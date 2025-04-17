@@ -1,0 +1,54 @@
+[path]
+root = "${builtin_root}"
+build = "${builtin_root}/build/"
+assets = "${builtin_root}/assets/"
+sources = "${builtin_root}/sources/"
+docs = "${builtin_root}/docs/"
+tools = "${builtin_root}/tools/"
+third = "${builtin_root}/sources/third/"
+libs = "${builtin_root}/sources/libs/"
+wrappers = "${builtin_root}/sources/wrappers/"
+
+[command.format]
+clang_format_tool_path = "${builtin_clang_format_tool_path}"
+style_file = "${builtin_root}/tools/.clang-format"
+for_exts = [".cpp", ".hpp", ".h", ".c"]
+paths = [
+    "${builtin_root}/sources/libs/",
+    "${builtin_root}/sources/wrappers/sandbox/"
+]
+
+[command.collect_sources]
+for_exts = [".cpp", ".hpp", ".h", ".c"]
+paths = [
+    "${builtin_root}/sources/libs/assets",
+    "${builtin_root}/sources/libs/core",
+    "${builtin_root}/sources/libs/renderer",
+    "${builtin_root}/sources/libs/system",
+    "${builtin_root}/sources/wrappers/sandbox",
+]
+
+[command.cmake_gen.host]
+cmake_tool_path = "${builtin_cmake_tool_path}"
+generator = "${builtin_cmake_host_generator}"
+architecture = "${builtin_cmake_host_architecture}"
+
+[command.cmake_gen.xcode]
+cmake_tool_path = "cmake"
+generator = "Xcode"
+architecture = "" # Can be x86_64 or arm64
+
+[command.cmake_gen.vstudio]
+cmake_tool_path = "cmake.exe"
+generator = "Visual Studio 17 2022"
+architecture = "x64" # Win32 or ARM64
+
+[command.cmake_gen.ninja]
+cmake_tool_path = "cmake"
+generator = "Ninja"
+architecture = ""
+
+[command.cmake_gen.makefiles]
+cmake_tool_path = "cmake"
+generator = "Unix Makefiles"
+architecture = ""
