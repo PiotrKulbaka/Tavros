@@ -33,7 +33,7 @@ namespace tavros::core
         /**
          * @brief Logger constructor
          */
-        explicit logger(string_view tag) noexcept;
+        explicit logger(string_view tag);
 
         /**
          * @brief Printf-style log debug message

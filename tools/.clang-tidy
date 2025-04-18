@@ -1,0 +1,27 @@
+Checks: >
+  clang-analyzer-*,
+  performance-*,
+  bugprone-*,
+  cppcoreguidelines-init-variables,
+  modernize-use-nullptr,
+  readability-identifier-naming,
+  clang-analyzer-deadcode.DeadStores,
+  clang-analyzer-core.NullDereference,
+  misc-unused-parameters,
+  misc-unused-variables,
+  -bugprone-suspicious-stringview-data-usage,
+  -performance-enum-size
+
+WarningsAsErrors: ''
+HeaderFilterRegex: '.*'
+FormatStyle: file
+
+CheckOptions:
+  - key: readability-identifier-naming.IgnoreStd
+    value: true
+  - key: modernize-use-nullptr.NullMacros
+    value: 'NULL'
+  - key: readability-identifier-naming.MemberVariablePrefix
+    value: m_
+  - key: readability-identifier-naming.MemberVariableCase
+    value: lower_case

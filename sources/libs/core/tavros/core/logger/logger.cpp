@@ -47,34 +47,32 @@ namespace
         auto s = last_ms / 1000;
         if (s == last_s) {
             return str_time;
-        } else {
-            last_s = s;
-            s %= 60;
-            str_time[7] = alpha[(s / 1) % 10];
-            str_time[6] = alpha[(s / 10) % 10];
         }
+        last_s = s;
+        s %= 60;
+        str_time[7] = alpha[(s / 1) % 10];
+        str_time[6] = alpha[(s / 10) % 10];
+
 
         // Minutes
         auto m = last_s / 60;
         if (m == last_m) {
             return str_time;
-        } else {
-            last_m = m;
-            m %= 60;
-            str_time[4] = alpha[(m / 1) % 10];
-            str_time[3] = alpha[(m / 10) % 10];
         }
+        last_m = m;
+        m %= 60;
+        str_time[4] = alpha[(m / 1) % 10];
+        str_time[3] = alpha[(m / 10) % 10];
 
         // Hours
         auto h = last_m / 60;
         if (h == last_h) {
             return str_time;
-        } else {
-            last_h = h;
-            h %= 24;
-            str_time[1] = alpha[(h / 1) % 10];
-            str_time[0] = alpha[(h / 10) % 10];
         }
+        last_h = h;
+        h %= 24;
+        str_time[1] = alpha[(h / 1) % 10];
+        str_time[0] = alpha[(h / 10) % 10];
 
         return str_time;
     }
@@ -113,7 +111,7 @@ namespace
 
     inline void log_print(tavros::core::severity_level level, tavros::core::string_view tag, const char* fmt, ...)
     {
-        va_list args;
+        va_list args = nullptr;
         va_start(args, fmt);
         log_vprint(level, tag, fmt, args);
         va_end(args);
@@ -122,7 +120,7 @@ namespace
 
 using namespace tavros::core;
 
-logger::logger(string_view tag) noexcept
+logger::logger(string_view tag)
     : m_tag(tag)
 {
 }
