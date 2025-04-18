@@ -108,14 +108,6 @@ namespace
             consumer(level, tag, tavros::core::string_view(message, static_cast<size_t>(len)));
         }
     }
-
-    inline void log_print(tavros::core::severity_level level, tavros::core::string_view tag, const char* fmt, ...)
-    {
-        va_list args = nullptr;
-        va_start(args, fmt);
-        log_vprint(level, tag, fmt, args);
-        va_end(args);
-    }
 } // namespace
 
 using namespace tavros::core;
@@ -127,22 +119,34 @@ logger::logger(string_view tag)
 
 void logger::debug(const char* fmt, ...)
 {
-    log_print(severity_level::debug, m_tag, fmt);
+    va_list args = nullptr;
+    va_start(args, fmt);
+    log_vprint(severity_level::debug, m_tag, fmt, args);
+    va_end(args);
 }
 
 void logger::info(const char* fmt, ...)
 {
-    log_print(severity_level::info, m_tag, fmt);
+    va_list args = nullptr;
+    va_start(args, fmt);
+    log_vprint(severity_level::info, m_tag, fmt, args);
+    va_end(args);
 }
 
 void logger::warning(const char* fmt, ...)
 {
-    log_print(severity_level::warning, m_tag, fmt);
+    va_list args = nullptr;
+    va_start(args, fmt);
+    log_vprint(severity_level::warning, m_tag, fmt, args);
+    va_end(args);
 }
 
 void logger::error(const char* fmt, ...)
 {
-    log_print(severity_level::error, m_tag, fmt);
+    va_list args = nullptr;
+    va_start(args, fmt);
+    log_vprint(severity_level::error, m_tag, fmt, args);
+    va_end(args);
 }
 
 string_view logger::tag() const
@@ -152,7 +156,10 @@ string_view logger::tag() const
 
 void logger::print(severity_level level, const char* tag, const char* fmt, ...)
 {
-    log_print(level, tag, fmt);
+    va_list args = nullptr;
+    va_start(args, fmt);
+    log_vprint(level, tag, fmt, args);
+    va_end(args);
 }
 
 void logger::vprint(severity_level level, const char* tag, const char* fmt, va_list args)
