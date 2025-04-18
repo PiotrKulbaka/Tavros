@@ -1,0 +1,28 @@
+# CMake
+build/
+CMakeFiles/
+CMakeCache.txt
+
+# Python
+__pycache__/
+**.pyc
+**.pyo
+**.egg-info/
+**/__pycache__/
+
+# IDE
+.vscode/
+**/.vscode/
+.idea/
+**/.idea/
+
+# Logs
+*.log
+
+# System
+.DS_Store
+**/.DS_Store
+Thumbs.db
+
+# Custom
+env.toml
