@@ -21,10 +21,7 @@ paths = [
 [command.collect_sources]
 for_exts = [".cpp", ".hpp", ".h", ".c"]
 paths = [
-    "${builtin_root}/sources/libs/assets",
     "${builtin_root}/sources/libs/core",
-    "${builtin_root}/sources/libs/renderer",
-    "${builtin_root}/sources/libs/system",
     "${builtin_root}/sources/wrappers/sandbox",
 ]
 
