@@ -29,8 +29,6 @@ def main(root_dir) -> int:
         elif args['collect_sources']:
             collect_sources(cfg)
         elif args['cmake_gen']:
-            if args['host']:
-                cmake_gen(cfg, 'host')
             if args['xcode']:
                 cmake_gen(cfg, 'xcode')
             if args['vstudio']:

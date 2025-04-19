@@ -9,7 +9,7 @@ def get_doc():
             tavros.py setup
             tavros.py autoformat
             tavros.py collect_sources
-            tavros.py cmake_gen (host | xcode | vstudio | ninja | makefiles)
+            tavros.py cmake_gen (xcode | vstudio | ninja | makefiles)
             tavros.py (-h | --help)
 
         Options:
@@ -22,7 +22,6 @@ def get_doc():
             cmake_gen           Generate CMake project for the given generator
 
         Generators:
-            host                Generate CMake project for the current platform
             xcode               Generate CMake project for Xcode
             vstudio             Generate CMake project for Visual Studio
             ninja               Generate CMake project for Ninja

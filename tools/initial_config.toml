@@ -25,19 +25,14 @@ paths = [
     "${builtin_root}/sources/wrappers/sandbox",
 ]
 
-[command.cmake_gen.host]
-cmake_tool_path = "${builtin_cmake_tool_path}"
-generator = "${builtin_cmake_host_generator}"
-architecture = "${builtin_cmake_host_architecture}"
+[command.cmake_gen.xcode]
+cmake_tool_path = "cmake"
+generator = "Xcode"
+architecture = ""
 compile_options = [
     "-Wno-gnu-anonymous-struct",
     "-Wno-nested-anon-types",
 ]
-
-[command.cmake_gen.xcode]
-cmake_tool_path = "cmake"
-generator = "Xcode"
-architecture = "" # Can be x86_64 or arm64
 
 [command.cmake_gen.vstudio]
 cmake_tool_path = "cmake.exe"
