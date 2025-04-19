@@ -133,18 +133,18 @@ float vec4::length() const noexcept
 
 vec4 vec4::normalized() const noexcept
 {
-    if (float len = length(); len != 0.0f) {
+    if (float len = length(); std::abs(len) > k_vec_normalize_epsilon) {
         return *this / len;
     }
     return vec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-const float* vec4::ptr() const noexcept
+const float* vec4::data() const noexcept
 {
     return &x;
 }
 
-float* vec4::ptr() noexcept
+float* vec4::data() noexcept
 {
     return &x;
 }

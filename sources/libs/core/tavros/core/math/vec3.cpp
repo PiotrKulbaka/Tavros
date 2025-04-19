@@ -9,13 +9,13 @@ using namespace tavros::core::math;
 float vec3::operator[](size_t index) const noexcept
 {
     TAV_ASSERT(index < 3);
-    return ptr()[index];
+    return data()[index];
 }
 
 float& vec3::operator[](size_t index) noexcept
 {
     TAV_ASSERT(index < 3);
-    return ptr()[index];
+    return data()[index];
 }
 
 vec3& vec3::operator+=(const vec3& other) noexcept
@@ -136,18 +136,18 @@ float vec3::length() const noexcept
 
 vec3 vec3::normalized() const noexcept
 {
-    if (float len = length(); len != 0.0f) {
+    if (float len = length(); std::abs(len) > k_vec_normalize_epsilon) {
         return *this / len;
     }
     return vec3(0.0f, 0.0f, 1.0f);
 }
 
-const float* vec3::ptr() const noexcept
+const float* vec3::data() const noexcept
 {
     return &x;
 }
 
-float* vec3::ptr() noexcept
+float* vec3::data() noexcept
 {
     return &x;
 }

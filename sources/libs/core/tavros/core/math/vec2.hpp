@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tavros/core/math/base_math.hpp>
 #include <tavros/core/types.hpp>
 #include <tavros/core/string.hpp>
 
@@ -119,7 +120,7 @@ namespace tavros::core::math
         /**
          * @brief Equality comparison between two vectors with a epsilon tolerance
          */
-        bool almost_equal(const vec2& other, float epsilon = 1e-6f) const noexcept;
+        bool almost_equal(const vec2& other, float epsilon = k_vec_compare_epsilon) const noexcept;
 
         /**
          * @brief 2D cross product (returns signed area / orientation)
@@ -181,12 +182,12 @@ namespace tavros::core::math
         /**
          * @brief Returns a pointer to the raw float array [x, y]
          */
-        const float* ptr() const noexcept;
+        const float* data() const noexcept;
 
         /**
          * @brief Returns a pointer to the raw float array [x, y]
          */
-        float* ptr() noexcept;
+        float* data() noexcept;
 
         /**
          * @brief Returns a string representation "[x, y]" with specified precision

@@ -1,6 +1,7 @@
 #pragma once
 
-#include <tavros/core/math/vec4.hpp>
+#include <tavros/core/math/vec3.hpp>
+
 #include <tavros/core/types.hpp>
 #include <tavros/core/string.hpp>
 
@@ -8,9 +9,9 @@ namespace tavros::core::math
 {
 
     /**
-     * @brief Represents a 4x4 matrix of 32-bit floating point values in **column-major** layout.
+     * @brief Represents a 3x3 matrix of 32-bit floating point values in **column-major** layout.
      *
-     * Each column is stored as a `vec4`, allowing efficient mathematical operations such as
+     * Each column is stored as a `vec3`, allowing efficient mathematical operations such as
      * matrix-vector and matrix-matrix multiplication. This matches the column-major format used
      * in OpenGL and GLSL.
      *
@@ -30,107 +31,107 @@ namespace tavros::core::math
      * - `operator[]` provides access to columns (not rows).
      * - Matrix inversion is undefined if the matrix is not invertible (determinant is zero).
      *
-     * @see vec4
+     * @see vec3
      */
-    class mat4
+    class mat3
     {
     public:
         /**
          * @brief Default constructor. Leaves the contents uninitialized
          */
-        constexpr mat4() noexcept = default;
+        constexpr mat3() noexcept = default;
 
         /**
-         * @brief Construct from 4 columns
+         * @brief Construct from 3 columns
          */
-        constexpr explicit mat4(const vec4& col0, const vec4& col1, const vec4& col2, const vec4& col3) noexcept;
+        constexpr explicit mat3(const vec3& col0, const vec3& col1, const vec3& col2) noexcept;
 
         /**
          * @brief Construct from scalar (diagonal matrix)
          */
-        constexpr explicit mat4(float diag) noexcept;
+        constexpr explicit mat3(float diag) noexcept;
 
         /**
-         * @brief Accesses a column by index [0..3]
+         * @brief Accesses a column by index [0..2]
          * @note Asserts in debug if index is out of bounds
          */
-        vec4& operator[](size_t i) noexcept;
+        vec3& operator[](size_t i) noexcept;
 
         /**
-         * @brief Accesses a column by index [0..3]
+         * @brief Accesses a column by index [0..2]
          * @note Asserts in debug if index is out of bounds
          */
-        const vec4& operator[](size_t i) const noexcept;
+        const vec3& operator[](size_t i) const noexcept;
 
         /**
          * @brief Equality comparison between two matrices
          */
-        bool operator==(const mat4& m) const noexcept;
+        bool operator==(const mat3& m) const noexcept;
 
         /**
          * @brief Inequality comparison between two matrices
          */
-        bool operator!=(const mat4& m) const noexcept;
+        bool operator!=(const mat3& m) const noexcept;
 
         /**
          * @brief Equality comparison between two matrices with a epsilon tolerance
          */
-        bool almost_equal(const mat4& m, float epsilon = k_mat_compare_epsilon) const noexcept;
+        bool almost_equal(const mat3& m, float epsilon = k_mat_compare_epsilon) const noexcept;
 
         /**
          * @brief Returns the negated matrix (element-wise negation)
          */
-        mat4 operator-() const noexcept;
+        mat3 operator-() const noexcept;
 
         /**
          * @brief Multiplies the matrix by a scalar
          */
-        mat4 operator*(float a) const noexcept;
+        mat3 operator*(float a) const noexcept;
 
         /**
-         * @brief Multiplies the matrix with a 4D vector
+         * @brief Multiplies the matrix with a 3D vector
          */
-        vec4 operator*(const vec4& v) const noexcept;
+        vec3 operator*(const vec3& v) const noexcept;
 
         /**
          * @brief Matrix multiplication
          */
-        mat4 operator*(const mat4& m) const noexcept;
+        mat3 operator*(const mat3& m) const noexcept;
 
         /**
          * @brief Adds two matrices element-wise
          */
-        mat4 operator+(const mat4& m) const noexcept;
+        mat3 operator+(const mat3& m) const noexcept;
 
         /**
          * @brief Subtracts two matrices element-wise
          */
-        mat4 operator-(const mat4& m) const noexcept;
+        mat3 operator-(const mat3& m) const noexcept;
 
         /**
          * @brief In-place scalar multiplication
          */
-        mat4& operator*=(const float a) noexcept;
+        mat3& operator*=(const float a) noexcept;
 
         /**
          * @brief In-place matrix multiplication
          */
-        mat4& operator*=(const mat4& m) noexcept;
+        mat3& operator*=(const mat3& m) noexcept;
 
         /**
          * @brief In-place element-wise addition
          */
-        mat4& operator+=(const mat4& m) noexcept;
+        mat3& operator+=(const mat3& m) noexcept;
 
         /**
          * @brief In-place element-wise subtraction
          */
-        mat4& operator-=(const mat4& m) noexcept;
+        mat3& operator-=(const mat3& m) noexcept;
 
         /**
          * @brief Transpose matrix
          */
-        mat4 transpose() const noexcept;
+        mat3 transpose() const noexcept;
 
         /**
          * @brief Computes the determinant of the matrix.
@@ -151,7 +152,7 @@ namespace tavros::core::math
          * @brief Computes and returns the inverse of this matrix.
          *
          * Matrix inversion is used to reverse transformations or change between coordinate spaces
-         * (e.g., world-space to view-space). This method performs a full inverse of the 4x4 matrix.
+         * (e.g., world-space to view-space). This method performs a full inverse of the 3x3 matrix.
          *
          * Internally, the function uses the adjugate and determinant method:
          * - If the determinant is zero, the matrix is not invertible and the returned result is undefined.
@@ -165,53 +166,52 @@ namespace tavros::core::math
          *
          * @see determinant()
          */
-        mat4 inverse() const noexcept;
+        mat3 inverse() const noexcept;
 
         /**
          * @brief Returns the identity matrix
          */
-        static constexpr mat4 identity() noexcept;
+        static constexpr mat3 identity() noexcept;
 
         /**
-         * @brief Returns a pointer to the raw float array [col1, col2, col3, col4]
+         * @brief Returns a pointer to the raw float array [col1, col2, col3]
          */
         const float* data() const noexcept;
 
         /**
-         * @brief Returns a pointer to the raw float array [col1, col2, col3, col4]
+         * @brief Returns a pointer to the raw float array [col1, col2, col3]
          */
         float* data() noexcept;
 
         /**
-         * @brief Returns a string representation "[[c1.x, ..., c1.w], ..., [c4.x, ..., c4.w]]" with specified precision
+         * @brief Returns a string representation "[[c1.x, ..., c1.z], ..., [c3.x, ..., c3.z]]" with specified precision
          */
         string to_string(int precision = 3) const;
 
     public:
-        vec4 cols[4];
+        vec3 cols[3];
     };
 
-    static_assert(sizeof(mat4) == 64, "incorrect size");
-    static_assert(alignof(mat4) == 16, "incorrect alignment");
+    static_assert(sizeof(mat3) == 36, "incorrect size");
+    static_assert(alignof(mat3) == 4, "incorrect alignment");
 
-    inline constexpr mat4::mat4(const vec4& col0, const vec4& col1, const vec4& col2, const vec4& col3) noexcept
-        : cols{col0, col1, col2, col3}
+    inline constexpr mat3::mat3(const vec3& col0, const vec3& col1, const vec3& col2) noexcept
+        : cols{col0, col1, col2}
     {
     }
 
-    inline constexpr mat4::mat4(float diag) noexcept
+    inline constexpr mat3::mat3(float diag) noexcept
         : cols{
-              vec4(diag, 0.0f, 0.0f, 0.0f),
-              vec4(0.0f, diag, 0.0f, 0.0f),
-              vec4(0.0f, 0.0f, diag, 0.0f),
-              vec4(0.0f, 0.0f, 0.0f, diag)
+              vec3(diag, 0.0f, 0.0f),
+              vec3(0.0f, diag, 0.0f),
+              vec3(0.0f, 0.0f, diag),
           }
     {
     }
 
-    inline constexpr mat4 mat4::identity() noexcept
+    inline constexpr mat3 mat3::identity() noexcept
     {
-        return mat4(1.0f);
+        return mat3(1.0f);
     }
 
 } // namespace tavros::core::math
