@@ -6,19 +6,19 @@
 
 using namespace tavros::core::math;
 
-constexpr float vec4::operator[](size_t index) const noexcept
+float vec4::operator[](size_t index) const noexcept
 {
     TAV_ASSERT(index < 4);
     return (&x)[index];
 }
 
-constexpr float& vec4::operator[](size_t index) noexcept
+float& vec4::operator[](size_t index) noexcept
 {
     TAV_ASSERT(index < 4);
     return (&x)[index];
 }
 
-constexpr vec4& vec4::operator+=(const vec4& other) noexcept
+vec4& vec4::operator+=(const vec4& other) noexcept
 {
     x += other.x;
     y += other.y;
@@ -27,7 +27,7 @@ constexpr vec4& vec4::operator+=(const vec4& other) noexcept
     return *this;
 }
 
-constexpr vec4& vec4::operator-=(const vec4& other) noexcept
+vec4& vec4::operator-=(const vec4& other) noexcept
 {
     x -= other.x;
     y -= other.y;
@@ -36,7 +36,7 @@ constexpr vec4& vec4::operator-=(const vec4& other) noexcept
     return *this;
 }
 
-constexpr vec4& vec4::operator*=(float a) noexcept
+vec4& vec4::operator*=(float a) noexcept
 {
     x *= a;
     y *= a;
@@ -45,7 +45,7 @@ constexpr vec4& vec4::operator*=(float a) noexcept
     return *this;
 }
 
-constexpr vec4& vec4::operator/=(float a) noexcept
+vec4& vec4::operator/=(float a) noexcept
 {
     TAV_ASSERT(a != 0.0f);
     x /= a;
@@ -55,7 +55,7 @@ constexpr vec4& vec4::operator/=(float a) noexcept
     return *this;
 }
 
-constexpr vec4& vec4::operator/=(const vec4& other) noexcept
+vec4& vec4::operator/=(const vec4& other) noexcept
 {
     TAV_ASSERT(other.x != 0.0f && other.y != 0.0f && other.z != 0.0f && other.w != 0.0f);
     x /= other.x;
@@ -65,53 +65,63 @@ constexpr vec4& vec4::operator/=(const vec4& other) noexcept
     return *this;
 }
 
-constexpr vec4 vec4::operator-() const noexcept
+vec4 vec4::operator-() const noexcept
 {
     return vec4(-x, -y, -z, -w);
 }
 
-constexpr vec4 vec4::operator+(const vec4& other) const noexcept
+vec4 vec4::operator+(const vec4& other) const noexcept
 {
     return vec4(x + other.x, y + other.y, z + other.z, w + other.w);
 }
 
-constexpr vec4 vec4::operator-(const vec4& other) const noexcept
+vec4 vec4::operator-(const vec4& other) const noexcept
 {
     return vec4(x - other.x, y - other.y, z - other.z, w - other.w);
 }
 
-constexpr vec4 vec4::operator*(const vec4& other) const noexcept
+vec4 vec4::operator*(const vec4& other) const noexcept
 {
     return vec4(x * other.x, y * other.y, z * other.z, w * other.w);
 }
 
-constexpr vec4 vec4::operator*(float a) const noexcept
+vec4 vec4::operator*(float a) const noexcept
 {
     return vec4(x * a, y * a, z * a, w * a);
 }
 
-constexpr vec4 vec4::operator/(float a) const noexcept
+vec4 vec4::operator/(float a) const noexcept
 {
     TAV_ASSERT(a != 0.0f);
     return vec4(x / a, y / a, z / a, w / a);
 }
 
-constexpr bool vec4::operator==(const vec4& other) const noexcept
+bool vec4::operator==(const vec4& other) const noexcept
 {
     return x == other.x && y == other.y && z == other.z && w == other.w;
 }
 
-constexpr bool vec4::operator!=(const vec4& other) const noexcept
+bool vec4::operator!=(const vec4& other) const noexcept
 {
     return !(*this == other);
 }
 
-constexpr float vec4::dot(const vec4& other) const noexcept
+bool vec4::almost_equal(const vec4& other, float epsilon) const noexcept
+{
+    // clang-format off
+    return std::abs(x - other.x) <= epsilon
+        && std::abs(y - other.y) <= epsilon
+        && std::abs(z - other.z) <= epsilon
+        && std::abs(w - other.w) <= epsilon;
+    // clang-format on
+}
+
+float vec4::dot(const vec4& other) const noexcept
 {
     return x * other.x + y * other.y + z * other.z + w * other.w;
 }
 
-constexpr vec4 vec4::lerp(const vec4& target, float coef) const noexcept
+vec4 vec4::lerp(const vec4& target, float coef) const noexcept
 {
     return *this + (target - *this) * coef;
 }
@@ -129,12 +139,12 @@ vec4 vec4::normalized() const noexcept
     return vec4(0.0f, 0.0f, 0.0f, 1.0f);
 }
 
-constexpr const float* vec4::ptr() const noexcept
+const float* vec4::ptr() const noexcept
 {
     return &x;
 }
 
-constexpr float* vec4::ptr() noexcept
+float* vec4::ptr() noexcept
 {
     return &x;
 }
