@@ -1,32 +1,20 @@
 #include <tavros/core/math/vec4.hpp>
 
+#include <tavros/core/debug/assert.hpp>
+
 #include <cmath>
 
 using namespace tavros::core::math;
 
-constexpr vec4::vec4(float v) noexcept
-    : x(v)
-    , y(v)
-    , z(v)
-    , w(v)
-{
-}
-
-constexpr vec4::vec4(float x, float y, float z, float w) noexcept
-    : x(x)
-    , y(y)
-    , z(z)
-    , w(w)
-{
-}
-
 constexpr float vec4::operator[](size_t index) const noexcept
 {
+    TAV_ASSERT(index < 4);
     return (&x)[index];
 }
 
 constexpr float& vec4::operator[](size_t index) noexcept
 {
+    TAV_ASSERT(index < 4);
     return (&x)[index];
 }
 
@@ -59,6 +47,7 @@ constexpr vec4& vec4::operator*=(float a) noexcept
 
 constexpr vec4& vec4::operator/=(float a) noexcept
 {
+    TAV_ASSERT(a != 0.0f);
     x /= a;
     y /= a;
     z /= a;
@@ -68,6 +57,7 @@ constexpr vec4& vec4::operator/=(float a) noexcept
 
 constexpr vec4& vec4::operator/=(const vec4& other) noexcept
 {
+    TAV_ASSERT(other.x != 0.0f && other.y != 0.0f && other.z != 0.0f && other.w != 0.0f);
     x /= other.x;
     y /= other.y;
     z /= other.z;
@@ -102,6 +92,7 @@ constexpr vec4 vec4::operator*(float a) const noexcept
 
 constexpr vec4 vec4::operator/(float a) const noexcept
 {
+    TAV_ASSERT(a != 0.0f);
     return vec4(x / a, y / a, z / a, w / a);
 }
 

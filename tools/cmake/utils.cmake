@@ -124,4 +124,8 @@ function(tavros_add_library)
     endif()
 
     group_sources_by_folder(${LIB_NAME})
+
+    if (TAV_COMPILE_OPTIONS)
+        target_compile_options(${LIB_NAME} PRIVATE ${TAV_COMPILE_OPTIONS})
+    endif()
 endfunction()

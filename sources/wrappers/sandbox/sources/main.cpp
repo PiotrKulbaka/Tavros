@@ -3,7 +3,9 @@
 #include <tavros/core/prelude.hpp>
 #include <tavros/core/timer.hpp>
 
+#include <tavros/core/math/vec4.hpp>
 #include <tavros/core/math/vec3.hpp>
+#include <tavros/core/math/vec2.hpp>
 
 #include <inttypes.h>
 
@@ -16,27 +18,44 @@ int main()
         std::cout << msg << std::endl;
     });
 
-    tavros::core::math::vec3 v(1.12345, 2.34567, 3.45678);
+    using ns = std::chrono::nanoseconds;
 
-    tavros::core::timer  t;
+    tavros::core::timer      total;
+    tavros::core::timer      timer;
+    tavros::core::math::vec4 v4(1.12345, 2.34567, 3.45678, 4.56789);
+    tavros::core::math::vec3 v3(1.12345, 2.34567, 3.45678);
+    tavros::core::math::vec2 v2(1.12345, 2.34567);
+
+
     tavros::core::logger logger("main");
-    uint64_t             us = t.elapsed<std::chrono::nanoseconds>();
 
-    auto n = t.elapsed<std::chrono::nanoseconds>();
-    auto n2 = t.elapsed<std::chrono::nanoseconds>();
-    auto r = n2 - n;
+    logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
+    timer.start();
 
-
-    auto s = v.to_string();
-    logger.info("Elapsed time to create a logger:  %" PRIu64 "  %s", r, s.c_str());
-    t.start();
     logger.debug("Debug message");
-    //    logger.info("Info message");
-    //    logger.warning("Warning message");
-    //    logger.error("Error message");
-    us = t.elapsed<std::chrono::nanoseconds>();
-    logger.info("Elapsed time to write 4 messages: %" PRIu64 " ", us);
+    logger.info("Info message");
+    logger.warning("Warning message");
+    logger.error("Error message");
+    logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
+    timer.start();
 
+    auto s4 = v4.to_string();
+    auto s3 = v3.to_string();
+    auto s2 = v2.to_string();
+    logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
+    timer.start();
+
+    logger.debug("vec4: %s", s4.c_str());
+    logger.debug("vec3: %s", s3.c_str());
+    logger.debug("vec2: %s", s2.c_str());
+
+    logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
+    timer.start();
+
+    logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
+
+
+    logger.info("Total ns: %" PRIu64, total.elapsed<ns>());
 
     return 0;
 }
