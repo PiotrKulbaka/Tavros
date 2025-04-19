@@ -16,6 +16,16 @@ class DotDict(dict):
     def __setattr__(self, key, value):
         self[key] = value
 
+    def get(self, path, default=None):
+        parts = path.split(".")
+        current = self
+        for part in parts:
+            if isinstance(current, dict) and part in current:
+                current = current[part]
+            else:
+                return default
+        return current
+
 
 class Config:
     def __init__(self, config_path):

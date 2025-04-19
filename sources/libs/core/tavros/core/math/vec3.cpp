@@ -1,29 +1,20 @@
 #include <tavros/core/math/vec3.hpp>
+
+#include <tavros/core/debug/assert.hpp>
+
 #include <cmath>
 
 using namespace tavros::core::math;
 
-constexpr vec3::vec3(float v) noexcept
-    : x(v)
-    , y(v)
-    , z(v)
-{
-}
-
-constexpr vec3::vec3(float x, float y, float z) noexcept
-    : x(x)
-    , y(y)
-    , z(z)
-{
-}
-
 constexpr float vec3::operator[](size_t index) const noexcept
 {
+    TAV_ASSERT(index < 3);
     return ptr()[index];
 }
 
 constexpr float& vec3::operator[](size_t index) noexcept
 {
+    TAV_ASSERT(index < 3);
     return ptr()[index];
 }
 
@@ -53,6 +44,7 @@ constexpr vec3& vec3::operator*=(float a) noexcept
 
 constexpr vec3& vec3::operator/=(float a) noexcept
 {
+    TAV_ASSERT(a != 0.0f);
     x /= a;
     y /= a;
     z /= a;
@@ -61,6 +53,7 @@ constexpr vec3& vec3::operator/=(float a) noexcept
 
 constexpr vec3& vec3::operator/=(const vec3& other) noexcept
 {
+    TAV_ASSERT(other.x != 0.0f && other.y != 0.0f && other.z != 0.0f);
     x /= other.x;
     y /= other.y;
     z /= other.z;
@@ -94,6 +87,7 @@ constexpr vec3 vec3::operator*(float a) const noexcept
 
 constexpr vec3 vec3::operator/(float a) const noexcept
 {
+    TAV_ASSERT(a != 0.0f);
     return vec3(x / a, y / a, z / a);
 }
 
@@ -105,6 +99,15 @@ constexpr bool vec3::operator==(const vec3& other) const noexcept
 constexpr bool vec3::operator!=(const vec3& other) const noexcept
 {
     return !(*this == other);
+}
+
+constexpr vec3 vec3::cross(const vec3& other) const noexcept
+{
+    return vec3(
+        y * other.z - z * other.y,
+        z * other.x - x * other.z,
+        x * other.y - y * other.x
+    );
 }
 
 constexpr float vec3::dot(const vec3& other) const noexcept

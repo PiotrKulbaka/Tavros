@@ -44,7 +44,7 @@ def main(root_dir) -> int:
             print(doc)
             return 1
     except Exception as e:
-        print('An exception was thrown')
-        return 1
+        print('An exception was thrown.')
+        raise e
 
     return 0

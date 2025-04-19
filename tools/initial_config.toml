@@ -29,6 +29,10 @@ paths = [
 cmake_tool_path = "${builtin_cmake_tool_path}"
 generator = "${builtin_cmake_host_generator}"
 architecture = "${builtin_cmake_host_architecture}"
+compile_options = [
+    "-Wno-gnu-anonymous-struct",
+    "-Wno-nested-anon-types",
+]
 
 [command.cmake_gen.xcode]
 cmake_tool_path = "cmake"
