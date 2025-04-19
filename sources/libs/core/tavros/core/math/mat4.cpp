@@ -30,8 +30,8 @@ bool mat4::operator!=(const mat4& m) const noexcept
 
 bool mat4::almost_equal(const mat4& m, float epsilon) const noexcept
 {
-    const float* a = ptr();
-    const float* b = m.ptr();
+    const float* a = data();
+    const float* b = m.data();
     for (auto i = 0; i < 16; ++i) {
         if (std::abs(a[i] - b[i]) > epsilon) {
             return false;
@@ -87,7 +87,7 @@ mat4 mat4::operator-(const mat4& m) const noexcept
     return mat4(cols[0] - m[0], cols[1] - m[1], cols[2] - m[2], cols[3] - m[3]);
 }
 
-mat4& mat4::operator*=(const float a)
+mat4& mat4::operator*=(const float a) noexcept
 {
     cols[0] *= a;
     cols[1] *= a;
@@ -96,13 +96,13 @@ mat4& mat4::operator*=(const float a)
     return *this;
 }
 
-mat4& mat4::operator*=(const mat4& m)
+mat4& mat4::operator*=(const mat4& m) noexcept
 {
     *this = *this * m;
     return *this;
 }
 
-mat4& mat4::operator+=(const mat4& m)
+mat4& mat4::operator+=(const mat4& m) noexcept
 {
     cols[0] += m[0];
     cols[1] += m[1];
@@ -111,7 +111,7 @@ mat4& mat4::operator+=(const mat4& m)
     return *this;
 }
 
-mat4& mat4::operator-=(const mat4& m)
+mat4& mat4::operator-=(const mat4& m) noexcept
 {
     cols[0] -= m[0];
     cols[1] -= m[1];
@@ -163,8 +163,8 @@ mat4 mat4::inverse() const noexcept
     // https://github.com/g-truc/glm/blob/master/glm/gtc/matrix_inverse.hpp
     mat4 inv_mat;
 
-    const float* m = ptr();
-    float*       inv = inv_mat.ptr();
+    const float* m = data();
+    float*       inv = inv_mat.data();
 
     // Calculation of minors
     // clang-format off
@@ -299,26 +299,25 @@ mat4 mat4::inverse() const noexcept
 
     // Calc det by the first row
     float det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
-    TAV_ASSERT(det != 0.0f);
-    if (det == 0.0f) {
-        // Can't calculate inverse matrix, so return matrix with uninitialized values
-        return mat4();
+    TAV_ASSERT(std::abs(det) > k_vec_normalize_epsilon);
+    if (std::abs(det) > k_vec_normalize_epsilon) {
+        // Can't calculate inverse matrix, so return zero matrix
+        return mat4(0.0f);
     }
 
     // Apply inverse determinant to the whole matrix
     inv_mat *= 1.0f / det;
-
     return inv_mat;
 }
 
-const float* mat4::ptr() const noexcept
+const float* mat4::data() const noexcept
 {
-    return cols[0].ptr();
+    return cols[0].data();
 }
 
-float* mat4::ptr() noexcept
+float* mat4::data() noexcept
 {
-    return cols[0].ptr();
+    return cols[0].data();
 }
 
 tavros::core::string mat4::to_string(int precision) const

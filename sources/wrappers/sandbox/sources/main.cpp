@@ -49,22 +49,25 @@ int main()
     auto mat1_inv_time = mtm.elapsed<ns>();
 
     logger.info("Mat1 inverse() ns time: %" PRIu64, mat1_inv_time);
-    
+
     mtm.start();
     auto inv2 = m2.inverse();
     auto mat2_inv_time = mtm.elapsed<ns>();
 
     logger.info("Mat2 inverse() ns time: %" PRIu64, mat2_inv_time);
-    
+
     auto res1 = m1 * inv1;
-    
+
     logger.info("Mat1 * inv1: %s", res1.to_string(5).c_str());
-    
+
     auto res2 = m2 * inv2;
     logger.info("Mat2 * inv2: %s", res2.to_string(5).c_str());
-    
-    
-    
+
+
+    constexpr auto identity = tavros::core::math::mat4::identity();
+    auto           is_eq = res2.almost_equal(identity, 1e-5f);
+
+    logger.info("Mat2 is eq to identity: %s", (is_eq ? "Yes" : "No"));
 
 
     logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
