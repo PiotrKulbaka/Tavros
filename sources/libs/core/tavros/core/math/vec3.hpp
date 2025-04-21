@@ -18,9 +18,9 @@ namespace tavros::core::math
     {
     public:
         /**
-         * @brief Default constructor. Leaves the contents uninitialized
+         * @brief Default constructor
          */
-        constexpr vec3() noexcept = default;
+        constexpr vec3() noexcept;
 
         /**
          * @brief Constructs all components with the same value
@@ -31,11 +31,6 @@ namespace tavros::core::math
          * @brief Constructs a vec3 from individual components
          */
         constexpr vec3(float x, float y, float z) noexcept;
-
-        /**
-         * @brief Default destructor
-         */
-        ~vec3() noexcept = default;
 
         /**
          * @brief Accesses a component by index [0..2]
@@ -62,13 +57,13 @@ namespace tavros::core::math
         /**
          * @brief Multiplies this vector by a scalar
          */
-        vec3& operator*=(float a) noexcept;
+        vec3& operator*=(float scalar) noexcept;
 
         /**
          * @brief Divides this vector by a scalar
          * @note Asserts in debug if `a` is zero
          */
-        vec3& operator/=(float a) noexcept;
+        vec3& operator/=(float scalar) noexcept;
 
         /**
          * @brief Divides this vector component-wise by another
@@ -92,35 +87,61 @@ namespace tavros::core::math
         vec3 operator-(const vec3& other) const noexcept;
 
         /**
+         * @brief Multiplies this vector by a scalar
+         */
+        vec3 operator*(float scalar) const noexcept;
+
+        /**
          * @brief Multiplies this vector component-wise by another
          */
         vec3 operator*(const vec3& other) const noexcept;
 
         /**
-         * @brief Multiplies this vector by a scalar
-         */
-        vec3 operator*(float a) const noexcept;
-
-        /**
          * @brief Divides this vector by a scalar
          * @note Asserts in debug if `a` is zero
          */
-        vec3 operator/(float a) const noexcept;
+        vec3 operator/(float scalar) const noexcept;
 
         /**
-         * @brief Equality comparison between two vectors
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool operator==(const vec3& other) const noexcept;
+        bool operator==(const vec3& other) const = delete;
 
         /**
-         * @brief Equality comparison between two vectors with a epsilon tolerance
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool almost_equal(const vec3& other, float epsilon = k_vec_compare_epsilon) const noexcept;
+        bool operator!=(const vec3& other) const = delete;
 
         /**
-         * @brief Inequality comparison between two vectors
+         * @brief Compares two sets of vec3 with a given tolerance.
+         *
+         * Returns true if the absolute difference between corresponding components
+         * of the two vec3 sets is less than or equal to the specified epsilon.
+         *
+         * This is useful for floating-point comparisons where exact equality is
+         * not reliable.
+         *
+         * @param other The other vec3 instance to compare with.
+         * @param epsilon The allowed difference per component. Default is k_epsilon6.
+         * @return true if all components are approximately equal.
          */
-        bool operator!=(const vec3& other) const noexcept;
+        bool almost_equal(const vec3& other, float epsilon = k_epsilon6) const noexcept;
+
+        /**
+         * @brief Calculates the angle (in radians) between this vector and another vector.
+         *
+         * The angle is computed using the formula:
+         *      θ = acos((A · B) / (|A| * |B|))
+         *
+         * @note In the case where either of the vectors has zero length, the angle
+         *       is defined as 0 radians (k_epsilon6 is used for comparisons)
+         *
+         * @note In debug, an assertion will be triggered if either of the vectors has zero length.
+         *
+         * @param other The other vector to compare this vector with.
+         * @return The angle between the two vectors in radians.
+         */
+        float angle(const vec3& other) const noexcept;
 
         /**
          * @brief 3D cross product (returns a vector perpendicular to both)
@@ -129,6 +150,10 @@ namespace tavros::core::math
          * The result is a new vector that is perpendicular to the plane defined by the two inputs,
          * with a direction determined by the right-hand rule and a magnitude equal to the area
          * of the parallelogram spanned by the vectors.
+         *
+         * This implementation assumes a **left-handed coordinate system** (X forward, Y right, Z up).
+         * If you're using a **right-handed coordinate system**, you must manually negate the result
+         * (i.e., multiply by -1).
          *
          * This is commonly used in:
          * - Calculating normals for lighting and geometry
@@ -180,6 +205,9 @@ namespace tavros::core::math
 
         /**
          * @brief Returns the normalized vector
+         *
+         * @note Returns normalized vector. If the vector has zero length, this method returns vec4(0, 0, 1)
+         * @note Asserts in debug if the vector has zero length
          */
         vec3 normalized() const noexcept;
 
@@ -218,6 +246,13 @@ namespace tavros::core::math
 
     static_assert(sizeof(vec3) == 12, "incorrect size");
     static_assert(alignof(vec3) == 4, "incorrect alignment");
+
+    inline constexpr vec3::vec3() noexcept
+        : x(0.0f)
+        , y(0.0f)
+        , z(0.0f)
+    {
+    }
 
     inline constexpr vec3::vec3(float v) noexcept
         : x(v)

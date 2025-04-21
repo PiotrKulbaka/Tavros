@@ -2,8 +2,6 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-#include <cmath>
-
 using namespace tavros::core::math;
 
 vec3& mat3::operator[](size_t i) noexcept
@@ -16,16 +14,6 @@ const vec3& mat3::operator[](size_t i) const noexcept
 {
     TAV_ASSERT(i < 3);
     return cols[i];
-}
-
-bool mat3::operator==(const mat3& m) const noexcept
-{
-    return cols[0] == m[0] && cols[1] == m[1] && cols[2] == m[2];
-}
-
-bool mat3::operator!=(const mat3& m) const noexcept
-{
-    return !(*this == m);
 }
 
 bool mat3::almost_equal(const mat3& m, float epsilon) const noexcept
@@ -160,8 +148,8 @@ mat3 mat3::inverse() const noexcept
     // clang-format on
 
     float det = m[0] * inv[0] + m[1] * inv[3] + m[2] * inv[6];
-    TAV_ASSERT(std::abs(det) > k_vec_normalize_epsilon);
-    if (std::abs(det) > k_vec_normalize_epsilon) {
+    TAV_ASSERT(!almost_zero(det, k_epsilon6));
+    if (almost_zero(det, k_epsilon6)) {
         // Can't calculate inverse matrix, so return zero matrix
         return mat3(0.0f);
     }

@@ -2,20 +2,18 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-#include <cmath>
-
 using namespace tavros::core::math;
 
 float vec2::operator[](size_t index) const noexcept
 {
     TAV_ASSERT(index < 2);
-    return index == 0 ? x : y;
+    return data()[index];
 }
 
 float& vec2::operator[](size_t index) noexcept
 {
     TAV_ASSERT(index < 2);
-    return index == 0 ? x : y;
+    return data()[index];
 }
 
 vec2& vec2::operator+=(const vec2& other) noexcept
@@ -86,19 +84,9 @@ vec2 vec2::operator/(float a) const noexcept
     return vec2(x / a, y / a);
 }
 
-bool vec2::operator==(const vec2& other) const noexcept
-{
-    return x == other.x && y == other.y;
-}
-
-bool vec2::operator!=(const vec2& other) const noexcept
-{
-    return !(*this == other);
-}
-
 bool vec2::almost_equal(const vec2& other, float epsilon) const noexcept
 {
-    return std::abs(x - other.x) <= epsilon && std::abs(y - other.y) <= epsilon;
+    return ::almost_equal(x, other.x, epsilon) && ::almost_equal(y, other.y, epsilon);
 }
 
 float vec2::cross(const vec2& other) const noexcept
@@ -123,10 +111,11 @@ float vec2::length() const noexcept
 
 vec2 vec2::normalized() const noexcept
 {
-    if (float len = length(); std::abs(len) > k_vec_normalize_epsilon) {
-        return *this / len;
+    auto len = length();
+    if (almost_zero(len, k_epsilon6)) {
+        return vec2(0.0f, 1.0f);
     }
-    return vec2(0.0f, 1.0f);
+    return *this / len;
 }
 
 const float* vec2::data() const noexcept

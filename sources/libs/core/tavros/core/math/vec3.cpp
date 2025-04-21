@@ -2,8 +2,6 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-#include <cmath>
-
 using namespace tavros::core::math;
 
 float vec3::operator[](size_t index) const noexcept
@@ -91,31 +89,41 @@ vec3 vec3::operator/(float a) const noexcept
     return vec3(x / a, y / a, z / a);
 }
 
-bool vec3::operator==(const vec3& other) const noexcept
-{
-    return x == other.x && y == other.y && z == other.z;
-}
-
-bool vec3::operator!=(const vec3& other) const noexcept
-{
-    return !(*this == other);
-}
-
 bool vec3::almost_equal(const vec3& other, float epsilon) const noexcept
 {
     // clang-format off
-    return std::abs(x - other.x) <= epsilon
-        && std::abs(y - other.y) <= epsilon
-        && std::abs(z - other.z) <= epsilon;
+    return ::almost_equal(x, other.x, epsilon)
+        && ::almost_equal(y, other.y, epsilon)
+        && ::almost_equal(z, other.z, epsilon);
     // clang-format on
+}
+
+float vec3::angle(const vec3& other) const noexcept
+{
+    auto len = length();
+    TAV_ASSERT(!almost_zero(len, k_epsilon6));
+    if (almost_zero(len, k_epsilon6)) {
+        return 0.0f;
+    }
+
+    auto other_len = other.length();
+    TAV_ASSERT(!almost_zero(other_len, k_epsilon6));
+    if (almost_zero(other_len, k_epsilon6)) {
+        return 0.0f;
+    }
+
+    auto cos_angle = dot(other) / (len * other_len);
+    cos_angle = std::fmax(-1.0f, std::fmin(1.0f, cos_angle));
+
+    return std::acos(cos_angle);
 }
 
 vec3 vec3::cross(const vec3& other) const noexcept
 {
     return vec3(
-        y * other.z - z * other.y,
-        z * other.x - x * other.z,
-        x * other.y - y * other.x
+        z * other.y - y * other.z,
+        x * other.z - z * other.x,
+        y * other.x - x * other.y
     );
 }
 
@@ -136,10 +144,12 @@ float vec3::length() const noexcept
 
 vec3 vec3::normalized() const noexcept
 {
-    if (float len = length(); std::abs(len) > k_vec_normalize_epsilon) {
-        return *this / len;
+    auto len = length();
+    TAV_ASSERT(!almost_zero(len, k_epsilon6));
+    if (almost_zero(len, k_epsilon6)) {
+        return vec3(0.0f, 0.0f, 1.0f);
     }
-    return vec3(0.0f, 0.0f, 1.0f);
+    return *this / len;
 }
 
 const float* vec3::data() const noexcept

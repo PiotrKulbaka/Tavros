@@ -2,8 +2,6 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-#include <cmath>
-
 using namespace tavros::core::math;
 
 vec4& mat4::operator[](size_t i) noexcept
@@ -18,22 +16,12 @@ const vec4& mat4::operator[](size_t i) const noexcept
     return cols[i];
 }
 
-bool mat4::operator==(const mat4& m) const noexcept
-{
-    return cols[0] == m[0] && cols[1] == m[1] && cols[2] == m[2] && cols[3] == m[3];
-}
-
-bool mat4::operator!=(const mat4& m) const noexcept
-{
-    return !(*this == m);
-}
-
 bool mat4::almost_equal(const mat4& m, float epsilon) const noexcept
 {
     const float* a = data();
     const float* b = m.data();
     for (auto i = 0; i < 16; ++i) {
-        if (std::abs(a[i] - b[i]) > epsilon) {
+        if (!::almost_equal(a[i], b[i], epsilon)) {
             return false;
         }
     }
@@ -299,8 +287,8 @@ mat4 mat4::inverse() const noexcept
 
     // Calc det by the first row
     float det = m[0] * inv[0] + m[1] * inv[4] + m[2] * inv[8] + m[3] * inv[12];
-    TAV_ASSERT(std::abs(det) > k_vec_normalize_epsilon);
-    if (std::abs(det) > k_vec_normalize_epsilon) {
+    TAV_ASSERT(!almost_zero(det, k_epsilon6));
+    if (almost_zero(det, k_epsilon6)) {
         // Can't calculate inverse matrix, so return zero matrix
         return mat4(0.0f);
     }

@@ -18,9 +18,9 @@ namespace tavros::core::math
     {
     public:
         /**
-         * @brief Default constructor. Leaves the contents uninitialized
+         * @brief Default constructor
          */
-        constexpr vec2() noexcept = default;
+        constexpr vec2() noexcept;
 
         /**
          * @brief Constructs all components with the same value
@@ -31,11 +31,6 @@ namespace tavros::core::math
          * @brief Constructs a vec2 from individual components
          */
         constexpr vec2(float x, float y) noexcept;
-
-        /**
-         * @brief Default destructor
-         */
-        ~vec2() noexcept = default;
 
         /**
          * @brief Accesses a component by index [0..1]
@@ -62,13 +57,13 @@ namespace tavros::core::math
         /**
          * @brief Multiplies this vector by a scalar
          */
-        vec2& operator*=(float a) noexcept;
+        vec2& operator*=(float scalar) noexcept;
 
         /**
          * @brief Divides this vector by a scalar
          * @note Asserts in debug if `a` is zero
          */
-        vec2& operator/=(float a) noexcept;
+        vec2& operator/=(float scalar) noexcept;
 
         /**
          * @brief Divides this vector component-wise by another
@@ -92,35 +87,45 @@ namespace tavros::core::math
         vec2 operator-(const vec2& other) const noexcept;
 
         /**
+         * @brief Multiplies this vector by a scalar
+         */
+        vec2 operator*(float scalar) const noexcept;
+
+        /**
          * @brief Multiplies this vector component-wise by another
          */
         vec2 operator*(const vec2& other) const noexcept;
 
         /**
-         * @brief Multiplies this vector by a scalar
-         */
-        vec2 operator*(float a) const noexcept;
-
-        /**
          * @brief Divides this vector by a scalar
          * @note Asserts in debug mode if `a` is zero
          */
-        vec2 operator/(float a) const noexcept;
+        vec2 operator/(float scalar) const noexcept;
 
         /**
-         * @brief Equality comparison between two vectors
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool operator==(const vec2& other) const noexcept;
+        bool operator==(const vec2& other) const = delete;
 
         /**
-         * @brief Inequality comparison between two vectors
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool operator!=(const vec2& other) const noexcept;
+        bool operator!=(const vec2& other) const = delete;
 
         /**
-         * @brief Equality comparison between two vectors with a epsilon tolerance
+         * @brief Compares two sets of vec2 with a given tolerance.
+         *
+         * Returns true if the absolute difference between corresponding components
+         * of the two vec2 sets is less than or equal to the specified epsilon.
+         *
+         * This is useful for floating-point comparisons where exact equality is
+         * not reliable.
+         *
+         * @param other The other vec2 instance to compare with.
+         * @param epsilon The allowed difference per component. Default is k_epsilon6.
+         * @return true if all components are approximately equal.
          */
-        bool almost_equal(const vec2& other, float epsilon = k_vec_compare_epsilon) const noexcept;
+        bool almost_equal(const vec2& other, float epsilon = k_epsilon6) const noexcept;
 
         /**
          * @brief 2D cross product (returns signed area / orientation)
@@ -176,6 +181,9 @@ namespace tavros::core::math
 
         /**
          * @brief Returns the normalized vector
+         *
+         * @note Returns normalized vector. If the vector has zero length, this method returns vec4(0, 1)
+         * @note Asserts in debug if the vector has zero length
          */
         vec2 normalized() const noexcept;
 
@@ -210,6 +218,12 @@ namespace tavros::core::math
 
     static_assert(sizeof(vec2) == 8, "incorrect size");
     static_assert(alignof(vec2) == 4, "incorrect alignment");
+
+    inline constexpr vec2::vec2() noexcept
+        : x(0.0f)
+        , y(0.0f)
+    {
+    }
 
     inline constexpr vec2::vec2(float v) noexcept
         : x(v)

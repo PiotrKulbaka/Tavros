@@ -2,8 +2,6 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-#include <cmath>
-
 using namespace tavros::core::math;
 
 float vec4::operator[](size_t index) const noexcept
@@ -96,23 +94,13 @@ vec4 vec4::operator/(float a) const noexcept
     return vec4(x / a, y / a, z / a, w / a);
 }
 
-bool vec4::operator==(const vec4& other) const noexcept
-{
-    return x == other.x && y == other.y && z == other.z && w == other.w;
-}
-
-bool vec4::operator!=(const vec4& other) const noexcept
-{
-    return !(*this == other);
-}
-
 bool vec4::almost_equal(const vec4& other, float epsilon) const noexcept
 {
     // clang-format off
-    return std::abs(x - other.x) <= epsilon
-        && std::abs(y - other.y) <= epsilon
-        && std::abs(z - other.z) <= epsilon
-        && std::abs(w - other.w) <= epsilon;
+    return ::almost_equal(x, other.x, epsilon)
+        && ::almost_equal(y, other.y, epsilon)        
+        && ::almost_equal(z, other.z, epsilon)
+        && ::almost_equal(w, other.w, epsilon);
     // clang-format on
 }
 
@@ -133,10 +121,12 @@ float vec4::length() const noexcept
 
 vec4 vec4::normalized() const noexcept
 {
-    if (float len = length(); std::abs(len) > k_vec_normalize_epsilon) {
-        return *this / len;
+    float len = length();
+    TAV_ASSERT(!almost_zero(len, k_epsilon6));
+    if (almost_zero(len, k_epsilon6)) {
+        return vec4(0.0f, 0.0f, 0.0f, 1.0f);
     }
-    return vec4(0.0f, 0.0f, 0.0f, 1.0f);
+    return *this / len;
 }
 
 const float* vec4::data() const noexcept

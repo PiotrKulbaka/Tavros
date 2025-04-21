@@ -2,9 +2,6 @@
 
 #include <tavros/core/math/vec3.hpp>
 
-#include <tavros/core/types.hpp>
-#include <tavros/core/string.hpp>
-
 namespace tavros::core::math
 {
 
@@ -64,19 +61,29 @@ namespace tavros::core::math
         const vec3& operator[](size_t i) const noexcept;
 
         /**
-         * @brief Equality comparison between two matrices
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool operator==(const mat3& m) const noexcept;
+        bool operator==(const mat3& m) const = delete;
 
         /**
-         * @brief Inequality comparison between two matrices
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool operator!=(const mat3& m) const noexcept;
+        bool operator!=(const mat3& m) const = delete;
 
         /**
-         * @brief Equality comparison between two matrices with a epsilon tolerance
+         * @brief Compares two sets of mat3 with a given tolerance.
+         *
+         * Returns true if the absolute difference between corresponding components
+         * of the two mat3 sets is less than or equal to the specified epsilon.
+         *
+         * This is useful for floating-point comparisons where exact equality is
+         * not reliable.
+         *
+         * @param other The other mat3 instance to compare with.
+         * @param epsilon The allowed difference per component. Default is k_epsilon6.
+         * @return true if all components are approximately equal.
          */
-        bool almost_equal(const mat3& m, float epsilon = k_mat_compare_epsilon) const noexcept;
+        bool almost_equal(const mat3& m, float epsilon = k_epsilon6) const noexcept;
 
         /**
          * @brief Returns the negated matrix (element-wise negation)
@@ -152,26 +159,19 @@ namespace tavros::core::math
          * @brief Computes and returns the inverse of this matrix.
          *
          * Matrix inversion is used to reverse transformations or change between coordinate spaces
-         * (e.g., world-space to view-space). This method performs a full inverse of the 3x3 matrix.
+         * (e.g., world-space to view-space). This method performs a full inverse of the 4x4 matrix.
          *
          * Internally, the function uses the adjugate and determinant method:
-         * - If the determinant is zero, the matrix is not invertible and the returned result is undefined.
+         * - If the determinant is zero, the matrix is not invertible and the returned result is zero matrix.
          * - It is the caller's responsibility to check for invertibility using `determinant()` if safety is required.
          *
-         * @warning Undefined behavior if the matrix is singular (determinant == 0). No internal checks are performed.
-         *
+         * @warning Zero matrix is returned if the matrix is singular (determinant == 0)
          * @note This operation involves multiple multiplications and additions; it is relatively expensive.
          *
          * @return The inverse of this matrix.
-         *
          * @see determinant()
          */
         mat3 inverse() const noexcept;
-
-        /**
-         * @brief Returns the identity matrix
-         */
-        static constexpr mat3 identity() noexcept;
 
         /**
          * @brief Returns a pointer to the raw float array [col1, col2, col3]
@@ -187,6 +187,12 @@ namespace tavros::core::math
          * @brief Returns a string representation "[[c1.x, ..., c1.z], ..., [c3.x, ..., c3.z]]" with specified precision
          */
         string to_string(int precision = 3) const;
+
+    public:
+        /**
+         * @brief Returns the identity matrix
+         */
+        static constexpr mat3 identity() noexcept;
 
     public:
         vec3 cols[3];

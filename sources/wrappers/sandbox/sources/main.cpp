@@ -7,6 +7,7 @@
 #include <tavros/core/math/vec3.hpp>
 #include <tavros/core/math/vec2.hpp>
 #include <tavros/core/math/mat4.hpp>
+#include <tavros/core/math/euler3.hpp>
 
 #include <inttypes.h>
 
@@ -28,6 +29,13 @@ int main()
     tavros::core::math::vec4 v4(1.12345, 2.34567, 3.45678, 4.56789);
     tavros::core::math::vec3 v3(1.12345, 2.34567, 3.45678);
     tavros::core::math::vec2 v2(1.12345, 2.34567);
+    
+    
+    tavros::core::math::euler3 e(1.12345, 2.34567, 3.45678);
+    
+    e = e.normalized();
+
+    
 
     auto m1 = tavros::core::math::mat4(
         {0.09500612330541536, 0.4787112903697103, 0.7323588693174977, 0.531766923237322},

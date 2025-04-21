@@ -18,9 +18,9 @@ namespace tavros::core::math
     {
     public:
         /**
-         * @brief Default constructor. Leaves the contents uninitialized
+         * @brief Default constructor
          */
-        constexpr vec4() noexcept = default;
+        constexpr vec4() noexcept;
 
         /**
          * @brief Constructs all components with the same value
@@ -62,13 +62,13 @@ namespace tavros::core::math
         /**
          * @brief Multiplies this vector by a scalar
          */
-        vec4& operator*=(float a) noexcept;
+        vec4& operator*=(float scalar) noexcept;
 
         /**
          * @brief Divides this vector by a scalar
          * @note Asserts in debug if `a` is zero
          */
-        vec4& operator/=(float a) noexcept;
+        vec4& operator/=(float scalar) noexcept;
 
         /**
          * @brief Divides this vector component-wise by another
@@ -92,35 +92,45 @@ namespace tavros::core::math
         vec4 operator-(const vec4& other) const noexcept;
 
         /**
+         * @brief Multiplies this vector by a scalar
+         */
+        vec4 operator*(float scalar) const noexcept;
+
+        /**
          * @brief Multiplies this vector component-wise by another
          */
         vec4 operator*(const vec4& other) const noexcept;
 
         /**
-         * @brief Multiplies this vector by a scalar
-         */
-        vec4 operator*(float a) const noexcept;
-
-        /**
          * @brief Divides this vector by a scalar
          * @note Asserts in debug if `a` is zero
          */
-        vec4 operator/(float a) const noexcept;
+        vec4 operator/(float scalar) const noexcept;
 
         /**
-         * @brief Equality comparison between two vectors
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool operator==(const vec4& other) const noexcept;
+        bool operator==(const vec4& other) const = delete;
 
         /**
-         * @brief Inequality comparison between two vectors
+         * @brief Deleted comparison. Use `almost_equal` instead
          */
-        bool operator!=(const vec4& other) const noexcept;
+        bool operator!=(const vec4& other) const = delete;
 
         /**
-         * @brief Equality comparison between two vectors with a epsilon tolerance
+         * @brief Compares two sets of vec4 with a given tolerance.
+         *
+         * Returns true if the absolute difference between corresponding components
+         * of the two vec4 sets is less than or equal to the specified epsilon.
+         *
+         * This is useful for floating-point comparisons where exact equality is
+         * not reliable.
+         *
+         * @param other The other vec4 instance to compare with.
+         * @param epsilon The allowed difference per component. Default is k_epsilon6.
+         * @return true if all components are approximately equal.
          */
-        bool almost_equal(const vec4& other, float epsilon = k_vec_compare_epsilon) const noexcept;
+        bool almost_equal(const vec4& other, float epsilon = k_epsilon6) const noexcept;
 
         /**
          * @brief Dot product of two 4D vectors
@@ -158,7 +168,10 @@ namespace tavros::core::math
         float length() const noexcept;
 
         /**
-         * @brief Returns the normalized vector
+         * @brief Returns the normalized vector.
+         *
+         * @note Returns normalized vector. If the vector has zero length, this method returns vec4(0, 0, 0, 1)
+         * @note Asserts in debug if the vector has zero length
          */
         vec4 normalized() const noexcept;
 
@@ -193,6 +206,14 @@ namespace tavros::core::math
 
     static_assert(sizeof(vec4) == 16, "incorrect size");
     static_assert(alignof(vec4) == 16, "incorrect alignment");
+
+    inline constexpr vec4::vec4() noexcept
+        : x(0.0f)
+        , y(0.0f)
+        , z(0.0f)
+        , w(0.0f)
+    {
+    }
 
     inline constexpr vec4::vec4(float v) noexcept
         : x(v)
