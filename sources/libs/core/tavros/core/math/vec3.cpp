@@ -152,6 +152,27 @@ vec3 vec3::normalized() const noexcept
     return *this / len;
 }
 
+vec3 vec3::orthogonal() const noexcept
+{
+    if (std::abs(x) < std::abs(y)) {
+        if (std::abs(x) < std::abs(z)) {
+            // X minimal
+            return vec3(0.0f, -z, y);
+        } else {
+            // Z minimal
+            return vec3(-y, x, 0.0f);
+        }
+    } else {
+        if (std::abs(y) < std::abs(z)) {
+            // Y minimal
+            return vec3(-z, 0.0f, x);
+        } else {
+            // Z minimal
+            return vec3(-y, x, 0.0f);
+        }
+    }
+}
+
 const float* vec3::data() const noexcept
 {
     return &x;

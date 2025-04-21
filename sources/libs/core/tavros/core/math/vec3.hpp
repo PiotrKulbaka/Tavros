@@ -212,6 +212,16 @@ namespace tavros::core::math
         vec3 normalized() const noexcept;
 
         /**
+         * @brief Returns an arbitrary vector orthogonal to this one.
+         *
+         * The result is not normalized. The smallest component is selected to minimize precision loss.
+         * If this vector is zero, the result is undefined.
+         *
+         * @return A vector perpendicular to this one.
+         */
+        vec3 orthogonal() const noexcept;
+
+        /**
          * @brief Returns a pointer to the raw float array [x, y, z]
          */
         const float* data() const noexcept;
@@ -267,6 +277,5 @@ namespace tavros::core::math
         , z(z)
     {
     }
-
 
 } // namespace tavros::core::math
