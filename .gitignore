@@ -24,5 +24,4 @@ __pycache__/
 **/.DS_Store
 Thumbs.db
 
-# Custom
 env.toml
