@@ -118,6 +118,22 @@ vec2 vec2::normalized() const noexcept
     return *this / len;
 }
 
+vec2 vec2::min(const vec2& other) const noexcept
+{
+    return vec2(
+        std::min(x, other.x),
+        std::min(y, other.y)
+    );
+}
+
+vec2 vec2::max(const vec2& other) const noexcept
+{
+    return vec2(
+        std::max(x, other.x),
+        std::max(y, other.y)
+    );
+}
+
 const float* vec2::data() const noexcept
 {
     return &x;

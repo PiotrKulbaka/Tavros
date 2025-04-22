@@ -173,6 +173,24 @@ vec3 vec3::orthogonal() const noexcept
     }
 }
 
+vec3 vec3::min(const vec3& other) const noexcept
+{
+    return vec3(
+        std::min(x, other.x),
+        std::min(y, other.y),
+        std::min(z, other.z)
+    );
+}
+
+vec3 vec3::max(const vec3& other) const noexcept
+{
+    return vec3(
+        std::max(x, other.x),
+        std::max(y, other.y),
+        std::max(z, other.z)
+    );
+}
+
 const float* vec3::data() const noexcept
 {
     return &x;

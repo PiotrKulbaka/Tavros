@@ -129,6 +129,26 @@ vec4 vec4::normalized() const noexcept
     return *this / len;
 }
 
+vec4 vec4::min(const vec4& other) const noexcept
+{
+    return vec4(
+        std::min(x, other.x),
+        std::min(y, other.y),
+        std::min(z, other.z),
+        std::min(w, other.w)
+    );
+}
+
+vec4 vec4::max(const vec4& other) const noexcept
+{
+    return vec4(
+        std::max(x, other.x),
+        std::max(y, other.y),
+        std::max(z, other.z),
+        std::max(w, other.w)
+    );
+}
+
 const float* vec4::data() const noexcept
 {
     return &x;

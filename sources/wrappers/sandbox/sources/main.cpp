@@ -3,12 +3,7 @@
 #include <tavros/core/prelude.hpp>
 #include <tavros/core/timer.hpp>
 
-#include <tavros/core/math/vec4.hpp>
-#include <tavros/core/math/vec3.hpp>
-#include <tavros/core/math/vec2.hpp>
-#include <tavros/core/math/mat4.hpp>
-#include <tavros/core/math/euler3.hpp>
-#include <tavros/core/math/quat.hpp>
+#include <tavros/core/math.hpp>
 
 #include <inttypes.h>
 
@@ -43,6 +38,11 @@ int main()
     tavros::core::math::euler3 e(1.12345, 2.34567, 3.45678);
 
     e = e.normalized();
+    
+    
+    tavros::core::math::aabb3 aabb;
+    
+    
 
 
     auto m1 = tavros::core::math::mat4(
@@ -57,6 +57,18 @@ int main()
         {0.8310086921945496, 0.12320011246585638, 0.4066032555957193, 0.17018108655245479},
         {0.9896494206550167, 0.6357118323726472, 0.7001380882169104, 0.42994401718657616}
     );
+    
+    aabb.expand(m1.cols[0].xyz);
+    aabb.expand(m1.cols[1].xyz);
+    aabb.expand(m1.cols[2].xyz);
+    aabb.expand(m1.cols[3].xyz);
+    aabb.expand(m2.cols[0].xyz);
+    aabb.expand(m2.cols[1].xyz);
+    aabb.expand(m2.cols[2].xyz);
+    aabb.expand(m2.cols[3].xyz);
+    
+    logger.info("AABB min: %s", aabb.min.to_string().c_str());
+    logger.info("AABB max: %s", aabb.max.to_string().c_str());
 
     tavros::core::timer mtm;
 

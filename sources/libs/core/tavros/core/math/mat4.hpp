@@ -32,9 +32,9 @@ namespace tavros::core::math
     {
     public:
         /**
-         * @brief Default constructor. Leaves the contents uninitialized
+         * @brief Default constructor, constructs a identity matrix
          */
-        constexpr mat4() noexcept = default;
+        constexpr mat4() noexcept;
 
         /**
          * @brief Construct from 4 columns
@@ -193,11 +193,26 @@ namespace tavros::core::math
         static constexpr mat4 identity() noexcept;
 
     public:
-        vec4 cols[4];
+        union
+        {
+            struct
+            {
+                vec4 cols[4];
+            };
+            struct
+            {
+                vec4 col0, col1, col2, col3;
+            };
+        };
     };
 
     static_assert(sizeof(mat4) == 64, "incorrect size");
     static_assert(alignof(mat4) == 16, "incorrect alignment");
+
+    inline constexpr mat4::mat4() noexcept
+        : mat4(1.0f)
+    {
+    }
 
     inline constexpr mat4::mat4(const vec4& col0, const vec4& col1, const vec4& col2, const vec4& col3) noexcept
         : cols{col0, col1, col2, col3}

@@ -1,8 +1,6 @@
 #pragma once
 
-#include <tavros/core/math/base_math.hpp>
-#include <tavros/core/types.hpp>
-#include <tavros/core/string.hpp>
+#include <tavros/core/math/vec2.hpp>
 
 namespace tavros::core::math
 {
@@ -18,7 +16,7 @@ namespace tavros::core::math
     {
     public:
         /**
-         * @brief Default constructor
+         * @brief Default constructor, constructs a zero vector
          */
         constexpr vec3() noexcept;
 
@@ -222,6 +220,16 @@ namespace tavros::core::math
         vec3 orthogonal() const noexcept;
 
         /**
+         * @brief Returns the minimum of this and another vector component-wise
+         */
+        vec3 min(const vec3& other) const noexcept;
+
+        /**
+         * @brief Returns the maximum of this and another vector component-wise
+         */
+        vec3 max(const vec3& other) const noexcept;
+
+        /**
          * @brief Returns a pointer to the raw float array [x, y, z]
          */
         const float* data() const noexcept;
@@ -239,6 +247,7 @@ namespace tavros::core::math
     public:
         union
         {
+            vec2 xy;
             struct
             {
                 float x, y, z;

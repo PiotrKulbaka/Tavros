@@ -18,7 +18,7 @@ namespace tavros::core::math
     {
     public:
         /**
-         * @brief Default constructor
+         * @brief Default constructor, constructs a zero vector
          */
         constexpr vec2() noexcept;
 
@@ -186,6 +186,16 @@ namespace tavros::core::math
          * @note Asserts in debug if the vector has zero length
          */
         vec2 normalized() const noexcept;
+
+        /**
+         * @brief Returns the minimum of this and another vector component-wise
+         */
+        vec2 min(const vec2& other) const noexcept;
+
+        /**
+         * @brief Returns the maximum of this and another vector component-wise
+         */
+        vec2 max(const vec2& other) const noexcept;
 
         /**
          * @brief Returns a pointer to the raw float array [x, y]
