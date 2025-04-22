@@ -16,7 +16,7 @@ def main(root_dir) -> int:
 
     if env_file_path.exists():
         cfg = Config(env_file_path)
-    else:
+    elif not args['setup']:
         print("The `env.toml` file not found. Use `./tavros.py setup` to initialize the project\n")
         print(doc)
         return 1
