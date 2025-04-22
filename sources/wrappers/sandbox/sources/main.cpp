@@ -5,6 +5,7 @@
 
 #include <tavros/core/math.hpp>
 #include <tavros/core/geometry/aabb3.hpp>
+#include <tavros/core/geometry/sphere.hpp>
 
 #include <inttypes.h>
 
@@ -41,6 +42,15 @@ int main()
     e = e.normalized();
 
 
+    auto sph = tavros::geometry::sphere(tavros::math::vec3(10, 10, 10), 5);
+    auto v_inside_sph = tavros::math::vec3(9, 9, 9);
+    
+    auto sph_dist1 = sph.distance(v);
+    auto sph_dist2 = sph.distance(v_inside_sph);
+    
+    logger.info("Dist to sphere1: %f", sph_dist1);
+    logger.info("Dist to sphere2: %f", sph_dist2);
+    
     tavros::geometry::aabb3 aabb;
 
 

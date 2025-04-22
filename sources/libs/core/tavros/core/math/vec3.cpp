@@ -142,6 +142,11 @@ float vec3::length() const noexcept
     return std::sqrt(dot(*this));
 }
 
+float vec3::squared_length() const noexcept
+{
+    return dot(*this);
+}
+
 vec3 vec3::normalized() const noexcept
 {
     auto len = length();

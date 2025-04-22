@@ -202,6 +202,11 @@ namespace tavros::math
         float length() const noexcept;
 
         /**
+         * @brief Returns the squared length of the vector
+         */
+        float squared_length() const noexcept;
+
+        /**
          * @brief Returns the normalized vector
          *
          * @note Returns normalized vector. If the vector has zero length, this method returns vec4(0, 0, 1)

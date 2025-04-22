@@ -35,6 +35,11 @@ set(TAV_CORE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb2.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb3.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb3.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/intersections.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/plane.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/plane.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/sphere.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/sphere.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/logger/logger.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/logger/logger.hpp
