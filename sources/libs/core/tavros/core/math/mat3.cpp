@@ -2,7 +2,7 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-using namespace tavros::core::math;
+using namespace tavros::math;
 
 vec3& mat3::operator[](size_t i) noexcept
 {
@@ -179,5 +179,5 @@ tavros::core::string mat3::to_string(int precision) const
         precision, cols[2].x, precision, cols[2].y, precision, cols[2].z
     );
     // clang-format on
-    return string(buffer);
+    return tavros::core::string(buffer);
 }

@@ -2,7 +2,7 @@
 
 #include <tavros/core/math/vec3.hpp>
 
-namespace tavros::core::math
+namespace tavros::math
 {
 
     /**
@@ -186,7 +186,7 @@ namespace tavros::core::math
         /**
          * @brief Returns a string representation "[[c1.x, ..., c1.z], ..., [c3.x, ..., c3.z]]" with specified precision
          */
-        string to_string(int precision = 3) const;
+        core::string to_string(int precision = 3) const;
 
     public:
         /**
@@ -220,4 +220,4 @@ namespace tavros::core::math
         return mat3(1.0f);
     }
 
-} // namespace tavros::core::math
+} // namespace tavros::math

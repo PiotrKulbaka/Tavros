@@ -2,7 +2,7 @@
 
 #include <tavros/core/math/vec3.hpp>
 
-namespace tavros::core::math
+namespace tavros::math
 {
 
     /**
@@ -148,7 +148,7 @@ namespace tavros::core::math
         /**
          * @brief Returns a string representation "[roll, pitch, yaw]" with specified precision
          */
-        string to_string(int precision = 3) const;
+        core::string to_string(int precision = 3) const;
 
     public:
         union
@@ -187,4 +187,4 @@ namespace tavros::core::math
     {
     }
 
-} // namespace tavros::core::math
+} // namespace tavros::math

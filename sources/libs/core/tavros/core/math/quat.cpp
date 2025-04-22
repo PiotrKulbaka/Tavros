@@ -2,7 +2,7 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-using namespace tavros::core::math;
+using namespace tavros::math;
 
 quat::quat(const euler3& euler) noexcept
 {
@@ -202,7 +202,7 @@ tavros::core::string quat::to_string(int precision) const
 {
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "[%.*f, %.*f, %.*f, %.*f]", precision, x, precision, y, precision, z, precision, w);
-    return string(buffer);
+    return tavros::core::string(buffer);
 }
 
 constexpr quat quat::identity() noexcept

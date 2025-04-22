@@ -2,7 +2,7 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-using namespace tavros::core::math;
+using namespace tavros::math;
 
 float vec4::operator[](size_t index) const noexcept
 {
@@ -163,5 +163,5 @@ tavros::core::string vec4::to_string(int precision) const
 {
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "[%.*f, %.*f, %.*f, %.*f]", precision, x, precision, y, precision, z, precision, w);
-    return string(buffer);
+    return tavros::core::string(buffer);
 }

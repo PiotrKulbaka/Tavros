@@ -2,7 +2,7 @@
 
 #include <tavros/core/debug/assert.hpp>
 
-namespace tavros::core::math
+namespace tavros::math
 {
 
     float euler3::operator[](size_t index) const noexcept
@@ -90,11 +90,11 @@ namespace tavros::core::math
         return vec.data();
     }
 
-    tavros::core::string euler3::to_string(int precision) const
+    core::string euler3::to_string(int precision) const
     {
         char buffer[64];
         snprintf(buffer, sizeof(buffer), "[%.*f, %.*f, %.*f]", precision, roll, precision, pitch, precision, yaw);
-        return string(buffer);
+        return core::string(buffer);
     }
 
-} // namespace tavros::core::math
+} // namespace tavros::math

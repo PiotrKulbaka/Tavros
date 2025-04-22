@@ -2,7 +2,7 @@
 
 #include <cmath>
 
-namespace tavros::core::math
+namespace tavros::math
 {
     constexpr double k_pi_d = 3.1415926535897932384626433832795;
     constexpr float  k_epsilon6 = 1e-6f;
@@ -35,4 +35,4 @@ namespace tavros::core::math
         return angle - k_pi;
     }
 
-} // namespace tavros::core::math
+} // namespace tavros::math

@@ -2,7 +2,7 @@
 
 #include <tavros/core/math/vec2.hpp>
 
-    namespace tavros::core::math
+namespace tavros::geometry
 {
     /**
      * @brief Axis-aligned bounding box in 2D space.
@@ -20,17 +20,17 @@
          * @param min_point Lower-left corner.
          * @param max_point Upper-right corner.
          */
-        aabb2(const vec2& min_point, const vec2& max_point) noexcept;
+        aabb2(const math::vec2& min_point, const math::vec2& max_point) noexcept;
 
         /**
          * @brief Returns the center point of the AABB.
          */
-        vec2 center() const noexcept;
+        math::vec2 center() const noexcept;
 
         /**
          * @brief Returns the size (width and height) of the AABB.
          */
-        vec2 size() const noexcept;
+        math::vec2 size() const noexcept;
 
         /**
          * @brief Returns the area of the AABB.
@@ -41,7 +41,7 @@
          * @brief Checks if the AABB contains a point.
          * @param point Point to check.
          */
-        bool contains_point(const vec2& point) const noexcept;
+        bool contains_point(const math::vec2& point) const noexcept;
 
         /**
          * @brief Checks if this AABB intersects with another AABB.
@@ -53,7 +53,7 @@
          * @brief Expands the AABB to include a point.
          * @param point Point to include.
          */
-        void expand(const vec2& point) noexcept;
+        void expand(const math::vec2& point) noexcept;
 
         /**
          * @brief Returns a new AABB that merges this and another AABB.
@@ -76,11 +76,11 @@
          * @brief Returns distance from a point to the AABB (0 if inside).
          * @param point Point to check.
          */
-        float distance(const vec2& point) const noexcept;
+        float distance(const math::vec2& point) const noexcept;
 
     public:
-        vec2 min;
-        vec2 max;
+        math::vec2 min;
+        math::vec2 max;
     };
 
-} // namespace tavros::core::math
+} // namespace tavros::geometry

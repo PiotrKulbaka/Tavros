@@ -31,14 +31,15 @@ set(TAV_CORE_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/unreachable.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/verify.hpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb2.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb2.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb3.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb3.hpp
+
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/logger/logger.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/logger/logger.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/logger/severity_level.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/aabb2.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/aabb2.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/aabb3.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/aabb3.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/base_math.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/euler3.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/euler3.hpp

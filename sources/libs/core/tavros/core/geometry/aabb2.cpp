@@ -1,8 +1,9 @@
-#include <tavros/core/math/aabb2.hpp>
+#include <tavros/core/geometry/aabb2.hpp>
 
 #include <limits>
 
-using namespace tavros::core::math;
+using namespace tavros::geometry;
+using namespace tavros::math;
 
 aabb2::aabb2() noexcept
     : min(std::numeric_limits<float>::max())

@@ -2,7 +2,7 @@
 
 #include <tavros/core/math/vec2.hpp>
 
-namespace tavros::core::math
+namespace tavros::math
 {
 
     /**
@@ -242,7 +242,7 @@ namespace tavros::core::math
         /**
          * @brief Returns a string representation "[x, y, z]" with specified precision
          */
-        string to_string(int precision = 3) const;
+        core::string to_string(int precision = 3) const;
 
     public:
         union
@@ -287,4 +287,4 @@ namespace tavros::core::math
     {
     }
 
-} // namespace tavros::core::math
+} // namespace tavros::math
