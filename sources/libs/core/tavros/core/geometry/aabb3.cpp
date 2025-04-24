@@ -40,28 +40,21 @@ bool aabb3::contains_point(const vec3& point) const noexcept
         && (point.z >= min.z && point.z <= max.z);
 }
 
-bool aabb3::intersects(const aabb3& other) const noexcept
-{
-    return (min.x <= other.max.x && max.x >= other.min.x)
-        && (min.y <= other.max.y && max.y >= other.min.y)
-        && (min.z <= other.max.z && max.z >= other.min.z);
-}
-
 void aabb3::expand(const vec3& point) noexcept
 {
-    min = min.min(point);
-    max = max.max(point);
+    min = tavros::math::min(this->min, point);
+    max = tavros::math::max(max, point);
 }
 
 aabb3 aabb3::merged(const aabb3& other) const noexcept
 {
-    return aabb3(min.min(other.min), max.max(other.max));
+    return aabb3(tavros::math::min(min, other.min), tavros::math::max(max, other.max));
 }
 
 void aabb3::merge(const aabb3& other) noexcept
 {
-    min = min.min(other.min);
-    max = max.max(other.max);
+    min = tavros::math::min(min, other.min);
+    max = tavros::math::max(max, other.max);
 }
 
 void aabb3::reset() noexcept
@@ -72,9 +65,9 @@ void aabb3::reset() noexcept
 
 float aabb3::distance(const vec3& point) const noexcept
 {
-    float dx = std::max({min.x - point.x, 0.0f, point.x - max.x});
-    float dy = std::max({min.y - point.y, 0.0f, point.y - max.y});
-    float dz = std::max({min.z - point.z, 0.0f, point.z - max.z});
+    float dx = tavros::math::max(min.x - point.x, 0.0f, point.x - max.x);
+    float dy = tavros::math::max(min.y - point.y, 0.0f, point.y - max.y);
+    float dz = tavros::math::max(min.z - point.z, 0.0f, point.z - max.z);
     return std::sqrt(dx * dx + dy * dy + dz * dz);
 }
 

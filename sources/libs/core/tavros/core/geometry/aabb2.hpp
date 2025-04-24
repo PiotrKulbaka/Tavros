@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/math/vec2.hpp>
+#include <tavros/core/math.hpp>
 
 namespace tavros::geometry
 {
@@ -42,12 +42,6 @@ namespace tavros::geometry
          * @param point Point to check.
          */
         bool contains_point(const math::vec2& point) const noexcept;
-
-        /**
-         * @brief Checks if this AABB intersects with another AABB.
-         * @param other AABB to check against.
-         */
-        bool intersects(const aabb2& other) const noexcept;
 
         /**
          * @brief Expands the AABB to include a point.

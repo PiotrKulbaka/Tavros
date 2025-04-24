@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/math/vec3.hpp>
+#include <tavros/core/math.hpp>
 
 namespace tavros::geometry
 {
@@ -96,7 +96,7 @@ namespace tavros::geometry
 
     inline constexpr plane::plane(const math::vec3& normal, const math::vec3& point) noexcept
         : normal(normal)
-        , d(-normal.dot(point))
+        , d(-math::dot(normal, point))
     {
     }
 

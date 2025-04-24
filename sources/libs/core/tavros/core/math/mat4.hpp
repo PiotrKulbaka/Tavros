@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/math/vec4.hpp>
+#include <tavros/core/math/quat.hpp>
 
 namespace tavros::math
 {
@@ -31,166 +32,59 @@ namespace tavros::math
     class mat4
     {
     public:
-        /**
-         * @brief Default constructor, constructs a identity matrix
-         */
-        constexpr mat4() noexcept;
+        /// @brief Returns the identity matrix
+        static constexpr mat4 identity() noexcept;
 
-        /**
-         * @brief Construct from 4 columns
-         */
-        constexpr explicit mat4(const vec4& col0, const vec4& col1, const vec4& col2, const vec4& col3) noexcept;
-
-        /**
-         * @brief Construct from scalar (diagonal matrix)
-         */
-        constexpr explicit mat4(float diag) noexcept;
-
-        /**
-         * @brief Accesses a column by index [0..3]
-         * @note Asserts in debug if index is out of bounds
-         */
-        vec4& operator[](size_t i) noexcept;
-
-        /**
-         * @brief Accesses a column by index [0..3]
-         * @note Asserts in debug if index is out of bounds
-         */
-        const vec4& operator[](size_t i) const noexcept;
-
-        /**
-         * @brief Deleted comparison. Use `almost_equal` instead
-         */
-        bool operator==(const mat4& m) const = delete;
-
-        /**
-         * @brief Deleted comparison. Use `almost_equal` instead
-         */
-        bool operator!=(const mat4& m) const = delete;
-
-        /**
-         * @brief Compares two sets of mat4 with a given tolerance.
-         *
-         * Returns true if the absolute difference between corresponding components
-         * of the two mat4 sets is less than or equal to the specified epsilon.
-         *
-         * This is useful for floating-point comparisons where exact equality is
-         * not reliable.
-         *
-         * @param other The other mat4 instance to compare with.
-         * @param epsilon The allowed difference per component. Default is k_epsilon6.
-         * @return true if all components are approximately equal.
-         */
-        bool almost_equal(const mat4& m, float epsilon = k_epsilon6) const noexcept;
-
-        /**
-         * @brief Returns the negated matrix (element-wise negation)
-         */
-        mat4 operator-() const noexcept;
-
-        /**
-         * @brief Multiplies the matrix by a scalar
-         */
-        mat4 operator*(float scalar) const noexcept;
-
-        /**
-         * @brief Multiplies the matrix with a 4D vector
-         */
-        vec4 operator*(const vec4& v) const noexcept;
-
-        /**
-         * @brief Matrix multiplication
-         */
-        mat4 operator*(const mat4& m) const noexcept;
-
-        /**
-         * @brief Adds two matrices element-wise
-         */
-        mat4 operator+(const mat4& m) const noexcept;
-
-        /**
-         * @brief Subtracts two matrices element-wise
-         */
-        mat4 operator-(const mat4& m) const noexcept;
-
-        /**
-         * @brief In-place scalar multiplication
-         */
-        mat4& operator*=(const float scalar) noexcept;
-
-        /**
-         * @brief In-place matrix multiplication
-         */
-        mat4& operator*=(const mat4& m) noexcept;
-
-        /**
-         * @brief In-place element-wise addition
-         */
-        mat4& operator+=(const mat4& m) noexcept;
-
-        /**
-         * @brief In-place element-wise subtraction
-         */
-        mat4& operator-=(const mat4& m) noexcept;
-
-        /**
-         * @brief Transpose matrix
-         */
-        mat4 transpose() const noexcept;
-
-        /**
-         * @brief Computes the determinant of the matrix.
-         *
-         * The determinant is a scalar value that encodes certain properties of the matrix:
-         * - If the determinant is zero, the matrix is **singular** and **not invertible**.
-         * - A non-zero determinant implies that the matrix can be inverted and preserves volume (up to scaling).
-         *
-         * This function is commonly used as a prerequisite check before attempting matrix inversion.
-         *
-         * @note This operation involves multiple multiplications and additions; it is relatively expensive.
-         *
-         * @return A floating-point scalar representing the determinant of the matrix.
-         */
-        float determinant() const noexcept;
-
-        /**
-         * @brief Computes and returns the inverse of this matrix.
-         *
-         * Matrix inversion is used to reverse transformations or change between coordinate spaces
-         * (e.g., world-space to view-space). This method performs a full inverse of the 4x4 matrix.
-         *
-         * Internally, the function uses the adjugate and determinant method:
-         * - If the determinant is zero, the matrix is not invertible and the returned result is zero matrix.
-         * - It is the caller's responsibility to check for invertibility using `determinant()` if safety is required.
-         *
-         * @warning Zero matrix is returned if the matrix is singular (determinant == 0)
-         * @note This operation involves multiple multiplications and additions; it is relatively expensive.
-         *
-         * @return The inverse of this matrix.
-         * @see determinant()
-         */
-        mat4 inverse() const noexcept;
-
-        /**
-         * @brief Returns a pointer to the raw float array [col1, col2, col3, col4]
-         */
-        const float* data() const noexcept;
-
-        /**
-         * @brief Returns a pointer to the raw float array [col1, col2, col3, col4]
-         */
-        float* data() noexcept;
-
-        /**
-         * @brief Returns a string representation "[[c1.x, ..., c1.w], ..., [c4.x, ..., c4.w]]" with specified precision
-         */
-        core::string to_string(int precision = 3) const;
+        /// @brief Construct matrix from quaternion
+        static mat4 from_quat(const quat& q) noexcept;
 
     public:
-        /**
-         * @brief Returns the identity matrix
-         */
-        static constexpr mat4 identity() noexcept;
+        /// @brief Default constructor, constructs a zero matrix
+        constexpr mat4() noexcept;
+
+        /// @brief Construct matrix from 16 components
+        constexpr explicit mat4(
+            float a00, float a01, float a02, float a03,
+            float a10, float a11, float a12, float a13,
+            float a20, float a21, float a22, float a23,
+            float a30, float a31, float a32, float a33
+        ) noexcept;
+
+        /// @brief Construct from 4 columns
+        constexpr explicit mat4(const vec4& col0, const vec4& col1, const vec4& col2, const vec4& col3) noexcept;
+
+        /// @brief Construct from scalar (diagonal matrix)
+        constexpr explicit mat4(float diag) noexcept;
+
+        /// @brief Accesses a component by index [0..3]. Asserts in debug if index is out of bounds
+        constexpr vec4& operator[](size_t i) noexcept;
+
+        /// @brief Accesses a component by index [0..3]. Asserts in debug if index is out of bounds
+        constexpr const vec4& operator[](size_t i) const noexcept;
+
+        /// @brief Deleted comparison. Use `almost_equal` instead
+        bool operator==(const mat4& m) const = delete;
+
+        /// @brief Deleted comparison. Use `almost_equal` instead
+        bool operator!=(const mat4& m) const = delete;
+
+        /// @brief Adds another matrix to this one
+        constexpr mat4& operator+=(const mat4& m) noexcept;
+
+        /// @brief Subtracts another matrix from this one
+        constexpr mat4& operator-=(const mat4& m) noexcept;
+
+        /// @brief Multiplies this matrix by another
+        constexpr mat4& operator*=(const mat4& m) noexcept;
+
+        /// @brief Multiplies this matrix by a scalar
+        constexpr mat4& operator*=(float s) noexcept;
+
+        /// @brief Returns a pointer to the raw float array [col1, col2, col3, col4]
+        constexpr const float* data() const noexcept;
+
+        /// @brief Returns a pointer to the raw float array [col1, col2, col3, col4]
+        constexpr float* data() noexcept;
 
     public:
         union
@@ -206,32 +100,18 @@ namespace tavros::math
         };
     };
 
-    static_assert(sizeof(mat4) == 64, "incorrect size");
-    static_assert(alignof(mat4) == 16, "incorrect alignment");
 
-    inline constexpr mat4::mat4() noexcept
-        : mat4(1.0f)
-    {
-    }
-
-    inline constexpr mat4::mat4(const vec4& col0, const vec4& col1, const vec4& col2, const vec4& col3) noexcept
-        : cols{col0, col1, col2, col3}
-    {
-    }
-
-    inline constexpr mat4::mat4(float diag) noexcept
-        : cols{
-              vec4(diag, 0.0f, 0.0f, 0.0f),
-              vec4(0.0f, diag, 0.0f, 0.0f),
-              vec4(0.0f, 0.0f, diag, 0.0f),
-              vec4(0.0f, 0.0f, 0.0f, diag)
-          }
-    {
-    }
-
-    inline constexpr mat4 mat4::identity() noexcept
-    {
-        return mat4(1.0f);
-    }
+    constexpr mat4 operator-(const mat4& m) noexcept;
+    constexpr mat4 operator+(const mat4& a, const mat4& b) noexcept;
+    constexpr mat4 operator-(const mat4& a, const mat4& b) noexcept;
+    constexpr mat4 operator*(const mat4& a, const mat4& b) noexcept;
+    constexpr vec4 operator*(const mat4& m, const vec4& v) noexcept;
+    constexpr vec4 operator*(const vec4& v, const mat4& m) noexcept;
+    constexpr mat4 operator*(const mat4& m, float s) noexcept;
+    constexpr mat4 operator*(float s, const mat4& m) noexcept;
+    constexpr mat4 operator/(const mat4& m, float s) noexcept;
+    constexpr mat4 operator/(float s, const mat4& m) noexcept;
 
 } // namespace tavros::math
+
+#include <tavros/core/math/mat4.inl>

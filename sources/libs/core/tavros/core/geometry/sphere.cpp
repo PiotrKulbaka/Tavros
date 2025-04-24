@@ -5,21 +5,21 @@ using namespace tavros::math;
 
 float sphere::distance(const vec3& point) const noexcept
 {
-    return (point - center).length() - radius;
+    return length(point - center) - radius;
 }
 
 float sphere::squared_distance(const vec3& point) const noexcept
 {
-    return (point - center).squared_length() - radius * radius;
+    return squared_length(point - center) - radius * radius;
 }
 
 vec3 sphere::project_point(const vec3& point) const noexcept
 {
     const auto dir = point - center;
-    const auto len = dir.length();
+    const auto len = length(dir);
 
     if (len < radius) {
-        return center + dir.normalized() * radius;
+        return center + normalize(dir) * radius;
     }
 
     if (len == 0.0f) {

@@ -4,6 +4,7 @@
 
 namespace tavros::math
 {
+    class quat;
 
     /**
      * @brief Represents a set of Euler angles in radians.
@@ -25,130 +26,44 @@ namespace tavros::math
     class euler3
     {
     public:
-        /**
-         * @brief Default constructor
-         */
+        static euler3 from_quat(const quat& q) noexcept;
+
+    public:
+        /// @brief Default constructor
         constexpr euler3() noexcept;
 
-        /**
-         * @brief Constructs a euler3 from individual components
-         */
+        /// @brief Constructs a euler3 from individual components
         constexpr euler3(float roll, float pitch, float yaw) noexcept;
 
-        /**
-         * @brief Constructs a euler3 from a vec3
-         */
+        /// @brief Constructs a euler3 from a vec3
         explicit constexpr euler3(const vec3& v) noexcept;
 
-        /**
-         * @brief Accesses a component by index [0..2]
-         * @note Asserts in debug if index is out of bounds
-         */
-        float operator[](size_t index) const noexcept;
+        /// Accesses a component by index [0..2]. Asserts in debug if index is out of bounds
+        constexpr float operator[](size_t index) const noexcept;
 
-        /**
-         * @brief Accesses a component by index [0..2]
-         * @note Asserts in debug if index is out of bounds
-         */
-        float& operator[](size_t index) noexcept;
+        /// Accesses a component by index [0..2]. Asserts in debug if index is out of bounds
+        constexpr float& operator[](size_t index) noexcept;
 
-        /**
-         * @brief Adds another angles to this one
-         */
-        euler3& operator+=(const euler3& other) noexcept;
-
-        /**
-         * @brief Subtracts another angles from this one
-         */
-        euler3& operator-=(const euler3& other) noexcept;
-
-        /**
-         * @brief Multiplies this angles by a scalar
-         */
-        euler3& operator*=(float scalar) noexcept;
-
-        /**
-         * @brief Divides this angles by a scalar
-         * @note Asserts in debug if `a` is zero
-         */
-        euler3& operator/=(float scalar) noexcept;
-
-        /**
-         * @brief Returns the negative of this angles
-         */
-        euler3 operator-() const noexcept;
-
-        /**
-         * @brief Adds another angles to this one
-         */
-        euler3 operator+(const euler3& other) const noexcept;
-
-        /**
-         * @brief Subtracts another angles from this one
-         */
-        euler3 operator-(const euler3& other) const noexcept;
-
-        /**
-         * @brief Multiplies this vector by a scalar
-         */
-        euler3 operator*(float scalar) const noexcept;
-
-        /**
-         * @brief Divides this angles by a scalar
-         * @note Asserts in debug if `a` is zero
-         */
-        euler3 operator/(float scalar) const noexcept;
-
-        /**
-         * @brief Deleted comparison. Use `almost_equal` instead
-         */
+        /// Deleted comparison. Use `almost_equal` instead
         bool operator==(const euler3& other) const = delete;
 
-        /**
-         * @brief Deleted comparison. Use `almost_equal` instead
-         */
+        /// Deleted comparison. Use `almost_equal` instead
         bool operator!=(const euler3& other) const = delete;
 
-        /**
-         * @brief Compares two sets of Euler angles with a given tolerance.
-         *
-         * Returns true if the absolute difference between corresponding components
-         * of the two angle sets is less than or equal to the specified epsilon.
-         *
-         * This is useful for floating-point comparisons where exact equality is
-         * not reliable.
-         *
-         * @param other The other euler3 instance to compare with.
-         * @param epsilon The allowed difference per component. Default is k_epsilon6.
-         * @return true if all components are approximately equal.
-         */
-        bool almost_equal(const euler3& other, float epsilon = k_epsilon6) const noexcept;
+        /// @brief Adds another angles to this one
+        constexpr euler3& operator+=(const euler3& other) noexcept;
 
-        /**
-         * @brief Returns a normalized version of the angles.
-         *
-         * Each angle is normalized into the range [-π, π], wrapping values that exceed
-         * this range. This is often useful to ensure consistency and prevent issues
-         * during interpolation or comparison.
-         *
-         * @return A new euler3 instance with normalized components.
-         */
-        euler3 normalized() const noexcept;
+        /// @brief Subtracts another angles from this one
+        constexpr euler3& operator-=(const euler3& other) noexcept;
 
-        /**
-         * @brief Returns a pointer to the raw float array [roll, pitch, yaw]
-         */
-        const float* data() const noexcept;
+        /// @brief Multiplies this angles by a scalar
+        constexpr euler3& operator*=(float scalar) noexcept;
 
-        /**
-         * @brief Returns a pointer to the raw float array [roll, pitch, yaw]
-         */
-        float* data() noexcept;
+        /// @brief Returns a pointer to the raw float array [roll, pitch, yaw]
+        constexpr const float* data() const noexcept;
 
-        /**
-         * @brief Returns a string representation "[roll, pitch, yaw]" with specified precision
-         */
-        core::string to_string(int precision = 3) const;
+        /// @brief Returns a pointer to the raw float array [roll, pitch, yaw]
+        constexpr float* data() noexcept;
 
     public:
         union
@@ -163,28 +78,17 @@ namespace tavros::math
         };
     };
 
-    static_assert(sizeof(euler3) == 12, "incorrect size");
-    static_assert(alignof(euler3) == 4, "incorrect alignment");
 
-    inline constexpr euler3::euler3() noexcept
-        : roll(0.0f)
-        , pitch(0.0f)
-        , yaw(0.0f)
-    {
-    }
-
-    inline constexpr euler3::euler3(float roll, float pitch, float yaw) noexcept
-        : roll(roll)
-        , pitch(pitch)
-        , yaw(yaw)
-    {
-    }
-
-    inline constexpr euler3::euler3(const vec3& v) noexcept
-        : roll(v.x)
-        , pitch(v.y)
-        , yaw(v.z)
-    {
-    }
+    constexpr euler3 operator-(const euler3& e) noexcept;
+    constexpr euler3 operator+(const euler3& a, const euler3& b) noexcept;
+    constexpr euler3 operator-(const euler3& a, const euler3& b) noexcept;
+    constexpr euler3 operator*(const euler3& a, const euler3& b) noexcept;
+    constexpr euler3 operator*(const euler3& e, float s) noexcept;
+    constexpr euler3 operator*(float s, const euler3& e) noexcept;
+    constexpr euler3 operator/(const euler3& a, const euler3& b) noexcept;
+    constexpr euler3 operator/(const euler3& e, float s) noexcept;
+    constexpr euler3 operator/(float s, const euler3& e) noexcept;
 
 } // namespace tavros::math
+
+#include <tavros/core/math/euler3.inl>

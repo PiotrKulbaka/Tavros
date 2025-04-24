@@ -4,8 +4,7 @@
 #include <tavros/core/timer.hpp>
 
 #include <tavros/core/math.hpp>
-#include <tavros/core/geometry/aabb3.hpp>
-#include <tavros/core/geometry/sphere.hpp>
+#include <tavros/core/math/utils/make_string.hpp>
 
 #include <inttypes.h>
 
@@ -30,29 +29,7 @@ int main()
 
 
     tavros::math::vec3 v(0, 100, 100);
-    tavros::math::quat q(tavros::math::vec3(1.0, 0.0, 0.0), 3.1415 / 2);
-    auto               rotated = q.rotate_point(v);
-
-    logger.info("Initial point vec3(): %s", v.to_string(1).c_str());
-    logger.info("Rotated point vec3(): %s", rotated.to_string(1).c_str());
-
-
-    tavros::math::euler3 e(1.12345, 2.34567, 3.45678);
-
-    e = e.normalized();
-
-
-    auto sph = tavros::geometry::sphere(tavros::math::vec3(10, 10, 10), 5);
-    auto v_inside_sph = tavros::math::vec3(9, 9, 9);
-    
-    auto sph_dist1 = sph.distance(v);
-    auto sph_dist2 = sph.distance(v_inside_sph);
-    
-    logger.info("Dist to sphere1: %f", sph_dist1);
-    logger.info("Dist to sphere2: %f", sph_dist2);
-    
-    tavros::geometry::aabb3 aabb;
-
+    tavros::math::quat q = tavros::math::quat::from_axis_angle(tavros::math::vec3(1.0, 0.0, 0.0), 3.1415 / 2);
 
     auto m1 = tavros::math::mat4(
         {0.09500612330541536, 0.4787112903697103, 0.7323588693174977, 0.531766923237322},
@@ -67,42 +44,34 @@ int main()
         {0.9896494206550167, 0.6357118323726472, 0.7001380882169104, 0.42994401718657616}
     );
 
-    aabb.expand(m1.cols[0].xyz);
-    aabb.expand(m1.cols[1].xyz);
-    aabb.expand(m1.cols[2].xyz);
-    aabb.expand(m1.cols[3].xyz);
-    aabb.expand(m2.cols[0].xyz);
-    aabb.expand(m2.cols[1].xyz);
-    aabb.expand(m2.cols[2].xyz);
-    aabb.expand(m2.cols[3].xyz);
+    auto ax = q.axis();
 
-    logger.info("AABB min: %s", aabb.min.to_string().c_str());
-    logger.info("AABB max: %s", aabb.max.to_string().c_str());
+    logger.info("Axis: %s", tavros::core::make_string(ax, 3).c_str());
 
     tavros::core::timer mtm;
 
     mtm.start();
-    auto inv1 = m1.inverse();
+    auto inv1 = tavros::math::inverse(m1);
     auto mat1_inv_time = mtm.elapsed<ns>();
 
     logger.info("Mat1 inverse() ns time: %" PRIu64, mat1_inv_time);
 
     mtm.start();
-    auto inv2 = m2.inverse();
+    auto inv2 = tavros::math::inverse(m2);
     auto mat2_inv_time = mtm.elapsed<ns>();
 
     logger.info("Mat2 inverse() ns time: %" PRIu64, mat2_inv_time);
 
     auto res1 = m1 * inv1;
 
-    logger.info("Mat1 * inv1: %s", res1.to_string(5).c_str());
+    logger.info("Mat1 * inv1: %s", tavros::core::make_string(res1).c_str());
 
     auto res2 = m2 * inv2;
-    logger.info("Mat2 * inv2: %s", res2.to_string(5).c_str());
+    logger.info("Mat2 * inv2: %s", tavros::core::make_string(res2).c_str());
 
 
     constexpr auto identity = tavros::math::mat4::identity();
-    auto           is_eq = res2.almost_equal(identity, 1e-5f);
+    auto           is_eq = tavros::math::almost_equal(res2, identity, 1e-5f);
 
     logger.info("Mat2 is eq to identity: %s", (is_eq ? "Yes" : "No"));
 
@@ -117,9 +86,9 @@ int main()
     logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
     timer.start();
 
-    auto s4 = v4.to_string();
-    auto s3 = v3.to_string();
-    auto s2 = v2.to_string();
+    auto s4 = tavros::core::make_string(v4);
+    auto s3 = tavros::core::make_string(v3);
+    auto s2 = tavros::core::make_string(v2);
     logger.info("Elapsed ns: %" PRIu64, timer.elapsed<ns>());
     timer.start();
 

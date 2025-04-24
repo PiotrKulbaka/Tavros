@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/math/vec3.hpp>
+#include <tavros/core/math.hpp>
 
 namespace tavros::geometry
 {
