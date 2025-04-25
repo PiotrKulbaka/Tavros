@@ -15,7 +15,7 @@ namespace tavros::math
      * Equivalent to applying the rotation represented by this quaternion to the point.
      * Assumes left-handed coordinate system.
      */
-    vec3 rotate_point(const quat& q, const vec3& p) noexcept
+    inline constexpr vec3 rotate_point(const quat& q, const vec3& p) noexcept
     {
         auto inv = inverse(q);
         auto qp = quat(p.x, p.y, p.z, 0);

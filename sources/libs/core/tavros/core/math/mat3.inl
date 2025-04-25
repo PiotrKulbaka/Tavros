@@ -122,9 +122,6 @@ namespace tavros::math
         mat3 result;
         for (size_t col = 0; col < 3; ++col) {
             for (size_t row = 0; row < 3; ++row) {
-                // Compute the element at [row][col] as a dot product of:
-                // - the 'row'-th row of this matrix
-                // - the 'col'-th column of matrix 'm'
                 // Note: in column-major layout, rows are accessed as [col][row]
                 result[col][row] =
                     a[0][row] * b[col][0] + a[1][row] * b[col][1] + a[2][row] * b[col][2];

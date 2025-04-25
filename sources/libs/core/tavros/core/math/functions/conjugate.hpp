@@ -14,7 +14,7 @@
 namespace tavros::math
 {
 
-    quat conjugate(const quat& q) noexcept
+    inline constexpr quat conjugate(const quat& q) noexcept
     {
         return quat(-q.x, -q.y, -q.z, q.w);
     }
