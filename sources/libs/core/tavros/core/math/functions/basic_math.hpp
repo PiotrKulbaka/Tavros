@@ -77,4 +77,14 @@ namespace tavros::math
         return angle - k_pi;
     }
 
+    [[nodiscard]] inline constexpr float rad_to_deg(float rad)
+    {
+        return rad * 180.0f / k_pi;
+    }
+
+    [[nodiscard]] inline constexpr float deg_to_rad(float rad)
+    {
+        return rad * k_pi / 180.0f;
+    }
+
 } // namespace tavros::math

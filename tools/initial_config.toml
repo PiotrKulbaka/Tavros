@@ -15,7 +15,8 @@ style_file = "${builtin_root}/tools/.clang-format"
 for_exts = [".cpp", ".hpp", ".h", ".c", ".inl"]
 paths = [
     "${builtin_root}/sources/libs/",
-    "${builtin_root}/sources/wrappers/sandbox/"
+    "${builtin_root}/sources/wrappers/sandbox/",
+    "${builtin_root}/tests/math/"
 ]
 
 [command.collect_sources]

@@ -13,7 +13,7 @@ namespace tavros::math
 
     inline constexpr float max(float a, float b) noexcept
     {
-        return a < b ? a : b;
+        return a > b ? a : b;
     }
 
     inline constexpr float max(float a, float b, float c) noexcept

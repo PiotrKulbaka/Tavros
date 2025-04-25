@@ -3,7 +3,7 @@
 #include <tavros/core/defines.hpp>
 
 #if TAV_DEBUG
-[[noreturn]] void tav_assertion_failed_impl(const char* expr, const char* file, int line, const char* function);
+void tav_assertion_failed_impl(const char* expr, const char* file, int line, const char* function);
     #define TAV_ASSERT(expr)                                                    \
         do {                                                                    \
             if (!(expr)) {                                                      \

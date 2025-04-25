@@ -38,20 +38,20 @@
 namespace tavros::math
 {
 
-    [[nodiscard]] inline constexpr bool almost_equal(const vec2& a, const vec2& b, float epsilon = k_epsilon6) noexcept
+    inline constexpr bool almost_equal(const vec2& a, const vec2& b, float epsilon = k_epsilon6) noexcept
     {
         return almost_equal(a.x, b.x, epsilon)
             && almost_equal(a.y, b.y, epsilon);
     }
 
-    [[nodiscard]] inline constexpr bool almost_equal(const vec3& a, const vec3& b, float epsilon = k_epsilon6) noexcept
+    inline constexpr bool almost_equal(const vec3& a, const vec3& b, float epsilon = k_epsilon6) noexcept
     {
         return almost_equal(a.x, b.x, epsilon)
             && almost_equal(a.y, b.y, epsilon)
             && almost_equal(a.z, b.z, epsilon);
     }
 
-    [[nodiscard]] inline constexpr bool almost_equal(const vec4& a, const vec4& b, float epsilon = k_epsilon6) noexcept
+    inline constexpr bool almost_equal(const vec4& a, const vec4& b, float epsilon = k_epsilon6) noexcept
     {
         return almost_equal(a.x, b.x, epsilon)
             && almost_equal(a.y, b.y, epsilon)
@@ -59,14 +59,14 @@ namespace tavros::math
             && almost_equal(a.w, b.w, epsilon);
     }
 
-    [[nodiscard]] inline constexpr bool almost_equal(const euler3& a, const euler3& b, float epsilon = k_epsilon6) noexcept
+    inline constexpr bool almost_equal(const euler3& a, const euler3& b, float epsilon = k_epsilon6) noexcept
     {
         return almost_equal(a.roll, b.roll, epsilon)
             && almost_equal(a.pitch, b.pitch, epsilon)
             && almost_equal(a.yaw, b.yaw, epsilon);
     }
 
-    [[nodiscard]] inline constexpr bool almost_equal(const quat& a, const quat& b, float epsilon = k_epsilon6) noexcept
+    inline constexpr bool almost_equal(const quat& a, const quat& b, float epsilon = k_epsilon6) noexcept
     {
         return almost_equal(a.x, b.x, epsilon)
             && almost_equal(a.y, b.y, epsilon)
@@ -74,14 +74,14 @@ namespace tavros::math
             && almost_equal(a.w, b.w, epsilon);
     }
 
-    [[nodiscard]] inline constexpr bool almost_equal(const mat3& a, const mat3& b, float epsilon = k_epsilon6) noexcept
+    inline constexpr bool almost_equal(const mat3& a, const mat3& b, float epsilon = k_epsilon6) noexcept
     {
         return almost_equal(a[0], b[0], epsilon)
             && almost_equal(a[1], b[1], epsilon)
             && almost_equal(a[2], b[2], epsilon);
     }
 
-    [[nodiscard]] inline constexpr bool almost_equal(const mat4& a, const mat4& b, float epsilon = k_epsilon6) noexcept
+    inline constexpr bool almost_equal(const mat4& a, const mat4& b, float epsilon = k_epsilon6) noexcept
     {
         return almost_equal(a[0], b[0], epsilon)
             && almost_equal(a[1], b[1], epsilon)

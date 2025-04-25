@@ -16,8 +16,6 @@ set_property(GLOBAL PROPERTY PREDEFINED_TARGETS_FOLDER "CMake")
 
 set(CMAKE_POSITION_INDEPENDENT_CODE ON)
 
-set(TAV_UNITTESTS ON)
-
 if (TAV_COMPILE_OPTIONS)
     separate_arguments(TAV_COMPILE_OPTIONS)
     message(STATUS "Using extra compile options: ${TAV_COMPILE_OPTIONS}")
