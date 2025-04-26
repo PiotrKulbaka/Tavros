@@ -1,11 +1,8 @@
 #pragma once
 
-#include <tavros/core/math/functions/length.hpp>
-#include <tavros/core/math/functions/dot.hpp>
-#include <tavros/core/math/vec3.hpp>
-
 namespace tavros::math
 {
+    class vec3;
 
     /**
      * @brief Calculates the angle (in radians) between this vector and another vector.

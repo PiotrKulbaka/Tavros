@@ -4,12 +4,11 @@
  * @file make_mat.hpp
  */
 
-#include <tavros/core/math/quat.hpp>
-#include <tavros/core/math/mat3.hpp>
-#include <tavros/core/math/mat4.hpp>
-
 namespace tavros::math
 {
+    class quat;
+    class mat3;
+    class mat4;
 
     /**
      * @brief Converts quaternion to 3x3 rotation matrix.

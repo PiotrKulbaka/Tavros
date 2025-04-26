@@ -24,14 +24,13 @@
  * - `euler3` — Euler angle normalization
  */
 
-#include <tavros/core/math/vec2.hpp>
-#include <tavros/core/math/vec3.hpp>
-#include <tavros/core/math/vec4.hpp>
-#include <tavros/core/math/quat.hpp>
-#include <tavros/core/math/euler3.hpp>
-
 namespace tavros::math
 {
+    class quat;
+    class euler3;
+    class vec2;
+    class vec3;
+    class vec4;
 
     /**
      * @brief Returns a normalized version of the angles.

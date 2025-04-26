@@ -1,5 +1,9 @@
 #include <tavros/core/math/functions/make_quat.hpp>
 
+#include <tavros/core/math/euler3.hpp>
+#include <tavros/core/math/vec3.hpp>
+#include <tavros/core/math/quat.hpp>
+
 #include <tavros/core/math/functions/normalize.hpp>
 #include <tavros/core/math/functions/dot.hpp>
 #include <tavros/core/math/functions/orthogonal.hpp>
@@ -12,7 +16,8 @@ namespace tavros::math
     {
         auto half = angle_rad * 0.5f;
         auto s = sin(half);
-        return quat(axis.x * s, axis.y * s, axis.z * s, cos(half));
+        auto n = normalize(axis);
+        return quat(n.x * s, n.y * s, n.z * s, cos(half));
     }
 
     quat make_quat(const euler3& euler) noexcept
@@ -48,50 +53,42 @@ namespace tavros::math
         return normalize(quat(axis.x * inv_s, axis.y * inv_s, axis.z * inv_s, s * 0.5f));
     }
 
-    quat make_quat_froward_up(const vec3& forward, const vec3& up) noexcept
+    quat make_quat_forward_up(const vec3& forward, const vec3& up) noexcept
     {
         auto f = normalize(forward);
-        auto r = normalize(cross(up, f));
+        auto r = cross(normalize(up), f);
         auto u = cross(f, r);
-        auto trace = r.x + u.y + f.z;
+
+        quat  q;
+        float trace = f.x + r.y + u.z;
 
         if (trace > 0.0f) {
-            auto s = sqrt(trace + 1.0f) * 2.0f;
-            return quat(
-                (f.y - u.z) / s,
-                (r.z - f.x) / s,
-                (u.x - r.y) / s,
-                0.25f * s
-            );
+            float s = sqrt(trace + 1.0f) * 2.0f;
+            q.w = 0.25f * s;
+            q.x = (r.z - u.y) / s;
+            q.y = (u.x - f.z) / s;
+            q.z = (f.y - r.x) / s;
+        } else if ((f.x > r.y) && (f.x > u.z)) {
+            float s = sqrt(1.0f + f.x - r.y - u.z) * 2.0f;
+            q.w = (r.z - u.y) / s;
+            q.x = 0.25f * s;
+            q.y = (r.x + f.y) / s;
+            q.z = (u.x + f.z) / s;
+        } else if (r.y > u.z) {
+            float s = sqrt(1.0f + r.y - f.x - u.z) * 2.0f;
+            q.w = (u.x - f.z) / s;
+            q.x = (r.x + f.y) / s;
+            q.y = 0.25f * s;
+            q.z = (u.y + r.z) / s;
+        } else {
+            float s = sqrt(1.0f + u.z - f.x - r.y) * 2.0f;
+            q.w = (f.y - r.x) / s;
+            q.x = (u.x + f.z) / s;
+            q.y = (u.y + r.z) / s;
+            q.z = 0.25f * s;
         }
 
-        if (r.x > u.y && r.x > f.z) {
-            auto s = sqrt(1.0f + r.x - u.y - f.z) * 2.0f;
-            return quat(
-                0.25f * s,
-                (r.y + u.x) / s,
-                (r.z + f.x) / s,
-                (f.y - u.z) / s
-            );
-        }
-
-        if (u.y > f.z) {
-            auto s = sqrt(1.0f + u.y - r.x - f.z) * 2.0f;
-            return quat(
-                (r.y + u.x) / s,
-                0.25f * s,
-                (u.z + f.y) / s,
-                (r.z - f.x) / s
-            );
-        }
-
-        auto s = sqrt(1.0f + f.z - r.x - u.y) * 2.0f;
-        return quat(
-            (r.z + f.x) / s,
-            (u.z + f.y) / s,
-            0.25f * s,
-            (u.x - r.y) / s
-        );
+        return normalize(q);
     }
 
 } // namespace tavros::math

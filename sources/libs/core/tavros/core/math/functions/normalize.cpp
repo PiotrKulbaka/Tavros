@@ -2,6 +2,12 @@
 
 #include <tavros/core/math/functions/length.hpp>
 
+#include <tavros/core/math/vec2.hpp>
+#include <tavros/core/math/vec3.hpp>
+#include <tavros/core/math/vec4.hpp>
+#include <tavros/core/math/quat.hpp>
+#include <tavros/core/math/euler3.hpp>
+
 namespace tavros::math
 {
 

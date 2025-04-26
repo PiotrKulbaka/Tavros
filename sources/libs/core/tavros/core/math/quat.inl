@@ -1,13 +1,11 @@
 #include <tavros/core/math/quat.hpp>
 
+#include <tavros/core/math/functions/make_quat.hpp>
+#include <tavros/core/math/functions/normalize.hpp>
+#include <tavros/core/math/functions/rotate.hpp>
+
 namespace tavros::math
 {
-
-    quat make_quat(const vec3& axis, float angle_rad) noexcept;
-    quat make_quat(const euler3& euler) noexcept;
-    quat make_quat(const vec3& from, const vec3& to) noexcept;
-    quat make_quat_forward_up(const vec3& forward, const vec3& up) noexcept;
-    quat normalize(const quat& q) noexcept;
 
     static_assert(sizeof(quat) == 16, "incorrect size");
     static_assert(alignof(quat) == 16, "incorrect alignment");
@@ -85,14 +83,7 @@ namespace tavros::math
 
     inline constexpr quat& quat::operator*=(const quat& other) noexcept
     {
-        auto nx = w * other.x + x * other.w + y * other.z - z * other.y;
-        auto ny = w * other.y - x * other.z + y * other.w + z * other.x;
-        auto nz = w * other.z + x * other.y - y * other.x + z * other.w;
-        auto nw = w * other.w - x * other.x - y * other.y - z * other.z;
-        x = nx;
-        y = ny;
-        z = nz;
-        w = nw;
+        *this = *this * other;
         return *this;
     }
 
@@ -163,6 +154,11 @@ namespace tavros::math
             a.w * b.z + a.x * b.y - a.y * b.x + a.z * b.w,
             a.w * b.w - a.x * b.x - a.y * b.y - a.z * b.z
         );
+    }
+
+    inline vec3 operator*(const quat& q, const vec3& p) noexcept
+    {
+        return rotate_point(q, p);
     }
 
     inline constexpr quat operator*(const quat& q, float s) noexcept

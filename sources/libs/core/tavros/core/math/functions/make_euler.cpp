@@ -1,5 +1,9 @@
 #include <tavros/core/math/functions/make_euler.hpp>
 
+#include <tavros/core/math/functions/basic_math.hpp>
+#include <tavros/core/math/quat.hpp>
+#include <tavros/core/math/euler3.hpp>
+
 namespace tavros::math
 {
 

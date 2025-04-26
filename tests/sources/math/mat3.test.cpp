@@ -1,4 +1,4 @@
-#include "common.hpp"
+#include <common.test.hpp>
 
 #include <tavros/core/math.hpp>
 
@@ -9,7 +9,8 @@ class mat3_test : public unittest_scope
 };
 
 // Test default constructor
-TEST_F(mat3_test, default_constructor) {
+TEST_F(mat3_test, default_constructor)
+{
     mat3 m;
     EXPECT_EQ(m[0].x, 0.0f);
     EXPECT_EQ(m[0].y, 0.0f);
@@ -23,7 +24,8 @@ TEST_F(mat3_test, default_constructor) {
 }
 
 // Test identity method
-TEST_F(mat3_test, identity) {
+TEST_F(mat3_test, identity)
+{
     mat3 m = mat3::identity();
     EXPECT_EQ(m[0].x, 1.0f);
     EXPECT_EQ(m[0].y, 0.0f);
@@ -37,7 +39,8 @@ TEST_F(mat3_test, identity) {
 }
 
 // Test constructor from components
-TEST_F(mat3_test, constructor_from_components) {
+TEST_F(mat3_test, constructor_from_components)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     EXPECT_EQ(m[0].x, 1.0f);
     EXPECT_EQ(m[0].y, 2.0f);
@@ -51,7 +54,8 @@ TEST_F(mat3_test, constructor_from_components) {
 }
 
 // Test constructor from columns
-TEST_F(mat3_test, constructor_from_columns) {
+TEST_F(mat3_test, constructor_from_columns)
+{
     vec3 col0(1.0f, 4.0f, 7.0f);
     vec3 col1(2.0f, 5.0f, 8.0f);
     vec3 col2(3.0f, 6.0f, 9.0f);
@@ -68,7 +72,8 @@ TEST_F(mat3_test, constructor_from_columns) {
 }
 
 // Test constructor from scalar
-TEST_F(mat3_test, constructor_crom_scalar) {
+TEST_F(mat3_test, constructor_crom_scalar)
+{
     mat3 m(3.0f);
     EXPECT_FLOAT_EQ(m[0].x, 3.0f);
     EXPECT_FLOAT_EQ(m[0].y, 0.0f);
@@ -82,7 +87,8 @@ TEST_F(mat3_test, constructor_crom_scalar) {
 }
 
 // Test operator[] const
-TEST_F(mat3_test, operator_bracket_const) {
+TEST_F(mat3_test, operator_bracket_const)
+{
     const mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     EXPECT_FLOAT_EQ(m[0].x, 1.0f);
     EXPECT_FLOAT_EQ(m[0].y, 2.0f);
@@ -95,16 +101,18 @@ TEST_F(mat3_test, operator_bracket_const) {
     EXPECT_FLOAT_EQ(m[2].z, 9.0f);
 }
 
-TEST_F(mat3_test, operator_bracket_const_assert) {
+TEST_F(mat3_test, operator_bracket_const_assert)
+{
     const mat3 m;
-    vec3 pad;
+    vec3       pad;
     EXPECT_FALSE(assert_was_called());
     auto ub = m[4];
     EXPECT_TRUE(assert_was_called());
 }
 
 // Test operator[]
-TEST_F(mat3_test, operator_bracket) {
+TEST_F(mat3_test, operator_bracket)
+{
     mat3 m;
     m[0] = vec3(1.0f, 2.0f, 3.0f);
     m[1] = vec3(4.0f, 5.0f, 6.0f);
@@ -120,7 +128,8 @@ TEST_F(mat3_test, operator_bracket) {
     EXPECT_FLOAT_EQ(m[2].z, 9.0f);
 }
 
-TEST_F(mat3_test, operator_bracket_assert) {
+TEST_F(mat3_test, operator_bracket_assert)
+{
     mat3 m;
     vec3 pad;
     EXPECT_FALSE(assert_was_called());
@@ -129,7 +138,8 @@ TEST_F(mat3_test, operator_bracket_assert) {
 }
 
 // Test operator+=
-TEST_F(mat3_test, operator_plus_equals) {
+TEST_F(mat3_test, operator_plus_equals)
+{
     mat3 m1(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 m2(9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f);
     m1 += m2;
@@ -145,7 +155,8 @@ TEST_F(mat3_test, operator_plus_equals) {
 }
 
 // Test operator-=
-TEST_F(mat3_test, operator_minus_equals) {
+TEST_F(mat3_test, operator_minus_equals)
+{
     mat3 m1(9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f);
     mat3 m2(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     m1 -= m2;
@@ -161,7 +172,8 @@ TEST_F(mat3_test, operator_minus_equals) {
 }
 
 // Test operator*=
-TEST_F(mat3_test, operator_multiply_equals_matrix) {
+TEST_F(mat3_test, operator_multiply_equals_matrix)
+{
     mat3 m1(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 m2(9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f);
     m1 *= m2;
@@ -177,7 +189,8 @@ TEST_F(mat3_test, operator_multiply_equals_matrix) {
 }
 
 // Test operator*=
-TEST_F(mat3_test, operator_multipl_equals_scalar) {
+TEST_F(mat3_test, operator_multipl_equals_scalar)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     m *= 2.0f;
     EXPECT_FLOAT_EQ(m[0].x, 2.0f);
@@ -192,8 +205,9 @@ TEST_F(mat3_test, operator_multipl_equals_scalar) {
 }
 
 // Test data() const
-TEST_F(mat3_test, data_const) {
-    mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
+TEST_F(mat3_test, data_const)
+{
+    mat3         m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     const float* data = m.data();
     EXPECT_EQ(data[0], 1.0f);
     EXPECT_EQ(data[1], 2.0f);
@@ -207,8 +221,9 @@ TEST_F(mat3_test, data_const) {
 }
 
 // Test data()
-TEST_F(mat3_test, data) {
-    mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
+TEST_F(mat3_test, data)
+{
+    mat3   m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     float* data = m.data();
     EXPECT_EQ(data[0], 1.0f);
     EXPECT_EQ(data[1], 2.0f);
@@ -221,7 +236,8 @@ TEST_F(mat3_test, data) {
     EXPECT_EQ(data[8], 9.0f);
 }
 
-TEST_F(mat3_test, operator_unary_minus) {
+TEST_F(mat3_test, operator_unary_minus)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 n = -m;
     EXPECT_FLOAT_EQ(n[0].x, -1.0f);
@@ -235,7 +251,8 @@ TEST_F(mat3_test, operator_unary_minus) {
     EXPECT_FLOAT_EQ(n[2].z, -9.0f);
 }
 
-TEST_F(mat3_test, operator_plus) {
+TEST_F(mat3_test, operator_plus)
+{
     mat3 m1(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 m2(9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f);
     mat3 n = m1 + m2;
@@ -250,7 +267,8 @@ TEST_F(mat3_test, operator_plus) {
     EXPECT_FLOAT_EQ(n[2].z, 10.0f);
 }
 
-TEST_F(mat3_test, operator_minus) {
+TEST_F(mat3_test, operator_minus)
+{
     mat3 m1(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 m2(9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f);
     mat3 n = m1 - m2;
@@ -265,7 +283,8 @@ TEST_F(mat3_test, operator_minus) {
     EXPECT_FLOAT_EQ(n[2].z, 8.0f);
 }
 
-TEST_F(mat3_test, operator_multiply) {
+TEST_F(mat3_test, operator_multiply)
+{
     mat3 m1(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 m2(9.0f, 8.0f, 7.0f, 6.0f, 5.0f, 4.0f, 3.0f, 2.0f, 1.0f);
     mat3 n = m1 * m2;
@@ -280,7 +299,8 @@ TEST_F(mat3_test, operator_multiply) {
     EXPECT_FLOAT_EQ(n[2].z, 30.0f);
 }
 
-TEST_F(mat3_test, operator_multiply_scalar) {
+TEST_F(mat3_test, operator_multiply_scalar)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 n = m * 2.0f;
     EXPECT_FLOAT_EQ(n[0].x, 2.0f);
@@ -294,7 +314,8 @@ TEST_F(mat3_test, operator_multiply_scalar) {
     EXPECT_FLOAT_EQ(n[2].z, 18.0f);
 }
 
-TEST_F(mat3_test, operator_scalar_multiply_matrix) {
+TEST_F(mat3_test, operator_scalar_multiply_matrix)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 n = 2.0f * m;
     EXPECT_FLOAT_EQ(n[0].x, 2.0f);
@@ -308,7 +329,8 @@ TEST_F(mat3_test, operator_scalar_multiply_matrix) {
     EXPECT_FLOAT_EQ(n[2].z, 18.0f);
 }
 
-TEST_F(mat3_test, operator_divide_scalar) {
+TEST_F(mat3_test, operator_divide_scalar)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 n = m / 2.0f;
     EXPECT_FLOAT_EQ(n[0].x, 0.5f);
@@ -322,13 +344,15 @@ TEST_F(mat3_test, operator_divide_scalar) {
     EXPECT_FLOAT_EQ(n[2].z, 4.5f);
 }
 
-TEST_F(mat3_test, operator_divide_scalar_zero) {
+TEST_F(mat3_test, operator_divide_scalar_zero)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 n = m / 0.0f;
     EXPECT_TRUE(assert_was_called());
 }
 
-TEST_F(mat3_test, operator_scalar_divide_matrix) {
+TEST_F(mat3_test, operator_scalar_divide_matrix)
+{
     mat3 m(2.0f, 4.0f, 8.0f, 1.0f, 2.0f, 4.0f, 0.5f, 1.0f, 2.0f);
     mat3 n = 8.0f / m;
     EXPECT_FLOAT_EQ(n[0].x, 4.0f);
@@ -342,20 +366,23 @@ TEST_F(mat3_test, operator_scalar_divide_matrix) {
     EXPECT_FLOAT_EQ(n[2].z, 4.0f);
 }
 
-TEST_F(mat3_test, operator_scalar_divide_matrix_zero) {
+TEST_F(mat3_test, operator_scalar_divide_matrix_zero)
+{
     mat3 m(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 0.0f, 7.0f, 8.0f, 9.0f);
     EXPECT_FALSE(assert_was_called());
     mat3 n = 0.0f / m;
     EXPECT_TRUE(assert_was_called());
 }
 
-TEST_F(mat3_test, almost_equal_nonzero_epsilon) {
+TEST_F(mat3_test, almost_equal_nonzero_epsilon)
+{
     mat3 a(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 b(1.000001f, 2.000001f, 3.000001f, 4.000001f, 5.000001f, 6.000001f, 7.000001f, 8.000001f, 9.000001f);
     EXPECT_TRUE(almost_equal(a, b));
 }
 
-TEST_F(mat3_test, almost_equal_zero_epsilon) {
+TEST_F(mat3_test, almost_equal_zero_epsilon)
+{
     mat3 a(1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f);
     mat3 b(1.1f, 2.1f, 3.1f, 4.1f, 5.1f, 6.1f, 7.1f, 8.1f, 9.1f);
     EXPECT_FALSE(almost_equal(a, b, 0.0f));

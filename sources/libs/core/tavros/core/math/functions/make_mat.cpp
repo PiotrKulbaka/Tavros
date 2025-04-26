@@ -1,5 +1,9 @@
 #include <tavros/core/math/functions/make_mat.hpp>
 
+#include <tavros/core/math/quat.hpp>
+#include <tavros/core/math/mat3.hpp>
+#include <tavros/core/math/mat4.hpp>
+
 namespace tavros::math
 {
 

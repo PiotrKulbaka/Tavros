@@ -1,5 +1,9 @@
 #include <tavros/core/math/functions/angle.hpp>
 
+#include <tavros/core/math/functions/length.hpp>
+#include <tavros/core/math/functions/dot.hpp>
+#include <tavros/core/math/vec3.hpp>
+
 namespace tavros::math
 {
 

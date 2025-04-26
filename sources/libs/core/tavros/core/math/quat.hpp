@@ -116,6 +116,7 @@ namespace tavros::math
     constexpr quat operator+(const quat& a, const quat& b) noexcept;
     constexpr quat operator-(const quat& a, const quat& b) noexcept;
     constexpr quat operator*(const quat& a, const quat& b) noexcept;
+    vec3           operator*(const quat& q, const vec3& p) noexcept;
     constexpr quat operator*(const quat& q, float s) noexcept;
     constexpr quat operator*(float s, const quat& q) noexcept;
     constexpr quat operator/(const quat& q, float s) noexcept;

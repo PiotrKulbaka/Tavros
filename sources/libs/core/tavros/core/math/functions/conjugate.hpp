@@ -2,21 +2,19 @@
 
 /**
  * @file conjugate.hpp
- * @brief Contains a function that returns the conjugate of a quaternion.
- *
- * The conjugate of a quaternion is computed by negating the vector part (x, y, z)
- * and keeping the scalar part (w) unchanged. It is commonly used to compute
- * the inverse of a unit quaternion or to undo a rotation.
  */
-
-#include <tavros/core/math/quat.hpp>
 
 namespace tavros::math
 {
+    class quat;
 
-    inline constexpr quat conjugate(const quat& q) noexcept
-    {
-        return quat(-q.x, -q.y, -q.z, q.w);
-    }
+    /**
+     * @brief Returns the conjugate of a quaternion.
+     *
+     * The conjugate of a quaternion is computed by negating the vector part (x, y, z)
+     * and keeping the scalar part (w) unchanged. It is commonly used to compute
+     * the inverse of a unit quaternion or to undo a rotation.
+     */
+    quat conjugate(const quat& q) noexcept;
 
 } // namespace tavros::math

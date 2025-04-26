@@ -8,6 +8,7 @@
 namespace tavros::math
 {
 
+    constexpr float k_epsilon5 = 1e-5f;
     constexpr float k_epsilon6 = 1e-6f;
     constexpr float k_pi = 3.1415926535897932384626433832795f;
     constexpr float k_two_pi = static_cast<float>(2.0 * k_pi);

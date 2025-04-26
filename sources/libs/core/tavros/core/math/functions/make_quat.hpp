@@ -4,12 +4,11 @@
  * @file make_quat.hpp
  */
 
-#include <tavros/core/math/euler3.hpp>
-#include <tavros/core/math/vec3.hpp>
-#include <tavros/core/math/quat.hpp>
-
 namespace tavros::math
 {
+    class euler3;
+    class vec3;
+    class quat;
 
     /**
      * @brief Constructs a quaternion from axis-angle rotation

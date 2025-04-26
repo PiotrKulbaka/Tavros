@@ -9,21 +9,23 @@ third = "${builtin_root}/sources/third/"
 libs = "${builtin_root}/sources/libs/"
 wrappers = "${builtin_root}/sources/wrappers/"
 
-[command.format]
+[command.autoformat]
 clang_format_tool_path = "${builtin_clang_format_tool_path}"
 style_file = "${builtin_root}/tools/.clang-format"
 for_exts = [".cpp", ".hpp", ".h", ".c", ".inl"]
 paths = [
     "${builtin_root}/sources/libs/",
     "${builtin_root}/sources/wrappers/sandbox/",
-    "${builtin_root}/tests/math/"
+    "${builtin_root}/tests/sources/"
 ]
 
 [command.collect_sources]
 for_exts = [".cpp", ".hpp", ".h", ".c", ".inl"]
+for_test_exts = [".test.cpp", ".test.hpp"]
 paths = [
     "${builtin_root}/sources/libs/core",
     "${builtin_root}/sources/wrappers/sandbox",
+    "${builtin_root}/tests/sources/"
 ]
 
 [command.cmake_gen.xcode]

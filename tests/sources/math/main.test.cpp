@@ -1,6 +1,4 @@
-#include <gtest/gtest.h>
-
-#include "common.hpp"
+#include <common.test.hpp>
 
 bool assert_was_called()
 {
