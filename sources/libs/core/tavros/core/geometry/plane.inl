@@ -15,8 +15,8 @@ namespace tavros::geometry
     {
         const auto ab = b - a;
         const auto ac = c - a;
-        auto normal = math::normalize(math::cross(ac, ab));
-        auto d = -math::dot(normal, a);
+        auto       normal = math::normalize(math::cross(ac, ab));
+        auto       d = -math::dot(normal, a);
         return plane(normal, d);
     }
 
