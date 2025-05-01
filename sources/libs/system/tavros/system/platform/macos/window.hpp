@@ -62,6 +62,7 @@ namespace tavros::system
     protected:
         NSWindow*                   m_window;
         NSObject<NSWindowDelegate>* m_delegate;
+        NSView*                     m_ns_view;
         close_callback              m_on_close_cb;
         event_callback              m_on_activate_cb;
         event_callback              m_on_deactivate_cb;

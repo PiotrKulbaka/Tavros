@@ -10,6 +10,7 @@ target_link_libraries(
     PRIVATE
         tav_core
         tav_system
+        glad
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")

@@ -11,7 +11,7 @@ tavros_add_library(
         ${TAV_SYSTEM_MACOS_SOURCES}
     LIB_WIN32_SOURCES
     LIB_DEPENDS
-        PUBLIC
+        PRIVATE
             tav_core
     LIB_DEFINES
 )

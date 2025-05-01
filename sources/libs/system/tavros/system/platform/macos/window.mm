@@ -281,9 +281,10 @@ window::window(tavros::core::string_view name)
     [m_window setAcceptsMouseMovedEvents:YES];
 
     WindowView* view = [[WindowView alloc] initWithOwner:this];
+    m_ns_view = view;
+
     [m_window setContentView:view];
     [view release];
-
 
     // Устанавливаем заголовок окна
     [m_window setTitle:[NSString stringWithUTF8String:name.data()]];
@@ -575,5 +576,5 @@ void window::on_key_press(key_event_args& e)
 
 handle window::get_handle() const
 {
-    return reinterpret_cast<handle>(m_window);
+    return reinterpret_cast<handle>(m_ns_view);
 }
