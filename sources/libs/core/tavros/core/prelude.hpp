@@ -5,6 +5,8 @@
 #include <tavros/core/nonmovable.hpp>
 #include <tavros/core/noncopyable.hpp>
 
+#include <tavros/core/memory/memory.hpp>
+
 // Debug and macro
 #include <tavros/core/defines.hpp>
 #include <tavros/core/debug/assert.hpp>

@@ -58,7 +58,7 @@ TEST_F(ray3_test, point_on_plane_remains_same)
     plane plane{vec3{0.0f, 1.0f, 0.0f}, -5.0f};
     vec3  point{2.0f, 5.0f, -3.0f}; // Lies on the plane
 
-    vec3 projected = project_point(plane, point);
+    vec3 projected = project_point(point, plane);
 
     EXPECT_FLOAT_EQ(projected.x, point.x);
     EXPECT_FLOAT_EQ(projected.y, point.y);
@@ -70,7 +70,7 @@ TEST_F(ray3_test, point_above_plane_projects_down)
     plane plane{vec3{0.0f, 1.0f, 0.0f}, 0.0f};
     vec3  point{1.0f, 5.0f, 1.0f}; // Above the plane y=0
 
-    vec3 projected = project_point(plane, point);
+    vec3 projected = project_point(point, plane);
 
     EXPECT_FLOAT_EQ(projected.x, 1.0f);
     EXPECT_FLOAT_EQ(projected.y, 0.0f);
@@ -82,7 +82,7 @@ TEST_F(ray3_test, point_below_plane_projects_up)
     plane plane{vec3{0.0f, 0.0f, 1.0f}, -2.0f};
     vec3  point{0.0f, 0.0f, 0.0f}; // Below the plane z=2
 
-    vec3 projected = project_point(plane, point);
+    vec3 projected = project_point(point, plane);
 
     EXPECT_FLOAT_EQ(projected.x, 0.0f);
     EXPECT_FLOAT_EQ(projected.y, 0.0f);
@@ -95,7 +95,7 @@ TEST_F(ray3_test, project_on_tilted_plane)
     plane plane{normalize(vec3{0.0f, 0.0f, 1.0f}), -2.0f};
     vec3  point{3.0f, 4.0f, 10.0f}; // Above the plane
 
-    vec3 projected = project_point(plane, point);
+    vec3 projected = project_point(point, plane);
 
     // Expect z == 2.0f after projection
     EXPECT_NEAR(projected.z, 2.0f, 1e-4f);
@@ -107,7 +107,7 @@ TEST_F(ray3_test, project_on_diagonal_plane)
     plane plane{normalize(vec3{1.0f, 1.0f, 1.0f}), -5.0f};
     vec3  point{2.0f, 2.0f, 2.0f};
 
-    vec3 projected = project_point(plane, point);
+    vec3 projected = project_point(point, plane);
 
     // Check that the point is on the plane after projection
     float dist = dot(plane.normal, projected) + plane.d;

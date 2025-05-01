@@ -29,6 +29,10 @@ def main(root_dir) -> int:
         elif args['collect_sources']:
             collect_sources(cfg)
         elif args['cmake_gen']:
+            if args['--autoformat']:
+                autoformat(cfg)
+            if args['--collect_sources']:
+                collect_sources(cfg)
             if args['xcode']:
                 cmake_gen(cfg, 'xcode')
             if args['vstudio']:

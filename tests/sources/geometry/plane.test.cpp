@@ -96,7 +96,7 @@ TEST_F(plane_test, project_point_point_on_plane)
     plane p(vec3(0.0f, 0.0f, 1.0f), 0.0f);
     vec3  point{1.0f, 2.0f, 0.0f};
 
-    vec3 projected = project_point(p, point);
+    vec3 projected = project_point(point, p);
 
     EXPECT_NEAR(projected.x, point.x, k_epsilon6);
     EXPECT_NEAR(projected.y, point.y, k_epsilon6);
@@ -108,7 +108,7 @@ TEST_F(plane_test, project_point_above_plane)
     plane p(vec3(0.0f, 0.0f, 1.0f), 0.0f);
     vec3  point(1.0f, 2.0f, 5.0f);
 
-    vec3 projected = project_point(p, point);
+    vec3 projected = project_point(point, p);
 
     EXPECT_NEAR(dot(p.normal, projected) + p.d, 0.0f, k_epsilon6);
 }
@@ -118,7 +118,7 @@ TEST_F(plane_test, project_point_below_plane)
     plane p(vec3(0.0f, 0.0f, 1.0f), 0.0f);
     vec3  point(1.0f, 2.0f, -5.0f);
 
-    vec3 projected = project_point(p, point);
+    vec3 projected = project_point(point, p);
 
     EXPECT_NEAR(dot(p.normal, projected) + p.d, 0.0f, k_epsilon6);
 }
@@ -160,7 +160,7 @@ TEST_F(plane_test, tilted_plane_45_degrees_project_point)
     plane p = plane::from_normal_point(normal, point_on_plane);
 
     vec3 point(1.0f, 0.0f, 0.0f); // above plane
-    vec3 projected = project_point(p, point);
+    vec3 projected = project_point(point, p);
 
     EXPECT_NEAR(dot(p.normal, projected) + p.d, 0.0f, k_epsilon5);
 }
@@ -172,7 +172,7 @@ TEST_F(plane_test, tilted_plane_random_normal_project_point)
     plane p = plane::from_normal_point(normal, point_on_plane);
 
     vec3 point(5.0f, -3.0f, 2.0f);
-    vec3 projected = project_point(p, point);
+    vec3 projected = project_point(point, p);
 
     EXPECT_NEAR(dot(p.normal, projected) + p.d, 0.0f, k_epsilon5);
 }
@@ -185,7 +185,7 @@ TEST_F(plane_test, tilted_plane_90_degrees_project_point)
     plane p = plane::from_normal_point(normal, point_on_plane);
 
     vec3 point(5.0f, 1.0f, 1.0f);
-    vec3 projected = project_point(p, point);
+    vec3 projected = project_point(point, p);
 
     EXPECT_NEAR(dot(p.normal, projected) + p.d, 0.0f, k_epsilon5);
 }

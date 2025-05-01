@@ -3,6 +3,9 @@
 namespace tavros::geometry
 {
 
+    static_assert(sizeof(ray3) == 24, "incorrect size");
+    static_assert(alignof(ray3) == 4, "incorrect alignment");
+
     inline constexpr ray3::ray3() noexcept
         : origin(0.0f, 0.0f, 0.0f)
         , direction(0.0f, 0.0f, 1.0f)

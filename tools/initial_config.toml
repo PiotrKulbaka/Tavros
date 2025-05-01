@@ -12,7 +12,7 @@ wrappers = "${builtin_root}/sources/wrappers/"
 [command.autoformat]
 clang_format_tool_path = "${builtin_clang_format_tool_path}"
 style_file = "${builtin_root}/tools/.clang-format"
-for_exts = [".cpp", ".hpp", ".h", ".c", ".inl"]
+for_exts = [".cpp", ".hpp", ".h", ".c", ".inl", ".m", ".mm"]
 paths = [
     "${builtin_root}/sources/libs/",
     "${builtin_root}/sources/wrappers/sandbox/",
@@ -21,12 +21,16 @@ paths = [
 
 [command.collect_sources]
 for_exts = [".cpp", ".hpp", ".h", ".c", ".inl"]
+only_macos_exts = [".mm", ".m"]
 for_test_exts = [".test.cpp", ".test.hpp"]
 paths = [
     "${builtin_root}/sources/libs/core",
+    "${builtin_root}/sources/libs/system",
     "${builtin_root}/sources/wrappers/sandbox",
     "${builtin_root}/tests/sources/"
 ]
+platform_subfolder_macos = "platform/macos/"
+platform_subfolder_win32 = "platform/win32/"
 
 [command.cmake_gen.xcode]
 cmake_tool_path = "cmake"

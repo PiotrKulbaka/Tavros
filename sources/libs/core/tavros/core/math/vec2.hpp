@@ -68,8 +68,15 @@ namespace tavros::math
             {
                 float u, v;
             };
+            struct
+            {
+                float width, height;
+            };
         };
     };
+
+    using point2 = vec2;
+    using size2 = vec2;
 
 
     constexpr vec2 operator-(const vec2& v) noexcept;
