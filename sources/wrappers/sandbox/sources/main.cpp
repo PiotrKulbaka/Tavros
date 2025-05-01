@@ -8,7 +8,7 @@
 
 #include <tavros/system/interfaces/window.hpp>
 #include <tavros/system/interfaces/application.hpp>
-#include <tavros/system/interfaces/gl_context.hpp>
+#include <tavros/renderer/interfaces/gl_context.hpp>
 
 #include <glad/glad.h>
 
@@ -117,7 +117,7 @@ int main()
 
     app->run();
 
-    auto context = tavros::system::interfaces::gl_context::create(wnd->get_handle());
+    auto context = tavros::renderer::interfaces::gl_context::create(wnd->get_handle());
 
     context->make_current();
 

@@ -1,4 +1,4 @@
-#include <tavros/system/platform/macos/gl_context.hpp>
+#include <tavros/renderer/internal/platform/macos/gl_context.hpp>
 
 #import <OpenGL/OpenGL.h>
 #import <OpenGL/gl3.h>
@@ -6,12 +6,12 @@
 #pragma clang diagnostic push
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
-using namespace tavros::system;
+using namespace tavros::renderer;
 
 
 gl_context_uptr interfaces::gl_context::create(handle ns_view)
 {
-    return tavros::core::make_unique<tavros::system::gl_context>(static_cast<NSView*>(ns_view));
+    return tavros::core::make_unique<tavros::renderer::gl_context>(static_cast<NSView*>(ns_view));
 }
 
 gl_context::gl_context(NSView* ns_view)

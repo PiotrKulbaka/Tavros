@@ -25,6 +25,7 @@ only_macos_exts = [".mm", ".m"]
 for_test_exts = [".test.cpp", ".test.hpp"]
 paths = [
     "${builtin_root}/sources/libs/core",
+    "${builtin_root}/sources/libs/renderer",
     "${builtin_root}/sources/libs/system",
     "${builtin_root}/sources/wrappers/sandbox",
     "${builtin_root}/tests/sources/"

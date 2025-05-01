@@ -9,8 +9,11 @@ target_link_libraries(
         tav_sandbox
     PRIVATE
         tav_core
+        tav_renderer
         tav_system
         glad
+        tinyobjloader
+        stb
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")

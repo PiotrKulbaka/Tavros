@@ -1,10 +1,10 @@
 #pragma once
 
-#include <tavros/system/interfaces/gl_context.hpp>
+#include <tavros/renderer/interfaces/gl_context.hpp>
 
 #import <Cocoa/Cocoa.h>
 
-namespace tavros::system
+namespace tavros::renderer
 {
     class gl_context : public interfaces::gl_context, core::noncopyable, core::nonmovable
     {
@@ -25,4 +25,4 @@ namespace tavros::system
         NSView*          m_ns_view;
         NSOpenGLContext* m_context;
     };
-} // namespace tavros::system
+} // namespace tavros::renderer

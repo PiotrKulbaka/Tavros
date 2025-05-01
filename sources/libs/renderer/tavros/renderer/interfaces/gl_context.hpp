@@ -2,17 +2,17 @@
 
 #include <tavros/core/prelude.hpp>
 
-namespace tavros::system::interfaces
+namespace tavros::renderer::interfaces
 {
     class gl_context;
 }
 
-namespace tavros::system
+namespace tavros::renderer
 {
     using gl_context_uptr = tavros::core::unique_ptr<interfaces::gl_context>;
-} // namespace tavros::system
+} // namespace tavros::renderer
 
-namespace tavros::system::interfaces
+namespace tavros::renderer::interfaces
 {
     /**
      * @brief Abstract class for managing OpenGL context.
@@ -65,4 +65,4 @@ namespace tavros::system::interfaces
          */
         virtual bool is_current() = 0;
     };
-} // namespace tavros::system::interfaces
+} // namespace tavros::renderer::interfaces
