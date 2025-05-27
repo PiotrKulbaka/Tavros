@@ -127,6 +127,7 @@ namespace tavros::system
         k_rcontrol,     // Right Ctrl key
         k_lalt,         // Left Alt key
         k_ralt,         // Right Alt key
+        k_last_key,
     };
 
     enum class mouse_button : uint8
