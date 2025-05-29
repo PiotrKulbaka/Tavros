@@ -1,4 +1,4 @@
-import os
+import time
 from pathlib import Path
 from docopt import docopt
 from .config import Config
@@ -10,6 +10,8 @@ from .help import get_doc
 
 
 def main(root_dir) -> int:
+    start = time.perf_counter()
+
     env_file_path = Path(root_dir) / 'env.toml'
     doc = get_doc()
     args = docopt(doc)
@@ -48,5 +50,8 @@ def main(root_dir) -> int:
     except Exception as e:
         print('An exception was thrown.')
         raise e
+
+    end = time.perf_counter()
+    print(f'Execution time: {end - start:.2f} seconds')
 
     return 0

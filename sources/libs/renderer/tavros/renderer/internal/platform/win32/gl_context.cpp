@@ -32,7 +32,7 @@ namespace
         _wglMakeCurrent = static_cast<fn_wglMakeCurrent_t>(static_cast<void*>(GetProcAddress(gl_lib, "wglMakeCurrent")));
         _wglGetCurrentContext = static_cast<fn_wglGetCurrentContext>(static_cast<void*>(GetProcAddress(gl_lib, "wglGetCurrentContext")));
 
-        FreeLibrary((HMODULE)gl_lib);
+        FreeLibrary((HMODULE) gl_lib);
 
         if (_wglCreateContext == nullptr || _wglDeleteContext == nullptr || _wglMakeCurrent == nullptr || _wglGetCurrentContext == nullptr) {
             logger.info("Error loading wgl functions.");
@@ -42,7 +42,6 @@ namespace
         return true;
     }
 } // namespace
-
 
 
 gl_context_uptr interfaces::gl_context::create(handle h)
@@ -74,12 +73,12 @@ gl_context::gl_context(HWND hWnd)
 
     int32 pixel_format = ChoosePixelFormat(m_hDC, &pfd);
     if (!pixel_format) {
-        ::logger.error("ChoosePixelFormat"/*, last_win_error_str()*/);
+        ::logger.error("ChoosePixelFormat" /*, last_win_error_str()*/);
         return;
     }
     ::logger.info("Pixel format selected [ColorBits: %d, DepthBits: %d, StencilBits: %d]", pfd.cColorBits, pfd.cDepthBits, pfd.cStencilBits);
     if (!SetPixelFormat(m_hDC, pixel_format, &pfd)) {
-        ::logger.error("SetPixelFormat failed"/*, last_win_error_str()*/);
+        ::logger.error("SetPixelFormat failed" /*, last_win_error_str()*/);
         return;
     }
 
@@ -89,7 +88,7 @@ gl_context::gl_context(HWND hWnd)
 
     m_hGLRC = _wglCreateContext(m_hDC);
     if (!m_hGLRC) {
-        ::logger.error("Create OpenGL context failed"/*, last_win_error_str()*/);
+        ::logger.error("Create OpenGL context failed" /*, last_win_error_str()*/);
         return;
     }
 
@@ -100,7 +99,7 @@ gl_context::~gl_context()
 {
     if (m_hGLRC) {
         if (!_wglDeleteContext(m_hGLRC)) {
-            ::logger.error("Detete OpenGL context failed"/*, last_win_error_str()*/); // TODO: print error
+            ::logger.error("Detete OpenGL context failed" /*, last_win_error_str()*/); // TODO: print error
         }
         m_hGLRC = nullptr;
     }
@@ -117,21 +116,21 @@ gl_context::~gl_context()
 void gl_context::make_current()
 {
     if (!_wglMakeCurrent(m_hDC, m_hGLRC)) {
-        ::logger.error("OpenGL activate context failed"/*, last_win_error_str()*/);
+        ::logger.error("OpenGL activate context failed" /*, last_win_error_str()*/);
     }
 }
 
 void gl_context::make_inactive()
 {
     if (!_wglMakeCurrent(nullptr, nullptr)) {
-        ::logger.error("OpenGL deactivate context failed"/*, last_win_error_str()*/);
+        ::logger.error("OpenGL deactivate context failed" /*, last_win_error_str()*/);
     }
 }
 
 void gl_context::swap_buffers()
 {
     if (!SwapBuffers(m_hDC)) {
-        ::logger.error("OpenGL swap buffers failed"/*, last_win_error_str()*/);
+        ::logger.error("OpenGL swap buffers failed" /*, last_win_error_str()*/);
     }
 }
 

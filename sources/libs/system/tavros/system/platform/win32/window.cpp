@@ -20,7 +20,7 @@ using namespace tavros::system;
 
 namespace
 {
-    tavros::core::logger         logger("window");
+    tavros::core::logger  logger("window");
     constexpr const char* wnd_class_name = "AppClassWindow";
 
     LRESULT CALLBACK wnd_proc_window(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

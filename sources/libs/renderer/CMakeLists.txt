@@ -5,7 +5,7 @@ tavros_add_library(
         tav_renderer
     LIB_TYPE
         STATIC
-        LIB_CROSSPLATFORM_SOURCES
+    LIB_CROSSPLATFORM_SOURCES
         ${TAV_RENDERER_SOURCES}
     LIB_MACOS_SOURCES
         ${TAV_RENDERER_MACOS_SOURCES}

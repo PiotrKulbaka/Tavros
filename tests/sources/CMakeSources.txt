@@ -21,3 +21,4 @@ set(TAV_SOURCES_TEST_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/math/vec3.test.cpp
     ${CMAKE_CURRENT_LIST_DIR}/math/vec4.test.cpp
 )
+

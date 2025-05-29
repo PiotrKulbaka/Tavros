@@ -21,13 +21,11 @@ application::~application()
 void application::run()
 {
     m_is_running = true;
-    
 }
 
 void application::exit()
 {
     m_is_running = false;
-    
 }
 
 bool application::is_runing()

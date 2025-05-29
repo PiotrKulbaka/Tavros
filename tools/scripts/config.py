@@ -11,7 +11,7 @@ class DotDict(dict):
         try:
             return self[item]
         except KeyError as e:
-            raise AttributeError(f"No such attribute: {item}") from e
+            raise AttributeError(f'No such attribute: {item}') from e
 
     def __setattr__(self, key, value):
         self[key] = value
@@ -43,7 +43,17 @@ class Config:
             toml.dump(to_plain_dict(self.data), f)
 
     def __getitem__(self, key):
-        return self.data[key]
+        if isinstance(key, str):
+            parts = key.split(".")
+            current = self.data
+            for part in parts:
+                if isinstance(current, dict) and part in current:
+                    current = current[part]
+                else:
+                    raise KeyError(f"No such key: {key}")
+            return current
+        else:
+            return self.data[key]
 
     def __setitem__(self, key, value):
         self.data[key] = value

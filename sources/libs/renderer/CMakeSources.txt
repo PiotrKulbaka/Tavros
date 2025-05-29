@@ -3,13 +3,6 @@
 # Use `./tavros.py collect_sources` for regenerate it file
 #
 
-set(TAV_RENDERER_SOURCES
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/interfaces/gl_context.hpp
-
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/platform/win32/gl_context.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/platform/win32/gl_context.hpp
-)
-
 set(TAV_RENDERER_MACOS_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/platform/macos/gl_context.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/platform/macos/gl_context.mm
@@ -19,3 +12,8 @@ set(TAV_RENDERER_WIN32_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/platform/win32/gl_context.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/platform/win32/gl_context.hpp
 )
+
+set(TAV_RENDERER_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/interfaces/gl_context.hpp
+)
+

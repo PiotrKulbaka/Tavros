@@ -1,3 +1,4 @@
+import os
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from .config import Config
@@ -5,12 +6,13 @@ from .variable_resolver import VariableResolver
 from .builtin_variables import get_builtin_variables
 from .utils import run_command
 
-def collect_files_by_exts(base_dir, exts):
+def collect_files_by_exts_recursive(include, exclude, exts):
     """
     Collect all files with the specified extensions from the given directory
     and its subdirectories.
 
-    :param base_dir: The base directory to start searching.
+    :param include: Directories or files to include to the search.
+    :param exclude: Directories or files to exclude from the search.
     :param exts: List of file extensions to be collected.
     :return: A sorted list of Path objects representing the collected files.
     """
@@ -22,14 +24,28 @@ def collect_files_by_exts(base_dir, exts):
                 return True
         return False
 
-    def recursive_collect(dir):
-        for entry in Path(dir).iterdir():
-            if entry.is_file() and has_suffix(entry, exts):
-                collected_files.append(entry)
-            elif entry.is_dir():
-                recursive_collect(entry)
+    def not_excluded(path):
+        for excluded in exclude:
+            if str(path).startswith(str(excluded)):
+                return False
+        return True
 
-    recursive_collect(base_dir)
+    def recursive_collect(entry):
+        for path in Path(entry).iterdir():
+            if path.is_file() and has_suffix(path, exts) and not_excluded(path):
+                collected_files.append(path)
+            elif path.is_dir():
+                recursive_collect(path)
+
+    if not isinstance(include, list):
+        include = [include]
+
+    for entry in include:
+        if Path(entry).is_file() and has_suffix(entry, exts) and not_excluded(entry):
+            collected_files.append(entry)
+        else:
+            recursive_collect(entry)
+
     return sorted(collected_files, key=lambda path: (path.parent, path))
 
 
@@ -56,18 +72,20 @@ def autoformat(cfg: Config):
 
     :param cfg: Config object with the project configuration.
     """
-    exts = cfg.command.autoformat.for_exts
+    exts = cfg.command.autoformat.exts
+    include = cfg.command.autoformat.include
+    exclude = cfg.command.autoformat.exclude
     clang_foramt_tool_path = cfg.command.autoformat.clang_format_tool_path
-    style_param = f"--style=file:{str(cfg.command.autoformat.style_file)}"
+    style_param = f"--style=file:{str(cfg.command.autoformat.clang_format_style_file)}"
 
-    files = []
-    for p in cfg.command.autoformat.paths:
-        files.extend(collect_files_by_exts(p, exts))
+    files = collect_files_by_exts_recursive(include, exclude, exts)
 
     def apply_clang_format(path):
         run_command([clang_foramt_tool_path, style_param, '-i', str(path)])
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    cores = os.cpu_count()
+    workers = cores if cores else 8
+    with ThreadPoolExecutor(max_workers=workers) as executor:
         for f in files:
             executor.submit(apply_clang_format, f)
 
@@ -79,9 +97,10 @@ def collect_sources(cfg: Config):
 
     :param cfg: Config object with the project configuration.
     """
-    exts = cfg.command.collect_sources.for_exts
-    test_exts = cfg.command.collect_sources.for_test_exts
-    macos_exts = cfg.command.collect_sources.only_macos_exts
+    exts = cfg.command.collect_sources.exts
+    test_exts = cfg.command.collect_sources.test_exts
+    exclude = cfg.command.collect_sources.exclude
+    platform_subfolders_section = cfg.command.collect_sources.platform_subfolders
 
     def collect_lib_sources(lib_dir, lib_name):
         """
@@ -91,20 +110,19 @@ def collect_sources(cfg: Config):
         :param lib_dir: Directory containing source code files.
         :param lib_name: Library name for the generated 'CMakeSources.txt' file.
         """
-        all_sources = collect_files_by_exts(lib_dir, exts)
-        test_sources = collect_files_by_exts(lib_dir, test_exts)
-        only_macos_sources = collect_files_by_exts(lib_dir, macos_exts)
+        all_sources = collect_files_by_exts_recursive(lib_dir, exclude, exts)
+        test_sources = collect_files_by_exts_recursive(lib_dir, exclude, test_exts)
 
-        platform_subfolder_macos = cfg.command.collect_sources.platform_subfolder_macos
-        platform_macos_sources = [s for s in all_sources if platform_subfolder_macos in str(s.as_posix())]
+        all_platfrom_sources = []
+        platfrom_sources = {}
+        for name, subfolder in platform_subfolders_section.items():
+            platfrom_sources[name] = [s for s in all_sources if subfolder in str(s.as_posix())]
+            all_platfrom_sources.extend(platfrom_sources[name])
 
-        platform_subfolder_win32 = cfg.command.collect_sources.platform_subfolder_win32
-        platform_win32_sources = [s for s in all_sources if platform_subfolder_win32 in str(s.as_posix())]
+        # Exclude test sources and all platfrom sources 
+        crossplatform_sources = [s for s in all_sources if s not in test_sources and s not in all_platfrom_sources]
 
-        # Exclude test sources, macos sources, and windows from all_sources 
-        crossplatform_sources = [s for s in all_sources if s not in test_sources and s not in platform_macos_sources]
-
-        if not crossplatform_sources and not test_sources and not platform_win32_sources and not platform_macos_sources and not only_macos_sources:
+        if not crossplatform_sources and not test_sources and not all_platfrom_sources:
             return
 
         cmake_sources_filename = lib_dir / 'CMakeSources.txt'
@@ -117,38 +135,33 @@ def collect_sources(cfg: Config):
                 for s in sources:
                     if prev and prev.parent != s.parent:
                         f.write('\n')
-                    f.write(f'    ${{CMAKE_CURRENT_LIST_DIR}}/{s.relative_to(lib_dir).as_posix()}\n')
+                    f.write(f'    ${{CMAKE_CURRENT_LIST_DIR}}/{str(Path(s).relative_to(lib_dir).as_posix())}\n')
                     prev = s
 
             f.write('#\n# Autogenerated file, do not edit manually\n')
             f.write('# Use `./tavros.py collect_sources` for regenerate it file\n#\n\n')
 
+            for platfrom_name, sources in platfrom_sources.items():
+                if not sources:
+                    continue
+                f.write(f'set(TAV_{lib_name.upper()}_{platfrom_name.upper()}_SOURCES\n')
+                print_sources_list(sources)
+                f.write(')\n\n')
+
             if crossplatform_sources:
                 f.write(f'set(TAV_{lib_name.upper()}_SOURCES\n')
                 print_sources_list(crossplatform_sources)
-                f.write(')\n')
+                f.write(')\n\n')
             
-            if platform_macos_sources or only_macos_sources:
-                sources = sorted(platform_macos_sources + only_macos_sources, key=lambda path: (path.parent, path))
-
-                f.write(f'\nset(TAV_{lib_name.upper()}_MACOS_SOURCES\n')
-                print_sources_list(sources)
-                f.write(')\n')
-
-            if platform_win32_sources:
-                f.write(f'\nset(TAV_{lib_name.upper()}_WIN32_SOURCES\n')
-                print_sources_list(platform_win32_sources)
-                f.write(')\n')
-
             if test_sources:
                 f.write(f'\nset(TAV_{lib_name.upper()}_TEST_SOURCES\n')
                 print_sources_list(test_sources)
-                f.write(')\n')
+                f.write(')\n\n')
 
-    paths = cfg.command.collect_sources.paths
+    paths = cfg.command.collect_sources.collect_paths
     for p in paths:
         dir = Path(p)
         if dir.exists():
             collect_lib_sources(dir, dir.name)
         else:
-            print(f'Directory is not exists: {str(dir)}')
+            print(f'Directory is not exists: {str(dir.as_posix())}')
