@@ -7,6 +7,8 @@ namespace tavros::math
 
     mat3 make_mat3(const quat& q) noexcept;
     mat4 make_mat4(const quat& q) noexcept;
+    mat4 make_look_at(const vec3& origin, const vec3& forward, const vec3& up) noexcept;
+    mat4 make_perspective(float fov_y, float aspect, float z_near, float z_far) noexcept;
 
     static_assert(sizeof(mat4) == 64, "incorrect size");
     static_assert(alignof(mat4) == 16, "incorrect alignment");
@@ -19,6 +21,16 @@ namespace tavros::math
     inline mat4 mat4::from_quat(const quat& q) noexcept
     {
         return make_mat4(q);
+    }
+
+    inline mat4 mat4::look_at(const vec3& origin, const vec3& forward, const vec3& up) noexcept
+    {
+        return make_look_at(origin, forward, up);
+    }
+
+    inline mat4 mat4::perspective(float fov_y, float aspect, float z_near, float z_far) noexcept
+    {
+        return make_perspective(fov_y, aspect, z_near, z_far);
     }
 
     inline constexpr mat4::mat4() noexcept

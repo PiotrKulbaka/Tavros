@@ -4,6 +4,9 @@
 
 #import <Cocoa/Cocoa.h>
 
+#pragma clang diagnostic push
+#pragma clang diagnostic ignored "-Wdeprecated-declarations"
+
 namespace tavros::renderer
 {
     class gl_context : public interfaces::gl_context, core::noncopyable, core::nonmovable
@@ -26,3 +29,5 @@ namespace tavros::renderer
         NSOpenGLContext* m_context;
     };
 } // namespace tavros::renderer
+
+#pragma clang diagnostic pop
