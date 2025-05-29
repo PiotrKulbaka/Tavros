@@ -11,6 +11,13 @@ set(TAV_SYSTEM_SOURCES
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/system/interfaces/application.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/system/interfaces/window.hpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/application.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/application.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/utils.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/utils.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/window.hpp
 )
 
 set(TAV_SYSTEM_MACOS_SOURCES
@@ -20,4 +27,13 @@ set(TAV_SYSTEM_MACOS_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/macos/utils.mm
     ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/macos/window.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/macos/window.mm
+)
+
+set(TAV_SYSTEM_WIN32_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/application.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/application.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/utils.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/utils.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/window.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/system/platform/win32/window.hpp
 )

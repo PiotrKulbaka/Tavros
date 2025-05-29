@@ -17,7 +17,7 @@ namespace tavros::math
      *
      * @return A vector perpendicular to this one.
      */
-    inline constexpr vec3 orthogonal(const vec3& v) noexcept
+    inline vec3 orthogonal(const vec3& v) noexcept
     {
         if (abs(v.x) < abs(v.y)) {
             if (abs(v.x) < abs(v.z)) {

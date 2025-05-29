@@ -9,8 +9,11 @@ tavros_add_library(
         ${TAV_RENDERER_SOURCES}
     LIB_MACOS_SOURCES
         ${TAV_RENDERER_MACOS_SOURCES}
+    LIB_WIN32_SOURCES
+        ${TAV_RENDERER_WIN32_SOURCES}
     LIB_DEPENDS
         PRIVATE
-        tav_core
+            tav_core
+            glad
     LIB_DEFINES
 )

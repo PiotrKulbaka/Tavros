@@ -36,7 +36,7 @@
 namespace tavros::math
 {
 
-    inline constexpr float length(const vec2& v) noexcept
+    inline float length(const vec2& v) noexcept
     {
         return sqrt(v.x * v.x + v.y * v.y);
     }
@@ -46,7 +46,7 @@ namespace tavros::math
         return v.x * v.x + v.y * v.y;
     }
 
-    inline constexpr float length(const vec3& v) noexcept
+    inline float length(const vec3& v) noexcept
     {
         return sqrt(v.x * v.x + v.y * v.y + v.z * v.z);
     }
@@ -56,7 +56,7 @@ namespace tavros::math
         return v.x * v.x + v.y * v.y + v.z * v.z;
     }
 
-    inline constexpr float length(const vec4& v) noexcept
+    inline float length(const vec4& v) noexcept
     {
         return sqrt(v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w);
     }
@@ -66,7 +66,7 @@ namespace tavros::math
         return v.x * v.x + v.y * v.y + v.z * v.z + v.w * v.w;
     }
 
-    inline constexpr float length(const quat& q) noexcept
+    inline float length(const quat& q) noexcept
     {
         return sqrt(q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w);
     }

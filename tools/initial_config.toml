@@ -44,7 +44,7 @@ compile_options = [
 
 [command.cmake_gen.vstudio]
 cmake_tool_path = "cmake.exe"
-generator = "Visual Studio 17 2022"
+generator = ""
 architecture = "x64" # Win32 or ARM64
 
 [command.cmake_gen.ninja]
