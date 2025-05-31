@@ -2,8 +2,6 @@ import os
 from concurrent.futures.thread import ThreadPoolExecutor
 from pathlib import Path
 from .config import Config
-from .variable_resolver import VariableResolver
-from .builtin_variables import get_builtin_variables
 from .utils import run_command
 
 def collect_files_by_exts_recursive(include, exclude, exts):
@@ -49,23 +47,6 @@ def collect_files_by_exts_recursive(include, exclude, exts):
     return sorted(collected_files, key=lambda path: (path.parent, path))
 
 
-def setup(root_dir, initial_config_path):
-    """
-    Initialize the project by generating an 'env.toml' file with configuration.
-
-    :param root_dir: The root directory of the project.
-    :param initial_config_path: The path to the initial configuration file.
-    """
-    env_file_path = Path(root_dir) / 'env.toml'
-    cfg = Config(initial_config_path)
-    builtin_vars = get_builtin_variables(root_dir.as_posix())
-    resolver = VariableResolver()
-    resolver.resolve_for_config(cfg, builtin_vars)
-    cfg.save(env_file_path)
-    print("Project has been successfully initialized")
-    print(f"Created env.toml: `{env_file_path}`")
-
-
 def autoformat(cfg: Config):
     """
     Format all source code files using clang-format.
@@ -74,7 +55,7 @@ def autoformat(cfg: Config):
     """
     exts = cfg.command.autoformat.exts
     include = cfg.command.autoformat.include
-    exclude = cfg.command.autoformat.exclude
+    exclude = cfg.command.autoformat.exclude if "exclude" in cfg.command.autoformat else []
     clang_foramt_tool_path = cfg.command.autoformat.clang_format_tool_path
     style_param = f"--style=file:{str(cfg.command.autoformat.clang_format_style_file)}"
 
@@ -99,7 +80,7 @@ def collect_sources(cfg: Config):
     """
     exts = cfg.command.collect_sources.exts
     test_exts = cfg.command.collect_sources.test_exts
-    exclude = cfg.command.collect_sources.exclude
+    exclude = cfg.command.collect_sources.exclude if "exclude" in cfg.command.collect_sources else []
     platform_subfolders_section = cfg.command.collect_sources.platform_subfolders
 
     def collect_lib_sources(lib_dir, lib_name):
@@ -116,7 +97,7 @@ def collect_sources(cfg: Config):
         all_platfrom_sources = []
         platfrom_sources = {}
         for name, subfolder in platform_subfolders_section.items():
-            platfrom_sources[name] = [s for s in all_sources if subfolder in str(s.as_posix())]
+            platfrom_sources[name] = [s for s in all_sources if subfolder in str(s.relative_to(lib_dir).as_posix())]
             all_platfrom_sources.extend(platfrom_sources[name])
 
         # Exclude test sources and all platfrom sources 
@@ -152,7 +133,7 @@ def collect_sources(cfg: Config):
                 f.write(f'set(TAV_{lib_name.upper()}_SOURCES\n')
                 print_sources_list(crossplatform_sources)
                 f.write(')\n\n')
-            
+
             if test_sources:
                 f.write(f'\nset(TAV_{lib_name.upper()}_TEST_SOURCES\n')
                 print_sources_list(test_sources)

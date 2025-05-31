@@ -16,7 +16,7 @@ lib_system = "${path.libs}/system"
 
 [command.autoformat]
 clang_format_tool_path = "${builtin_clang_format_tool_path}"
-clang_format_style_file = "${builtin_root}/tools/.clang-format"
+clang_format_style_file = "${path.tools}/.clang-format"
 exts = [".cpp", ".hpp", ".h", ".c", ".inl", ".m", ".mm"]
 include = [
     "${path.lib_core}",
@@ -24,9 +24,6 @@ include = [
     "${path.lib_system}",
     "${path.wrappers}/sandbox",
     "${path.tests}/sources",
-]
-exclude = [
-    # nothing to exclude
 ]
 
 
@@ -40,9 +37,7 @@ collect_paths = [
     "${path.wrappers}/sandbox",
     "${path.tests}/sources",
 ]
-exclude = [
-    # nothing to exclude
-]
+
 
 [command.collect_sources.platform_subfolders]
 apple = "platform/apple"
@@ -50,7 +45,6 @@ macos = "platform/macos"
 ios = "platform/ios"
 android = "platform/android"
 win32 = "platform/win32"
-
 
 
 [command.cmake_gen.xcode]

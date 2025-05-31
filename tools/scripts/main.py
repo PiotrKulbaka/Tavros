@@ -2,30 +2,27 @@ import time
 from pathlib import Path
 from docopt import docopt
 from .config import Config
-from .tools import setup
 from .tools import autoformat
 from .tools import collect_sources
 from .cmake import cmake_gen
 from .help import get_doc
-
+from .variable_resolver import VariableResolver
+from .builtin_variables import get_builtin_variables
 
 def main(root_dir) -> int:
     start = time.perf_counter()
 
-    env_file_path = Path(root_dir) / 'env.toml'
     doc = get_doc()
     args = docopt(doc)
 
-    if env_file_path.exists():
-        cfg = Config(env_file_path)
-    elif not args['setup']:
-        print("The `env.toml` file not found. Use `./tavros.py setup` to initialize the project\n")
-        print(doc)
-        return 1
+    cfg = Config(Path(root_dir) / 'tools' / 'config.toml')
+    builtin_vars = get_builtin_variables(root_dir.as_posix())
+    resolver = VariableResolver()
+    resolver.resolve_for_config(cfg, builtin_vars)
 
     try:
-        if args['setup']:
-            setup(root_dir, Path(root_dir) / 'tools' / 'initial_config.toml')
+        if args['--show_resolved_config']:
+            print(cfg.to_str())
         elif args['autoformat']:
             autoformat(cfg)
         elif args['collect_sources']:

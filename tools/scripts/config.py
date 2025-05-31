@@ -33,6 +33,13 @@ class Config:
             raw = toml.load(f)
         self.data = DotDict(raw)
 
+    def to_str(self):
+        def to_plain_dict(d):
+            if isinstance(d, dict):
+                return {k: to_plain_dict(v) for k, v in d.items()}
+            return d
+        return toml.dumps(to_plain_dict(self.data))
+
     def save(self, config_path):
         def to_plain_dict(d):
             if isinstance(d, dict):
