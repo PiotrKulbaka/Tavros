@@ -66,7 +66,6 @@ int main()
     constexpr uint8 k_left = static_cast<uint8>(tavros::system::keys::k_A);
     constexpr uint8 k_down = static_cast<uint8>(tavros::system::keys::k_S);
 
-
     auto app = tavros::system::interfaces::application::create();
 
     auto wnd = tavros::system::interfaces::window::create("TavrosEngine");

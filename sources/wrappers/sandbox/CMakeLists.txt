@@ -2,7 +2,7 @@ include(CMakeSources.txt)
 
 add_executable(
     sandbox
-    ${TAV_SANDBOX_SOURCES}
+    ${TAV_SANDBOX_CROSSPLATFORM_SOURCES}
 )
 
 target_link_libraries(

@@ -6,7 +6,7 @@ tavros_add_library(
     LIB_TYPE
         STATIC
     LIB_CROSSPLATFORM_SOURCES
-        ${TAV_CORE_SOURCES}
+        ${TAV_CORE_CROSSPLATFORM_SOURCES}
     LIB_DEPENDS
     LIB_DEFINES
 )

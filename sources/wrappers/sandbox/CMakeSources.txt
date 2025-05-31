@@ -3,7 +3,7 @@
 # Use `./tavros.py collect_sources` for regenerate it file
 #
 
-set(TAV_SANDBOX_SOURCES
+set(TAV_SANDBOX_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/sources/main.cpp
 )
 
