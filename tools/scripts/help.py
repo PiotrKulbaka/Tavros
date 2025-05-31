@@ -7,7 +7,7 @@ def get_doc():
         Usage:
             tavros.py autoformat
             tavros.py collect_sources
-            tavros.py cmake_gen (xcode | vstudio | ninja | makefiles) [--collect_sources] [--autoformat]
+            tavros.py cmake_gen (xcode | visual_studio | ninja | makefiles) [--collect_sources] [--autoformat]
             tavros.py (--show_resolved_config)
             tavros.py (-h | --help)
 
@@ -24,7 +24,7 @@ def get_doc():
 
         Generators:
             xcode                   Generate CMake project for Xcode
-            vstudio                 Generate CMake project for Visual Studio
+            visual_studio           Generate CMake project for Visual Studio
             ninja                   Generate CMake project for Ninja
             makefiles               Generate CMake project for Unix Makefiles
         """

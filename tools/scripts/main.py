@@ -34,8 +34,8 @@ def main(root_dir) -> int:
                 collect_sources(cfg)
             if args['xcode']:
                 cmake_gen(cfg, 'xcode')
-            if args['vstudio']:
-                cmake_gen(cfg, 'vstudio')
+            if args['visual_studio']:
+                cmake_gen(cfg, 'visual_studio')
             if args['ninja']:
                 cmake_gen(cfg, 'ninja')
             if args['makefiles']:

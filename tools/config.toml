@@ -56,7 +56,7 @@ compile_options = [
     "-Wno-nested-anon-types",
 ]
 
-[command.cmake_gen.vstudio]
+[command.cmake_gen.visual_studio]
 cmake_tool_path = "cmake.exe"
 generator = ""
 architecture = "x64" # Win32 or ARM64
