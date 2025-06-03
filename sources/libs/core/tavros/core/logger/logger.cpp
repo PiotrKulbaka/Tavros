@@ -23,12 +23,12 @@ namespace
 
     const char* now_time()
     {
-        static const char           alpha[] = "0123456789";
-        thread_local static char    str_time[] = "00:00:00.000";
-        thread_local static int64_t last_ms = 0;
-        thread_local static int64_t last_s = 0;
-        thread_local static int64_t last_m = 0;
-        thread_local static int64_t last_h = 0;
+        static const char         alpha[] = "0123456789";
+        thread_local static char  str_time[] = "00:00:00.000";
+        thread_local static int64 last_ms = 0;
+        thread_local static int64 last_s = 0;
+        thread_local static int64 last_m = 0;
+        thread_local static int64 last_h = 0;
 
         using namespace std::chrono;
 
@@ -96,7 +96,7 @@ namespace
         };
 
         const auto* now_s = now_time();
-        const auto* lvl_s = level_strings[static_cast<uint32_t>(level)];
+        const auto* lvl_s = level_strings[static_cast<uint32>(level)];
 
         auto len = std::snprintf(message, size - 1, "[tavros|%s|%s][%s] ", now_s, lvl_s, tag.data());
         if (len < size) {

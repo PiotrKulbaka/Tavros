@@ -778,7 +778,7 @@ const char* tavros::system::last_win_error_str()
         if (result) {
             // Trim the end of the line from spaces
             str[result] = 0;
-            for (int32_t i = result - 1; i >= 0; i--) {
+            for (int32 i = result - 1; i >= 0; i--) {
                 if (str[i] == ' ' || str[i] == '\n' || str[i] == '\r') {
                     str[i] = 0;
                 } else {
@@ -799,8 +799,8 @@ const char* tavros::system::last_win_error_str()
 
 tavros::math::ipoint2 tavros::system::create_point2(LPARAM lParam)
 {
-    int32_t x = GET_X_LPARAM(lParam);
-    int32_t y = GET_Y_LPARAM(lParam);
+    int32 x = GET_X_LPARAM(lParam);
+    int32 y = GET_Y_LPARAM(lParam);
     return tavros::math::ipoint2(x, y);
 }
 
@@ -813,8 +813,8 @@ tavros::math::point2 create_fpoint2(LPARAM lParam)
 
 tavros::math::isize2 tavros::system::create_size2(LPARAM lParam)
 {
-    int32_t width = GET_X_LPARAM(lParam);
-    int32_t height = GET_Y_LPARAM(lParam);
+    int32 width = GET_X_LPARAM(lParam);
+    int32 height = GET_Y_LPARAM(lParam);
     return tavros::math::isize2(width, height);
 }
 

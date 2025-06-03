@@ -23,7 +23,7 @@ include = [
     "${path.lib_renderer}",
     "${path.lib_system}",
     "${path.wrappers}/sandbox",
-    "${path.tests}/sources",
+    "${path.wrappers}/q3pp",
 ]
 
 
@@ -36,6 +36,8 @@ collect_paths = [
     "${path.lib_system}",
     "${path.wrappers}/sandbox",
     "${path.tests}/sources",
+    "${path.tests}/sources",
+    "${path.wrappers}/q3pp",
 ]
 
 
