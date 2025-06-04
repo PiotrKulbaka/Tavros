@@ -241,19 +241,6 @@ static void CG_Item(centity_t* cent)
     }
 
     item = &bg_itemlist[es->modelindex];
-    if (cg_simpleItems->integer && item->giType != IT_TEAM) {
-        memset(&ent, 0, sizeof(ent));
-        ent.reType = RT_SPRITE;
-        VectorCopy(cent->lerpOrigin, ent.origin);
-        ent.radius = 14;
-        ent.customShader = cg_items[es->modelindex].icon;
-        ent.shaderRGBA[0] = 255;
-        ent.shaderRGBA[1] = 255;
-        ent.shaderRGBA[2] = 255;
-        ent.shaderRGBA[3] = 255;
-        RE_AddRefEntityToScene(&ent);
-        return;
-    }
 
     // items bob up and down continuously
     scale = 0.005 + cent->currentState.number * 0.00001;
@@ -323,28 +310,26 @@ static void CG_Item(centity_t* cent)
     RE_AddRefEntityToScene(&ent);
 
     // accompanying rings / spheres for powerups
-    if (!cg_simpleItems->integer) {
-        vec3_t spinAngles;
+    vec3_t spinAngles;
 
-        VectorClear(spinAngles);
+    VectorClear(spinAngles);
 
-        if (item->giType == IT_HEALTH || item->giType == IT_POWERUP) {
-            if ((ent.hModel = cg_items[es->modelindex].models[1]) != 0) {
-                if (item->giType == IT_POWERUP) {
-                    ent.origin[2] += 12;
-                    spinAngles[1] = (cg.time & 1023) * 360 / -1024.0f;
-                }
-                AnglesToAxis(spinAngles, ent.axis);
-
-                // scale up if respawning
-                if (frac != 1.0) {
-                    VectorScale(ent.axis[0], frac, ent.axis[0]);
-                    VectorScale(ent.axis[1], frac, ent.axis[1]);
-                    VectorScale(ent.axis[2], frac, ent.axis[2]);
-                    ent.nonNormalizedAxes = true;
-                }
-                RE_AddRefEntityToScene(&ent);
+    if (item->giType == IT_HEALTH || item->giType == IT_POWERUP) {
+        if ((ent.hModel = cg_items[es->modelindex].models[1]) != 0) {
+            if (item->giType == IT_POWERUP) {
+                ent.origin[2] += 12;
+                spinAngles[1] = (cg.time & 1023) * 360 / -1024.0f;
             }
+            AnglesToAxis(spinAngles, ent.axis);
+
+            // scale up if respawning
+            if (frac != 1.0) {
+                VectorScale(ent.axis[0], frac, ent.axis[0]);
+                VectorScale(ent.axis[1], frac, ent.axis[1]);
+                VectorScale(ent.axis[2], frac, ent.axis[2]);
+                ent.nonNormalizedAxes = true;
+            }
+            RE_AddRefEntityToScene(&ent);
         }
     }
 }

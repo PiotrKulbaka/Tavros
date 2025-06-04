@@ -98,32 +98,24 @@ static void CG_DrawClientScore(int32 y, score_t* score, tavros::math::vec4 color
     // draw the handicap or bot skill marker (unless player has flag)
     if (ci->powerups & (1 << PW_NEUTRALFLAG)) {
         if (largeFormat) {
-            CG_DrawFlagModel(iconx, y - (32 - BIGCHAR_HEIGHT) / 2, 32, 32, TEAM_FREE, false);
+            CG_DrawFlagModel(iconx, y - (32 - BIGCHAR_HEIGHT) / 2, 32, 32, TEAM_FREE);
         } else {
-            CG_DrawFlagModel(iconx, y, 16, 16, TEAM_FREE, false);
+            CG_DrawFlagModel(iconx, y, 16, 16, TEAM_FREE);
         }
     } else if (ci->powerups & (1 << PW_REDFLAG)) {
         if (largeFormat) {
-            CG_DrawFlagModel(iconx, y - (32 - BIGCHAR_HEIGHT) / 2, 32, 32, TEAM_RED, false);
+            CG_DrawFlagModel(iconx, y - (32 - BIGCHAR_HEIGHT) / 2, 32, 32, TEAM_RED);
         } else {
-            CG_DrawFlagModel(iconx, y, 16, 16, TEAM_RED, false);
+            CG_DrawFlagModel(iconx, y, 16, 16, TEAM_RED);
         }
     } else if (ci->powerups & (1 << PW_BLUEFLAG)) {
         if (largeFormat) {
-            CG_DrawFlagModel(iconx, y - (32 - BIGCHAR_HEIGHT) / 2, 32, 32, TEAM_BLUE, false);
+            CG_DrawFlagModel(iconx, y - (32 - BIGCHAR_HEIGHT) / 2, 32, 32, TEAM_BLUE);
         } else {
-            CG_DrawFlagModel(iconx, y, 16, 16, TEAM_BLUE, false);
+            CG_DrawFlagModel(iconx, y, 16, 16, TEAM_BLUE);
         }
     } else {
-        if (ci->botSkill > 0 && ci->botSkill <= 5) {
-            if (cg_drawIcons->integer) {
-                if (largeFormat) {
-                    CG_DrawPic(iconx, y - (32 - BIGCHAR_HEIGHT) / 2, 32, 32, cgs.media.botSkillShaders[ci->botSkill - 1]);
-                } else {
-                    CG_DrawPic(iconx, y, 16, 16, cgs.media.botSkillShaders[ci->botSkill - 1]);
-                }
-            }
-        } else if (ci->handicap < 100) {
+        if (ci->handicap < 100) {
             Com_sprintf(string, sizeof(string), "%i", ci->handicap);
             if (cgs.gametype == GT_TOURNAMENT) {
                 CG_DrawSmallStringColor(iconx, y - SMALLCHAR_HEIGHT / 2, string, color);

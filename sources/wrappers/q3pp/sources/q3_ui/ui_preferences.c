@@ -39,8 +39,6 @@ GAME OPTIONS MENU
 
 #define PREFERENCES_X_POS 360
 
-#define ID_SIMPLEITEMS    128
-#define ID_EJECTINGBRASS  130
 #define ID_ALLOWDOWNLOAD  137
 #define ID_BACK           138
 
@@ -53,8 +51,6 @@ typedef struct
     menubitmap_s framel;
     menubitmap_s framer;
 
-    menuradiobutton_s simpleitems;
-    menuradiobutton_s brass;
     menuradiobutton_s allowdownload;
     menubitmap_s      back;
 } preferences_t;
@@ -63,8 +59,6 @@ static preferences_t s_preferences;
 
 static void Preferences_SetMenuItems()
 {
-    s_preferences.simpleitems.curvalue = Cvar_VariableValue("cg_simpleItems") != 0;
-    s_preferences.brass.curvalue = Cvar_VariableValue("cg_brassTime") != 0;
     s_preferences.allowdownload.curvalue = Cvar_VariableValue("cl_allowDownload") != 0;
 }
 
@@ -76,18 +70,6 @@ static void Preferences_Event(void* ptr, int32 notification)
     }
 
     switch (((menucommon_s*) ptr)->id) {
-    case ID_SIMPLEITEMS:
-        Cvar_SetValue("cg_simpleItems", s_preferences.simpleitems.curvalue);
-        break;
-
-    case ID_EJECTINGBRASS:
-        if (s_preferences.brass.curvalue) {
-            Cvar_Reset("cg_brassTime");
-        } else {
-            Cvar_SetValue("cg_brassTime", 0);
-        }
-        break;
-
     case ID_ALLOWDOWNLOAD:
         Cvar_SetValue("cl_allowDownload", s_preferences.allowdownload.curvalue);
         Cvar_SetValue("sv_allowDownload", s_preferences.allowdownload.curvalue);
@@ -134,22 +116,6 @@ static void Preferences_MenuInit()
     s_preferences.framer.height = 334;
 
     y = 144;
-    s_preferences.simpleitems.generic.type = MTYPE_RADIOBUTTON;
-    s_preferences.simpleitems.generic.name = "Simple Items:";
-    s_preferences.simpleitems.generic.flags = QMF_PULSEIFFOCUS | QMF_SMALLFONT;
-    s_preferences.simpleitems.generic.callback = Preferences_Event;
-    s_preferences.simpleitems.generic.id = ID_SIMPLEITEMS;
-    s_preferences.simpleitems.generic.x = PREFERENCES_X_POS;
-    s_preferences.simpleitems.generic.y = y;
-
-    y += BIGCHAR_HEIGHT + 2;
-    s_preferences.brass.generic.type = MTYPE_RADIOBUTTON;
-    s_preferences.brass.generic.name = "Ejecting Brass:";
-    s_preferences.brass.generic.flags = QMF_PULSEIFFOCUS | QMF_SMALLFONT;
-    s_preferences.brass.generic.callback = Preferences_Event;
-    s_preferences.brass.generic.id = ID_EJECTINGBRASS;
-    s_preferences.brass.generic.x = PREFERENCES_X_POS;
-    s_preferences.brass.generic.y = y;
 
     y += BIGCHAR_HEIGHT + 2;
     s_preferences.allowdownload.generic.type = MTYPE_RADIOBUTTON;
@@ -176,8 +142,6 @@ static void Preferences_MenuInit()
     Menu_AddItem(&s_preferences.menu, &s_preferences.framel);
     Menu_AddItem(&s_preferences.menu, &s_preferences.framer);
 
-    Menu_AddItem(&s_preferences.menu, &s_preferences.simpleitems);
-    Menu_AddItem(&s_preferences.menu, &s_preferences.brass);
     Menu_AddItem(&s_preferences.menu, &s_preferences.allowdownload);
 
     Menu_AddItem(&s_preferences.menu, &s_preferences.back);

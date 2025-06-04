@@ -102,10 +102,6 @@ void CG_Draw3DModel(float x, float y, float w, float h, qhandle_t model, qhandle
     refdef_t    refdef;
     refEntity_t ent;
 
-    if (!cg_draw3dIcons->integer || !cg_drawIcons->integer) {
-        return;
-    }
-
     CG_AdjustFrom640(&x, &y, &w, &h);
 
     memset(&refdef, 0, sizeof(refdef));
@@ -153,30 +149,26 @@ void CG_DrawHead(float x, float y, float w, float h, int32 clientNum, vec3_t hea
 
     ci = &cgs.clientinfo[clientNum];
 
-    if (cg_draw3dIcons->integer) {
-        cm = ci->headModel;
-        if (!cm) {
-            return;
-        }
-
-        // offset the origin y and z to center the head
-        R_ModelBounds(cm, mins, maxs);
-
-        origin[2] = -0.5 * (mins[2] + maxs[2]);
-        origin[1] = 0.5 * (mins[1] + maxs[1]);
-
-        // calculate distance so the head nearly fills the box
-        // assume heads are taller than wide
-        len = 0.7 * (maxs[2] - mins[2]);
-        origin[0] = len / 0.268; // len / tan( fov/2 )
-
-        // allow per-model tweaking
-        VectorAdd(origin, ci->headOffset, origin);
-
-        CG_Draw3DModel(x, y, w, h, ci->headModel, ci->headSkin, origin, headAngles);
-    } else if (cg_drawIcons->integer) {
-        CG_DrawPic(x, y, w, h, ci->modelIcon);
+    cm = ci->headModel;
+    if (!cm) {
+        return;
     }
+
+    // offset the origin y and z to center the head
+    R_ModelBounds(cm, mins, maxs);
+
+    origin[2] = -0.5 * (mins[2] + maxs[2]);
+    origin[1] = 0.5 * (mins[1] + maxs[1]);
+
+    // calculate distance so the head nearly fills the box
+    // assume heads are taller than wide
+    len = 0.7 * (maxs[2] - mins[2]);
+    origin[0] = len / 0.268; // len / tan( fov/2 )
+
+    // allow per-model tweaking
+    VectorAdd(origin, ci->headOffset, origin);
+
+    CG_Draw3DModel(x, y, w, h, ci->headModel, ci->headSkin, origin, headAngles);
 
     // if they are deferred, draw a cross out
     if (ci->deferred) {
@@ -191,7 +183,7 @@ CG_DrawFlagModel
 Used for both the status bar and the scoreboard
 ================
 */
-void CG_DrawFlagModel(float x, float y, float w, float h, int32 team, bool force2D)
+void CG_DrawFlagModel(float x, float y, float w, float h, int32 team)
 {
     qhandle_t cm;
     float     len;
@@ -199,51 +191,37 @@ void CG_DrawFlagModel(float x, float y, float w, float h, int32 team, bool force
     vec3_t    mins, maxs;
     qhandle_t handle;
 
-    if (!force2D && cg_draw3dIcons->integer) {
-        VectorClear(angles);
 
-        cm = cgs.media.redFlagModel;
+    // Draw 3d icons
+    VectorClear(angles);
 
-        // offset the origin y and z to center the flag
-        R_ModelBounds(cm, mins, maxs);
+    cm = cgs.media.redFlagModel;
 
-        origin[2] = -0.5 * (mins[2] + maxs[2]);
-        origin[1] = 0.5 * (mins[1] + maxs[1]);
+    // offset the origin y and z to center the flag
+    R_ModelBounds(cm, mins, maxs);
 
-        // calculate distance so the flag nearly fills the box
-        // assume heads are taller than wide
-        len = 0.5 * (maxs[2] - mins[2]);
-        origin[0] = len / 0.268; // len / tan( fov/2 )
+    origin[2] = -0.5 * (mins[2] + maxs[2]);
+    origin[1] = 0.5 * (mins[1] + maxs[1]);
 
-        angles[YAW] = 60 * sin(cg.time / 2000.0);
-        ;
+    // calculate distance so the flag nearly fills the box
+    // assume heads are taller than wide
+    len = 0.5 * (maxs[2] - mins[2]);
+    origin[0] = len / 0.268; // len / tan( fov/2 )
 
-        if (team == TEAM_RED) {
-            handle = cgs.media.redFlagModel;
-        } else if (team == TEAM_BLUE) {
-            handle = cgs.media.blueFlagModel;
-        } else if (team == TEAM_FREE) {
-            handle = cgs.media.neutralFlagModel;
-        } else {
-            return;
-        }
-        CG_Draw3DModel(x, y, w, h, handle, 0, origin, angles);
-    } else if (cg_drawIcons->integer) {
-        gitem_t* item;
+    angles[YAW] = 60 * sin(cg.time / 2000.0);
+    ;
 
-        if (team == TEAM_RED) {
-            item = BG_FindItemForPowerup(PW_REDFLAG);
-        } else if (team == TEAM_BLUE) {
-            item = BG_FindItemForPowerup(PW_BLUEFLAG);
-        } else if (team == TEAM_FREE) {
-            item = BG_FindItemForPowerup(PW_NEUTRALFLAG);
-        } else {
-            return;
-        }
-        if (item) {
-            CG_DrawPic(x, y, w, h, cg_items[ITEM_INDEX(item)].icon);
-        }
+    if (team == TEAM_RED) {
+        handle = cgs.media.redFlagModel;
+    } else if (team == TEAM_BLUE) {
+        handle = cgs.media.blueFlagModel;
+    } else if (team == TEAM_FREE) {
+        handle = cgs.media.neutralFlagModel;
+    } else {
+        return;
     }
+    CG_Draw3DModel(x, y, w, h, handle, 0, origin, angles);
+    
 }
 
 /*
@@ -311,7 +289,7 @@ CG_DrawStatusBarFlag
 */
 static void CG_DrawStatusBarFlag(float x, int32 team)
 {
-    CG_DrawFlagModel(x, 480 - ICON_SIZE, ICON_SIZE, ICON_SIZE, team, false);
+    CG_DrawFlagModel(x, 480 - ICON_SIZE, ICON_SIZE, ICON_SIZE, team);
 }
 
 /*
@@ -419,16 +397,6 @@ static void CG_DrawStatusBar()
 
             CG_DrawField(0, 432, 3, value);
             RE_SetColor(NULL);
-
-            // if we didn't draw a 3D icon, draw a 2D icon for ammo
-            if (!cg_draw3dIcons->integer && cg_drawIcons->integer) {
-                qhandle_t icon;
-
-                icon = cg_weapons[cg.predictedPlayerState.weapon].ammoIcon;
-                if (icon) {
-                    CG_DrawPic(CHAR_WIDTH * 3 + TEXT_ICON_SPACE, 432, ICON_SIZE, ICON_SIZE, icon);
-                }
-            }
         }
     }
 
@@ -461,181 +429,6 @@ static void CG_DrawStatusBar()
         RE_SetColor(colors[0]);
         CG_DrawField(370, 432, 3, value);
         RE_SetColor(NULL);
-        // if we didn't draw a 3D icon, draw a 2D icon for armor
-        if (!cg_draw3dIcons->integer && cg_drawIcons->integer) {
-            CG_DrawPic(370 + CHAR_WIDTH * 3 + TEXT_ICON_SPACE, 432, ICON_SIZE, ICON_SIZE, cgs.media.armorIcon);
-        }
-    }
-}
-
-/*
-===========================================================================================
-
-  UPPER RIGHT CORNER
-
-===========================================================================================
-*/
-
-/*
-================
-CG_DrawAttacker
-
-================
-*/
-static float CG_DrawAttacker(float y)
-{
-    int32       t;
-    float       size;
-    vec3_t      angles;
-    const char* info;
-    const char* name;
-    int32       clientNum;
-
-    if (cg.predictedPlayerState.stats[STAT_HEALTH] <= 0) {
-        return y;
-    }
-
-    if (!cg.attackerTime) {
-        return y;
-    }
-
-    clientNum = cg.predictedPlayerState.persistant[PERS_ATTACKER];
-    if (clientNum < 0 || clientNum >= MAX_CLIENTS || clientNum == cg.snap->ps.clientNum) {
-        return y;
-    }
-
-    t = cg.time - cg.attackerTime;
-    if (t > ATTACKER_HEAD_TIME) {
-        cg.attackerTime = 0;
-        return y;
-    }
-
-    size = ICON_SIZE * 1.25;
-
-    angles[PITCH] = 0;
-    angles[YAW] = 180;
-    angles[ROLL] = 0;
-    CG_DrawHead(640 - size, y, size, size, clientNum, angles);
-
-    info = CG_ConfigString(CS_PLAYERS + clientNum);
-    name = Info_ValueForKey(info, "n");
-    y += size;
-    CG_DrawBigString(640 - (Q_PrintStrlen(name) * BIGCHAR_WIDTH), y, name, 0.5);
-
-    return y + BIGCHAR_HEIGHT + 2;
-}
-
-/*
-==================
-CG_DrawSnapshot
-==================
-*/
-static float CG_DrawSnapshot(float y)
-{
-    char* s;
-    int32 w;
-
-    s = va("time:%i snap:%i cmd:%i", cg.snap->serverTime, cg.latestSnapshotNum, cgs.serverCommandSequence);
-    w = CG_DrawStrlen(s) * BIGCHAR_WIDTH;
-
-    CG_DrawBigString(635 - w, y + 2, s, 1.0F);
-
-    return y + BIGCHAR_HEIGHT + 4;
-}
-
-/*
-==================
-CG_DrawFPS
-==================
-*/
-#define FPS_FRAMES 4
-static float CG_DrawFPS(float y)
-{
-    char*        s;
-    int32        w;
-    static int32 previousTimes[FPS_FRAMES];
-    static int32 index;
-    int32        i, total;
-    int32        fps;
-    static int32 previous;
-    int32        t, frameTime;
-
-    // don't use serverTime, because that will be drifting to
-    // correct for internet lag changes, timescales, timedemos, etc
-    t = Sys_Milliseconds();
-    frameTime = t - previous;
-    previous = t;
-
-    previousTimes[index % FPS_FRAMES] = frameTime;
-    index++;
-    if (index > FPS_FRAMES) {
-        // average multiple frames together to smooth changes out a bit
-        total = 0;
-        for (i = 0; i < FPS_FRAMES; i++) {
-            total += previousTimes[i];
-        }
-        if (!total) {
-            total = 1;
-        }
-        fps = 1000 * FPS_FRAMES / total;
-
-        s = va("%ifps", fps);
-        w = CG_DrawStrlen(s) * BIGCHAR_WIDTH;
-
-        CG_DrawBigString(635 - w, y + 2, s, 1.0F);
-    }
-
-    return y + BIGCHAR_HEIGHT + 4;
-}
-
-/*
-=================
-CG_DrawTimer
-=================
-*/
-static float CG_DrawTimer(float y)
-{
-    char* s;
-    int32 w;
-    int32 mins, seconds, tens;
-    int32 msec;
-
-    msec = cg.time - cgs.levelStartTime;
-
-    seconds = msec / 1000;
-    mins = seconds / 60;
-    seconds -= mins * 60;
-    tens = seconds / 10;
-    seconds -= tens * 10;
-
-    s = va("%i:%i%i", mins, tens, seconds);
-    w = CG_DrawStrlen(s) * BIGCHAR_WIDTH;
-
-    CG_DrawBigString(635 - w, y + 2, s, 1.0F);
-
-    return y + BIGCHAR_HEIGHT + 4;
-}
-
-/*
-=====================
-CG_DrawUpperRight
-
-=====================
-*/
-static void CG_DrawUpperRight()
-{
-    float y = 0.0;
-    if (cg_drawSnapshot->integer) {
-        y = CG_DrawSnapshot(y);
-    }
-    if (cg_drawFPS->integer) {
-        y = CG_DrawFPS(y);
-    }
-    if (cg_drawTimer->integer) {
-        y = CG_DrawTimer(y);
-    }
-    if (cg_drawAttacker->integer) {
-        y = CG_DrawAttacker(y);
     }
 }
 
@@ -1349,7 +1142,8 @@ static void CG_DrawCenterString()
         return;
     }
 
-    tavros::math::vec4 fadeColor = CG_FadeColor(cg.centerPrintTime, 1000 * cg_centertime->value);
+    constexpr auto time_to_show_central_messages = 3; // time to show messages to center screen
+    tavros::math::vec4 fadeColor = CG_FadeColor(cg.centerPrintTime, 1000 * time_to_show_central_messages);
     if (fadeColor.x == 0.0f) {
         return;
     }
@@ -1825,8 +1619,6 @@ static void CG_Draw2D()
     CG_DrawTeamVote();
 
     CG_DrawLagometer();
-
-    CG_DrawUpperRight();
 
     CG_DrawLowerRight();
     CG_DrawLowerLeft();

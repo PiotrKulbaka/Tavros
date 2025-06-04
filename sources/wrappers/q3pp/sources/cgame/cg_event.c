@@ -360,7 +360,7 @@ static void CG_ItemPickup(int32 itemNum)
     // see if it should be the grabbed weapon
     if (bg_itemlist[itemNum].giType == IT_WEAPON) {
         // select it immediately
-        if (cg_autoswitch->integer && bg_itemlist[itemNum].giTag != WP_MACHINEGUN) {
+        if (bg_itemlist[itemNum].giTag != WP_MACHINEGUN) {
             cg.weaponSelectTime = cg.time;
             cg.weaponSelect = bg_itemlist[itemNum].giTag;
         }
@@ -446,33 +446,23 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
     //
     case EV_FOOTSTEP:
         DEBUGNAME("EV_FOOTSTEP");
-        if (cg_footsteps->integer) {
-            S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[ci->footsteps][rand() & 3]);
-        }
+        S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[ci->footsteps][rand() & 3]);
         break;
     case EV_FOOTSTEP_METAL:
         DEBUGNAME("EV_FOOTSTEP_METAL");
-        if (cg_footsteps->integer) {
-            S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_METAL][rand() & 3]);
-        }
+        S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_METAL][rand() & 3]);
         break;
     case EV_FOOTSPLASH:
         DEBUGNAME("EV_FOOTSPLASH");
-        if (cg_footsteps->integer) {
-            S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_SPLASH][rand() & 3]);
-        }
+        S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_SPLASH][rand() & 3]);
         break;
     case EV_FOOTWADE:
         DEBUGNAME("EV_FOOTWADE");
-        if (cg_footsteps->integer) {
-            S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_SPLASH][rand() & 3]);
-        }
+        S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_SPLASH][rand() & 3]);
         break;
     case EV_SWIM:
         DEBUGNAME("EV_SWIM");
-        if (cg_footsteps->integer) {
-            S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_SPLASH][rand() & 3]);
-        }
+        S_StartSound(NULL, es->number, CHAN_BODY, cgs.media.footsteps[FOOTSTEP_SPLASH][rand() & 3]);
         break;
 
 

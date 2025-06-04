@@ -462,9 +462,6 @@ void CG_PredictPlayerState()
     CL_GetUserCmd(cmdNum, &oldestCmd);
     if (oldestCmd.serverTime > cg.snap->ps.commandTime
         && oldestCmd.serverTime < cg.time) { // special check for map_restart
-        if (cg_showmiss->integer) {
-            logger.info("exceeded PACKET_BACKUP on commands");
-        }
         return;
     }
 
@@ -526,25 +523,14 @@ void CG_PredictPlayerState()
             if (cg.thisFrameTeleport) {
                 // a teleport will not cause an error decay
                 VectorClear(cg.predictedError);
-                if (cg_showmiss->integer) {
-                    logger.info("PredictionTeleport");
-                }
                 cg.thisFrameTeleport = false;
             } else {
                 vec3_t adjusted;
                 CG_AdjustPositionForMover(cg.predictedPlayerState.origin, cg.predictedPlayerState.groundEntityNum, cg.physicsTime, cg.oldTime, adjusted);
 
-                if (cg_showmiss->integer) {
-                    if (!VectorCompare(oldPlayerState.origin, adjusted)) {
-                        logger.info("prediction error");
-                    }
-                }
                 VectorSubtract(oldPlayerState.origin, adjusted, delta);
                 len = VectorLength(delta);
                 if (len > 0.1) {
-                    if (cg_showmiss->integer) {
-                        logger.info("Prediction miss: %f", len);
-                    }
                     if (cg_errorDecay->integer) {
                         int32 t;
                         float f;
@@ -553,9 +539,6 @@ void CG_PredictPlayerState()
                         f = (cg_errorDecay->value - t) / cg_errorDecay->value;
                         if (f < 0) {
                             f = 0;
-                        }
-                        if (f > 0 && cg_showmiss->integer) {
-                            logger.info("Double prediction decay: %f", f);
                         }
                         VectorScale(cg.predictedError, f, cg.predictedError);
                     } else {
@@ -585,35 +568,15 @@ void CG_PredictPlayerState()
         // check for predictable events that changed from previous predictions
     }
 
-    if (cg_showmiss->integer > 1) {
-        logger.info("[%i : %i] ", cg_pmove.cmd.serverTime, cg.time);
-    }
-
     if (!moved) {
-        if (cg_showmiss->integer) {
-            logger.info("not moved");
-        }
         return;
     }
 
     // adjust for the movement of the groundentity
     CG_AdjustPositionForMover(cg.predictedPlayerState.origin, cg.predictedPlayerState.groundEntityNum, cg.physicsTime, cg.time, cg.predictedPlayerState.origin);
 
-    if (cg_showmiss->integer) {
-        if (cg.predictedPlayerState.eventSequence > oldPlayerState.eventSequence + MAX_PS_EVENTS) {
-            logger.warning("dropped event");
-        }
-    }
-
     // fire events and other transition triggered things
     CG_TransitionPlayerState(&cg.predictedPlayerState, &oldPlayerState);
-
-    if (cg_showmiss->integer) {
-        if (cg.eventSequence > cg.predictedPlayerState.eventSequence) {
-            logger.warning("double event");
-            cg.eventSequence = cg.predictedPlayerState.eventSequence;
-        }
-    }
 }
 
 

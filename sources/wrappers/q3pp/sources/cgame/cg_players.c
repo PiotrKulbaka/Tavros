@@ -1120,11 +1120,6 @@ static void CG_PlayerAnimation(centity_t* cent, int32* legsOld, int32* legs, flo
 
     clientNum = cent->currentState.clientNum;
 
-    if (cg_noPlayerAnims->integer) {
-        *legsOld = *legs = *torsoOld = *torso = 0;
-        return;
-    }
-
     if (cent->currentState.powerups & (1 << PW_HASTE)) {
         speedScale = 1.5;
     } else {

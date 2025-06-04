@@ -389,9 +389,7 @@ require a reload of all the media
 */
 static void CG_MapRestart()
 {
-    if (cg_showmiss->integer) {
-        logger.info("CG_MapRestart");
-    }
+    logger.info("CG_MapRestart");
 
     CG_InitLocalEntities();
     CG_InitMarkPolys();

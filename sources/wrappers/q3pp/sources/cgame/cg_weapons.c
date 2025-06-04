@@ -42,10 +42,6 @@ static void CG_MachineGunEjectBrass(centity_t* cent)
     float          waterScale = 1.0f;
     vec3_t         v[3];
 
-    if (cg_brassTime->integer <= 0) {
-        return;
-    }
-
     le = CG_AllocLocalEntity();
     re = &le->refEntity;
 
@@ -55,7 +51,8 @@ static void CG_MachineGunEjectBrass(centity_t* cent)
 
     le->leType = LE_FRAGMENT;
     le->startTime = cg.time;
-    le->endTime = le->startTime + cg_brassTime->integer + (cg_brassTime->integer / 4) * random();
+    constexpr auto brass_time = 2500;
+    le->endTime = le->startTime + brass_time + (brass_time / 4) * random();
 
     le->pos.trType = TR_GRAVITY;
     le->pos.trTime = cg.time - (rand() & 15);
@@ -115,10 +112,6 @@ static void CG_ShotgunEjectBrass(centity_t* cent)
     vec3_t         v[3];
     int32          i;
 
-    if (cg_brassTime->integer <= 0) {
-        return;
-    }
-
     for (i = 0; i < 2; i++) {
         float waterScale = 1.0f;
 
@@ -135,7 +128,8 @@ static void CG_ShotgunEjectBrass(centity_t* cent)
 
         le->leType = LE_FRAGMENT;
         le->startTime = cg.time;
-        le->endTime = le->startTime + cg_brassTime->integer * 3 + cg_brassTime->integer * random();
+        constexpr auto brass_time = 2500;
+        le->endTime = le->startTime + brass_time * 3 + brass_time * random();
 
         le->pos.trType = TR_GRAVITY;
         le->pos.trTime = cg.time;
@@ -211,7 +205,7 @@ void CG_RailTrail(clientInfo_t* ci, vec3_t start, vec3_t end)
 
     le->leType = LE_FADE_RGB;
     le->startTime = cg.time;
-    le->endTime = cg.time + cg_railTrailTime->value;
+    le->endTime = cg.time + 600.0f; // 600 time to show railgun track
     le->lifeRate = 1.0 / (le->endTime - le->startTime);
 
     re->shaderTime = cg.time / 1000.0f;
@@ -1563,7 +1557,7 @@ void CG_FireWeapon(centity_t* cent)
     }
 
     // do brass ejection
-    if (weap->ejectBrassFunc && cg_brassTime->integer > 0) {
+    if (weap->ejectBrassFunc) {
         weap->ejectBrassFunc(cent);
     }
 }
@@ -1896,7 +1890,7 @@ void CG_Tracer(vec3_t source, vec3_t dest)
         return;
     }
     begin = 50 + random() * (len - 60);
-    end = begin + cg_tracerLength->value;
+    end = begin + 100;
     if (end > len) {
         end = len;
     }
@@ -1910,7 +1904,7 @@ void CG_Tracer(vec3_t source, vec3_t dest)
     VectorMA(right, -line[0], cg.refdef.viewaxis[2], right);
     VectorNormalize(right);
 
-    VectorMA(finish, cg_tracerWidth->value, right, verts[0].xyz);
+    VectorMA(finish, 1.0f, right, verts[0].xyz);
     verts[0].st[0] = 0;
     verts[0].st[1] = 1;
     verts[0].modulateU8[0] = 255;
@@ -1918,7 +1912,7 @@ void CG_Tracer(vec3_t source, vec3_t dest)
     verts[0].modulateU8[2] = 255;
     verts[0].modulateU8[3] = 255;
 
-    VectorMA(finish, -cg_tracerWidth->value, right, verts[1].xyz);
+    VectorMA(finish, -1.0f, right, verts[1].xyz);
     verts[1].st[0] = 1;
     verts[1].st[1] = 0;
     verts[1].modulateU8[0] = 255;
@@ -1926,7 +1920,7 @@ void CG_Tracer(vec3_t source, vec3_t dest)
     verts[1].modulateU8[2] = 255;
     verts[1].modulateU8[3] = 255;
 
-    VectorMA(start, -cg_tracerWidth->value, right, verts[2].xyz);
+    VectorMA(start, -1.0f, right, verts[2].xyz);
     verts[2].st[0] = 1;
     verts[2].st[1] = 1;
     verts[2].modulateU8[0] = 255;
@@ -1934,7 +1928,7 @@ void CG_Tracer(vec3_t source, vec3_t dest)
     verts[2].modulateU8[2] = 255;
     verts[2].modulateU8[3] = 255;
 
-    VectorMA(start, cg_tracerWidth->value, right, verts[3].xyz);
+    VectorMA(start, 1.0f, right, verts[3].xyz);
     verts[3].st[0] = 0;
     verts[3].st[1] = 0;
     verts[3].modulateU8[0] = 255;
@@ -2007,7 +2001,7 @@ void CG_Bullet(vec3_t end, int32 sourceEntityNum, vec3_t normal, bool flesh, int
 
     // if the shooter is currently valid, calc a source point and possibly
     // do trail effects
-    if (sourceEntityNum >= 0 && cg_tracerChance->value > 0) {
+    if (sourceEntityNum >= 0) {
         if (CG_CalcMuzzlePoint(sourceEntityNum, start)) {
             sourceContentType = CM_PointContents(start, 0);
             destContentType = CM_PointContents(end, 0);
@@ -2028,7 +2022,7 @@ void CG_Bullet(vec3_t end, int32 sourceEntityNum, vec3_t normal, bool flesh, int
             }
 
             // draw a tracer
-            if (random() < cg_tracerChance->value) {
+            if (random() < 0.4f) {
                 CG_Tracer(start, end);
             }
         }
