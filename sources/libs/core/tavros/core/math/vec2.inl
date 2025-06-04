@@ -73,6 +73,12 @@ namespace tavros::math
         return *this;
     }
 
+    inline constexpr void vec2::set(float x, float y) noexcept
+    {
+        this->x = x;
+        this->y = y;
+    }
+
     inline constexpr const float* vec2::data() const noexcept
     {
         return &x;

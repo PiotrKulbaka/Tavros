@@ -51,6 +51,9 @@ namespace tavros::math
         /// @brief Divides this vector component-wise by another. Asserts in debug if any component of `other` is zero
         constexpr vec3& operator/=(const vec3& other) noexcept;
 
+        /// @brief Sets the components of the vector to the specified values
+        constexpr void set(float x, float y, float z) noexcept;
+
         /// @brief Returns a pointer to the raw float array [x, y, z]
         constexpr const float* data() const noexcept;
 

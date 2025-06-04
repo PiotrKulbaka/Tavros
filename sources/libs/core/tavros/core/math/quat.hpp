@@ -94,6 +94,9 @@ namespace tavros::math
         /// @brief Returns rotation angle in radians
         float angle() const noexcept;
 
+        /// @brief Sets the components of the quat to the specified values
+        constexpr void set(float x, float y, float z, float w) noexcept;
+
         /// @brief Returns a pointer to the raw float array [x, y, z, w]
         constexpr const float* data() const noexcept;
 

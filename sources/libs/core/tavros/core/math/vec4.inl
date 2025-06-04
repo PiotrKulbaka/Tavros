@@ -89,6 +89,14 @@ namespace tavros::math
         return *this;
     }
 
+    inline constexpr void vec4::set(float x, float y, float z, float w) noexcept
+    {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+        this->w = w;
+    }
+
     inline constexpr const float* vec4::data() const noexcept
     {
         return &x;

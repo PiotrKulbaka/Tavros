@@ -121,6 +121,14 @@ namespace tavros::math
         return 2.0f * acos(q.w);
     }
 
+    inline constexpr void quat::set(float x, float y, float z, float w) noexcept
+    {
+        this->x = x;
+        this->y = y;
+        this->z = z;
+        this->w = w;
+    }
+
     inline constexpr const float* quat::data() const noexcept
     {
         return &x;
