@@ -3230,9 +3230,6 @@ int32 BotGetActivateGoal(bot_state_t* bs, int32 entitynum, bot_activategoal_t* a
             }
         }
     }
-#ifdef OBSTACLEDEBUG
-    BotAI_Print(PRT_ERROR, "BotGetActivateGoal: no valid activator for entity with target \"%s\"\n", targetname[0]);
-#endif
     return 0;
 }
 
@@ -3316,10 +3313,6 @@ void BotAIBlocked(bot_state_t* bs, bot_moveresult_t* moveresult, int32 activate)
     }
     // get info for the entity that is blocking the bot
     BotEntityInfo(moveresult->blockentity, &entinfo);
-#ifdef OBSTACLEDEBUG
-    ClientName(bs->client, netname, sizeof(netname));
-    BotAI_Print(PRT_MESSAGE, "%s: I'm blocked by model %d\n", netname, entinfo.modelindex);
-#endif // OBSTACLEDEBUG
     // if blocked by a bsp model and the bot wants to activate it
     if (activate && entinfo.modelindex > 0 && entinfo.modelindex <= max_bspmodelindex) {
         // find the bsp entity which should be activated in order to get the blocking entity out of the way

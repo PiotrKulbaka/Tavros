@@ -328,7 +328,7 @@ void CMod_LoadPlanes(lump_t* l)
         }
 
         out->dist = (in->dist);
-        out->type = PlaneTypeForNormal(out->normal);
+        out->side_type = PlaneTypeForNormal(out->normal);
         out->signbits = bits;
     }
 }
@@ -740,13 +740,13 @@ void CM_InitBoxHull()
 
         // planes
         p = &box_planes[i * 2];
-        p->type = i >> 1;
+        p->side_type = i >> 1;
         p->signbits = 0;
         VectorClear(p->normal);
         p->normal[i >> 1] = 1;
 
         p = &box_planes[i * 2 + 1];
-        p->type = 3 + (i >> 1);
+        p->side_type = 3 + (i >> 1);
         p->signbits = 0;
         VectorClear(p->normal);
         p->normal[i >> 1] = -1;

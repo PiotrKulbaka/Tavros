@@ -1388,27 +1388,6 @@ void Menu_Draw(menuframework_s* menu)
                 Com_Error(ERR_DROP, va("Menu_Draw: unknown type %d", itemptr->type));
             }
         }
-#ifndef NDEBUG
-        if (uis.debug) {
-            int32 x;
-            int32 y;
-            int32 w;
-            int32 h;
-
-            if (!(itemptr->flags & QMF_INACTIVE)) {
-                x = itemptr->left;
-                y = itemptr->top;
-                w = itemptr->right - itemptr->left + 1;
-                h = itemptr->bottom - itemptr->top + 1;
-
-                if (itemptr->flags & QMF_HASMOUSEFOCUS) {
-                    UI_DrawRect(x, y, w, h, color_yellow);
-                } else {
-                    UI_DrawRect(x, y, w, h, color_white);
-                }
-            }
-        }
-#endif
     }
 
     itemptr = (menucommon_s*) Menu_ItemAtCursor(menu);
@@ -1504,15 +1483,6 @@ sfxHandle_t Menu_DefaultKey(menuframework_s* m, int32 key)
 
     // default handling
     switch (key) {
-#ifndef NDEBUG
-    case K_F11:
-        uis.debug ^= 1;
-        break;
-
-    case K_F12:
-        Cbuf_ExecuteText(EXEC_APPEND, "screenshot\n");
-        break;
-#endif
     case K_KP_UPARROW:
     case K_UPARROW:
         cursor_prev = m->cursor;

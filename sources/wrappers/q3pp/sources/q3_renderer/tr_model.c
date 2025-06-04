@@ -187,11 +187,9 @@ qhandle_t RE_RegisterModel(const char* name)
 
         return mod->index;
     }
-#ifdef DEBUG
     else {
         logger.warning("RE_RegisterModel: couldn't load %s", name);
     }
-#endif
 
 fail:
     // we still keep the model_t around, so if the model name is asked for

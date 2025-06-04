@@ -256,12 +256,6 @@ int32 MSG_ReadBits(msg_t* msg, int32 bits)
 
 void MSG_WriteByte(msg_t* sb, int32 c)
 {
-#ifdef PARANOID
-    if (c < 0 || c > 255) {
-        Com_Error(ERR_FATAL, "MSG_WriteByte: range error");
-    }
-#endif
-
     MSG_WriteBits(sb, c, 8);
 }
 
@@ -275,12 +269,6 @@ void MSG_WriteData(msg_t* buf, const void* data, int32 length)
 
 void MSG_WriteShort(msg_t* sb, int32 c)
 {
-#ifdef PARANOID
-    if (c < ((int16) 0x8000) || c > (int16) 0x7fff) {
-        Com_Error(ERR_FATAL, "MSG_WriteShort: range error");
-    }
-#endif
-
     MSG_WriteBits(sb, c, 16);
 }
 

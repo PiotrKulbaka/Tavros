@@ -139,7 +139,7 @@ void BotAI_Trace(bsp_trace_t* bsptrace, vec3_t start, vec3_t mins, vec3_t maxs, 
     bsptrace->plane.dist = trace.plane.dist;
     VectorCopy(trace.plane.normal, bsptrace->plane.normal);
     bsptrace->plane.signbits = trace.plane.signbits;
-    bsptrace->plane.type = trace.plane.type;
+    bsptrace->plane.side_type = trace.plane.side_type;
     bsptrace->surface.value = trace.surfaceFlags;
     bsptrace->ent = trace.entityNum;
     bsptrace->exp_dist = 0;

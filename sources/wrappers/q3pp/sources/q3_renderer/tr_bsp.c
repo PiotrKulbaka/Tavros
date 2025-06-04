@@ -335,7 +335,7 @@ static void ParseFace(dsurface_t* ds, drawVert_t* verts, msurface_t* surf, int32
     }
     cv->plane.dist = DotProduct(cv->points[0], cv->plane.normal);
     SetPlaneSignbits(&cv->plane);
-    cv->plane.type = PlaneTypeForNormal(cv->plane.normal);
+    cv->plane.side_type = PlaneTypeForNormal(cv->plane.normal);
 
     surf->data = (surfaceType_t*) cv;
 }
@@ -1439,15 +1439,9 @@ static void R_LoadSurfaces(lump_t* surfs, lump_t* verts, lump_t* indexLump)
         }
     }
 
-#ifdef PATCH_STITCHING
     R_StitchAllPatches();
-#endif
-
     R_FixSharedVertexLodError();
-
-#ifdef PATCH_STITCHING
     R_MovePatchSurfacesToHunk();
-#endif
 
     logger.info("...loaded %d faces, %i meshes, %i trisurfs, %i flares", numFaces, numMeshes, numTriSurfs, numFlares);
 }
@@ -1674,7 +1668,7 @@ static void R_LoadPlanes(lump_t* l)
         }
 
         out->dist = (in->dist);
-        out->type = PlaneTypeForNormal(out->normal);
+        out->side_type = PlaneTypeForNormal(out->normal);
         out->signbits = bits;
     }
 }

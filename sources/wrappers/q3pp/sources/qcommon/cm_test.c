@@ -38,8 +38,8 @@ int32 CM_PointLeafnum_r(const vec3_t p, int32 num)
         node = cm.nodes + num;
         plane = node->plane;
 
-        if (plane->type < 3) {
-            d = p[plane->type] - plane->dist;
+        if (plane->side_type < 3) {
+            d = p[plane->side_type] - plane->dist;
         } else {
             d = DotProduct(plane->normal, p) - plane->dist;
         }

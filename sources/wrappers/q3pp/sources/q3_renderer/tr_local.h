@@ -1165,8 +1165,6 @@ CURVE TESSELATION
 ============================================================
 */
 
-#define PATCH_STITCHING
-
 srfGridMesh_t* R_SubdividePatchToGrid(int32 width, int32 height, drawVert_t points[MAX_PATCH_SIZE * MAX_PATCH_SIZE]);
 srfGridMesh_t* R_GridInsertColumn(srfGridMesh_t* grid, int32 column, int32 row, vec3_t point, float loderror);
 srfGridMesh_t* R_GridInsertRow(srfGridMesh_t* grid, int32 row, int32 column, vec3_t point, float loderror);

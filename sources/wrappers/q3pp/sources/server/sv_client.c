@@ -1289,9 +1289,7 @@ void SV_ExecuteClientMessage(client_t* cl, msg_t* msg)
     if (cl->messageAcknowledge < 0) {
         // usually only hackers create messages like this
         // it is more annoying for them to let them hanging
-#ifndef NDEBUG
         SV_DropClient(cl, "DEBUG: illegible client message");
-#endif
         return;
     }
 
@@ -1303,9 +1301,7 @@ void SV_ExecuteClientMessage(client_t* cl, msg_t* msg)
     if (cl->reliableAcknowledge < cl->reliableSequence - MAX_RELIABLE_COMMANDS) {
         // usually only hackers create messages like this
         // it is more annoying for them to let them hanging
-#ifndef NDEBUG
         SV_DropClient(cl, "DEBUG: illegible client message");
-#endif
         cl->reliableAcknowledge = cl->reliableSequence;
         return;
     }

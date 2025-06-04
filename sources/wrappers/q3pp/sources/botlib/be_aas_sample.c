@@ -35,8 +35,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 
 extern botlib_import_t botimport;
 
-// #define AAS_SAMPLE_DEBUG
-
 #define BBOX_NORMAL_EPSILON 0.001
 
 #define ON_EPSILON          0 // 0.0005
@@ -181,20 +179,7 @@ int32 AAS_PointAreaNum(vec3_t point)
     // start with node 1 because node zero is a dummy used for solid leafs
     nodenum = 1;
     while (nodenum > 0) {
-//        botimport.Print(PRT_MESSAGE, "[%d]", nodenum);
-#ifdef AAS_SAMPLE_DEBUG
-        if (nodenum >= aasworld.numnodes) {
-            botimport.Print(PRT_ERROR, "nodenum = %d >= aasworld.numnodes = %d\n", nodenum, aasworld.numnodes);
-            return 0;
-        }
-#endif // AAS_SAMPLE_DEBUG
         node = &aasworld.nodes[nodenum];
-#ifdef AAS_SAMPLE_DEBUG
-        if (node->planenum < 0 || node->planenum >= aasworld.numplanes) {
-            botimport.Print(PRT_ERROR, "node->planenum = %d >= aasworld.numplanes = %d\n", node->planenum, aasworld.numplanes);
-            return 0;
-        }
-#endif // AAS_SAMPLE_DEBUG
         plane = &aasworld.planes[node->planenum];
         dist = DotProduct(point, plane->normal) - plane->dist;
         if (dist > 0) {
@@ -204,9 +189,6 @@ int32 AAS_PointAreaNum(vec3_t point)
         }
     }
     if (!nodenum) {
-#ifdef AAS_SAMPLE_DEBUG
-        botimport.Print(PRT_MESSAGE, "in solid\n");
-#endif // AAS_SAMPLE_DEBUG
         return 0;
     }
     return -nodenum;
@@ -368,14 +350,7 @@ aas_trace_t AAS_TraceClientBBox(vec3_t start, vec3_t end, int32 presencetype, in
         nodenum = tstack_p->nodenum;
         // if it is an area
         if (nodenum < 0) {
-#ifdef AAS_SAMPLE_DEBUG
-            if (-nodenum > aasworld.numareasettings) {
-                botimport.Print(PRT_ERROR, "AAS_TraceBoundingBox: -nodenum out of range\n");
-                return trace;
-            }
-#endif // AAS_SAMPLE_DEBUG
-       // botimport.Print(PRT_MESSAGE, "areanum = %d, must be %d\n", -nodenum, AAS_PointAreaNum(start));
-       // if can't enter the area because it hasn't got the right presence type
+            // if can't enter the area because it hasn't got the right presence type
             if (!(aasworld.areasettings[-nodenum].presencetype & presencetype)) {
                 // if the start point is still the initial start point
                 // NOTE: no need for epsilons because the points will be
@@ -445,13 +420,7 @@ aas_trace_t AAS_TraceClientBBox(vec3_t start, vec3_t end, int32 presencetype, in
             }
             return trace;
         }
-#ifdef AAS_SAMPLE_DEBUG
-        if (nodenum > aasworld.numnodes) {
-            botimport.Print(PRT_ERROR, "AAS_TraceBoundingBox: nodenum out of range\n");
-            return trace;
-        }
-#endif // AAS_SAMPLE_DEBUG
-       // the node to test against
+        // the node to test against
         aasnode = &aasworld.nodes[nodenum];
         // start point of current line to test against node
         VectorCopy(tstack_p->start, cur_start);
@@ -460,33 +429,9 @@ aas_trace_t AAS_TraceClientBBox(vec3_t start, vec3_t end, int32 presencetype, in
         // the current node plane
         plane = &aasworld.planes[aasnode->planenum];
 
-        switch (plane->type) { /*FIXME: wtf doesn't this work? obviously the axial node planes aren't always facing positive!!!
-                                  //check for axial planes
-                                  case PLANE_X:
-                                  {
-                                      front = cur_start[0] - plane->dist;
-                                      back = cur_end[0] - plane->dist;
-                                      break;
-                                  }
-                                  case PLANE_Y:
-                                  {
-                                      front = cur_start[1] - plane->dist;
-                                      back = cur_end[1] - plane->dist;
-                                      break;
-                                  }
-                                  case PLANE_Z:
-                                  {
-                                      front = cur_start[2] - plane->dist;
-                                      back = cur_end[2] - plane->dist;
-                                      break;
-                                  }*/
-        default:               // gee it's not an axial plane
-        {
-            front = DotProduct(cur_start, plane->normal) - plane->dist;
-            back = DotProduct(cur_end, plane->normal) - plane->dist;
-            break;
-        }
-        }
+        front = DotProduct(cur_start, plane->normal) - plane->dist;
+        back = DotProduct(cur_end, plane->normal) - plane->dist;
+
         // bk010221 - old location of FPE hack and divide by zero expression
         // if the whole to be traced line is totally at the front of this node
         // only go down the tree with the front child
@@ -607,13 +552,6 @@ int32 AAS_TraceAreas(vec3_t start, vec3_t end, int32* areas, vec3_t* points, int
         nodenum = tstack_p->nodenum;
         // if it is an area
         if (nodenum < 0) {
-#ifdef AAS_SAMPLE_DEBUG
-            if (-nodenum > aasworld.numareasettings) {
-                botimport.Print(PRT_ERROR, "AAS_TraceAreas: -nodenum = %d out of range\n", -nodenum);
-                return numareas;
-            }
-#endif // AAS_SAMPLE_DEBUG
-       // botimport.Print(PRT_MESSAGE, "areanum = %d, must be %d\n", -nodenum, AAS_PointAreaNum(start));
             areas[numareas] = -nodenum;
             if (points) {
                 VectorCopy(tstack_p->start, points[numareas]);
@@ -628,13 +566,7 @@ int32 AAS_TraceAreas(vec3_t start, vec3_t end, int32* areas, vec3_t* points, int
         if (!nodenum) {
             continue;
         }
-#ifdef AAS_SAMPLE_DEBUG
-        if (nodenum > aasworld.numnodes) {
-            botimport.Print(PRT_ERROR, "AAS_TraceAreas: nodenum out of range\n");
-            return numareas;
-        }
-#endif // AAS_SAMPLE_DEBUG
-       // the node to test against
+        // the node to test against
         aasnode = &aasworld.nodes[nodenum];
         // start point of current line to test against node
         VectorCopy(tstack_p->start, cur_start);
@@ -643,33 +575,8 @@ int32 AAS_TraceAreas(vec3_t start, vec3_t end, int32* areas, vec3_t* points, int
         // the current node plane
         plane = &aasworld.planes[aasnode->planenum];
 
-        switch (plane->type) { /*FIXME: wtf doesn't this work? obviously the node planes aren't always facing positive!!!
-                                  //check for axial planes
-                                  case PLANE_X:
-                                  {
-                                      front = cur_start[0] - plane->dist;
-                                      back = cur_end[0] - plane->dist;
-                                      break;
-                                  }
-                                  case PLANE_Y:
-                                  {
-                                      front = cur_start[1] - plane->dist;
-                                      back = cur_end[1] - plane->dist;
-                                      break;
-                                  }
-                                  case PLANE_Z:
-                                  {
-                                      front = cur_start[2] - plane->dist;
-                                      back = cur_end[2] - plane->dist;
-                                      break;
-                                  }*/
-        default:               // gee it's not an axial plane
-        {
-            front = DotProduct(cur_start, plane->normal) - plane->dist;
-            back = DotProduct(cur_end, plane->normal) - plane->dist;
-            break;
-        }
-        }
+        front = DotProduct(cur_start, plane->normal) - plane->dist;
+        back = DotProduct(cur_end, plane->normal) - plane->dist;
 
         // if the whole to be traced line is totally at the front of this node
         // only go down the tree with the front child
@@ -765,9 +672,6 @@ bool AAS_InsideFace(aas_face_t* face, vec3_t pnormal, vec3_t point, float epsilo
     vec3_t      v0;
     vec3_t      edgevec, pointvec, sepnormal;
     aas_edge_t* edge;
-#ifdef AAS_SAMPLE_DEBUG
-    int32 lastvertex = 0;
-#endif // AAS_SAMPLE_DEBUG
 
     if (!aasworld.loaded) {
         return false;
@@ -782,13 +686,7 @@ bool AAS_InsideFace(aas_face_t* face, vec3_t pnormal, vec3_t point, float epsilo
         // edge vector
         VectorSubtract(aasworld.vertexes[edge->v[!firstvertex]], v0, edgevec);
         //
-#ifdef AAS_SAMPLE_DEBUG
-        if (lastvertex && lastvertex != edge->v[firstvertex]) {
-            botimport.Print(PRT_MESSAGE, "winding not counter clockwise\n");
-        }
-        lastvertex = edge->v[!firstvertex];
-#endif // AAS_SAMPLE_DEBUG
-       // vector from first edge point to point possible in face
+        // vector from first edge point to point possible in face
         VectorSubtract(point, v0, pointvec);
         // get a vector pointing inside the face orthogonal to both the
         // edge vector and the normal vector of the plane the face is in

@@ -426,7 +426,6 @@ typedef struct
     menuframework_s* activemenu;
     menuframework_s* stack[MAX_MENUDEPTH];
     glconfig_t       glconfig;
-    bool             debug;
     qhandle_t        whiteShader;
     qhandle_t        menuBackShader;
     qhandle_t        menuBackNoLogoShader;

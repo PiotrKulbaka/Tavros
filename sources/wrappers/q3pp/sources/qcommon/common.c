@@ -107,11 +107,9 @@ void QDECL Com_Error(int32 code, const char* fmt, ...)
     static int32 errorCount;
     int32        currentTime;
 
-#ifdef DEBUG
     if (code != ERR_DISCONNECT) {
-        __asm int 0x03
+        TAV_ASSERT(false);
     }
-#endif
 
     // make sure we can get at our local stuff
     FS_PureServerSetLoadedPaks("", "");
@@ -513,11 +511,7 @@ static void Z_Init()
     zallocator = std::make_unique<tavros::core::mallocator>();
 }
 
-#ifdef DEBUG
-void* Z_TagMallocDebug(int32 size, const char* tag, const char* file, int32 line)
-#else
 void* Z_TagMalloc(int32 size, const char* tag)
-#endif
 {
     return zallocator->allocate(size, tag);
 }
@@ -527,17 +521,9 @@ void Z_Free(void* ptr)
     zallocator->deallocate(ptr);
 }
 
-#ifdef DEBUG
-void* Z_MallocDebug(int32 size, const char* file, int32 line)
-#else
 void* Z_Malloc(int32 size)
-#endif
 {
-#ifdef DEBUG
-    return Z_TagMallocDebug(size, "general", file, line);
-#else
     return Z_TagMalloc(size, "general");
-#endif
 }
 
 /*
@@ -627,10 +613,8 @@ The server calls this before shutting down or loading a new map
 */
 void Hunk_Clear()
 {
-#ifndef DEDICATED
     CL_ShutdownCGame();
     CL_ShutdownUI();
-#endif
     SV_ShutdownGameProgs();
 
     hallocator = hallocator_marked.get();

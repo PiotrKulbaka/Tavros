@@ -1161,13 +1161,6 @@ void UI_Refresh(int32 realtime)
     UI_SetColor(NULL);
     UI_DrawHandlePic(uis.cursorx - 16, uis.cursory - 16, 32, 32, uis.cursor);
 
-#ifndef NDEBUG
-    if (uis.debug) {
-        // cursor coordinates
-        UI_DrawString(0, 0, va("(%d,%d)", uis.cursorx, uis.cursory), UI_LEFT | UI_SMALLFONT, color_red);
-    }
-#endif
-
     // delay playing the enter sound until after the
     // menu has been drawn, to avoid delay while
     // caching images

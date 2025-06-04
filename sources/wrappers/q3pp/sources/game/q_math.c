@@ -513,17 +513,6 @@ int32 BoxOnPlaneSide(vec3_t emins, vec3_t emaxs, struct cplane_s* p)
     float dist1, dist2;
     int32 sides;
 
-    // fast axial cases
-    if (p->type < 3) {
-        if (p->dist <= emins[p->type]) {
-            return 1;
-        }
-        if (p->dist >= emaxs[p->type]) {
-            return 2;
-        }
-        return 3;
-    }
-
     // general case
     switch (p->signbits) {
     case 0:
@@ -857,13 +846,13 @@ void CrossProduct(const vec3_t v1, const vec3_t v2, vec3_t cross)
 int32 PlaneTypeForNormal(vec3_t normal)
 {
     if (normal[0] == 1.0) {
-        return PLANE_X;
+        return 0;
     }
     if (normal[1] == 1.0) {
-        return PLANE_Y;
+        return 1;
     }
     if (normal[2] == 1.0) {
-        return PLANE_Z;
+        return 2;
     }
-    return PLANE_NON_AXIAL;
+    return 3;
 }

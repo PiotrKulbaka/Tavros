@@ -133,22 +133,13 @@ typedef enum
 #define UI_INVERSE            0x00002000
 #define UI_PULSE              0x00004000
 
-#ifdef DEBUG
-    #define HUNK_DEBUG
-#endif
-
 typedef enum
 {
     h_high,
     h_low
 } ha_pref;
 
-#ifdef HUNK_DEBUG
-    #define Hunk_Alloc(size, preference) Hunk_AllocDebug(size, preference, #size, __FILE__, __LINE__)
-void* Hunk_AllocDebug(int32 size, ha_pref preference, const char* label, const char* file, int32 line);
-#else
 void* Hunk_Alloc(int32 size, ha_pref preference);
-#endif
 
 #define Snd_Memset Com_Memset
 
@@ -505,20 +496,13 @@ COLLISION DETECTION
 #define SURF_DUST              0x40000    // leave a dust trail when walking on this surface
 
 
-// plane types are used to speed some tests
-// 0-2 are axial planes
-#define PLANE_X                0
-#define PLANE_Y                1
-#define PLANE_Z                2
-#define PLANE_NON_AXIAL        3
-
 // plane_t structure
 // !!! if this is changed, it must be changed in asm code too !!!
 typedef struct cplane_s
 {
     vec3_t normal;
     float  dist;
-    uint8  type;     // for fast side tests: 0,1,2 = axial, 3 = nonaxial
+    uint8  side_type;     // for fast side tests: 0,1,2 = axial, 3 = nonaxial
     uint8  signbits; // signx + (signy<<1) + (signz<<2), used as lookup during collision
     uint8  pad[2];
 } cplane_t;

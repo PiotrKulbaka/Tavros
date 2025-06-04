@@ -21,13 +21,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #include "cm_local.h"
 
-// always use bbox vs. bbox collision and never capsule vs. bbox or vice versa
-// #define ALWAYS_BBOX_VS_BBOX
-// always use capsule vs. capsule collision and never capsule vs. bbox or vice versa
-// #define ALWAYS_CAPSULE_VS_CAPSULE
-
-// #define CAPSULE_DEBUG
-
 /*
 ===============================================================================
 
@@ -771,12 +764,6 @@ void CM_TraceThroughSphere(traceWork_t* tw, vec3_t origin, float radius, vec3_t 
             VectorSubtract(end, start, dir);
             VectorMA(start, fraction, dir, intersection);
             VectorSubtract(intersection, origin, dir);
-#ifdef CAPSULE_DEBUG
-            l2 = VectorLength(dir);
-            if (l2 < radius) {
-                int32 bah = 1;
-            }
-#endif
             scale = 1 / (radius + RADIUS_EPSILON);
             VectorScale(dir, scale, dir);
             VectorCopy(dir, tw->trace.plane.normal);
@@ -871,12 +858,6 @@ void CM_TraceThroughVerticalCylinder(traceWork_t* tw, vec3_t origin, float radiu
                 tw->trace.fraction = fraction;
                 VectorSubtract(intersection, origin, dir);
                 dir[2] = 0;
-#ifdef CAPSULE_DEBUG
-                l2 = VectorLength(dir);
-                if (l2 <= radius) {
-                    int32 bah = 1;
-                }
-#endif
                 scale = 1 / (radius + RADIUS_EPSILON);
                 VectorScale(dir, scale, dir);
                 VectorCopy(dir, tw->trace.plane.normal);
@@ -1034,10 +1015,10 @@ void CM_TraceThroughTree(traceWork_t* tw, int32 num, float p1f, float p2f, vec3_
     plane = node->plane;
 
     // adjust the plane distance apropriately for mins/maxs
-    if (plane->type < 3) {
-        t1 = p1[plane->type] - plane->dist;
-        t2 = p2[plane->type] - plane->dist;
-        offset = tw->extents[plane->type];
+    if (plane->side_type < 3) {
+        t1 = p1[plane->side_type] - plane->dist;
+        t2 = p2[plane->side_type] - plane->dist;
+        offset = tw->extents[plane->side_type];
     } else {
         t1 = DotProduct(plane->normal, p1) - plane->dist;
         t2 = DotProduct(plane->normal, p2) - plane->dist;
@@ -1240,17 +1221,7 @@ void CM_Trace(trace_t* results, const vec3_t start, const vec3_t end, vec3_t min
     //
     if (start[0] == end[0] && start[1] == end[1] && start[2] == end[2]) {
         if (model) {
-#ifdef ALWAYS_BBOX_VS_BBOX // bk010201 - FIXME - compile time flag?
-            if (model == BOX_MODEL_HANDLE || model == CAPSULE_MODEL_HANDLE) {
-                tw.sphere.use = false;
-                CM_TestInLeaf(&tw, &cmod->leaf);
-            } else
-#elif defined(ALWAYS_CAPSULE_VS_CAPSULE)
-            if (model == BOX_MODEL_HANDLE || model == CAPSULE_MODEL_HANDLE) {
-                CM_TestCapsuleInCapsule(&tw, model);
-            } else
-#endif
-                if (model == CAPSULE_MODEL_HANDLE) {
+            if (model == CAPSULE_MODEL_HANDLE) {
                 if (tw.sphere.use) {
                     CM_TestCapsuleInCapsule(&tw, model);
                 } else {
@@ -1280,17 +1251,7 @@ void CM_Trace(trace_t* results, const vec3_t start, const vec3_t end, vec3_t min
         // general sweeping through world
         //
         if (model) {
-#ifdef ALWAYS_BBOX_VS_BBOX
-            if (model == BOX_MODEL_HANDLE || model == CAPSULE_MODEL_HANDLE) {
-                tw.sphere.use = false;
-                CM_TraceThroughLeaf(&tw, &cmod->leaf);
-            } else
-#elif defined(ALWAYS_CAPSULE_VS_CAPSULE)
-            if (model == BOX_MODEL_HANDLE || model == CAPSULE_MODEL_HANDLE) {
-                CM_TraceCapsuleThroughCapsule(&tw, model);
-            } else
-#endif
-                if (model == CAPSULE_MODEL_HANDLE) {
+            if (model == CAPSULE_MODEL_HANDLE) {
                 if (tw.sphere.use) {
                     CM_TraceCapsuleThroughCapsule(&tw, model);
                 } else {

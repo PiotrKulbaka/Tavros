@@ -460,7 +460,7 @@ void R_SetupFrustum()
     VectorMA(tr.viewParms.frustum[3].normal, -xc, tr.viewParms.orient.axis[2], tr.viewParms.frustum[3].normal);
 
     for (i = 0; i < 4; i++) {
-        tr.viewParms.frustum[i].type = PLANE_NON_AXIAL;
+        tr.viewParms.frustum[i].side_type = 3;
         tr.viewParms.frustum[i].dist = DotProduct(tr.viewParms.orient.origin, tr.viewParms.frustum[i].normal);
         SetPlaneSignbits(&tr.viewParms.frustum[i]);
     }
