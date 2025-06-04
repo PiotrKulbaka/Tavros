@@ -1,12 +1,20 @@
 #include <tavros/core/memory/mallocator.hpp>
 
+#include <tavros/core/containers/unordered_map.hpp>
+#include <tavros/core/debug/assert.hpp>
+#include <tavros/core/logger/logger.hpp>
+
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
 
 #include <unordered_map>
 
 using namespace tavros::core;
+
+namespace
+{
+    tavros::core::logger s_logger("mallocator");
+}
 
 struct mallocator::impl
 {
@@ -16,9 +24,16 @@ struct mallocator::impl
         const char* tag;
     };
 
-    void* allocate(size_t size, const char* tag)
+    void* allocate(size_t size, const char* tag = nullptr)
     {
         auto* p = std::malloc(size);
+
+        if (!p) {
+            s_logger.error("Allocator cannot allocate memory `%s`.", (tag ? tag : ""));
+            TAV_ASSERT(false);
+            return nullptr;
+        }
+
         allocations[p] = allocation_info{
             .size = size,
             .tag = tag
@@ -39,12 +54,11 @@ struct mallocator::impl
             std::free(ptr);
         } else {
             if (auto it = released.find(ptr); it != released.end()) {
-                // TODO: write info to log instead assert
-                // Attempt to free memory twice
-                assert(false);
+                s_logger.error("Attempting to free memory twice.");
+                TAV_ASSERT(false);
             } else {
-                // TODO: write info to log instead assert
-                assert(false);
+                s_logger.error("Attempting to free previously unallocated memory with this allocator.");
+                TAV_ASSERT(false);
             }
         }
     }
@@ -60,33 +74,28 @@ struct mallocator::impl
         released.clear();
     }
 
-    std::unordered_map<void*, allocation_info> allocations;
-    std::unordered_map<void*, allocation_info> released;
+    unordered_map<void*, allocation_info> allocations;
+    unordered_map<void*, allocation_info> released;
 }; // struct mallocator::impl
 
 
-/* mallocator::mallocator */
 mallocator::mallocator() = default;
 
-/* zone_allocator::~zone_allocator */
 mallocator::~mallocator()
 {
     clear();
 }
 
-/* mallocator::allocate */
-auto mallocator::allocate(size_t size, const char* tag) -> void*
+void* mallocator::allocate(size_t size, const char* tag)
 {
     return m_impl->allocate(size, tag);
 }
 
-/* mallocator::deallocate */
 void mallocator::deallocate(void* ptr)
 {
     m_impl->deallocate(ptr);
 }
 
-/* mallocator::clear */
 void mallocator::clear()
 {
     m_impl->clear();

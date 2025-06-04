@@ -1,11 +1,11 @@
 #include <tavros/core/memory/zone_allocator.hpp>
 
+#include <tavros/core/containers/unordered_map.hpp>
+#include <tavros/core/debug/assert.hpp>
+
 #include <new>
 #include <cstdlib>
 #include <cstring>
-#include <cassert>
-
-#include <unordered_map>
 
 using namespace tavros::core;
 
@@ -19,8 +19,8 @@ namespace
             , size(chunk_size - sizeof(zone_chunk))
             , free(true)
         {
-            assert(chunk_size == align(chunk_size));
-            assert(chunk_size > sizeof(zone_chunk));
+            TAV_ASSERT(chunk_size == align(chunk_size));
+            TAV_ASSERT(chunk_size > sizeof(zone_chunk));
         }
 
         ~zone_chunk()
@@ -30,9 +30,9 @@ namespace
 
         void insert_this_after(zone_chunk* chunk)
         {
-            assert(!next);
-            assert(!prev);
-            assert(chunk);
+            TAV_ASSERT(!next);
+            TAV_ASSERT(!prev);
+            TAV_ASSERT(chunk);
 
             next = chunk->next;
             prev = chunk;
@@ -41,8 +41,8 @@ namespace
                 next->prev = this;
             }
 
-            assert(next && next->prev == this || !next);
-            assert(prev->next == this);
+            TAV_ASSERT(next && next->prev == this || !next);
+            TAV_ASSERT(prev->next == this);
         }
 
         void extract()
@@ -53,8 +53,9 @@ namespace
             if (next) {
                 next->prev = prev;
             }
-            assert(prev && prev->next == next || !prev);
-            assert(next && next->prev == prev || !next);
+            TAV_ASSERT(prev && prev->next == next || !prev);
+            TAV_ASSERT(next && next->prev == prev || !next);
+
             next = prev = nullptr;
         }
 
@@ -92,8 +93,8 @@ struct zone_allocator::impl
 {
     impl(size_t zone_size)
     {
-        assert(zone_size >= 1024);
-        assert(zone_size == zone_chunk::align(zone_size));
+        TAV_ASSERT(zone_size >= 1024);
+        TAV_ASSERT(zone_size == zone_chunk::align(zone_size));
 
         this->zone_size = zone_size;
         alloced_size = zone_size + sizeof(zone_chunk);
@@ -133,14 +134,14 @@ struct zone_allocator::impl
         if (!chunk) {
             return nullptr;
         }
-        assert(chunk->free);
+        TAV_ASSERT(chunk->free);
 
         auto extra_size = chunk->size - size;
         if (extra_size > sizeof(zone_chunk)) {
             auto* mem = chunk->memptr();
 
-            assert(extra_size == zone_chunk::align(extra_size));
-            assert(mem == zone_chunk::align(mem));
+            TAV_ASSERT(extra_size == zone_chunk::align(extra_size));
+            TAV_ASSERT(mem == zone_chunk::align(mem));
 
             // add a free chunk to the right
             chunk->size = size;
@@ -157,10 +158,10 @@ struct zone_allocator::impl
 
     void free_chunk(zone_chunk* chunk)
     {
-        assert(reinterpret_cast<uint8_t*>(chunk) >= reinterpret_cast<uint8_t*>(base));
-        assert(reinterpret_cast<uint8_t*>(chunk) < (reinterpret_cast<uint8_t*>(base) + zone_size));
-        assert(!chunk->free);
-        assert(chunk->tag == 0xdaf321ca);
+        TAV_ASSERT(reinterpret_cast<uint8_t*>(chunk) >= reinterpret_cast<uint8_t*>(base));
+        TAV_ASSERT(reinterpret_cast<uint8_t*>(chunk) < (reinterpret_cast<uint8_t*>(base) + zone_size));
+        TAV_ASSERT(!chunk->free);
+        TAV_ASSERT(chunk->tag == 0xdaf321ca);
 
         chunk->free = true;
         auto* next = chunk->next;
@@ -192,36 +193,36 @@ struct zone_allocator::impl
         pivot = base;
     }
 
-    uint8_t*                        mptr;
-    size_t                          alloced_size;
-    size_t                          zone_size;
-    zone_chunk*                     base; // the first chunk
-    zone_chunk*                     pivot;
-    std::unordered_map<void*, bool> allocation_info;
+    uint8_t*                   mptr;
+    size_t                     alloced_size;
+    size_t                     zone_size;
+    zone_chunk*                base; // the first chunk
+    zone_chunk*                pivot;
+    unordered_map<void*, bool> allocation_info;
 }; // struct zone_allocator::impl
 
 
-/* zone_allocator::zone_allocator */
 zone_allocator::zone_allocator(size_t zone_size)
     : m_impl(zone_size)
 {
-    assert(zone_size == zone_chunk::align(zone_size));
+    TAV_ASSERT(zone_size == zone_chunk::align(zone_size));
 }
 
-/* zone_allocator::~zone_allocator */
-zone_allocator::~zone_allocator() = default;
+zone_allocator::~zone_allocator()
+{
+    clear();
+}
 
-/* zone_allocator::allocate */
 void* zone_allocator::allocate(size_t size, const char* tag)
 {
     auto* chunk = m_impl->allocate_chunk(size);
-    assert(chunk);
+    TAV_ASSERT(chunk);
 
     auto* p = static_cast<void*>(chunk->memptr());
     auto& map = m_impl->allocation_info;
     if (auto it = map.find(p); it != map.end()) {
         if (it->second) {
-            assert(false);
+            TAV_ASSERT(false);
         } else {
             it->second = true;
         }
@@ -232,7 +233,6 @@ void* zone_allocator::allocate(size_t size, const char* tag)
     return chunk->memptr();
 }
 
-/* zone_allocator::deallocate */
 void zone_allocator::deallocate(void* ptr)
 {
     auto* chunk = reinterpret_cast<zone_chunk*>(static_cast<uint8_t*>(ptr) - sizeof(zone_chunk));
@@ -242,10 +242,10 @@ void zone_allocator::deallocate(void* ptr)
         if (it->second) {
             it->second = false;
         } else {
-            assert(false);
+            TAV_ASSERT(false);
         }
     } else {
-        assert(false);
+        TAV_ASSERT(false);
     }
 
     m_impl->free_chunk(chunk);

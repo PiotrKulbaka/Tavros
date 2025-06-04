@@ -10,6 +10,9 @@ namespace tavros::core
     template<typename T>
     using unique_ptr = std::unique_ptr<T>;
 
+    template<typename T>
+    using weak_ptr = std::weak_ptr<T>;
+
     template<typename T, typename... Args>
     inline shared_ptr<T> make_shared(Args&&... args)
     {

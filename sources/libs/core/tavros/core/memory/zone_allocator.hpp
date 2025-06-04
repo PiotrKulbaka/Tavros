@@ -6,15 +6,15 @@
 namespace tavros::core
 {
 
-    class zone_allocator : public allocator
+    class zone_allocator final : public allocator
     {
     public:
         zone_allocator(size_t zone_size);
         ~zone_allocator();
 
-        auto allocate(size_t size, const char* tag = nullptr) -> void* override;
-        void deallocate(void* ptr) override;
-        void clear() override;
+        void* allocate(size_t size, const char* tag = nullptr) override;
+        void  deallocate(void* ptr) override;
+        void  clear() override;
 
     private:
         struct impl;
