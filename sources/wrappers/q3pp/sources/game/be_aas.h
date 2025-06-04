@@ -150,7 +150,7 @@ typedef struct aas_areainfo_s
 } aas_areainfo_t;
 
 // client movement prediction stop events, stop as soon as:
-#define _SE_NONE               0
+#define _SE_NONE              0
 #define SE_HITGROUND          1    // the ground is hit
 #define SE_LEAVEGROUND        2    // there's no ground
 #define SE_ENTERWATER         4    // water is entered

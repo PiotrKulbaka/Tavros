@@ -20,4 +20,4 @@ namespace tavros::renderer::interfaces
         virtual graphics_device& graphics_device() = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::interfaces

@@ -1706,8 +1706,7 @@ SnapVector
 */
 void __SnapVector(float* v)
 {
-    for (int i = 0; i < 3; ++i)
-    {
+    for (int i = 0; i < 3; ++i) {
         v[i] = static_cast<float>(std::round(v[i]));
     }
 }

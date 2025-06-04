@@ -1152,12 +1152,11 @@ BotFreeWaypoints
 */
 void BotFreeWaypoints(bot_waypoint_t* wp)
 {
-    bot_waypoint_t* nextwp;
-
-    for (; wp; wp = nextwp) {
-        nextwp = wp->next;
+    while (wp) {
+        bot_waypoint_t* next = wp->next;
         wp->next = botai_freewaypoints;
         botai_freewaypoints = wp;
+        wp = next;
     }
 }
 

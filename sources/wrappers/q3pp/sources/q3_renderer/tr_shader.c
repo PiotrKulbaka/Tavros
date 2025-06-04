@@ -1826,12 +1826,12 @@ most world construction surfaces.
 */
 shader_t* R_FindShader(const char* name, int32 lightmapIndex, bool mipRawImage)
 {
-    char                           strippedName[MAX_QPATH];
-    char                           fileName[MAX_QPATH];
-    int32                          i, hash;
-    char*                          shaderText;
+    char         strippedName[MAX_QPATH];
+    char         fileName[MAX_QPATH];
+    int32        i, hash;
+    char*        shaderText;
     texture_type image;
-    shader_t*                      sh;
+    shader_t*    sh;
 
     if (name[0] == 0) {
         return tr.defaultShader;

@@ -267,8 +267,8 @@ typedef struct
 typedef struct
 {
     texture_type image[MAX_IMAGE_ANIMATIONS];
-    int32                          numImageAnimations;
-    float                          imageAnimationSpeed;
+    int32        numImageAnimations;
+    float        imageAnimationSpeed;
 
     texCoordGen_t tcGen;
     vec3_t        tcGenVectors[2];
@@ -324,7 +324,7 @@ typedef enum
 
 typedef struct
 {
-    float                          cloudHeight;
+    float        cloudHeight;
     texture_type outerbox[6], innerbox[6];
 } skyParms_t;
 
@@ -863,7 +863,7 @@ typedef struct
 
     shader_t* sunShader;
 
-    int32                          numLightmaps;
+    int32        numLightmaps;
     texture_type lightmaps[MAX_LIGHTMAPS];
 
     trRefEntity_t* currentEntity;
@@ -892,7 +892,7 @@ typedef struct
     model_t* models[MAX_MOD_KNOWN];
     int32    numModels;
 
-    int32                          numImages;
+    int32        numImages;
     texture_type images[MAX_DRAWIMAGES];
 
     // shader indexes from other modules will be looked up in tr.shaders[]
@@ -1023,9 +1023,9 @@ bool R_GetEntityToken(char* buffer, int32 size);
 model_t* R_AllocModel();
 
 
-void set_texture_sampler(texture_type tex, int32_t min_filter, int32_t mag_filter, int32_t wrap);
+void         set_texture_sampler(texture_type tex, int32_t min_filter, int32_t mag_filter, int32_t wrap);
 texture_type create_texture(tavros::core::string_view name, int32_t width, int32_t height, const uint8_t* pixels);
-void                           R_Init();
+void         R_Init();
 texture_type R_FindImageFile(const char* name, bool mipmap, int32 glWrapClampMode);
 
 const void* RB_TakeScreenshotCmd(const void* data);
@@ -1251,11 +1251,11 @@ typedef struct
 
 typedef struct
 {
-    int32                          commandId;
+    int32        commandId;
     texture_type image;
-    int32                          width;
-    int32                          height;
-    void*                          data;
+    int32        width;
+    int32        height;
+    void*        data;
 } subImageCommand_t;
 
 typedef struct

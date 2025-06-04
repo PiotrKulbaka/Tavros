@@ -20,4 +20,4 @@ namespace tavros::renderer::interfaces
         virtual void destroy_texture(texture_handle) = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::interfaces

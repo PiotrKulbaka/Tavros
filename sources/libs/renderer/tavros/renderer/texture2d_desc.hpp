@@ -14,7 +14,7 @@ namespace tavros::renderer
     enum class texture_wrap : uint8
     {
         repeat,
-        clamp_to_edge, 
+        clamp_to_edge,
     };
 
     enum class pixel_format : uint8
@@ -35,7 +35,7 @@ namespace tavros::renderer
         }
 
         texture2d_desc& set_wrap(texture_wrap wrap)
-        { 
+        {
             wrap_s = wrap;
             wrap_t = wrap;
             return *this;
@@ -59,15 +59,15 @@ namespace tavros::renderer
             this->height = height;
             return *this;
         }
-        
+
         texture_filter min_filter = texture_filter::nearest;
         texture_filter mag_filter = texture_filter::nearest;
-        texture_wrap wrap_s = texture_wrap::repeat;
-        texture_wrap wrap_t = texture_wrap::repeat;
-        pixel_format format = pixel_format::rgba;
-        bool gen_mipmaps = false;
-        int32 width = 0;
-        int32 height = 0;
+        texture_wrap   wrap_s = texture_wrap::repeat;
+        texture_wrap   wrap_t = texture_wrap::repeat;
+        pixel_format   format = pixel_format::rgba;
+        bool           gen_mipmaps = false;
+        int32          width = 0;
+        int32          height = 0;
     };
 
 } // namespace tavros::renderer

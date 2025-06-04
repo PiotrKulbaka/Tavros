@@ -29,27 +29,26 @@ namespace tavros::renderer
     };
 
     enum class blend : uint8
-	{
-		off,
-		zero,
-		one,
-		alpha_rgba,
-		screen,
-		add,
-		mul,
-		min,
-		max,
-	};
-
+    {
+        off,
+        zero,
+        one,
+        alpha_rgba,
+        screen,
+        add,
+        mul,
+        min,
+        max,
+    };
 
 
     struct pipeline_desc
     {
-        cull_face   cull_face = cull_face::off;
-        front_face  front_face = front_face::clockwise;
+        cull_face  cull_face = cull_face::off;
+        front_face front_face = front_face::clockwise;
 
-        bool        wireframe = false;
-        ztest       depth_test = depth_test::off;
+        bool  wireframe = false;
+        ztest depth_test = depth_test::off;
     };
 
 } // namespace tavros::renderer

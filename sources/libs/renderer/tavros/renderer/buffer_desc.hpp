@@ -41,7 +41,7 @@ namespace tavros::renderer
             this->size = size;
             return *this;
         }
-        
+
         buffer_usage  usage = buffer_usage::index;      // Buffer usage
         buffer_access access = buffer_access::gpu_only; // Buffer access mode
         uint32        size = 0;                         // Buffer size in bytes

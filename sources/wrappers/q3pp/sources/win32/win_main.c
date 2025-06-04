@@ -43,6 +43,8 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include "../q3_renderer/tr_local.h"
 #include "../client/keys.h"
 
+#include <tavros/system/interfaces/application.hpp>
+
 #include <memory>
 
 static tavros::core::logger logger("win_main");
@@ -393,7 +395,7 @@ public:
     }
 
 private:
-    tavros::system::window_uptr                       m_wnd;
+    tavros::system::window_uptr       m_wnd;
     std::unique_ptr<opengl_swapchain> m_swapchain;
 };
 
@@ -486,22 +488,6 @@ void Sys_Mkdir(const char* path)
 }
 
 /*
-==============
-Sys_Cwd
-==============
-*/
-const char* Sys_Cwd()
-{
-    static char cwd[MAX_OSPATH];
-
-    _getcwd(cwd, sizeof(cwd) - 1);
-    cwd[MAX_OSPATH - 1] = 0;
-
-    return cwd;
-}
-
-
-/*
 ================
 Sys_Milliseconds
 ================
@@ -548,7 +534,7 @@ const char* Sys_DefaultHomePath()
 const char* Sys_DefaultInstallPath()
 {
     static char s[MAX_OSPATH];
-    //char*       end = _getcwd(s, sizeof(s) - 1);
+    // char*       end = _getcwd(s, sizeof(s) - 1);
     strcpy(s, "D:\\Work\\q3pp_res\\");
     s[MAX_OSPATH - 1] = 0;
 
@@ -570,7 +556,7 @@ void Sys_ListFilteredFiles(const char* basedir, const char* subdirs, const char*
 {
     char               search[MAX_OSPATH], newsubdirs[MAX_OSPATH];
     char               filename[MAX_OSPATH];
-    intptr_t              findhandle;
+    intptr_t           findhandle;
     struct _finddata_t findinfo;
 
     if (*numfiles >= MAX_FOUND_FILES - 1) {
@@ -642,7 +628,7 @@ const char** Sys_ListFiles(const char* directory, const char* extension, const c
     const char**       listCopy;
     char*              list[MAX_FOUND_FILES];
     struct _finddata_t findinfo;
-    intptr_t              findhandle;
+    intptr_t           findhandle;
     int32              flag;
     int32              i;
 
@@ -844,33 +830,7 @@ sysEvent_t Sys_GetEvent()
         eventTail++;
         return eventQue[(eventTail - 1) & MASK_QUED_EVENTS];
     }
-
-    // pump the message loop
-    while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-        if (msg.message == WM_QUIT) {
-            Com_Quit_f();
-        }
-
-        // save the msg time, because wndprocs don't have access to the timestamp
-        g_wv.sysMsgTime = msg.time;
-
-        TranslateMessage(&msg);
-        DispatchMessage(&msg);
-    }
-
-    // check for console commands
-    // TODO: console commands add here like below
-    /*s = Sys_ConsoleInput();
-    if (s) {
-        char*   b;
-        int32 len;
-
-        len = strlen(s) + 1;
-        b = (char*) Z_Malloc(len);
-        Q_strncpyz(b, s, len - 1);
-        Sys_QueEvent(0, SE_CONSOLE, 0, 0, len, b);
-    }*/
-
+    g_wv.sysMsgTime = timeGetTime();
     // check for network packets
     MSG_Init(&netmsg, sys_packetReceived, sizeof(sys_packetReceived));
     if (Sys_GetPacket(&adr, &netmsg)) {
@@ -938,8 +898,6 @@ FILE* log_f = nullptr;
 /* WinMain */
 int32 WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int32 nCmdShow)
 {
-    char cwd[MAX_OSPATH];
-
     // should never get a previous instance in Win32
     if (hPrevInstance) {
         return 0;
@@ -951,50 +909,7 @@ int32 WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         fflush(log_f);
     });
 
-#if 0
-    auto win = tavros::system::interfaces::window::create("Quake 3: Arena");
-    win->set_on_close_listener([](tavros::system::window_ptr, tavros::system::close_event_args& e){
-        PostQuitMessage(0);
-    });
-    win->set_on_key_down_listener([](tavros::system::window_ptr, tavros::system::key_event_args& e) {
-        if (e.key == tavros::system::keys::k_Q) {
-            exit(0);
-        }
-    });
-
-    win->set_on_resize_listener([](tavros::system::window_ptr control, tavros::system::size_event_args& e) {
-        
-    });
-
-    win->set_on_drop_listener([](tavros::system::window_ptr control, tavros::system::drop_event_args& e) {
-        for (auto i = 0; e.files[i] != nullptr; ++i) {
-            logger.debug("Drop file: %s", e.files[i]);
-        }
-    });
-
-    win->show();
-
-    MSG        msg;
-    sysEvent_t ev;
-    bool run = true;
-
-    while (run) {
-        while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
-            if (msg.message == WM_QUIT) {
-                run = false;
-            }
-            TranslateMessage(&msg);
-            DispatchMessage(&msg);
-        }
-
-        Sleep(1);
-    }
-
-    CoUninitialize();
-
-    return 0;
-#endif
-
+    auto app = tavros::system::interfaces::application::create();
 
     Q_strncpyz(sys_cmdline, lpCmdLine, sizeof(sys_cmdline));
 
@@ -1006,22 +921,17 @@ int32 WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
     Com_Init(sys_cmdline);
     NET_Init();
 
-    _getcwd(cwd, sizeof(cwd));
-    logger.info("Working directory: %s", cwd);
-
     tavros::core::timer tm;
-    // main game loop
-    while (1) {
-        // if not running as a game client, sleep a bit
+
+    app->run();
+    while (app->is_runing()) {
+        app->poll_events();
         if (g_wv.isMinimized || (com_dedicated && com_dedicated->integer)) {
             Sleep(5);
         }
-
-        // run the game
         Com_Frame();
     }
 
-    // never gets here
     return 0;
 }
 

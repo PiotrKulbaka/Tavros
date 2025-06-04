@@ -992,8 +992,8 @@ recurse:
            that a median-of-three algorithm does not, in general, increase
            performance. */
 
-        mid = lo + (size / 2) * width; /* find middle element */
-        swap_draw_surf((drawSurf_t*)mid, (drawSurf_t*)lo);       /* swap it to beginning of array */
+        mid = lo + (size / 2) * width;                       /* find middle element */
+        swap_draw_surf((drawSurf_t*) mid, (drawSurf_t*) lo); /* swap it to beginning of array */
 
         /* We now wish to partition the array into three pieces, one
            consisiting of elements <= partition element, one of elements
@@ -1033,7 +1033,7 @@ recurse:
                A[loguy] > A[lo], A[higuy] < A[lo],
                loguy < hi, highy > lo */
 
-            swap_draw_surf((drawSurf_t*)loguy, (drawSurf_t*)higuy);
+            swap_draw_surf((drawSurf_t*) loguy, (drawSurf_t*) higuy);
 
             /* A[loguy] < A[lo], A[higuy] > A[lo]; so condition at top
                of loop is re-established */
@@ -1047,7 +1047,7 @@ recurse:
                A[i] <= A[lo] for lo <= i <= higuy,
                A[i] = A[lo] for higuy < i < loguy */
 
-        swap_draw_surf((drawSurf_t*)lo, (drawSurf_t*)higuy); /* put partition element in place */
+        swap_draw_surf((drawSurf_t*) lo, (drawSurf_t*) higuy); /* put partition element in place */
 
         /* OK, now we have the following:
               A[i] >= A[higuy] for loguy <= i <= hi,

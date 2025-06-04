@@ -775,7 +775,6 @@ bool Sys_IsLANAddress(netadr_t adr);
 void Sys_ShowIP();
 
 void        Sys_Mkdir(const char* path);
-const char* Sys_Cwd();
 const char* Sys_DefaultInstallPath();
 const char* Sys_DefaultHomePath();
 

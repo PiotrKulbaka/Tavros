@@ -77,8 +77,7 @@ texture_type create_texture(tavros::core::string_view name, int32_t width, int32
     if (t != s_textures.end()) {
         t->second = texid;
         ref = t->second;
-    }
-    else {
+    } else {
         s_storage.push_back(texid);
         ref = s_storage.back();
     }
@@ -102,7 +101,7 @@ texture_type load_texture(tavros::core::string_view name, tavros::core::string_v
     }
 
     uint8_t* buf;
-    int32_t  len = FS_ReadFile(path.data(), (void**)&buf);
+    int32_t  len = FS_ReadFile(path.data(), (void**) &buf);
     if (len == -1) {
         return 0;
     }
