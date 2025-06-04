@@ -240,14 +240,13 @@ static void UI_SPPostgameMenu_DrawAwardsMedals(int32 max)
 
 static void UI_SPPostgameMenu_DrawAwardsPresentation(int32 timer)
 {
-    int32  awardNum;
-    int32  atimer;
-    vec4_t color;
+    int32              awardNum;
+    int32              atimer;
+    tavros::math::vec4 color(1.0f);
 
     awardNum = timer / AWARD_PRESENTATION_TIME;
     atimer = timer % AWARD_PRESENTATION_TIME;
 
-    color[0] = color[1] = color[2] = 1.0f;
     color[3] = (float) (AWARD_PRESENTATION_TIME - atimer) / (float) AWARD_PRESENTATION_TIME;
     UI_DrawProportionalString(320, 64, ui_medalNames[postgameMenuInfo.awardsEarned[awardNum]], UI_CENTER, color);
 

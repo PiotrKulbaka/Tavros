@@ -173,14 +173,14 @@ Coordinates are at 640 by 480 virtual resolution
 */
 void SCR_DrawStringExt(int32 x, int32 y, float size, const char* string, float* setColor, bool forceColor)
 {
-    vec4_t      color;
-    const char* s;
-    int32       xx;
+    tavros::math::vec4 color;
+    const char*        s;
+    int32              xx;
 
     // draw the drop shadow
     color[0] = color[1] = color[2] = 0;
     color[3] = setColor[3];
-    RE_SetColor(color);
+    RE_SetColor(color.data());
     s = string;
     xx = x;
     while (*s) {
@@ -201,9 +201,9 @@ void SCR_DrawStringExt(int32 x, int32 y, float size, const char* string, float* 
     while (*s) {
         if (Q_IsColorString(s)) {
             if (!forceColor) {
-                Com_Memcpy(color, g_color_table[ColorIndex(*(s + 1))], sizeof(color));
+                color = g_color_table[ColorIndex(*(s + 1))];
                 color[3] = setColor[3];
-                RE_SetColor(color);
+                RE_SetColor(color.data());
             }
             s += 2;
             continue;
@@ -237,9 +237,9 @@ Coordinates are at 640 by 480 virtual resolution
 */
 void SCR_DrawSmallStringExt(int32 x, int32 y, const char* string, float* setColor, bool forceColor)
 {
-    vec4_t      color;
-    const char* s;
-    int32       xx;
+    tavros::math::vec4 color;
+    const char*        s;
+    int32              xx;
 
     // draw the colored text
     s = string;
@@ -248,9 +248,9 @@ void SCR_DrawSmallStringExt(int32 x, int32 y, const char* string, float* setColo
     while (*s) {
         if (Q_IsColorString(s)) {
             if (!forceColor) {
-                Com_Memcpy(color, g_color_table[ColorIndex(*(s + 1))], sizeof(color));
+                color = g_color_table[ColorIndex(*(s + 1))];
                 color[3] = setColor[3];
-                RE_SetColor(color);
+                RE_SetColor(color.data());
             }
             s += 2;
             continue;
@@ -284,7 +284,7 @@ void SCR_DrawDemoRecording()
     pos = FS_FTell(clc.demofile);
     sprintf(string, "RECORDING %s: %ik", clc.demoName, pos / 1024);
 
-    SCR_DrawStringExt(320 - strlen(string) * 4, 20, 8, string, g_color_table[7], true);
+    SCR_DrawStringExt(320 - strlen(string) * 4, 20, 8, string, g_color_table[7].data(), true);
 }
 
 
@@ -334,7 +334,7 @@ void SCR_DrawDebugGraph()
     w = cls.glconfig.vidWidth;
     x = 0;
     y = cls.glconfig.vidHeight;
-    RE_SetColor(g_color_table[0]);
+    RE_SetColor(g_color_table[0].data());
     RE_DrawStretchPic(x, y - cl_graphheight->integer, w, cl_graphheight->integer, 0, 0, 0, 0, cls.whiteShader);
     RE_SetColor(NULL);
 
@@ -386,7 +386,7 @@ void SCR_DrawScreenField()
     // unless they are displaying game renderings
     if (cls.state != CA_ACTIVE) {
         if (cls.glconfig.vidWidth * 480 > cls.glconfig.vidHeight * 640) {
-            RE_SetColor(g_color_table[0]);
+            RE_SetColor(g_color_table[0].data());
             RE_DrawStretchPic(0, 0, cls.glconfig.vidWidth, cls.glconfig.vidHeight, 0, 0, 0, 0, cls.whiteShader);
             RE_SetColor(NULL);
         }

@@ -132,18 +132,6 @@ void UI_ForceMenuOff()
     Cvar_Set("cl_paused", "0");
 }
 
-static void UI_LerpColor(vec4_t a, vec4_t b, vec4_t c, float t)
-{
-    tavros::math::vec4 va(a[0], a[1], a[2], a[3]);
-    tavros::math::vec4 vb(b[0], b[1], b[2], b[3]);
-    auto               vc = tavros::math::lerp(va, vb, t);
-
-    c[0] = vc[0];
-    c[1] = vc[1];
-    c[2] = vc[2];
-    c[3] = vc[3];
-}
-
 /*
 =================
 UI_DrawProportionalString2
@@ -315,7 +303,7 @@ static int32 propMapB[26][3] = {
 UI_DrawBannerString
 =================
 */
-static void UI_DrawBannerString2(int32 x, int32 y, const char* str, vec4_t color)
+static void UI_DrawBannerString2(int32 x, int32 y, const char* str, tavros::math::vec4 color)
 {
     const char* s;
     uint8       ch;
@@ -329,7 +317,7 @@ static void UI_DrawBannerString2(int32 x, int32 y, const char* str, vec4_t color
     float       fheight;
 
     // draw the colored text
-    RE_SetColor(color);
+    RE_SetColor(color.data());
 
     ax = x * uis.scale + uis.bias;
     ay = y * uis.scale;
@@ -356,12 +344,11 @@ static void UI_DrawBannerString2(int32 x, int32 y, const char* str, vec4_t color
     RE_SetColor(NULL);
 }
 
-void UI_DrawBannerString(int32 x, int32 y, const char* str, int32 style, vec4_t color)
+void UI_DrawBannerString(int32 x, int32 y, const char* str, int32 style, tavros::math::vec4 color)
 {
     const char* s;
     int32       ch;
     int32       width;
-    vec4_t      drawcolor;
 
     // find the width of the drawn text
     s = str;
@@ -392,9 +379,7 @@ void UI_DrawBannerString(int32 x, int32 y, const char* str, int32 style, vec4_t 
     }
 
     if (style & UI_DROPSHADOW) {
-        drawcolor[0] = drawcolor[1] = drawcolor[2] = 0;
-        drawcolor[3] = color[3];
-        UI_DrawBannerString2(x + 2, y + 2, str, drawcolor);
+        UI_DrawBannerString2(x + 2, y + 2, str, tavros::math::vec4(0.0f, 0.0f, 0.0f, color.w));
     }
 
     UI_DrawBannerString2(x, y, str, color);
@@ -424,7 +409,7 @@ int32 UI_ProportionalStringWidth(const char* str)
     return width;
 }
 
-static void UI_DrawProportionalString2(int32 x, int32 y, const char* str, vec4_t color, float sizeScale, qhandle_t charset)
+static void UI_DrawProportionalString2(int32 x, int32 y, const char* str, tavros::math::vec4 color, float sizeScale, qhandle_t charset)
 {
     const char* s;
     uint8       ch;
@@ -438,7 +423,7 @@ static void UI_DrawProportionalString2(int32 x, int32 y, const char* str, vec4_t
     float       fheight;
 
     // draw the colored text
-    RE_SetColor(color);
+    RE_SetColor(color.data());
 
     ax = x * uis.scale + uis.bias;
     ay = y * uis.scale;
@@ -485,11 +470,10 @@ float UI_ProportionalSizeScale(int32 style)
 UI_DrawProportionalString
 =================
 */
-void UI_DrawProportionalString(int32 x, int32 y, const char* str, int32 style, vec4_t color)
+void UI_DrawProportionalString(int32 x, int32 y, const char* str, int32 style, tavros::math::vec4 color)
 {
-    vec4_t drawcolor;
-    int32  width;
-    float  sizeScale;
+    int32 width;
+    float sizeScale;
 
     sizeScale = UI_ProportionalSizeScale(style);
 
@@ -510,32 +494,21 @@ void UI_DrawProportionalString(int32 x, int32 y, const char* str, int32 style, v
     }
 
     if (style & UI_DROPSHADOW) {
-        drawcolor[0] = drawcolor[1] = drawcolor[2] = 0;
-        drawcolor[3] = color[3];
-        UI_DrawProportionalString2(x + 2, y + 2, str, drawcolor, sizeScale, uis.charsetProp);
+        auto draw_color = tavros::math::vec4(0.0f, 0.0f, 0.0f, color.w);
+        UI_DrawProportionalString2(x + 2, y + 2, str, draw_color, sizeScale, uis.charsetProp);
     }
 
     if (style & UI_INVERSE) {
-        drawcolor[0] = color[0] * 0.7;
-        drawcolor[1] = color[1] * 0.7;
-        drawcolor[2] = color[2] * 0.7;
-        drawcolor[3] = color[3];
-        UI_DrawProportionalString2(x, y, str, drawcolor, sizeScale, uis.charsetProp);
+        auto draw_color = tavros::math::vec4(color.x * 0.7f, color.y * 0.7f, color.z * 0.7f, color.w);
+        UI_DrawProportionalString2(x, y, str, draw_color, sizeScale, uis.charsetProp);
         return;
     }
 
     if (style & UI_PULSE) {
-        drawcolor[0] = color[0] * 0.7;
-        drawcolor[1] = color[1] * 0.7;
-        drawcolor[2] = color[2] * 0.7;
-        drawcolor[3] = color[3];
+        auto draw_color = tavros::math::vec4(color.x * 0.7f, color.y * 0.7f, color.z * 0.7f, color.w);
         UI_DrawProportionalString2(x, y, str, color, sizeScale, uis.charsetProp);
-
-        drawcolor[0] = color[0];
-        drawcolor[1] = color[1];
-        drawcolor[2] = color[2];
-        drawcolor[3] = 0.5 + 0.5 * sin(uis.realtime / PULSE_DIVISOR);
-        UI_DrawProportionalString2(x, y, str, drawcolor, sizeScale, uis.charsetPropGlow);
+        draw_color = tavros::math::vec4(color.x, color.y, color.z, 0.5 + 0.5 * sin(uis.realtime / PULSE_DIVISOR));
+        UI_DrawProportionalString2(x, y, str, draw_color, sizeScale, uis.charsetPropGlow);
         return;
     }
 
@@ -547,7 +520,7 @@ void UI_DrawProportionalString(int32 x, int32 y, const char* str, int32 style, v
 UI_DrawProportionalString_Wrapped
 =================
 */
-void UI_DrawProportionalString_AutoWrapped(int32 x, int32 y, int32 xmax, int32 ystep, const char* str, int32 style, vec4_t color)
+void UI_DrawProportionalString_AutoWrapped(int32 x, int32 y, int32 xmax, int32 ystep, const char* str, int32 style, tavros::math::vec4 color)
 {
     int32 width;
     char *s1, *s2, *s3;
@@ -610,18 +583,18 @@ void UI_DrawProportionalString_AutoWrapped(int32 x, int32 y, int32 xmax, int32 y
 UI_DrawString2
 =================
 */
-static void UI_DrawString2(int32 x, int32 y, const char* str, vec4_t color, int32 charw, int32 charh)
+static void UI_DrawString2(int32 x, int32 y, const char* str, tavros::math::vec4 color, int32 charw, int32 charh)
 {
-    const char* s;
-    char        ch;
-    int32       forceColor = false; // APSFIXME;
-    vec4_t      tempcolor;
-    float       ax;
-    float       ay;
-    float       aw;
-    float       ah;
-    float       frow;
-    float       fcol;
+    const char*        s;
+    char               ch;
+    int32              forceColor = false; // APSFIXME;
+    tavros::math::vec4 tempcolor;
+    float              ax;
+    float              ay;
+    float              aw;
+    float              ah;
+    float              frow;
+    float              fcol;
 
     if (y < -charh) {
         // offscreen
@@ -629,7 +602,7 @@ static void UI_DrawString2(int32 x, int32 y, const char* str, vec4_t color, int3
     }
 
     // draw the colored text
-    RE_SetColor(color);
+    RE_SetColor(color.data());
 
     ax = x * uis.scale + uis.bias;
     ay = y * uis.scale;
@@ -640,9 +613,9 @@ static void UI_DrawString2(int32 x, int32 y, const char* str, vec4_t color, int3
     while (*s) {
         if (Q_IsColorString(s)) {
             if (!forceColor) {
-                memcpy(tempcolor, g_color_table[ColorIndex(s[1])], sizeof(tempcolor));
+                tempcolor = g_color_table[ColorIndex(s[1])];
                 tempcolor[3] = color[3];
-                RE_SetColor(tempcolor);
+                RE_SetColor(tempcolor.data());
             }
             s += 2;
             continue;
@@ -667,15 +640,15 @@ static void UI_DrawString2(int32 x, int32 y, const char* str, vec4_t color, int3
 UI_DrawString
 =================
 */
-void UI_DrawString(int32 x, int32 y, const char* str, int32 style, vec4_t color)
+void UI_DrawString(int32 x, int32 y, const char* str, int32 style, tavros::math::vec4 color)
 {
-    int32  len;
-    int32  charw;
-    int32  charh;
-    vec4_t newcolor;
-    vec4_t lowlight;
-    float* drawcolor;
-    vec4_t dropcolor;
+    int32              len;
+    int32              charw;
+    int32              charh;
+    tavros::math::vec4 newcolor;
+    tavros::math::vec4 lowlight;
+    tavros::math::vec4 dropcolor;
+    tavros::math::vec4 drawcolor;
 
     if (!str) {
         return;
@@ -697,11 +670,8 @@ void UI_DrawString(int32 x, int32 y, const char* str, int32 style, vec4_t color)
     }
 
     if (style & UI_PULSE) {
-        lowlight[0] = 0.8 * color[0];
-        lowlight[1] = 0.8 * color[1];
-        lowlight[2] = 0.8 * color[2];
-        lowlight[3] = 0.8 * color[3];
-        UI_LerpColor(color, lowlight, newcolor, 0.5 + 0.5 * sin(uis.realtime / PULSE_DIVISOR));
+        lowlight = color * 0.8f;
+        newcolor = tavros::math::lerp(color, lowlight, 0.5 + 0.5 * sin(uis.realtime / PULSE_DIVISOR));
         drawcolor = newcolor;
     } else {
         drawcolor = color;
@@ -726,8 +696,7 @@ void UI_DrawString(int32 x, int32 y, const char* str, int32 style, vec4_t color)
     }
 
     if (style & UI_DROPSHADOW) {
-        dropcolor[0] = dropcolor[1] = dropcolor[2] = 0;
-        dropcolor[3] = drawcolor[3];
+        dropcolor = tavros::math::vec4(0.0f, 0.0f, 0.0f, drawcolor.a);
         UI_DrawString2(x + 2, y + 2, str, dropcolor, charw, charh);
     }
 
@@ -739,7 +708,7 @@ void UI_DrawString(int32 x, int32 y, const char* str, int32 style, vec4_t color)
 UI_DrawChar
 =================
 */
-void UI_DrawChar(int32 x, int32 y, int32 ch, int32 style, vec4_t color)
+void UI_DrawChar(int32 x, int32 y, int32 ch, int32 style, tavros::math::vec4 color)
 {
     char buff[2];
 
@@ -1085,9 +1054,9 @@ UI_FillRect
 Coordinates are 640*480 virtual values
 =================
 */
-void UI_FillRect(float x, float y, float width, float height, const float* color)
+void UI_FillRect(float x, float y, float width, float height, tavros::math::vec4 color)
 {
-    RE_SetColor(color);
+    RE_SetColor(color.data());
 
     UI_AdjustFrom640(&x, &y, &width, &height);
     RE_DrawStretchPic(x, y, width, height, 0, 0, 0, 0, uis.whiteShader);
@@ -1102,9 +1071,9 @@ UI_DrawRect
 Coordinates are 640*480 virtual values
 =================
 */
-void UI_DrawRect(float x, float y, float width, float height, const float* color)
+void UI_DrawRect(float x, float y, float width, float height, tavros::math::vec4 color)
 {
-    RE_SetColor(color);
+    RE_SetColor(color.data());
 
     UI_AdjustFrom640(&x, &y, &width, &height);
 

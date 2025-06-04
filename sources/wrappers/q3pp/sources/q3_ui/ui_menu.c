@@ -142,13 +142,13 @@ TTimo: this function is common to the main menu and errorMessage menu
 
 static void Main_MenuDraw()
 {
-    refdef_t    refdef;
-    refEntity_t ent;
-    vec3_t      origin;
-    vec3_t      angles;
-    float       adjust;
-    float       x, y, w, h;
-    vec4_t      color = {0.5, 0, 0, 1};
+    refdef_t           refdef;
+    refEntity_t        ent;
+    vec3_t             origin;
+    vec3_t             angles;
+    float              adjust;
+    float              x, y, w, h;
+    tavros::math::vec4 color = {0.5, 0, 0, 1};
 
     // setup the refdef
 

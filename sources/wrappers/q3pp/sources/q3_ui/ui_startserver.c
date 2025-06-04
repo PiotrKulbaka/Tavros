@@ -1173,11 +1173,11 @@ PlayerName_Draw
 */
 static void PlayerName_Draw(void* item)
 {
-    menutext_s* s;
-    float*      color;
-    int32       x, y;
-    int32       style;
-    bool        focus;
+    menutext_s*        s;
+    tavros::math::vec4 color;
+    int32              x, y;
+    int32              style;
+    bool               focus;
 
     s = (menutext_s*) item;
 

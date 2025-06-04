@@ -218,13 +218,13 @@ UI_TeamOrdersMenu_ListDraw
 */
 static void UI_TeamOrdersMenu_ListDraw(void* self)
 {
-    menulist_s* l;
-    int32       x;
-    int32       y;
-    int32       i;
-    float*      color;
-    bool        hasfocus;
-    int32       style;
+    menulist_s*        l;
+    int32              x;
+    int32              y;
+    int32              i;
+    tavros::math::vec4 color;
+    bool               hasfocus;
+    int32              style;
 
     l = (menulist_s*) self;
 

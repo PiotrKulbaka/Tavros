@@ -78,7 +78,7 @@ static bool localClient; // true if local client has been displayed
 CG_DrawScoreboard
 =================
 */
-static void CG_DrawClientScore(int32 y, score_t* score, float* color, float fade, bool largeFormat)
+static void CG_DrawClientScore(int32 y, score_t* score, tavros::math::vec4 color, float fade, bool largeFormat)
 {
     char          string[1024];
     vec3_t        headAngles;
@@ -211,14 +211,11 @@ CG_TeamScoreboard
 */
 static int32 CG_TeamScoreboard(int32 y, team_t team, float fade, int32 maxClients, int32 lineHeight)
 {
-    int32         i;
-    score_t*      score;
-    float         color[4];
-    int32         count;
-    clientInfo_t* ci;
-
-    color[0] = color[1] = color[2] = 1.0;
-    color[3] = fade;
+    int32              i;
+    score_t*           score;
+    tavros::math::vec4 color(1.0f, 1.0, 1.0f, fade);
+    int32              count;
+    clientInfo_t*      ci;
 
     count = 0;
     for (i = 0; i < cg.numScores && count < maxClients; i++) {
@@ -246,13 +243,13 @@ Draw the normal in-game scoreboard
 */
 bool CG_DrawOldScoreboard()
 {
-    int32  x, y, w, i, n1, n2;
-    float  fade;
-    float* fadeColor;
-    char*  s;
-    int32  maxClients;
-    int32  lineHeight;
-    int32  topBorderSize, bottomBorderSize;
+    int32              x, y, w, i, n1, n2;
+    float              fade;
+    tavros::math::vec4 fadeColor;
+    char*              s;
+    int32              maxClients;
+    int32              lineHeight;
+    int32              topBorderSize, bottomBorderSize;
 
     // don't draw amuthing if the menu or console is up
     if (cg_paused->integer) {
@@ -271,19 +268,19 @@ bool CG_DrawOldScoreboard()
     }
 
     if (cg.showScores || cg.predictedPlayerState.pm_type == PM_DEAD || cg.predictedPlayerState.pm_type == PM_INTERMISSION) {
-        vec4_t white = {1.0, 1.0, 1.0, 1.0};
+        tavros::math::vec4 white = {1.0, 1.0, 1.0, 1.0};
         fade = 1.0;
         fadeColor = white;
     } else {
         fadeColor = CG_FadeColor(cg.scoreFadeTime, FADE_TIME);
 
-        if (!fadeColor) {
+        if (tavros::math::almost_equal(fadeColor, tavros::math::vec4(0.0f))) {
             // next time scoreboard comes up, don't print killer
             cg.deferredPlayerLoading = 0;
             cg.killerName[0] = 0;
             return false;
         }
-        fade = *fadeColor;
+        fade = fadeColor.r;
     }
 
 
@@ -410,16 +407,9 @@ CG_CenterGiantLine
 */
 static void CG_CenterGiantLine(float y, const char* string)
 {
-    float  x;
-    vec4_t color;
-
-    color[0] = 1;
-    color[1] = 1;
-    color[2] = 1;
-    color[3] = 1;
-
+    float              x;
+    tavros::math::vec4 color(1.0f);
     x = 0.5 * (640 - GIANT_WIDTH * CG_DrawStrlen(string));
-
     CG_DrawStringExt(x, y, string, color, true, true, GIANT_WIDTH, GIANT_HEIGHT, 0);
 }
 
@@ -432,12 +422,12 @@ Draw the oversize scoreboard for tournements
 */
 void CG_DrawOldTourneyScoreboard()
 {
-    const char*   s;
-    vec4_t        color;
-    int32         min, tens, ones;
-    clientInfo_t* ci;
-    int32         y;
-    int32         i;
+    const char*        s;
+    tavros::math::vec4 color(0.0f, 0.0f, 0.0f, 1.0f);
+    int32              min, tens, ones;
+    clientInfo_t*      ci;
+    int32              y;
+    int32              i;
 
     // request more scores regularly
     if (cg.scoresRequestTime + 2000 < cg.time) {
@@ -445,15 +435,8 @@ void CG_DrawOldTourneyScoreboard()
         CL_AddReliableCommand("score");
     }
 
-    color[0] = 1;
-    color[1] = 1;
-    color[2] = 1;
-    color[3] = 1;
-
     // draw the dialog background
-    color[0] = color[1] = color[2] = 0;
-    color[3] = 1;
-    CG_FillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color);
+    CG_FillRect(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, color.data());
 
     // print the mesage of the day
     s = CG_ConfigString(CS_MOTD);

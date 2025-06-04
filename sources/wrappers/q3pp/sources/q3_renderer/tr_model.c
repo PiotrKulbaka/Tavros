@@ -186,8 +186,7 @@ qhandle_t RE_RegisterModel(const char* name)
         }
 
         return mod->index;
-    }
-    else {
+    } else {
         logger.warning("RE_RegisterModel: couldn't load %s", name);
     }
 

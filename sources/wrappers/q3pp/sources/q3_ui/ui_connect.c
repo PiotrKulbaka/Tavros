@@ -166,7 +166,7 @@ void UI_DrawConnectScreen(bool overlay)
 
     if (!overlay) {
         // draw the dialog background
-        UI_SetColor(color_white);
+        UI_SetColor(color_white.data());
         UI_DrawHandlePic(0, 0, SCREEN_WIDTH, SCREEN_HEIGHT, uis.menuBackShader);
     }
 

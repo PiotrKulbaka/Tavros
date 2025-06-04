@@ -156,7 +156,6 @@ MATHLIB
 
 typedef float vec_t;
 typedef vec_t vec3_t[3];
-typedef vec_t vec4_t[4];
 
 #ifndef M_PI
     #define M_PI 3.14159265358979323846f // matches value in gcc v2 math.h
@@ -203,7 +202,7 @@ extern vec3_t bytedirs[NUMVERTEXNORMALS];
 #define S_COLOR_MAGENTA    "^6"
 #define S_COLOR_WHITE      "^7"
 
-extern vec4_t g_color_table[8];
+extern tavros::math::vec4 g_color_table[8];
 
 #define DEG2RAD(a) (((a) * M_PI) / 180.0F)
 #define RAD2DEG(a) (((a) * 180.0f) / M_PI)
@@ -502,8 +501,8 @@ typedef struct cplane_s
 {
     vec3_t normal;
     float  dist;
-    uint8  side_type;     // for fast side tests: 0,1,2 = axial, 3 = nonaxial
-    uint8  signbits; // signx + (signy<<1) + (signz<<2), used as lookup during collision
+    uint8  side_type; // for fast side tests: 0,1,2 = axial, 3 = nonaxial
+    uint8  signbits;  // signx + (signy<<1) + (signz<<2), used as lookup during collision
     uint8  pad[2];
 } cplane_t;
 

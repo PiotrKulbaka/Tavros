@@ -30,7 +30,7 @@ Handles horizontal scrolling and cursor blinking
 x, y, are in pixels
 ===================
 */
-void MField_Draw(mfield_t* edit, int32 x, int32 y, int32 style, vec4_t color)
+void MField_Draw(mfield_t* edit, int32 x, int32 y, int32 style, tavros::math::vec4 color)
 {
     int32 len;
     int32 charw;
@@ -328,13 +328,13 @@ MenuField_Draw
 */
 void MenuField_Draw(menufield_s* f)
 {
-    int32  x;
-    int32  y;
-    int32  w;
-    int32  h;
-    int32  style;
-    bool   focus;
-    float* color;
+    int32              x;
+    int32              y;
+    int32              w;
+    int32              h;
+    int32              style;
+    bool               focus;
+    tavros::math::vec4 color;
 
     x = f->generic.x;
     y = f->generic.y;

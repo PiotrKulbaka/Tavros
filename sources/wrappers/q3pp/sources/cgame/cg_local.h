@@ -1112,20 +1112,20 @@ void CG_AddBufferedSound(sfxHandle_t sfx);
 void CG_AdjustFrom640(float* x, float* y, float* w, float* h);
 void CG_FillRect(float x, float y, float width, float height, const float* color);
 void CG_DrawPic(float x, float y, float width, float height, qhandle_t hShader);
-void CG_DrawStringExt(int32 x, int32 y, const char* string, const float* setColor, bool forceColor, bool shadow, int32 charWidth, int32 charHeight, int32 maxChars);
+void CG_DrawStringExt(int32 x, int32 y, const char* string, tavros::math::vec4 setColor, bool forceColor, bool shadow, int32 charWidth, int32 charHeight, int32 maxChars);
 void CG_DrawBigString(int32 x, int32 y, const char* s, float alpha);
-void CG_DrawBigStringColor(int32 x, int32 y, const char* s, vec4_t color);
+void CG_DrawBigStringColor(int32 x, int32 y, const char* s, tavros::math::vec4 color);
 void CG_DrawSmallString(int32 x, int32 y, const char* s, float alpha);
-void CG_DrawSmallStringColor(int32 x, int32 y, const char* s, vec4_t color);
+void CG_DrawSmallStringColor(int32 x, int32 y, const char* s, tavros::math::vec4 color);
 
 int32 CG_DrawStrlen(const char* str);
 
-float* CG_FadeColor(int32 startMsec, int32 totalMsec);
-void   CG_TileClear();
-void   CG_ColorForHealth(vec4_t hcolor);
-void   CG_GetColorForHealth(int32 health, int32 armor, vec4_t hcolor);
+tavros::math::vec4 CG_FadeColor(int32 startMsec, int32 totalMsec);
+void               CG_TileClear();
+tavros::math::vec4 CG_ColorForHealth();
+tavros::math::vec4 CG_GetColorForHealth(int32 health, int32 armor);
 
-void UI_DrawProportionalString(int32 x, int32 y, const char* str, int32 style, vec4_t color);
+void UI_DrawProportionalString(int32 x, int32 y, const char* str, int32 style, tavros::math::vec4 color);
 
 
 //

@@ -38,19 +38,19 @@ static qhandle_t sliderBar;
 static qhandle_t sliderButton_0;
 static qhandle_t sliderButton_1;
 
-vec4_t menu_text_color = {1.0f, 1.0f, 1.0f, 1.0f};
-vec4_t color_black = {0.00f, 0.00f, 0.00f, 1.00f};
-vec4_t color_white = {1.00f, 1.00f, 1.00f, 1.00f};
-vec4_t color_yellow = {1.00f, 1.00f, 0.00f, 1.00f};
-vec4_t color_orange = {1.00f, 0.43f, 0.00f, 1.00f};
-vec4_t color_red = {1.00f, 0.00f, 0.00f, 1.00f};
+tavros::math::vec4 menu_text_color = {1.0f, 1.0f, 1.0f, 1.0f};
+tavros::math::vec4 color_black = {0.00f, 0.00f, 0.00f, 1.00f};
+tavros::math::vec4 color_white = {1.00f, 1.00f, 1.00f, 1.00f};
+tavros::math::vec4 color_yellow = {1.00f, 1.00f, 0.00f, 1.00f};
+tavros::math::vec4 color_orange = {1.00f, 0.43f, 0.00f, 1.00f};
+tavros::math::vec4 color_red = {1.00f, 0.00f, 0.00f, 1.00f};
 
 // current color scheme
-vec4_t pulse_color = {1.00f, 1.00f, 1.00f, 1.00f};
-vec4_t text_color_disabled = {0.50f, 0.50f, 0.50f, 1.00f};  // light gray
-vec4_t text_color_normal = {1.00f, 0.43f, 0.00f, 1.00f};    // light orange
-vec4_t text_color_highlight = {1.00f, 1.00f, 0.00f, 1.00f}; // bright yellow
-vec4_t listbar_color = {1.00f, 0.43f, 0.00f, 0.30f};        // transluscent orange
+tavros::math::vec4 pulse_color = {1.00f, 1.00f, 1.00f, 1.00f};
+tavros::math::vec4 text_color_disabled = {0.50f, 0.50f, 0.50f, 1.00f};  // light gray
+tavros::math::vec4 text_color_normal = {1.00f, 0.43f, 0.00f, 1.00f};    // light orange
+tavros::math::vec4 text_color_highlight = {1.00f, 1.00f, 0.00f, 1.00f}; // bright yellow
+tavros::math::vec4 listbar_color = {1.00f, 0.43f, 0.00f, 0.30f};        // transluscent orange
 
 // action widget
 static void Action_Init(menuaction_s* a);
@@ -104,10 +104,10 @@ Text_Draw
 */
 static void Text_Draw(menutext_s* t)
 {
-    int32  x;
-    int32  y;
-    char   buff[512];
-    float* color;
+    int32              x;
+    int32              y;
+    char               buff[512];
+    tavros::math::vec4 color;
 
     x = t->generic.x;
     y = t->generic.y;
@@ -127,7 +127,7 @@ static void Text_Draw(menutext_s* t)
     if (t->generic.flags & QMF_GRAYED) {
         color = text_color_disabled;
     } else {
-        color = t->color;
+        color = tavros::math::vec4(t->color[0], t->color[1], t->color[2], t->color[3]);
     }
 
     UI_DrawString(x, y, buff, t->style, color);
@@ -150,9 +150,9 @@ BText_Draw
 */
 static void BText_Draw(menutext_s* t)
 {
-    int32  x;
-    int32  y;
-    float* color;
+    int32              x;
+    int32              y;
+    tavros::math::vec4 color;
 
     x = t->generic.x;
     y = t->generic.y;
@@ -205,10 +205,10 @@ PText_Draw
 */
 static void PText_Draw(menutext_s* t)
 {
-    int32  x;
-    int32  y;
-    float* color;
-    int32  style;
+    int32              x;
+    int32              y;
+    tavros::math::vec4 color;
+    int32              style;
 
     x = t->generic.x;
     y = t->generic.y;
@@ -276,12 +276,11 @@ Bitmap_Draw
 */
 void Bitmap_Draw(menubitmap_s* b)
 {
-    float  x;
-    float  y;
-    float  w;
-    float  h;
-    vec4_t tempcolor;
-    float* color;
+    float              x;
+    float              y;
+    float              w;
+    float              h;
+    tavros::math::vec4 color;
 
     x = b->generic.x;
     y = b->generic.y;
@@ -308,8 +307,8 @@ void Bitmap_Draw(menubitmap_s* b)
 
     if (b->generic.flags & QMF_GRAYED) {
         if (b->shader) {
-            vec4_t gray = {0.5, 0.5, 0.5, 1.0};
-            RE_SetColor(gray);
+            tavros::math::vec4 gray = {0.5, 0.5, 0.5, 1.0};
+            RE_SetColor(gray.data());
             UI_DrawHandlePic(x, y, w, h, b->shader);
             RE_SetColor(NULL);
         }
@@ -322,22 +321,19 @@ void Bitmap_Draw(menubitmap_s* b)
         if (((b->generic.flags & QMF_PULSE)
              || (b->generic.flags & QMF_PULSEIFFOCUS))
             && (Menu_ItemAtCursor(b->generic.parent) == b)) {
-            if (b->focuscolor) {
-                tempcolor[0] = b->focuscolor[0];
-                tempcolor[1] = b->focuscolor[1];
-                tempcolor[2] = b->focuscolor[2];
-                color = tempcolor;
+            if (b->use_focuscolor) {
+                color = b->focuscolor;
             } else {
                 color = pulse_color;
             }
             color[3] = 0.5 + 0.5 * sin(uis.realtime / PULSE_DIVISOR);
 
-            RE_SetColor(color);
+            RE_SetColor(color.data());
             UI_DrawHandlePic(x, y, w, h, b->focusshader);
             RE_SetColor(NULL);
         } else if ((b->generic.flags & QMF_HIGHLIGHT) || ((b->generic.flags & QMF_HIGHLIGHT_IF_FOCUS) && (Menu_ItemAtCursor(b->generic.parent) == b))) {
-            if (b->focuscolor) {
-                RE_SetColor(b->focuscolor);
+            if (b->use_focuscolor) {
+                RE_SetColor(b->focuscolor.data());
                 UI_DrawHandlePic(x, y, w, h, b->focusshader);
                 RE_SetColor(NULL);
             } else {
@@ -377,9 +373,9 @@ Action_Draw
 */
 static void Action_Draw(menuaction_s* a)
 {
-    int32  x, y;
-    int32  style;
-    float* color;
+    int32              x, y;
+    int32              style;
+    tavros::math::vec4 color;
 
     style = 0;
     color = menu_text_color;
@@ -465,11 +461,11 @@ RadioButton_Draw
 */
 static void RadioButton_Draw(menuradiobutton_s* rb)
 {
-    int32  x;
-    int32  y;
-    float* color;
-    int32  style;
-    bool   focus;
+    int32              x;
+    int32              y;
+    tavros::math::vec4 color;
+    int32              style;
+    bool               focus;
 
     x = rb->generic.x;
     y = rb->generic.y;
@@ -597,12 +593,12 @@ Slider_Draw
 */
 static void Slider_Draw(menuslider_s* s)
 {
-    int32  x;
-    int32  y;
-    int32  style;
-    float* color;
-    int32  button;
-    bool   focus;
+    int32              x;
+    int32              y;
+    int32              style;
+    tavros::math::vec4 color;
+    int32              button;
+    bool               focus;
 
     x = s->generic.x;
     y = s->generic.y;
@@ -623,7 +619,7 @@ static void Slider_Draw(menuslider_s* s)
     UI_DrawString(x - SMALLCHAR_WIDTH, y, s->generic.name, UI_RIGHT | style, color);
 
     // draw slider
-    UI_SetColor(color);
+    UI_SetColor(color.data());
     UI_DrawHandlePic(x + SMALLCHAR_WIDTH, y, 96, 16, sliderBar);
     UI_SetColor(NULL);
 
@@ -737,10 +733,10 @@ SpinControl_Draw
 */
 static void SpinControl_Draw(menulist_s* s)
 {
-    float* color;
-    int32  x, y;
-    int32  style;
-    bool   focus;
+    tavros::math::vec4 color;
+    int32              x, y;
+    int32              style;
+    bool               focus;
 
     x = s->generic.x;
     y = s->generic.y;
@@ -1080,15 +1076,15 @@ ScrollList_Draw
 */
 void ScrollList_Draw(menulist_s* l)
 {
-    int32  x;
-    int32  u;
-    int32  y;
-    int32  i;
-    int32  base;
-    int32  column;
-    float* color;
-    bool   hasfocus;
-    int32  style;
+    int32              x;
+    int32              u;
+    int32              y;
+    int32              i;
+    int32              base;
+    int32              column;
+    tavros::math::vec4 color;
+    bool               hasfocus;
+    int32              style;
 
     hasfocus = (l->generic.parent->cursor == l->generic.menuPosition);
 

@@ -145,7 +145,7 @@ int32 BotGoForAir(bot_state_t* bs, int32 tfl, bot_goal_t* ltg, float range)
 
     // if the bot needs air
     if (bs->lastair_time < FloatTime() - 6) {
-       // if we can find an air goal
+        // if we can find an air goal
         if (BotGetAirGoal(bs, &goal)) {
             trap_BotPushGoal(bs->gs, &goal);
             return true;

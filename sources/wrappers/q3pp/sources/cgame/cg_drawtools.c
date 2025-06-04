@@ -117,12 +117,12 @@ to a fixed color.
 Coordinates are at 640 by 480 virtual resolution
 ==================
 */
-void CG_DrawStringExt(int32 x, int32 y, const char* string, const float* setColor, bool forceColor, bool shadow, int32 charWidth, int32 charHeight, int32 maxChars)
+void CG_DrawStringExt(int32 x, int32 y, const char* string, tavros::math::vec4 setColor, bool forceColor, bool shadow, int32 charWidth, int32 charHeight, int32 maxChars)
 {
-    vec4_t      color;
-    const char* s;
-    int32       xx;
-    int32       cnt;
+    tavros::math::vec4 color;
+    const char*        s;
+    int32              xx;
+    int32              cnt;
 
     if (maxChars <= 0) {
         maxChars = 32767; // do them all!
@@ -130,9 +130,8 @@ void CG_DrawStringExt(int32 x, int32 y, const char* string, const float* setColo
 
     // draw the drop shadow
     if (shadow) {
-        color[0] = color[1] = color[2] = 0;
-        color[3] = setColor[3];
-        RE_SetColor(color);
+        color = tavros::math::vec4(0.0f, 0.0f, 0.0f, setColor.a);
+        RE_SetColor(color.data());
         s = string;
         xx = x;
         cnt = 0;
@@ -152,13 +151,13 @@ void CG_DrawStringExt(int32 x, int32 y, const char* string, const float* setColo
     s = string;
     xx = x;
     cnt = 0;
-    RE_SetColor(setColor);
+    RE_SetColor(setColor.data());
     while (*s && cnt < maxChars) {
         if (Q_IsColorString(s)) {
             if (!forceColor) {
-                memcpy(color, g_color_table[ColorIndex(*(s + 1))], sizeof(color));
+                color = g_color_table[ColorIndex(*(s + 1))];
                 color[3] = setColor[3];
-                RE_SetColor(color);
+                RE_SetColor(color.data());
             }
             s += 2;
             continue;
@@ -173,28 +172,22 @@ void CG_DrawStringExt(int32 x, int32 y, const char* string, const float* setColo
 
 void CG_DrawBigString(int32 x, int32 y, const char* s, float alpha)
 {
-    float color[4];
-
-    color[0] = color[1] = color[2] = 1.0;
-    color[3] = alpha;
+    tavros::math::vec4 color(1.0f, 1.0f, 1.0f, alpha);
     CG_DrawStringExt(x, y, s, color, false, true, BIGCHAR_WIDTH, BIGCHAR_HEIGHT, 0);
 }
 
-void CG_DrawBigStringColor(int32 x, int32 y, const char* s, vec4_t color)
+void CG_DrawBigStringColor(int32 x, int32 y, const char* s, tavros::math::vec4 color)
 {
     CG_DrawStringExt(x, y, s, color, true, true, BIGCHAR_WIDTH, BIGCHAR_HEIGHT, 0);
 }
 
 void CG_DrawSmallString(int32 x, int32 y, const char* s, float alpha)
 {
-    float color[4];
-
-    color[0] = color[1] = color[2] = 1.0;
-    color[3] = alpha;
+    tavros::math::vec4 color(1.0f, 1.0f, 1.0f, alpha);
     CG_DrawStringExt(x, y, s, color, false, false, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 0);
 }
 
-void CG_DrawSmallStringColor(int32 x, int32 y, const char* s, vec4_t color)
+void CG_DrawSmallStringColor(int32 x, int32 y, const char* s, tavros::math::vec4 color)
 {
     CG_DrawStringExt(x, y, s, color, true, false, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 0);
 }
@@ -286,30 +279,24 @@ void CG_TileClear()
 CG_FadeColor
 ================
 */
-float* CG_FadeColor(int32 startMsec, int32 totalMsec)
+tavros::math::vec4 CG_FadeColor(int32 startMsec, int32 totalMsec)
 {
-    static vec4_t color;
-    int32         t;
-
     if (startMsec == 0) {
-        return NULL;
+        return tavros::math::vec4(0.0f);
     }
 
-    t = cg.time - startMsec;
+    int32 t = cg.time - startMsec;
 
     if (t >= totalMsec) {
-        return NULL;
+        return tavros::math::vec4(0.0f);
     }
 
     // fade out
     if (totalMsec - t < FADE_TIME) {
-        color[3] = (totalMsec - t) * 1.0 / FADE_TIME;
-    } else {
-        color[3] = 1.0;
+        float fade = (totalMsec - t) * 1.0 / FADE_TIME;
+        return tavros::math::vec4(1.0f, 1.0f, 1.0f, fade);
     }
-    color[0] = color[1] = color[2] = 1;
-
-    return color;
+    return tavros::math::vec4(1.0f);
 }
 
 /*
@@ -317,7 +304,7 @@ float* CG_FadeColor(int32 startMsec, int32 totalMsec)
 CG_GetColorForHealth
 =================
 */
-void CG_GetColorForHealth(int32 health, int32 armor, vec4_t hcolor)
+tavros::math::vec4 CG_GetColorForHealth(int32 health, int32 armor)
 {
     int32 count;
     int32 max;
@@ -325,9 +312,7 @@ void CG_GetColorForHealth(int32 health, int32 armor, vec4_t hcolor)
     // calculate the total points of damage that can
     // be sustained at the current health / armor level
     if (health <= 0) {
-        VectorClear(hcolor); // black
-        hcolor[3] = 1;
-        return;
+        return tavros::math::vec4(0.0f, 0.0f, 0.0f, 1.0f);
     }
     count = armor;
     max = health * ARMOR_PROTECTION / (1.0 - ARMOR_PROTECTION);
@@ -337,23 +322,24 @@ void CG_GetColorForHealth(int32 health, int32 armor, vec4_t hcolor)
     health += count;
 
     // set the color based on health
-    hcolor[0] = 1.0;
-    hcolor[3] = 1.0;
+    float g = 0.0f, b = 0.0f;
     if (health >= 100) {
-        hcolor[2] = 1.0;
+        b = 1.0;
     } else if (health < 66) {
-        hcolor[2] = 0;
+        b = 0;
     } else {
-        hcolor[2] = (health - 66) / 33.0;
+        b = (health - 66) / 33.0;
     }
 
     if (health > 60) {
-        hcolor[1] = 1.0;
+        g = 1.0;
     } else if (health < 30) {
-        hcolor[1] = 0;
+        g = 0;
     } else {
-        hcolor[1] = (health - 30) / 30.0;
+        g = (health - 30) / 30.0;
     }
+
+    return tavros::math::vec4(1.0f, g, b, 1.0f);
 }
 
 /*
@@ -361,9 +347,9 @@ void CG_GetColorForHealth(int32 health, int32 armor, vec4_t hcolor)
 CG_ColorForHealth
 =================
 */
-void CG_ColorForHealth(vec4_t hcolor)
+tavros::math::vec4 CG_ColorForHealth()
 {
-    CG_GetColorForHealth(cg.snap->ps.stats[STAT_HEALTH], cg.snap->ps.stats[STAT_ARMOR], hcolor);
+    return CG_GetColorForHealth(cg.snap->ps.stats[STAT_HEALTH], cg.snap->ps.stats[STAT_ARMOR]);
 }
 
 /*
@@ -530,10 +516,10 @@ static int32 propMapB[26][3] = {
 #define PROPB_SPACE_WIDTH 12
 #define PROPB_HEIGHT      36
 
-void        UI_DrawBannerString(int32 x, int32 y, const char* str, int32 style, vec4_t color);                              // implemented in ui_atoms.c
-int32       UI_ProportionalStringWidth(const char* str);                                                                    // implemented in ui_atoms.c
-float       UI_ProportionalSizeScale(int32 style);                                                                          // implemented in ui_atoms.c
-static void UI_DrawProportionalString2(int32 x, int32 y, const char* str, vec4_t color, float sizeScale, qhandle_t charset) // duplicate symbol
+void        UI_DrawBannerString(int32 x, int32 y, const char* str, int32 style, tavros::math::vec4 color);                              // implemented in ui_atoms.c
+int32       UI_ProportionalStringWidth(const char* str);                                                                                // implemented in ui_atoms.c
+float       UI_ProportionalSizeScale(int32 style);                                                                                      // implemented in ui_atoms.c
+static void UI_DrawProportionalString2(int32 x, int32 y, const char* str, tavros::math::vec4 color, float sizeScale, qhandle_t charset) // duplicate symbol
 {
     const char* s;
     uint8       ch;
@@ -547,7 +533,7 @@ static void UI_DrawProportionalString2(int32 x, int32 y, const char* str, vec4_t
     float       fheight;
 
     // draw the colored text
-    RE_SetColor(color);
+    RE_SetColor(color.data());
 
     ax = x * cgs.screenXScale + cgs.screenXBias;
     ay = y * cgs.screenXScale;

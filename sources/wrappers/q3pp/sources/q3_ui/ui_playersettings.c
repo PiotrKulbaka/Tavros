@@ -107,15 +107,15 @@ PlayerSettings_DrawName
 */
 static void PlayerSettings_DrawName(void* self)
 {
-    menufield_s* f;
-    bool         focus;
-    int32        style;
-    char*        txt;
-    char         c;
-    float*       color;
-    int32        n;
-    int32        basex, x, y;
-    char         name[32];
+    menufield_s*       f;
+    bool               focus;
+    int32              style;
+    char*              txt;
+    char               c;
+    tavros::math::vec4 color;
+    int32              n;
+    int32              basex, x, y;
+    char               name[32];
 
     f = (menufield_s*) self;
     basex = f->generic.x;
@@ -180,10 +180,10 @@ PlayerSettings_DrawHandicap
 */
 static void PlayerSettings_DrawHandicap(void* self)
 {
-    menulist_s* item;
-    bool        focus;
-    int32       style;
-    float*      color;
+    menulist_s*        item;
+    bool               focus;
+    int32              style;
+    tavros::math::vec4 color;
 
     item = (menulist_s*) self;
     focus = (item->generic.parent->cursor == item->generic.menuPosition);
@@ -207,10 +207,10 @@ PlayerSettings_DrawEffects
 */
 static void PlayerSettings_DrawEffects(void* self)
 {
-    menulist_s* item;
-    bool        focus;
-    int32       style;
-    float*      color;
+    menulist_s*        item;
+    bool               focus;
+    int32              style;
+    tavros::math::vec4 color;
 
     item = (menulist_s*) self;
     focus = (item->generic.parent->cursor == item->generic.menuPosition);

@@ -344,14 +344,14 @@ CG_DrawStatusBar
 */
 static void CG_DrawStatusBar()
 {
-    int32          color;
-    centity_t*     cent;
-    playerState_t* ps;
-    int32          value;
-    vec4_t         hcolor;
-    vec3_t         angles;
-    vec3_t         origin;
-    static float   colors[4][4] = {
+    int32              color;
+    centity_t*         cent;
+    playerState_t*     ps;
+    int32              value;
+    tavros::math::vec4 hcolor;
+    vec3_t             angles;
+    vec3_t             origin;
+    static float       colors[4][4] = {
         //        { 0.2, 1.0, 0.2, 1.0 } , { 1.0, 0.2, 0.2, 1.0 }, {0.5, 0.5, 0.5, 1} };
         {1.0f, 0.69f, 0.0f, 1.0f}, // normal
         {1.0f, 0.2f, 0.2f, 1.0f},  // low health
@@ -449,8 +449,8 @@ static void CG_DrawStatusBar()
 
     // stretch the health up when taking damage
     CG_DrawField(185, 432, 3, value);
-    CG_ColorForHealth(hcolor);
-    RE_SetColor(hcolor);
+    hcolor = CG_ColorForHealth();
+    RE_SetColor(hcolor.data());
 
 
     //
@@ -656,13 +656,13 @@ Draw the small two score display
 */
 static float CG_DrawScores(float y)
 {
-    const char* s;
-    int32       s1, s2, score;
-    int32       x, w;
-    int32       v;
-    vec4_t      color;
-    float       y1;
-    gitem_t*    item;
+    const char*        s;
+    int32              s1, s2, score;
+    int32              x, w;
+    int32              v;
+    tavros::math::vec4 color;
+    float              y1;
+    gitem_t*           item;
 
     s1 = cgs.scores1;
     s2 = cgs.scores2;
@@ -674,14 +674,11 @@ static float CG_DrawScores(float y)
     // draw from the right side to left
     if (cgs.gametype >= GT_TEAM) {
         x = 640;
-        color[0] = 0.0f;
-        color[1] = 0.0f;
-        color[2] = 1.0f;
-        color[3] = 0.33f;
+        color = tavros::math::vec4(0.0f, 0.0f, 1.0f, 0.33f);
         s = va("%2i", s2);
         w = CG_DrawStrlen(s) * BIGCHAR_WIDTH + 8;
         x -= w;
-        CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color);
+        CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color.data());
         if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_BLUE) {
             CG_DrawPic(x, y - 4, w, BIGCHAR_HEIGHT + 8, cgs.media.selectShader);
         }
@@ -698,14 +695,11 @@ static float CG_DrawScores(float y)
                 }
             }
         }
-        color[0] = 1.0f;
-        color[1] = 0.0f;
-        color[2] = 0.0f;
-        color[3] = 0.33f;
+        color = tavros::math::vec4(1.0f, 0.0f, 0.0f, 0.33f);
         s = va("%2i", s1);
         w = CG_DrawStrlen(s) * BIGCHAR_WIDTH + 8;
         x -= w;
-        CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color);
+        CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color.data());
         if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_RED) {
             CG_DrawPic(x, y - 4, w, BIGCHAR_HEIGHT + 8, cgs.media.selectShader);
         }
@@ -751,18 +745,12 @@ static float CG_DrawScores(float y)
             w = CG_DrawStrlen(s) * BIGCHAR_WIDTH + 8;
             x -= w;
             if (!spectator && score == s2 && score != s1) {
-                color[0] = 1.0f;
-                color[1] = 0.0f;
-                color[2] = 0.0f;
-                color[3] = 0.33f;
-                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color);
+                color = tavros::math::vec4(1.0f, 0.0f, 0.0f, 0.33f);
+                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color.data());
                 CG_DrawPic(x, y - 4, w, BIGCHAR_HEIGHT + 8, cgs.media.selectShader);
             } else {
-                color[0] = 0.5f;
-                color[1] = 0.5f;
-                color[2] = 0.5f;
-                color[3] = 0.33f;
-                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color);
+                color = tavros::math::vec4(0.5f, 0.5f, 0.5f, 0.33f);
+                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color.data());
             }
             CG_DrawBigString(x + 4, y, s, 1.0F);
         }
@@ -773,18 +761,12 @@ static float CG_DrawScores(float y)
             w = CG_DrawStrlen(s) * BIGCHAR_WIDTH + 8;
             x -= w;
             if (!spectator && score == s1) {
-                color[0] = 0.0f;
-                color[1] = 0.0f;
-                color[2] = 1.0f;
-                color[3] = 0.33f;
-                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color);
+                color = tavros::math::vec4(0.0f, 0.0f, 1.0f, 0.33f);
+                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color.data());
                 CG_DrawPic(x, y - 4, w, BIGCHAR_HEIGHT + 8, cgs.media.selectShader);
             } else {
-                color[0] = 0.5f;
-                color[1] = 0.5f;
-                color[2] = 0.5f;
-                color[3] = 0.33f;
-                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color);
+                color = tavros::math::vec4(0.5f, 0.5f, 0.5f, 0.33f);
+                CG_FillRect(x, y - 4, w, BIGCHAR_HEIGHT + 8, color.data());
             }
             CG_DrawBigString(x + 4, y, s, 1.0F);
         }
@@ -874,12 +856,10 @@ static float CG_DrawPowerups(float y)
             if (t - cg.time >= POWERUP_BLINKS * POWERUP_BLINK_TIME) {
                 RE_SetColor(NULL);
             } else {
-                vec4_t modulate;
-
                 f = (float) (t - cg.time) / POWERUP_BLINK_TIME;
                 f -= (int32) f;
-                modulate[0] = modulate[1] = modulate[2] = modulate[3] = f;
-                RE_SetColor(modulate);
+                tavros::math::vec4 modulate(f);
+                RE_SetColor(modulate.data());
             }
 
             if (cg.powerupActive == sorted[i] && cg.time - cg.powerupTime < PULSE_TIME) {
@@ -920,23 +900,20 @@ CG_DrawPickupItem
 */
 static int32 CG_DrawPickupItem(int32 y)
 {
-    int32  value;
-    float* fadeColor;
-
     if (cg.snap->ps.stats[STAT_HEALTH] <= 0) {
         return y;
     }
 
     y -= ICON_SIZE;
 
-    value = cg.itemPickup;
+    auto value = cg.itemPickup;
     if (value) {
-        fadeColor = CG_FadeColor(cg.itemPickupTime, 3000);
-        if (fadeColor) {
+        auto fadeColor = CG_FadeColor(cg.itemPickupTime, 3000);
+        if (fadeColor.x != 0.0f) {
             CG_RegisterItemVisuals(value);
-            RE_SetColor(fadeColor);
+            RE_SetColor(fadeColor.data());
             CG_DrawPic(8, y, ICON_SIZE, ICON_SIZE, cg_items[value].icon);
-            CG_DrawBigString(ICON_SIZE + 16, y + (ICON_SIZE / 2 - BIGCHAR_HEIGHT / 2), bg_itemlist[value].pickup_name, fadeColor[0]);
+            CG_DrawBigString(ICON_SIZE + 16, y + (ICON_SIZE / 2 - BIGCHAR_HEIGHT / 2), bg_itemlist[value].pickup_name, fadeColor.x);
             RE_SetColor(NULL);
         }
     }
@@ -966,10 +943,10 @@ CG_DrawTeamInfo
 */
 static void CG_DrawTeamInfo()
 {
-    int32  w, h;
-    int32  i, len;
-    vec4_t hcolor;
-    int32  chatHeight;
+    int32              w, h;
+    int32              i, len;
+    tavros::math::vec4 hcolor;
+    int32              chatHeight;
 
 #define CHATLOC_Y 420 // bottom end
 #define CHATLOC_X 0
@@ -1018,7 +995,7 @@ static void CG_DrawTeamInfo()
             hcolor[3] = 0.33f;
         }
 
-        RE_SetColor(hcolor);
+        RE_SetColor(hcolor.data());
         CG_DrawPic(CHATLOC_X, CHATLOC_Y - h, 640, h, cgs.media.teamStatusBar);
         RE_SetColor(NULL);
 
@@ -1054,17 +1031,16 @@ CG_DrawReward
 */
 static void CG_DrawReward()
 {
-    float* color;
-    int32  i, count;
-    float  x, y;
-    char   buf[32];
+    int32 i, count;
+    float x, y;
+    char  buf[32];
 
     if (!cg_drawRewards->integer) {
         return;
     }
 
-    color = CG_FadeColor(cg.rewardTime, REWARD_TIME);
-    if (!color) {
+    auto fadeColor = CG_FadeColor(cg.rewardTime, REWARD_TIME);
+    if (fadeColor.x != 0.0f) {
         if (cg.rewardStack > 0) {
             for (i = 0; i < cg.rewardStack; i++) {
                 cg.rewardSound[i] = cg.rewardSound[i + 1];
@@ -1073,14 +1049,14 @@ static void CG_DrawReward()
             }
             cg.rewardTime = cg.time;
             cg.rewardStack--;
-            color = CG_FadeColor(cg.rewardTime, REWARD_TIME);
+            fadeColor = CG_FadeColor(cg.rewardTime, REWARD_TIME);
             S_StartLocalSound(cg.rewardSound[0], CHAN_ANNOUNCER);
         } else {
             return;
         }
     }
 
-    RE_SetColor(color);
+    RE_SetColor(fadeColor.data());
 
     if (cg.rewardCount[0] >= 10) {
         y = 56;
@@ -1088,7 +1064,7 @@ static void CG_DrawReward()
         CG_DrawPic(x, y, ICON_SIZE - 4, ICON_SIZE - 4, cg.rewardShader[0]);
         Com_sprintf(buf, sizeof(buf), "%d", cg.rewardCount[0]);
         x = (SCREEN_WIDTH - SMALLCHAR_WIDTH * CG_DrawStrlen(buf)) / 2;
-        CG_DrawStringExt(x, y + ICON_SIZE, buf, color, false, true, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 0);
+        CG_DrawStringExt(x, y + ICON_SIZE, buf, fadeColor, false, true, SMALLCHAR_WIDTH, SMALLCHAR_HEIGHT, 0);
     } else {
         count = cg.rewardCount[0];
 
@@ -1257,7 +1233,7 @@ static void CG_DrawLagometer()
         if (v > 0) {
             if (color != 1) {
                 color = 1;
-                RE_SetColor(g_color_table[ColorIndex(COLOR_YELLOW)]);
+                RE_SetColor(g_color_table[ColorIndex(COLOR_YELLOW)].data());
             }
             if (v > range) {
                 v = range;
@@ -1266,7 +1242,7 @@ static void CG_DrawLagometer()
         } else if (v < 0) {
             if (color != 2) {
                 color = 2;
-                RE_SetColor(g_color_table[ColorIndex(COLOR_BLUE)]);
+                RE_SetColor(g_color_table[ColorIndex(COLOR_BLUE)].data());
             }
             v = -v;
             if (v > range) {
@@ -1287,12 +1263,12 @@ static void CG_DrawLagometer()
             if (lagometer.snapshotFlags[i] & SNAPFLAG_RATE_DELAYED) {
                 if (color != 5) {
                     color = 5; // YELLOW for rate delay
-                    RE_SetColor(g_color_table[ColorIndex(COLOR_YELLOW)]);
+                    RE_SetColor(g_color_table[ColorIndex(COLOR_YELLOW)].data());
                 }
             } else {
                 if (color != 3) {
                     color = 3;
-                    RE_SetColor(g_color_table[ColorIndex(COLOR_GREEN)]);
+                    RE_SetColor(g_color_table[ColorIndex(COLOR_GREEN)].data());
                 }
             }
             v = v * vscale;
@@ -1303,7 +1279,7 @@ static void CG_DrawLagometer()
         } else if (v < 0) {
             if (color != 4) {
                 color = 4; // RED for dropped snapshots
-                RE_SetColor(g_color_table[ColorIndex(COLOR_RED)]);
+                RE_SetColor(g_color_table[ColorIndex(COLOR_RED)].data());
             }
             RE_DrawStretchPic(ax + aw - a, ay + ah - range, 1, range, 0, 0, 0, 0, cgs.media.whiteShader);
         }
@@ -1369,18 +1345,16 @@ static void CG_DrawCenterString()
     int32 l;
     int32 x, y, w;
 
-    float* color;
-
     if (!cg.centerPrintTime) {
         return;
     }
 
-    color = CG_FadeColor(cg.centerPrintTime, 1000 * cg_centertime->value);
-    if (!color) {
+    tavros::math::vec4 fadeColor = CG_FadeColor(cg.centerPrintTime, 1000 * cg_centertime->value);
+    if (fadeColor.x == 0.0f) {
         return;
     }
 
-    RE_SetColor(color);
+    RE_SetColor(fadeColor.data());
 
     start = cg.centerPrint;
 
@@ -1401,7 +1375,7 @@ static void CG_DrawCenterString()
 
         x = (SCREEN_WIDTH - w) / 2;
 
-        CG_DrawStringExt(x, y, linebuffer, color, false, true, cg.centerPrintCharWidth, (int32) (cg.centerPrintCharWidth * 1.5), 0);
+        CG_DrawStringExt(x, y, linebuffer, fadeColor, false, true, cg.centerPrintCharWidth, (int32) (cg.centerPrintCharWidth * 1.5), 0);
 
         y += cg.centerPrintCharWidth * 1.5;
 
@@ -1449,10 +1423,8 @@ static void CG_DrawCrosshair()
 
     // set color based on health
     if (cg_crosshairHealth->integer) {
-        vec4_t hcolor;
-
-        CG_ColorForHealth(hcolor);
-        RE_SetColor(hcolor);
+        auto hcolor = CG_ColorForHealth();
+        RE_SetColor(hcolor.data());
     } else {
         RE_SetColor(NULL);
     }
@@ -1518,9 +1490,8 @@ CG_DrawCrosshairNames
 */
 static void CG_DrawCrosshairNames()
 {
-    float* color;
-    char*  name;
-    float  w;
+    char* name;
+    float w;
 
     if (cg.renderingThirdPerson) {
         return;
@@ -1530,15 +1501,15 @@ static void CG_DrawCrosshairNames()
     CG_ScanForCrosshairEntity();
 
     // draw the name of the player being looked at
-    color = CG_FadeColor(cg.crosshairClientTime, 1000);
-    if (!color) {
+    auto fadeColor = CG_FadeColor(cg.crosshairClientTime, 1000);
+    if (fadeColor.x == 0.0f) {
         RE_SetColor(NULL);
         return;
     }
 
     name = cgs.clientinfo[cg.crosshairClientNum].name;
     w = CG_DrawStrlen(name) * BIGCHAR_WIDTH;
-    CG_DrawBigString(320 - w / 2, 170, name, color[3] * 0.5f);
+    CG_DrawBigString(320 - w / 2, 170, name, fadeColor.a * 0.5f);
     RE_SetColor(NULL);
 }
 
@@ -1652,25 +1623,18 @@ CG_DrawFollow
 static bool CG_DrawFollow()
 {
     float       x;
-    vec4_t      color;
     const char* name;
 
     if (!(cg.snap->ps.pm_flags & PMF_FOLLOW)) {
         return false;
     }
-    color[0] = 1;
-    color[1] = 1;
-    color[2] = 1;
-    color[3] = 1;
-
-
     CG_DrawBigString(320 - 9 * 8, 24, "following", 1.0F);
 
     name = cgs.clientinfo[cg.snap->ps.clientNum].name;
 
     x = 0.5 * (640 - GIANT_WIDTH * CG_DrawStrlen(name));
 
-    CG_DrawStringExt(x, 40, name, color, true, true, GIANT_WIDTH, GIANT_HEIGHT, 0);
+    CG_DrawStringExt(x, 40, name, tavros::math::vec4(1.0f), true, true, GIANT_WIDTH, GIANT_HEIGHT, 0);
 
     return true;
 }
@@ -1717,7 +1681,6 @@ static void CG_DrawWarmup()
     clientInfo_t *ci1, *ci2;
     int32         cw;
     const char*   s;
-    vec4_t        white = {1.0, 1.0, 1.0, 1.0};
 
     sec = cg.warmup;
     if (!sec) {
@@ -1754,7 +1717,7 @@ static void CG_DrawWarmup()
             } else {
                 cw = GIANT_WIDTH;
             }
-            CG_DrawStringExt(320 - w * cw / 2, 20, s, white, false, true, cw, (int32) (cw * 1.5f), 0);
+            CG_DrawStringExt(320 - w * cw / 2, 20, s, tavros::math::vec4(1.0f), false, true, cw, (int32) (cw * 1.5f), 0);
         }
     } else {
         if (cgs.gametype == GT_FFA) {
@@ -1772,7 +1735,7 @@ static void CG_DrawWarmup()
         } else {
             cw = GIANT_WIDTH;
         }
-        CG_DrawStringExt(320 - w * cw / 2, 25, s, white, false, true, cw, (int32) (cw * 1.1f), 0);
+        CG_DrawStringExt(320 - w * cw / 2, 25, s, tavros::math::vec4(1.0f), false, true, cw, (int32) (cw * 1.1f), 0);
     }
 
     sec = (sec - cg.time) / 1000;
@@ -1818,7 +1781,7 @@ static void CG_DrawWarmup()
     }
 
     w = CG_DrawStrlen(s);
-    CG_DrawStringExt(320 - w * cw / 2, 70, s, white, false, true, cw, (int32) (cw * 1.5), 0);
+    CG_DrawStringExt(320 - w * cw / 2, 70, s, tavros::math::vec4(1.0f), false, true, cw, (int32) (cw * 1.5), 0);
 }
 
 /*

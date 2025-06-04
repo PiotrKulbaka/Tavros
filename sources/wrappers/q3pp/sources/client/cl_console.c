@@ -33,20 +33,20 @@ typedef struct
     bool initialized;
 
     int16 text[CON_TEXTSIZE];
-    int32 current;     // line where next message will be printed
-    int32 x;           // offset in current line for next print
-    int32 display;     // bottom of console displays this line
+    int32 current;               // line where next message will be printed
+    int32 x;                     // offset in current line for next print
+    int32 display;               // bottom of console displays this line
 
-    int32 linewidth;   // characters across screen
-    int32 totallines;  // total lines in console scrollback
+    int32 linewidth;             // characters across screen
+    int32 totallines;            // total lines in console scrollback
 
-    float xadjust;     // for wide aspect screens
+    float xadjust;               // for wide aspect screens
 
-    float displayFrac; // aproaches finalFrac at scr_conspeed
-    float finalFrac;   // 0.0 to 1.0 lines of console to display
+    float displayFrac;           // aproaches finalFrac at scr_conspeed
+    float finalFrac;             // 0.0 to 1.0 lines of console to display
 
-    int32  vislines;   // in scanlines
-    vec4_t color;
+    int32              vislines; // in scanlines
+    tavros::math::vec4 color;
 } console_t;
 
 static console_t con;
@@ -446,7 +446,7 @@ void Con_DrawInput()
 
     y = con.vislines - (SMALLCHAR_HEIGHT * 2);
 
-    RE_SetColor(con.color);
+    RE_SetColor(con.color.data());
 
     SCR_DrawSmallChar(con.xadjust + 1 * SMALLCHAR_WIDTH, y, ']');
 
@@ -470,7 +470,7 @@ void Con_DrawNotify()
     int32  currentColor;
 
     currentColor = 7;
-    RE_SetColor(g_color_table[currentColor]);
+    RE_SetColor(g_color_table[currentColor].data());
 
     v = 0;
     for (i = con.current + 1; i <= con.current; i++) {
@@ -489,7 +489,7 @@ void Con_DrawNotify()
             }
             if (((text[x] >> 8) & 7) != currentColor) {
                 currentColor = (text[x] >> 8) & 7;
-                RE_SetColor(g_color_table[currentColor]);
+                RE_SetColor(g_color_table[currentColor].data());
             }
             SCR_DrawSmallChar(cl_conXOffset->integer + con.xadjust + (x + 1) * SMALLCHAR_WIDTH, v, text[x] & 0xff);
         }
@@ -534,8 +534,8 @@ static void Con_DrawSolidConsole(float frac)
     int32  row;
     int32  lines;
     //    qhandle_t        conShader;
-    int32  currentColor;
-    vec4_t color;
+    int32              currentColor;
+    tavros::math::vec4 color(1.0f, 0.0f, 0.0f, 1.0f);
 
     lines = cls.glconfig.vidHeight * frac;
     if (lines <= 0) {
@@ -558,16 +558,12 @@ static void Con_DrawSolidConsole(float frac)
         SCR_DrawPic(0, 0, CONSOLE_WIDTH, y, cls.consoleShader);
     }
 
-    color[0] = 1;
-    color[1] = 0;
-    color[2] = 0;
-    color[3] = 1;
-    SCR_FillRect(0, y, CONSOLE_WIDTH, 2, color);
+    SCR_FillRect(0, y, CONSOLE_WIDTH, 2, color.data());
 
 
     // draw the version number
 
-    RE_SetColor(g_color_table[ColorIndex(COLOR_RED)]);
+    RE_SetColor(g_color_table[ColorIndex(COLOR_RED)].data());
 
     i = strlen(Q3_VERSION);
 
@@ -587,7 +583,7 @@ static void Con_DrawSolidConsole(float frac)
     // draw from the bottom up
     if (con.display != con.current) {
         // draw arrows to show the buffer is backscrolled
-        RE_SetColor(g_color_table[ColorIndex(COLOR_RED)]);
+        RE_SetColor(g_color_table[ColorIndex(COLOR_RED)].data());
         for (x = 0; x < con.linewidth; x += 4) {
             SCR_DrawSmallChar(con.xadjust + (x + 1) * SMALLCHAR_WIDTH, y, '^');
         }
@@ -602,7 +598,7 @@ static void Con_DrawSolidConsole(float frac)
     }
 
     currentColor = 7;
-    RE_SetColor(g_color_table[currentColor]);
+    RE_SetColor(g_color_table[currentColor].data());
 
     for (i = 0; i < rows; i++, y -= SMALLCHAR_HEIGHT, row--) {
         if (row < 0) {
@@ -622,7 +618,7 @@ static void Con_DrawSolidConsole(float frac)
 
             if (((text[x] >> 8) & 7) != currentColor) {
                 currentColor = (text[x] >> 8) & 7;
-                RE_SetColor(g_color_table[currentColor]);
+                RE_SetColor(g_color_table[currentColor].data());
             }
             SCR_DrawSmallChar(con.xadjust + (x + 1) * SMALLCHAR_WIDTH, y, text[x] & 0xff);
         }

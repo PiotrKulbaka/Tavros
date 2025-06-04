@@ -1294,18 +1294,17 @@ void CG_DrawWeaponSelect()
     int32       count;
     int32       x, y, w;
     const char* name;
-    float*      color;
 
     // don't display if dead
     if (cg.predictedPlayerState.stats[STAT_HEALTH] <= 0) {
         return;
     }
 
-    color = CG_FadeColor(cg.weaponSelectTime, WEAPON_SELECT_TIME);
-    if (!color) {
+    auto fadeColor = CG_FadeColor(cg.weaponSelectTime, WEAPON_SELECT_TIME);
+    if (fadeColor.x == 0.0f) {
         return;
     }
-    RE_SetColor(color);
+    RE_SetColor(fadeColor.data());
 
     // showing weapon select clears pickup item display, but not the blend blob
     cg.itemPickupTime = 0;
@@ -1351,7 +1350,7 @@ void CG_DrawWeaponSelect()
         if (name) {
             w = CG_DrawStrlen(name) * BIGCHAR_WIDTH;
             x = (SCREEN_WIDTH - w) / 2;
-            CG_DrawBigStringColor(x, y - 22, name, color);
+            CG_DrawBigStringColor(x, y - 22, name, fadeColor);
         }
     }
 

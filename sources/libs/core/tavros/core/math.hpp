@@ -21,8 +21,8 @@
 #include <tavros/core/math/functions/make_euler.hpp>
 #include <tavros/core/math/functions/make_mat.hpp>
 #include <tavros/core/math/functions/make_quat.hpp>
-//#include <tavros/core/math/functions/max.hpp>
-//#include <tavros/core/math/functions/min.hpp>
+// #include <tavros/core/math/functions/max.hpp>
+// #include <tavros/core/math/functions/min.hpp>
 #include <tavros/core/math/functions/normalize.hpp>
 #include <tavros/core/math/functions/orthogonal.hpp>
 #include <tavros/core/math/functions/rotate.hpp>

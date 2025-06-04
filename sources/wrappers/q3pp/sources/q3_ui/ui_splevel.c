@@ -527,10 +527,10 @@ UI_SPLevelMenu_MenuDraw
 
 static void UI_SPLevelMenu_MenuDraw()
 {
-    int32  n, i;
-    int32  x, y;
-    vec4_t color;
-    int32  level;
+    int32              n, i;
+    int32              x, y;
+    tavros::math::vec4 color;
+    int32              level;
     //    int32                fraglimit;
     int32 pad;
     char  buf[MAX_INFO_VALUE];
@@ -596,8 +596,8 @@ static void UI_SPLevelMenu_MenuDraw()
     }
 
     // show levelshots for levels of current tier
-    Vector4Copy(color_white, color);
-    color[3] = 0.5 + 0.5 * sin(uis.realtime / PULSE_DIVISOR);
+    color = tavros::math::vec4(1.0f);
+    color.w = 0.5 + 0.5 * sin(uis.realtime / PULSE_DIVISOR);
     for (n = 0; n < levelMenuInfo.numMaps; n++) {
         x = levelMenuInfo.item_maps[n].generic.x;
         y = levelMenuInfo.item_maps[n].generic.y;
@@ -610,12 +610,12 @@ static void UI_SPLevelMenu_MenuDraw()
 
         if (n == selectedArena) {
             if (Menu_ItemAtCursor(&levelMenuInfo.menu) == &levelMenuInfo.item_maps[n]) {
-                RE_SetColor(color);
+                RE_SetColor(color.data());
             }
             UI_DrawHandlePic(x - 1, y - 1, 130, 130 - 14, levelMenuInfo.levelSelectedPic);
             RE_SetColor(NULL);
         } else if (Menu_ItemAtCursor(&levelMenuInfo.menu) == &levelMenuInfo.item_maps[n]) {
-            RE_SetColor(color);
+            RE_SetColor(color.data());
             UI_DrawHandlePic(x - 31, y - 30, 256, 256 - 27, levelMenuInfo.levelFocusPic);
             RE_SetColor(NULL);
         }

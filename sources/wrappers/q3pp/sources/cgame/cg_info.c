@@ -32,7 +32,7 @@ static int32     loadingItemIconCount;
 static qhandle_t loadingPlayerIcons[MAX_LOADING_PLAYER_ICONS];
 static qhandle_t loadingItemIcons[MAX_LOADING_ITEM_ICONS];
 
-static vec4_t white = {1.0, 1.0, 1.0, 1.0};
+static tavros::math::vec4 white = {1.0, 1.0, 1.0, 1.0};
 /*
 ===================
 CG_DrawLoadingIcons

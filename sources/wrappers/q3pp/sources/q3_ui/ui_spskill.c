@@ -77,7 +77,7 @@ typedef struct
 static skillMenuInfo_t skillMenuInfo;
 
 
-static void SetSkillColor(int32 skill, vec4_t color)
+static void SetSkillColor(int32 skill, tavros::math::vec4 color)
 {
     switch (skill) {
     case 1:
