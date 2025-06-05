@@ -931,7 +931,7 @@ void CG_NewClientInfo(int32 clientNum)
     // so we can avoid loading checks if possible
     if (!CG_ScanForExistingClientInfo(&newInfo)) {
         // if we are defering loads, just have it pick the first valid
-        if (cg_deferPlayers->integer && !cg.loading) {
+        if (!cg.loading) {
             // keep whatever they had if it won't violate team skins
             CG_SetDeferredClientInfo(&newInfo);
         } else {
@@ -998,10 +998,6 @@ static void CG_SetLerpFrameAnimation(clientInfo_t* ci, lerpFrame_t* lf, int32 ne
 
     lf->animation = anim;
     lf->animationTime = lf->frameTime + anim->initialLerp;
-
-    if (cg_debugAnim->integer) {
-        logger.debug("Anim: %i", newAnimation);
-    }
 }
 
 /*
@@ -1016,12 +1012,6 @@ static void CG_RunLerpFrame(clientInfo_t* ci, lerpFrame_t* lf, int32 newAnimatio
 {
     int32        f, numFrames;
     animation_t* anim;
-
-    // debugging tool to get no animations
-    if (cg_animSpeed->integer == 0) {
-        lf->oldFrame = lf->frame = lf->backlerp = 0;
-        return;
-    }
 
     // see if the animation sequence is switching
     if (newAnimation != lf->animationNumber || !lf->animation) {
@@ -1072,9 +1062,6 @@ static void CG_RunLerpFrame(clientInfo_t* ci, lerpFrame_t* lf, int32 newAnimatio
         }
         if (cg.time > lf->frameTime) {
             lf->frameTime = cg.time;
-            if (cg_debugAnim->integer) {
-                logger.debug("Clamp lf->frameTime");
-            }
         }
     }
 
@@ -1294,8 +1281,8 @@ static void CG_PlayerAngles(centity_t* cent, vec3_t legs[3], vec3_t torso[3], ve
     torsoAngles[YAW] = headAngles[YAW] + 0.25 * movementOffsets[dir];
 
     // torso
-    CG_SwingAngles(torsoAngles[YAW], 25, 90, cg_swingSpeed->value, &cent->pe.torso.yawAngle, &cent->pe.torso.yawing);
-    CG_SwingAngles(legsAngles[YAW], 40, 90, cg_swingSpeed->value, &cent->pe.legs.yawAngle, &cent->pe.legs.yawing);
+    CG_SwingAngles(torsoAngles[YAW], 25, 90, 0.3, &cent->pe.torso.yawAngle, &cent->pe.torso.yawing);
+    CG_SwingAngles(legsAngles[YAW], 40, 90, 0.3, &cent->pe.legs.yawAngle, &cent->pe.legs.yawing);
 
     torsoAngles[YAW] = cent->pe.torso.yawAngle;
     legsAngles[YAW] = cent->pe.legs.yawAngle;
@@ -2030,9 +2017,5 @@ void CG_ResetPlayerEntity(centity_t* cent)
     cent->pe.torso.yawing = false;
     cent->pe.torso.pitchAngle = cent->rawAngles[PITCH];
     cent->pe.torso.pitching = false;
-
-    if (cg_debugPosition->integer) {
-        logger.debug("%i ResetPlayerEntity yaw=%i", cent->currentState.number, cent->pe.torso.yawAngle);
-    }
 }
 

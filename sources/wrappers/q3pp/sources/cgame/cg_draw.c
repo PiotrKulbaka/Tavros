@@ -337,10 +337,6 @@ static void CG_DrawStatusBar()
         {1.0f, 1.0f, 1.0f, 1.0f}
     };                             // health > 100
 
-    if (cg_drawStatus->integer == 0) {
-        return;
-    }
-
     // draw the team background
     CG_DrawTeamBackground(0, 420, 640, 60, 0.33f, cg.snap->ps.persistant[PERS_TEAM]);
 
@@ -828,10 +824,6 @@ static void CG_DrawReward()
     float x, y;
     char  buf[32];
 
-    if (!cg_drawRewards->integer) {
-        return;
-    }
-
     auto fadeColor = CG_FadeColor(cg.rewardTime, REWARD_TIME);
     if (fadeColor.x != 0.0f) {
         if (cg.rewardStack > 0) {
@@ -1216,14 +1208,11 @@ static void CG_DrawCrosshair()
     }
 
     // set color based on health
-    if (cg_crosshairHealth->integer) {
-        auto hcolor = CG_ColorForHealth();
-        RE_SetColor(hcolor.data());
-    } else {
-        RE_SetColor(NULL);
-    }
+    auto hcolor = CG_ColorForHealth();
+    RE_SetColor(hcolor.data());
 
-    w = h = cg_crosshairSize->value;
+
+    w = h = 20;
 
     // pulse the size of the crosshair when picking up items
     f = cg.time - cg.itemPickupBlendTime;
@@ -1233,8 +1222,8 @@ static void CG_DrawCrosshair()
         h *= (1 + f);
     }
 
-    x = cg_crosshairX->integer;
-    y = cg_crosshairY->integer;
+    x = 0;
+    y = 0;
     CG_AdjustFrom640(&x, &y, &w, &h);
 
     RE_DrawStretchPic(x + cg.refdef.x + 0.5 * (cg.refdef.width - w), y + cg.refdef.y + 0.5 * (cg.refdef.height - h), w, h, 0, 0, 1, 1, cgs.media.crosshairShader);
@@ -1444,10 +1433,6 @@ static void CG_DrawAmmoWarning()
     const char* s;
     int32       w;
 
-    if (cg_drawAmmoWarning->integer == 0) {
-        return;
-    }
-
     if (!cg.lowAmmoWarning) {
         return;
     }
@@ -1585,10 +1570,6 @@ CG_Draw2D
 */
 static void CG_Draw2D()
 {
-    if (cg_draw2D->integer == 0) {
-        return;
-    }
-
     if (cg.snap->ps.pm_type == PM_INTERMISSION) {
         CG_DrawIntermission();
         return;

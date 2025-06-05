@@ -365,22 +365,22 @@ static void CG_OffsetFirstPersonView()
     VectorCopy(cg.predictedPlayerState.velocity, predictedVelocity);
 
     delta = DotProduct(predictedVelocity, cg.refdef.viewaxis[0]);
-    angles[PITCH] += delta * cg_runpitch->value;
+    angles[PITCH] += delta * 0.002;
 
     delta = DotProduct(predictedVelocity, cg.refdef.viewaxis[1]);
-    angles[ROLL] -= delta * cg_runroll->value;
+    angles[ROLL] -= delta * 0.005;
 
     // add angles based on bob
 
     // make sure the bob is visible even at low speeds
     speed = cg.xyspeed > 200 ? cg.xyspeed : 200;
 
-    delta = cg.bobfracsin * cg_bobpitch->value * speed;
+    delta = cg.bobfracsin * 0.003 * speed;
     if (cg.predictedPlayerState.pm_flags & PMF_DUCKED) {
         delta *= 3; // crouching
     }
     angles[PITCH] += delta;
-    delta = cg.bobfracsin * cg_bobroll->value * speed;
+    delta = cg.bobfracsin * 0.003 * speed;
     if (cg.predictedPlayerState.pm_flags & PMF_DUCKED) {
         delta *= 3; // crouching accentuates roll
     }
@@ -402,7 +402,7 @@ static void CG_OffsetFirstPersonView()
     }
 
     // add bob height
-    bob = cg.bobfracsin * cg.xyspeed * cg_bobup->value;
+    bob = cg.bobfracsin * cg.xyspeed * 0.006;
     if (bob > 6) {
         bob = 6;
     }
@@ -624,17 +624,15 @@ static int32 CG_CalcViewValues()
     VectorCopy(ps->viewangles, cg.refdefViewAngles);
 
     // add error decay
-    if (cg_errorDecay->value > 0) {
-        int32 t;
-        float f;
+    int32 t;
+    float f;
 
-        t = cg.time - cg.predictedErrorTime;
-        f = (cg_errorDecay->value - t) / cg_errorDecay->value;
-        if (f > 0 && f < 1) {
-            VectorMA(cg.refdef.vieworg, f, cg.predictedError, cg.refdef.vieworg);
-        } else {
-            cg.predictedErrorTime = 0;
-        }
+    t = cg.time - cg.predictedErrorTime;
+    f = (200 - t) / 200;
+    if (f > 0 && f < 1) {
+        VectorMA(cg.refdef.vieworg, f, cg.predictedError, cg.refdef.vieworg);
+    } else {
+        cg.predictedErrorTime = 0;
     }
 
     if (cg.renderingThirdPerson) {

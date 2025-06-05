@@ -531,19 +531,16 @@ void CG_PredictPlayerState()
                 VectorSubtract(oldPlayerState.origin, adjusted, delta);
                 len = VectorLength(delta);
                 if (len > 0.1) {
-                    if (cg_errorDecay->integer) {
-                        int32 t;
-                        float f;
+                    int32 t;
+                    float f;
 
-                        t = cg.time - cg.predictedErrorTime;
-                        f = (cg_errorDecay->value - t) / cg_errorDecay->value;
-                        if (f < 0) {
-                            f = 0;
-                        }
-                        VectorScale(cg.predictedError, f, cg.predictedError);
-                    } else {
-                        VectorClear(cg.predictedError);
+                    t = cg.time - cg.predictedErrorTime;
+                    f = (200 - t) / 200;
+                    if (f < 0) {
+                        f = 0;
                     }
+                    VectorScale(cg.predictedError, f, cg.predictedError);
+
                     VectorAdd(delta, cg.predictedError, cg.predictedError);
                     cg.predictedErrorTime = cg.oldTime;
                 }
