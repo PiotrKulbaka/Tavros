@@ -417,7 +417,6 @@ static void CG_MapRestart()
         S_StartLocalSound(cgs.media.countFightSound, CHAN_ANNOUNCER);
         CG_CenterPrint("FIGHT!", 120, GIANTCHAR_WIDTH * 2);
     }
-    Cvar_Set("cg_thirdPerson", "0");
 }
 
 /*
@@ -475,12 +474,10 @@ static void CG_ServerCommand()
     }
 
     if (!strcmp(cmd, "chat")) {
-        if (!cg_teamChatsOnly->integer) {
-            S_StartLocalSound(cgs.media.talkSound, CHAN_LOCAL_SOUND);
-            Q_strncpyz(text, CG_Argv(1), MAX_SAY_TEXT);
-            CG_RemoveChatEscapeChar(text);
-            logger.info("%s", text);
-        }
+        S_StartLocalSound(cgs.media.talkSound, CHAN_LOCAL_SOUND);
+        Q_strncpyz(text, CG_Argv(1), MAX_SAY_TEXT);
+        CG_RemoveChatEscapeChar(text);
+        logger.info("%s", text);
         return;
     }
 

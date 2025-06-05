@@ -40,10 +40,6 @@ void CG_BubbleTrail(vec3_t start, vec3_t end, float spacing)
     float  len;
     int32  i;
 
-    if (cg_noProjectileTrail->integer) {
-        return;
-    }
-
     VectorCopy(start, move);
     VectorSubtract(end, start, vec);
     len = VectorNormalize(vec);
@@ -196,7 +192,7 @@ void CG_ScorePlum(int32 client, vec3_t org, int32 score)
     static vec3_t  lastPos;
 
     // only visualize for the client that scored
-    if (client != cg.predictedPlayerState.clientNum || cg_scorePlum->integer == 0) {
+    if (client != cg.predictedPlayerState.clientNum) {
         return;
     }
 

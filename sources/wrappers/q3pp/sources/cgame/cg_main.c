@@ -60,9 +60,6 @@ cvar_t* cg_gun_y;
 cvar_t* cg_gun_z;
 cvar_t* cg_fov;
 cvar_t* cg_zoomFov;
-cvar_t* cg_thirdPerson;
-cvar_t* cg_thirdPersonRange;
-cvar_t* cg_thirdPersonAngle;
 cvar_t* cg_lagometer;
 cvar_t* cg_synchronousClients;
 cvar_t* cg_teamChatTime;
@@ -72,22 +69,12 @@ cvar_t* cg_paused;
 cvar_t* cg_predictItems;
 cvar_t* cg_deferPlayers;
 cvar_t* cg_drawFriend;
-cvar_t* cg_teamChatsOnly;
-cvar_t* cg_noVoiceChats;
-cvar_t* cg_noVoiceText;
-cvar_t* cg_scorePlum;
 cvar_t* cg_smoothClients;
 cvar_t* pmove_fixed;
 cvar_t* pmove_msec;
-cvar_t* cg_cameraMode;
-cvar_t* cg_cameraOrbit;
-cvar_t* cg_cameraOrbitDelay;
 cvar_t* cg_timescaleFadeEnd;
 cvar_t* cg_timescaleFadeSpeed;
 cvar_t* cg_timescale;
-cvar_t* cg_noTaunt;
-cvar_t* cg_noProjectileTrail;
-cvar_t* cg_trueLightning;
 
 /*
 =================
@@ -125,31 +112,18 @@ void CG_RegisterCvars()
     cg_debugEvents = Cvar_Get("cg_debugevents", "0", CVAR_CHEAT);
     cg_errorDecay = Cvar_Get("cg_errordecay", "100", 0);
     cg_nopredict = Cvar_Get("cg_nopredict", "0", 0);
-    cg_thirdPersonRange = Cvar_Get("cg_thirdPersonRange", "40", CVAR_CHEAT);
-    cg_thirdPersonAngle = Cvar_Get("cg_thirdPersonAngle", "0", CVAR_CHEAT);
-    cg_thirdPerson = Cvar_Get("cg_thirdPerson", "0", 0);
     cg_teamChatTime = Cvar_Get("cg_teamChatTime", "3000", CVAR_ARCHIVE);
     cg_teamChatHeight = Cvar_Get("cg_teamChatHeight", "0", CVAR_ARCHIVE);
     cg_predictItems = Cvar_Get("cg_predictItems", "1", CVAR_ARCHIVE);
     cg_deferPlayers = Cvar_Get("cg_deferPlayers", "1", CVAR_ARCHIVE);
     cg_stats = Cvar_Get("cg_stats", "0", 0);
     cg_drawFriend = Cvar_Get("cg_drawFriend", "1", CVAR_ARCHIVE);
-    cg_teamChatsOnly = Cvar_Get("cg_teamChatsOnly", "0", CVAR_ARCHIVE);
-    cg_noVoiceChats = Cvar_Get("cg_noVoiceChats", "0", CVAR_ARCHIVE);
-    cg_noVoiceText = Cvar_Get("cg_noVoiceText", "0", CVAR_ARCHIVE);
     cg_paused = Cvar_Get("cl_paused", "0", CVAR_ROM);
     cg_synchronousClients = Cvar_Get("g_synchronousClients", "0", 0);
-    cg_cameraOrbit = Cvar_Get("cg_cameraOrbit", "0", CVAR_CHEAT);
-    cg_cameraOrbitDelay = Cvar_Get("cg_cameraOrbitDelay", "50", CVAR_ARCHIVE);
     cg_timescaleFadeEnd = Cvar_Get("cg_timescaleFadeEnd", "1", 0);
     cg_timescaleFadeSpeed = Cvar_Get("cg_timescaleFadeSpeed", "0", 0);
     cg_timescale = Cvar_Get("timescale", "1", 0);
-    cg_scorePlum = Cvar_Get("cg_scorePlums", "1", CVAR_USERINFO | CVAR_ARCHIVE);
     cg_smoothClients = Cvar_Get("cg_smoothClients", "0", CVAR_USERINFO | CVAR_ARCHIVE);
-    cg_cameraMode = Cvar_Get("com_cameraMode", "0", CVAR_CHEAT);
-    cg_noTaunt = Cvar_Get("cg_noTaunt", "0", CVAR_ARCHIVE);
-    cg_noProjectileTrail = Cvar_Get("cg_noProjectileTrail", "0", CVAR_ARCHIVE);
-    cg_trueLightning = Cvar_Get("cg_trueLightning", "0.0", CVAR_ARCHIVE);
 
     // see if we are also running the server on this machine
     Cvar_VariableStringBuffer("sv_running", var, sizeof(var));

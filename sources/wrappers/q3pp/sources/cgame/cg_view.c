@@ -262,26 +262,24 @@ static void CG_OffsetThirdPersonView()
 
     AngleVectors(cg.refdefViewAngles, forward, right, up);
 
-    forwardScale = cos(cg_thirdPersonAngle->value / 180 * M_PI);
-    sideScale = sin(cg_thirdPersonAngle->value / 180 * M_PI);
-    VectorMA(view, -cg_thirdPersonRange->value * forwardScale, forward, view);
-    VectorMA(view, -cg_thirdPersonRange->value * sideScale, right, view);
+    forwardScale = cos(180 * M_PI);
+    sideScale = sin(180 * M_PI);
+    constexpr auto third_person_range = 40;
+    VectorMA(view, -40 * forwardScale, forward, view);
+    VectorMA(view, -40 * sideScale, right, view);
 
     // trace a ray from the origin to the viewpoint to make sure the view isn't
     // in a solid block.  Use an 8 by 8 block to prevent the view from near clipping anything
+    CG_Trace(&trace, cg.refdef.vieworg, mins, maxs, view, cg.predictedPlayerState.clientNum, MASK_SOLID);
 
-    if (!cg_cameraMode->integer) {
+    if (trace.fraction != 1.0) {
+        VectorCopy(trace.endpos, view);
+        view[2] += (1.0 - trace.fraction) * 32;
+        // try another trace to this position, because a tunnel may have the ceiling
+        // close enogh that this is poking out
+
         CG_Trace(&trace, cg.refdef.vieworg, mins, maxs, view, cg.predictedPlayerState.clientNum, MASK_SOLID);
-
-        if (trace.fraction != 1.0) {
-            VectorCopy(trace.endpos, view);
-            view[2] += (1.0 - trace.fraction) * 32;
-            // try another trace to this position, because a tunnel may have the ceiling
-            // close enogh that this is poking out
-
-            CG_Trace(&trace, cg.refdef.vieworg, mins, maxs, view, cg.predictedPlayerState.clientNum, MASK_SOLID);
-            VectorCopy(trace.endpos, view);
-        }
+        VectorCopy(trace.endpos, view);
     }
 
 
@@ -294,7 +292,6 @@ static void CG_OffsetThirdPersonView()
         focusDist = 1; // should never happen
     }
     cg.refdefViewAngles[PITCH] = -180 / M_PI * atan2(focusPoint[2], focusDist);
-    cg.refdefViewAngles[YAW] -= cg_thirdPersonAngle->value;
 }
 
 
@@ -626,12 +623,6 @@ static int32 CG_CalcViewValues()
     VectorCopy(ps->origin, cg.refdef.vieworg);
     VectorCopy(ps->viewangles, cg.refdefViewAngles);
 
-    if (cg_cameraOrbit->integer) {
-        if (cg.time > cg.nextOrbitTime) {
-            cg.nextOrbitTime = cg.time + cg_cameraOrbitDelay->integer;
-            cg_thirdPersonAngle->value += cg_cameraOrbit->value;
-        }
-    }
     // add error decay
     if (cg_errorDecay->value > 0) {
         int32 t;
@@ -775,7 +766,7 @@ void CG_DrawActiveFrame(int32 serverTime, bool demoPlayback)
     CG_PredictPlayerState();
 
     // decide on third person view
-    cg.renderingThirdPerson = cg_thirdPerson->integer || (cg.snap->ps.stats[STAT_HEALTH] <= 0);
+    cg.renderingThirdPerson = cg.snap->ps.stats[STAT_HEALTH] <= 0;
 
     // build cg.refdef
     inwater = CG_CalcViewValues();

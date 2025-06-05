@@ -294,10 +294,6 @@ static void CG_RocketTrail(centity_t* ent, const weaponInfo_t* wi)
     vec3_t         up;
     localEntity_t* smoke;
 
-    if (cg_noProjectileTrail->integer) {
-        return;
-    }
-
     up[0] = 0;
     up[1] = 0;
     up[2] = 0;
@@ -354,10 +350,6 @@ static void CG_PlasmaTrail(centity_t* cent, const weaponInfo_t* wi)
     int32          t, startTime, step;
 
     float waterScale = 1.0f;
-
-    if (cg_noProjectileTrail->integer) {
-        return;
-    }
 
     step = 50;
 
@@ -824,37 +816,8 @@ static void CG_LightningBolt(centity_t* cent, vec3_t origin)
 
     memset(&beam, 0, sizeof(beam));
 
-    // CPMA  "true" lightning
-    if ((cent->currentState.number == cg.predictedPlayerState.clientNum) && (cg_trueLightning->value != 0)) {
-        vec3_t angle;
-        int32  i;
-
-        for (i = 0; i < 3; i++) {
-            float a = cent->lerpAngles[i] - cg.refdefViewAngles[i];
-            if (a > 180) {
-                a -= 360;
-            }
-            if (a < -180) {
-                a += 360;
-            }
-
-            angle[i] = cg.refdefViewAngles[i] + a * (1.0 - cg_trueLightning->value);
-            if (angle[i] < 0) {
-                angle[i] += 360;
-            }
-            if (angle[i] > 360) {
-                angle[i] -= 360;
-            }
-        }
-
-        AngleVectors(angle, forward, NULL, NULL);
-        VectorCopy(cent->lerpOrigin, muzzlePoint);
-        //        VectorCopy(cg.refdef.vieworg, muzzlePoint );
-    } else {
-        // !CPMA
-        AngleVectors(cent->lerpAngles, forward, NULL, NULL);
-        VectorCopy(cent->lerpOrigin, muzzlePoint);
-    }
+    AngleVectors(cent->lerpAngles, forward, NULL, NULL);
+    VectorCopy(cent->lerpOrigin, muzzlePoint);
 
     // FIXME: crouch
     muzzlePoint[2] += DEFAULT_VIEWHEIGHT;

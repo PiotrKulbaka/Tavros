@@ -188,15 +188,6 @@ static void CG_StartOrbit_f()
     if (!atoi(var)) {
         return;
     }
-    if (cg_cameraOrbit->value != 0) {
-        Cvar_Set("cg_cameraOrbit", "0");
-        Cvar_Set("cg_thirdPerson", "0");
-    } else {
-        Cvar_Set("cg_cameraOrbit", "5");
-        Cvar_Set("cg_thirdPerson", "1");
-        Cvar_Set("cg_thirdPersonAngle", "0");
-        Cvar_Set("cg_thirdPersonRange", "100");
-    }
 }
 
 

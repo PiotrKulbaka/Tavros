@@ -1031,9 +1031,6 @@ extern cvar_t* cg_gun_z;
 extern cvar_t* cg_viewsize;
 extern cvar_t* cg_fov;
 extern cvar_t* cg_zoomFov;
-extern cvar_t* cg_thirdPersonRange;
-extern cvar_t* cg_thirdPersonAngle;
-extern cvar_t* cg_thirdPerson;
 extern cvar_t* cg_lagometer;
 extern cvar_t* cg_synchronousClients;
 extern cvar_t* cg_teamChatTime;
@@ -1043,22 +1040,12 @@ extern cvar_t* cg_paused;
 extern cvar_t* cg_predictItems;
 extern cvar_t* cg_deferPlayers;
 extern cvar_t* cg_drawFriend;
-extern cvar_t* cg_teamChatsOnly;
-extern cvar_t* cg_noVoiceChats;
-extern cvar_t* cg_noVoiceText;
-extern cvar_t* cg_scorePlum;
 extern cvar_t* cg_smoothClients;
 extern cvar_t* pmove_fixed;
 extern cvar_t* pmove_msec;
-extern cvar_t* cg_cameraOrbit;
-extern cvar_t* cg_cameraOrbitDelay;
 extern cvar_t* cg_timescaleFadeEnd;
 extern cvar_t* cg_timescaleFadeSpeed;
 extern cvar_t* cg_timescale;
-extern cvar_t* cg_cameraMode;
-extern cvar_t* cg_noTaunt;
-extern cvar_t* cg_noProjectileTrail;
-extern cvar_t* cg_trueLightning;
 
 //
 // cg_main.c

@@ -631,8 +631,6 @@ void ClientThink_real(gentity_t* ent)
 
     if (pmove_fixed->integer || client->pers.pmoveFixed) {
         ucmd->serverTime = ((ucmd->serverTime + pmove_msec->integer - 1) / pmove_msec->integer) * pmove_msec->integer;
-        // if (ucmd->serverTime - client->ps.commandTime <= 0)
-        //     return;
     }
 
     //
