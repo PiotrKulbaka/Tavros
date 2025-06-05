@@ -922,30 +922,18 @@ extern glstate_t      glState;  // outside of TR since it shouldn't be cleared d
 //
 // cvars
 //
-extern cvar_t* r_measureOverdraw; // enables stencil buffer overdraw measurement
-
 extern cvar_t* r_novis;           // disable/enable usage of PVS
 extern cvar_t* r_nocurves;
-extern cvar_t* r_showcluster;
 
 extern cvar_t* r_offsetFactor;
 extern cvar_t* r_offsetUnits;
 
 extern cvar_t* r_lightmap;    // render lightmaps only
 
-extern cvar_t* r_showtris;    // enables wireframe rendering of the world
-extern cvar_t* r_shownormals; // draws wireframe normals
-
 extern cvar_t* r_lockpvs;
 
 extern cvar_t* r_subdivisions;
 extern cvar_t* r_lodCurveError;
-
-extern cvar_t* r_ignoreGLErrors;
-
-extern cvar_t* r_debugSurface;
-
-extern cvar_t* r_debugSort;
 
 //====================================================================
 
@@ -1326,9 +1314,6 @@ typedef struct
     polyVert_t*         polyVerts; //[MAX_POLYVERTS];
     renderCommandList_t commands;
 } backEndData_t;
-
-extern int32 max_polys;
-extern int32 max_polyverts;
 
 extern backEndData_t* backEndData; // the second one may not be allocated
 

@@ -27,11 +27,6 @@ static tavros::core::logger logger("cm_patch");
 
 int32 c_totalPatchBlocks;
 
-static const patchCollide_t* debugPatchCollide;
-static const facet_t*        debugFacet;
-static bool                  debugBlock;
-static vec3_t                debugBlockPoints[4];
-
 /*
 =================
 CM_ClearLevelPatches
@@ -39,8 +34,6 @@ CM_ClearLevelPatches
 */
 void CM_ClearLevelPatches()
 {
-    debugPatchCollide = NULL;
-    debugFacet = NULL;
 }
 
 /*
@@ -694,13 +687,6 @@ static void CM_SetBorderInward(facet_t* facet, cGrid_t* grid, int32 gridPlanes[M
             // bisecting side border
             logger.debug("WARNING: CM_SetBorderInward: mixed plane sides");
             facet->borderInward[k] = false;
-            if (!debugBlock) {
-                debugBlock = true;
-                VectorCopy(grid->points[i][j], debugBlockPoints[0]);
-                VectorCopy(grid->points[i + 1][j], debugBlockPoints[1]);
-                VectorCopy(grid->points[i + 1][j + 1], debugBlockPoints[2]);
-                VectorCopy(grid->points[i][j + 1], debugBlockPoints[3]);
-            }
         }
     }
 }
@@ -1202,7 +1188,6 @@ void CM_TracePointThroughPatchCollide(traceWork_t* tw, const struct patchCollide
     int32               i, j, k;
     float               offset;
     float               d1, d2;
-    static cvar_t*      cv;
 
     if (!cm_playerCurveClip->integer || !tw->isPoint) {
         return;
@@ -1256,14 +1241,6 @@ void CM_TracePointThroughPatchCollide(traceWork_t* tw, const struct patchCollide
             }
         }
         if (j == facet->numBorders) {
-            // we hit this facet
-            if (!cv) {
-                cv = Cvar_Get("r_debugSurfaceUpdate", "1", 0);
-            }
-            if (cv->integer) {
-                debugPatchCollide = pc;
-                debugFacet = facet;
-            }
             planes = &pc->planes[facet->surfacePlane];
 
             // calculate intersection with a slight pushoff
@@ -1342,7 +1319,6 @@ void CM_TraceThroughPatchCollide(traceWork_t* tw, const struct patchCollide_s* p
     facet_t*       facet;
     float          plane[4], bestplane[4];
     vec3_t         startp, endp;
-    static cvar_t* cv;
 
     if (tw->isPoint) {
         CM_TracePointThroughPatchCollide(tw, pc);
@@ -1435,13 +1411,6 @@ void CM_TraceThroughPatchCollide(traceWork_t* tw, const struct patchCollide_s* p
             if (enterFrac < tw->trace.fraction) {
                 if (enterFrac < 0) {
                     enterFrac = 0;
-                }
-                if (!cv) {
-                    cv = Cvar_Get("r_debugSurfaceUpdate", "1", 0);
-                }
-                if (cv && cv->integer) {
-                    debugPatchCollide = pc;
-                    debugFacet = facet;
                 }
 
                 tw->trace.fraction = enterFrac;
@@ -1552,143 +1521,3 @@ DEBUGGING
 
 =======================================================================
 */
-
-
-/*
-==================
-CM_DrawDebugSurface
-
-Called from the renderer
-==================
-*/
-void BotDrawDebugPolygons(void (*drawPoly)(int32 color, int32 numPoints, float* points), int32 value);
-
-void CM_DrawDebugSurface(void (*drawPoly)(int32 color, int32 numPoints, float* points))
-{
-    static cvar_t*        cv;
-    static cvar_t*        cv2;
-    const patchCollide_t* pc;
-    facet_t*              facet;
-    winding_t*            w;
-    int32                 i, j, k, n;
-    int32                 curplanenum, planenum, curinward, inward;
-    float                 plane[4];
-    vec3_t                mins = {-15, -15, -28}, maxs = {15, 15, 28};
-    // vec3_t mins = {0, 0, 0}, maxs = {0, 0, 0};
-    vec3_t v1, v2;
-
-    if (!cv2) {
-        cv2 = Cvar_Get("r_debugSurface", "0", 0);
-    }
-
-    if (cv2->integer != 1) {
-        BotDrawDebugPolygons(drawPoly, cv2->integer);
-        return;
-    }
-
-    if (!debugPatchCollide) {
-        return;
-    }
-
-    if (!cv) {
-        cv = Cvar_Get("cm_debugSize", "2", 0);
-    }
-    pc = debugPatchCollide;
-
-    for (i = 0, facet = pc->facets; i < pc->numFacets; i++, facet++) {
-        for (k = 0; k < facet->numBorders + 1; k++) {
-            //
-            if (k < facet->numBorders) {
-                planenum = facet->borderPlanes[k];
-                inward = facet->borderInward[k];
-            } else {
-                planenum = facet->surfacePlane;
-                inward = false;
-                // continue;
-            }
-
-            Vector4Copy(pc->planes[planenum].plane, plane);
-
-            // planenum = facet->surfacePlane;
-            if (inward) {
-                VectorSubtract(vec3_origin, plane, plane);
-                plane[3] = -plane[3];
-            }
-
-            plane[3] += cv->value;
-            //*
-            for (n = 0; n < 3; n++) {
-                if (plane[n] > 0) {
-                    v1[n] = maxs[n];
-                } else {
-                    v1[n] = mins[n];
-                }
-            }
-            VectorNegate(plane, v2);
-            plane[3] += fabs(DotProduct(v1, v2));
-            //*/
-
-            w = BaseWindingForPlane(plane, plane[3]);
-            for (j = 0; j < facet->numBorders + 1 && w; j++) {
-                //
-                if (j < facet->numBorders) {
-                    curplanenum = facet->borderPlanes[j];
-                    curinward = facet->borderInward[j];
-                } else {
-                    curplanenum = facet->surfacePlane;
-                    curinward = false;
-                    // continue;
-                }
-                //
-                if (curplanenum == planenum) {
-                    continue;
-                }
-
-                Vector4Copy(pc->planes[curplanenum].plane, plane);
-                if (!curinward) {
-                    VectorSubtract(vec3_origin, plane, plane);
-                    plane[3] = -plane[3];
-                }
-                //            if ( !facet->borderNoAdjust[j] ) {
-                plane[3] -= cv->value;
-                //            }
-                for (n = 0; n < 3; n++) {
-                    if (plane[n] > 0) {
-                        v1[n] = maxs[n];
-                    } else {
-                        v1[n] = mins[n];
-                    }
-                }
-                VectorNegate(plane, v2);
-                plane[3] -= fabs(DotProduct(v1, v2));
-
-                ChopWindingInPlace(&w, plane, plane[3], 0.1f);
-            }
-            if (w) {
-                if (facet == debugFacet) {
-                    drawPoly(4, w->numpoints, w->p[0]);
-                } else {
-                    drawPoly(1, w->numpoints, w->p[0]);
-                }
-                FreeWinding(w);
-            } else {
-                logger.info("Winding chopped away by border planes\n");
-            }
-        }
-    }
-
-    // draw the debug block
-    {
-        vec3_t v[3];
-
-        VectorCopy(debugBlockPoints[0], v[0]);
-        VectorCopy(debugBlockPoints[1], v[1]);
-        VectorCopy(debugBlockPoints[2], v[2]);
-        drawPoly(2, 3, v[0]);
-
-        VectorCopy(debugBlockPoints[2], v[0]);
-        VectorCopy(debugBlockPoints[3], v[1]);
-        VectorCopy(debugBlockPoints[0], v[2]);
-        drawPoly(2, 3, v[0]);
-    }
-}

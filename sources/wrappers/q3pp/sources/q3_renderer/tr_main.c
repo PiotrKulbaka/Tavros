@@ -1323,25 +1323,6 @@ void R_DebugPolygon(int32 color, int32 numPoints, float* points)
 }
 
 /*
-====================
-R_DebugGraphics
-
-Visualization aid for movement clipping debugging
-====================
-*/
-void R_DebugGraphics()
-{
-    if (!r_debugSurface->integer) {
-        return;
-    }
-
-    GL_Bind(tr.whiteImage);
-    GL_Cull(CT_FRONT_SIDED);
-    CM_DrawDebugSurface(R_DebugPolygon);
-}
-
-
-/*
 ================
 R_RenderView
 
@@ -1375,9 +1356,6 @@ void R_RenderView(viewParms_t* parms)
     R_GenerateDrawSurfs();
 
     R_SortDrawSurfs(tr.refdef.drawSurfs + firstDrawSurf, tr.refdef.numDrawSurfs - firstDrawSurf);
-
-    // draw main system development information (surface outlines, etc)
-    R_DebugGraphics();
 }
 
 

@@ -335,9 +335,6 @@ static void RB_BeginDrawingView()
     // clear relevant buffers
     clearBits = GL_DEPTH_BUFFER_BIT;
 
-    if (r_measureOverdraw->integer) {
-        clearBits |= GL_STENCIL_BUFFER_BIT;
-    }
     qglClear(clearBits);
 
     if ((backEnd.refdef.rdflags & RDF_HYPERSPACE)) {
@@ -652,16 +649,6 @@ static const void* RB_SwapBuffers(const void* data)
     }
 
     cmd = (const swapBuffersCommand_t*) data;
-
-    // we measure overdraw by reading back the stencil buffer and
-    // counting up the number of increments that have happened
-    if (r_measureOverdraw->integer) {
-        uint8* stencilReadback;
-
-        stencilReadback = (uint8*) Hunk_AllocateTempMemory(glConfig.vidWidth * glConfig.vidHeight);
-        qglReadPixels(0, 0, glConfig.vidWidth, glConfig.vidHeight, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, stencilReadback);
-        Hunk_FreeTempMemory(stencilReadback);
-    }
 
     GLimp_EndFrame();
 

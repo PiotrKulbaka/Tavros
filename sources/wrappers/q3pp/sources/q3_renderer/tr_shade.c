@@ -70,58 +70,6 @@ static void R_BindAnimatedImage(textureBundle_t* bundle)
 }
 
 /*
-================
-DrawTris
-
-Draws triangle outlines for debugging
-================
-*/
-static void DrawTris(shaderCommands_t* input)
-{
-    GL_Bind(tr.whiteImage);
-    qglColor3f(1, 1, 1);
-
-    GL_State(GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE);
-    qglDepthRange(0, 0);
-
-    qglDisableClientState(GL_COLOR_ARRAY);
-    qglDisableClientState(GL_TEXTURE_COORD_ARRAY);
-
-    qglVertexPointer(3, GL_FLOAT, 16, input->xyz); // padded for SIMD
-    qglDrawElements(GL_TRIANGLES, input->numIndexes, GL_INDEX_TYPE, input->indexes);
-    qglDepthRange(0, 1);
-}
-
-
-/*
-================
-DrawNormals
-
-Draws vertex normals for debugging
-================
-*/
-static void DrawNormals(shaderCommands_t* input)
-{
-    int32  i;
-    vec3_t temp;
-
-    GL_Bind(tr.whiteImage);
-    qglColor3f(1, 1, 1);
-    qglDepthRange(0, 0); // never occluded
-    GL_State(GLS_POLYMODE_LINE | GLS_DEPTHMASK_TRUE);
-
-    qglBegin(GL_LINES);
-    for (i = 0; i < input->numVertexes; i++) {
-        qglVertex3fv(input->xyz[i].data());
-        VectorMA(input->xyz[i].data(), 2, input->normal[i].data(), temp);
-        qglVertex3fv(temp);
-    }
-    qglEnd();
-
-    qglDepthRange(0, 1);
-}
-
-/*
 ==============
 RB_BeginSurface
 
@@ -704,25 +652,11 @@ void RB_EndSurface()
         Com_Error(ERR_DROP, "RB_EndSurface() - SHADER_MAX_VERTEXES hit");
     }
 
-    // for debugging of sort order issues, stop rendering after a given sort value
-    if (r_debugSort->integer && r_debugSort->integer < tess.shader->sort) {
-        return;
-    }
-
     //
     // call off to shader specific tess end function
     //
     tess.currentStageIteratorFunc();
 
-    //
-    // draw debugging stuff
-    //
-    if (r_showtris->integer) {
-        DrawTris(input);
-    }
-    if (r_shownormals->integer) {
-        DrawNormals(input);
-    }
     // clear shader so we can tell we don't have any unclosed surfaces
     tess.numIndexes = 0;
 }

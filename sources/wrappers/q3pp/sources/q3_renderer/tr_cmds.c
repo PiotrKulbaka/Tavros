@@ -166,33 +166,6 @@ void RE_BeginFrame()
     tr.frameSceneNum = 0;
 
     //
-    // do overdraw measurement
-    //
-    if (r_measureOverdraw->integer) {
-        qglEnable(GL_STENCIL_TEST);
-        qglStencilMask(~0U);
-        qglClearStencil(0U);
-        qglStencilFunc(GL_ALWAYS, 0U, ~0U);
-        qglStencilOp(GL_KEEP, GL_INCR, GL_INCR);
-        r_measureOverdraw->modified = false;
-    } else {
-        // this is only reached if it was on and is now off
-        if (r_measureOverdraw->modified) {
-            qglDisable(GL_STENCIL_TEST);
-        }
-        r_measureOverdraw->modified = false;
-    }
-
-    // check for errors
-    if (!r_ignoreGLErrors->integer) {
-        int32 err;
-
-        if ((err = qglGetError()) != GL_NO_ERROR) {
-            Com_Error(ERR_FATAL, "RE_BeginFrame() - glGetError() failed (0x%x)!\n", err);
-        }
-    }
-
-    //
     // draw buffer stuff
     //
     cmd = (drawBufferCommand_t*) R_GetCommandBuffer(sizeof(*cmd));

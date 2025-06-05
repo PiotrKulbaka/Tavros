@@ -60,6 +60,3 @@ void CM_AdjustAreaPortalState(int32 area1, int32 area2, bool open);
 bool CM_AreasConnected(int32 area1, int32 area2);
 
 int32 CM_WriteAreaBits(uint8* buffer, int32 area);
-
-// cm_patch.c
-void CM_DrawDebugSurface(void (*drawPoly)(int32 color, int32 numPoints, float* points));

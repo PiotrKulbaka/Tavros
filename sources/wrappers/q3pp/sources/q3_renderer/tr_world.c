@@ -490,17 +490,8 @@ static void R_MarkLeaves()
     // if the cluster is the same and the area visibility matrix
     // hasn't changed, we don't need to mark everything again
 
-    // if r_showcluster was just turned on, remark everything
-    if (tr.viewCluster == cluster && !tr.refdef.areamaskModified
-        && !r_showcluster->modified) {
+    if (tr.viewCluster == cluster && !tr.refdef.areamaskModified) {
         return;
-    }
-
-    if (r_showcluster->modified || r_showcluster->integer) {
-        r_showcluster->modified = false;
-        if (r_showcluster->integer) {
-            logger.info("cluster:%i  area:%i", cluster, leaf->area);
-        }
     }
 
     tr.visCount++;

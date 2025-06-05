@@ -35,17 +35,10 @@ glstate_t  glState;
 static void GfxInfo_f();
 static void GL_SetDefaultState();
 
-cvar_t* r_measureOverdraw;
-
 cvar_t* r_novis;
-cvar_t* r_showcluster;
 cvar_t* r_nocurves;
 
-cvar_t* r_ignoreGLErrors;
-
 cvar_t* r_lightmap;
-cvar_t* r_showtris;
-cvar_t* r_shownormals;
 cvar_t* r_offsetFactor;
 cvar_t* r_offsetUnits;
 cvar_t* r_lockpvs;
@@ -53,17 +46,8 @@ cvar_t* r_lockpvs;
 cvar_t* r_subdivisions;
 cvar_t* r_lodCurveError;
 
-cvar_t* r_debugSurface;
-
 cvar_t* r_ambientScale;
 cvar_t* r_directedScale;
-cvar_t* r_debugSort;
-
-cvar_t* r_maxpolys;
-int32   max_polys;
-cvar_t* r_maxpolyverts;
-int32   max_polyverts;
-
 
 static bool glIsInitialized = false;
 /*
@@ -86,50 +70,6 @@ static void InitOpenGL()
 
     // set default state
     GL_SetDefaultState();
-}
-
-/*
-==================
-GL_CheckErrors
-==================
-*/
-void GL_CheckErrors()
-{
-    int32 err;
-    char  s[64];
-
-    err = qglGetError();
-    if (err == GL_NO_ERROR) {
-        return;
-    }
-    if (r_ignoreGLErrors->integer) {
-        return;
-    }
-    switch (err) {
-    case GL_INVALID_ENUM:
-        strcpy(s, "GL_INVALID_ENUM");
-        break;
-    case GL_INVALID_VALUE:
-        strcpy(s, "GL_INVALID_VALUE");
-        break;
-    case GL_INVALID_OPERATION:
-        strcpy(s, "GL_INVALID_OPERATION");
-        break;
-    case GL_STACK_OVERFLOW:
-        strcpy(s, "GL_STACK_OVERFLOW");
-        break;
-    case GL_STACK_UNDERFLOW:
-        strcpy(s, "GL_STACK_UNDERFLOW");
-        break;
-    case GL_OUT_OF_MEMORY:
-        strcpy(s, "GL_OUT_OF_MEMORY");
-        break;
-    default:
-        Com_sprintf(s, sizeof(s), "%i", err);
-        break;
-    }
-
-    Com_Error(ERR_FATAL, "GL_CheckErrors: %s", s);
 }
 
 /*
@@ -295,28 +235,17 @@ static void R_Register()
     // archived variables that can change at any time
     //
     r_lodCurveError = Cvar_Get("r_lodCurveError", "250", CVAR_ARCHIVE | CVAR_CHEAT);
-    r_ignoreGLErrors = Cvar_Get("r_ignoreGLErrors", "1", CVAR_ARCHIVE);
 
     r_ambientScale = Cvar_Get("r_ambientScale", "0.6", CVAR_CHEAT);
     r_directedScale = Cvar_Get("r_directedScale", "1", CVAR_CHEAT);
 
-    r_debugSort = Cvar_Get("r_debugSort", "0", CVAR_CHEAT);
-
     r_nocurves = Cvar_Get("r_nocurves", "0", CVAR_CHEAT);
     r_lightmap = Cvar_Get("r_lightmap", "0", CVAR_CHEAT);
 
-    r_measureOverdraw = Cvar_Get("r_measureOverdraw", "0", CVAR_CHEAT);
     r_novis = Cvar_Get("r_novis", "0", CVAR_CHEAT);
-    r_showcluster = Cvar_Get("r_showcluster", "0", CVAR_CHEAT);
-    r_debugSurface = Cvar_Get("r_debugSurface", "0", CVAR_CHEAT);
-    r_showtris = Cvar_Get("r_showtris", "0", CVAR_CHEAT);
-    r_shownormals = Cvar_Get("r_shownormals", "0", CVAR_CHEAT);
     r_offsetFactor = Cvar_Get("r_offsetfactor", "-1", CVAR_CHEAT);
     r_offsetUnits = Cvar_Get("r_offsetunits", "-2", CVAR_CHEAT);
     r_lockpvs = Cvar_Get("r_lockpvs", "0", CVAR_CHEAT);
-
-    r_maxpolys = Cvar_Get("r_maxpolys", va("%d", MAX_POLYS), 0);
-    r_maxpolyverts = Cvar_Get("r_maxpolyverts", va("%d", MAX_POLYVERTS), 0);
 
     // make sure all the commands added here are also
     // removed in R_Shutdown
@@ -377,25 +306,14 @@ void R_Init()
 
     R_Register();
 
-    max_polys = r_maxpolys->integer;
-    if (max_polys < MAX_POLYS) {
-        max_polys = MAX_POLYS;
-    }
-
-    max_polyverts = r_maxpolyverts->integer;
-    if (max_polyverts < MAX_POLYVERTS) {
-        max_polyverts = MAX_POLYVERTS;
-    }
-
-    ptr = (uint8*) Hunk_Alloc(sizeof(backEndData_t) + sizeof(srfPoly_t) * max_polys + sizeof(polyVert_t) * max_polyverts, h_low);
+    ptr = (uint8*) Hunk_Alloc(sizeof(backEndData_t) + sizeof(srfPoly_t) * MAX_POLYS + sizeof(polyVert_t) * MAX_POLYVERTS, h_low);
     backEndData = (backEndData_t*) ptr;
     backEndData->polys = (srfPoly_t*) ((char*) ptr + sizeof(backEndData_t));
-    backEndData->polyVerts = (polyVert_t*) ((char*) ptr + sizeof(backEndData_t) + sizeof(srfPoly_t) * max_polys);
+    backEndData->polyVerts = (polyVert_t*) ((char*) ptr + sizeof(backEndData_t) + sizeof(srfPoly_t) * MAX_POLYS);
 
     InitOpenGL();
 
     gladLoadGL();
-    GL_CheckErrors();
 
     R_InitImages();
 
