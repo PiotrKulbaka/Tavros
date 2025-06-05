@@ -41,7 +41,6 @@ DISPLAY OPTIONS MENU
 #define ID_SOUND      12
 #define ID_NETWORK    13
 #define ID_BRIGHTNESS 14
-#define ID_SCREENSIZE 15
 #define ID_BACK       16
 
 
@@ -59,7 +58,6 @@ typedef struct
     menutext_s network;
 
     menuslider_s brightness;
-    menuslider_s screensize;
 
     menubitmap_s back;
 } displayOptionsInfo_t;
@@ -98,10 +96,6 @@ static void UI_DisplayOptionsMenu_Event(void* ptr, int32 event)
         break;
 
     case ID_BRIGHTNESS:
-        break;
-
-    case ID_SCREENSIZE:
-        Cvar_SetValue("cg_viewsize", displayOptionsInfo.screensize.curvalue * 10);
         break;
 
     case ID_BACK:
@@ -203,15 +197,6 @@ static void UI_DisplayOptionsMenu_Init()
     displayOptionsInfo.brightness.generic.flags |= QMF_GRAYED;
 
     y += BIGCHAR_HEIGHT + 2;
-    displayOptionsInfo.screensize.generic.type = MTYPE_SLIDER;
-    displayOptionsInfo.screensize.generic.name = "Screen Size:";
-    displayOptionsInfo.screensize.generic.flags = QMF_PULSEIFFOCUS | QMF_SMALLFONT;
-    displayOptionsInfo.screensize.generic.callback = UI_DisplayOptionsMenu_Event;
-    displayOptionsInfo.screensize.generic.id = ID_SCREENSIZE;
-    displayOptionsInfo.screensize.generic.x = 400;
-    displayOptionsInfo.screensize.generic.y = y;
-    displayOptionsInfo.screensize.minvalue = 3;
-    displayOptionsInfo.screensize.maxvalue = 10;
 
     displayOptionsInfo.back.generic.type = MTYPE_BITMAP;
     displayOptionsInfo.back.generic.name = ART_BACK0;
@@ -232,10 +217,7 @@ static void UI_DisplayOptionsMenu_Init()
     Menu_AddItem(&displayOptionsInfo.menu, (void*) &displayOptionsInfo.sound);
     Menu_AddItem(&displayOptionsInfo.menu, (void*) &displayOptionsInfo.network);
     Menu_AddItem(&displayOptionsInfo.menu, (void*) &displayOptionsInfo.brightness);
-    Menu_AddItem(&displayOptionsInfo.menu, (void*) &displayOptionsInfo.screensize);
     Menu_AddItem(&displayOptionsInfo.menu, (void*) &displayOptionsInfo.back);
-
-    displayOptionsInfo.screensize.curvalue = Cvar_VariableValue("cg_viewsize") / 10;
 }
 
 

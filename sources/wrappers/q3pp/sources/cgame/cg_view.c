@@ -163,13 +163,6 @@ static void CG_AddTestModel()
         VectorCopy(cg.refdef.viewaxis[0], cg.testModelEntity.axis[0]);
         VectorCopy(cg.refdef.viewaxis[1], cg.testModelEntity.axis[1]);
         VectorCopy(cg.refdef.viewaxis[2], cg.testModelEntity.axis[2]);
-
-        // allow the position to be adjusted
-        for (i = 0; i < 3; i++) {
-            cg.testModelEntity.origin[i] += cg.refdef.viewaxis[0][i] * cg_gun_x->value;
-            cg.testModelEntity.origin[i] += cg.refdef.viewaxis[1][i] * cg_gun_y->value;
-            cg.testModelEntity.origin[i] += cg.refdef.viewaxis[2][i] * cg_gun_z->value;
-        }
     }
 
     RE_AddRefEntityToScene(&cg.testModelEntity);
@@ -188,27 +181,10 @@ Sets the coordinates of the rendered window
 */
 static void CG_CalcVrect()
 {
-    int32 size;
-
-    // the intermission should allways be full screen
-    if (cg.snap->ps.pm_type == PM_INTERMISSION) {
-        size = 100;
-    } else {
-        // bound normal viewsize
-        if (cg_viewsize->integer < 30) {
-            Cvar_Set("cg_viewsize", "30");
-            size = 30;
-        } else if (cg_viewsize->integer > 100) {
-            Cvar_Set("cg_viewsize", "100");
-            size = 100;
-        } else {
-            size = cg_viewsize->integer;
-        }
-    }
-    cg.refdef.width = cgs.glconfig.vidWidth * size / 100;
+    cg.refdef.width = cgs.glconfig.vidWidth;
     cg.refdef.width &= ~1;
 
-    cg.refdef.height = cgs.glconfig.vidHeight * size / 100;
+    cg.refdef.height = cgs.glconfig.vidHeight;
     cg.refdef.height &= ~1;
 
     cg.refdef.x = (cgs.glconfig.vidWidth - cg.refdef.width) / 2;
@@ -475,21 +451,10 @@ static int32 CG_CalcFov()
         // if in intermission, use a fixed value
         fov_x = 90;
     } else {
-        // user selectable
-        if (cgs.dmflags & DF_FIXED_FOV) {
-            // dmflag to prevent wide fov for all clients
-            fov_x = 90;
-        } else {
-            fov_x = cg_fov->value;
-            if (fov_x < 1) {
-                fov_x = 1;
-            } else if (fov_x > 160) {
-                fov_x = 160;
-            }
-        }
+        fov_x = 90;
 
         // account for zooms
-        zoomFov = cg_zoomFov->value;
+        zoomFov = 25;
         if (zoomFov < 1) {
             zoomFov = 1;
         } else if (zoomFov > 160) {
@@ -825,8 +790,4 @@ void CG_DrawActiveFrame(int32 serverTime, bool demoPlayback)
 
     // actually issue the rendering calls
     CG_DrawActive();
-
-    if (cg_stats->integer) {
-        logger.info("cg.clientFrame:%i", cg.clientFrame);
-    }
 }

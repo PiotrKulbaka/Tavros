@@ -326,7 +326,7 @@ Touch_Item
 void Touch_Item(gentity_t* ent, gentity_t* other, trace_t* trace)
 {
     int32 respawn;
-    bool  predict;
+    bool  predict = false;
 
     if (!other->client) {
         return;
@@ -341,8 +341,6 @@ void Touch_Item(gentity_t* ent, gentity_t* other, trace_t* trace)
     }
 
     logger.debug("Item: %i %s\n", other->s.number, ent->item->classname);
-
-    predict = other->client->pers.predictItemPickup;
 
     // call the item-specific pickup function
     switch (ent->item->giType) {

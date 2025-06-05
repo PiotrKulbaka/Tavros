@@ -632,12 +632,7 @@ void ClientUserinfoChanged(int32 clientNum)
     }
 
     // check the item prediction
-    s = Info_ValueForKey(userinfo, "cg_predictItems");
-    if (!atoi(s)) {
-        client->pers.predictItemPickup = false;
-    } else {
-        client->pers.predictItemPickup = true;
-    }
+    client->pers.predictItemPickup = false;
 
     // set name
     Q_strncpyz(oldname, client->pers.netname, sizeof(oldname));

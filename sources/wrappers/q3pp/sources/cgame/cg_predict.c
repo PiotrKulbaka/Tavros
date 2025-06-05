@@ -265,9 +265,6 @@ static void CG_TouchItem(centity_t* cent)
 {
     gitem_t* item;
 
-    if (!cg_predictItems->integer) {
-        return;
-    }
     if (!BG_PlayerTouchesItem(&cg.predictedPlayerState, &cent->currentState, cg.time)) {
         return;
     }
@@ -431,7 +428,7 @@ void CG_PredictPlayerState()
     }
 
     // non-predicting local movement will grab the latest angles
-    if (cg_nopredict->integer || cg_synchronousClients->integer) {
+    if (cg_synchronousClients->integer) {
         CG_InterpolatePlayerState(true);
         return;
     }

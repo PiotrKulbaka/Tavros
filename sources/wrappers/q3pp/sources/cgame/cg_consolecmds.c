@@ -41,33 +41,6 @@ void CG_TargetCommand_f()
     Cbuf_AddText(va("gc %i %i", targetNum, atoi(test))); // Send console command
 }
 
-
-/*
-=================
-CG_SizeUp_f
-
-Keybinding command
-=================
-*/
-static void CG_SizeUp_f()
-{
-    Cvar_Set("cg_viewsize", va("%i", (int32) (cg_viewsize->integer + 10)));
-}
-
-
-/*
-=================
-CG_SizeDown_f
-
-Keybinding command
-=================
-*/
-static void CG_SizeDown_f()
-{
-    Cvar_Set("cg_viewsize", va("%i", (int32) (cg_viewsize->integer - 10)));
-}
-
-
 /*
 =============
 CG_Viewpos_f
@@ -209,8 +182,6 @@ static consoleCommand_t commands[] = {
     {"-scores", CG_ScoresUp_f},
     {"+zoom", CG_ZoomDown_f},
     {"-zoom", CG_ZoomUp_f},
-    {"sizeup", CG_SizeUp_f},
-    {"sizedown", CG_SizeDown_f},
     {"weapnext", CG_NextWeapon_f},
     {"weapprev", CG_PrevWeapon_f},
     {"weapon", CG_Weapon_f},

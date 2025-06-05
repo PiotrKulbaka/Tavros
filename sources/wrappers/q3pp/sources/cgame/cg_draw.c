@@ -726,78 +726,6 @@ static void CG_DrawLowerLeft()
 }
 
 /*
-=================
-CG_DrawTeamInfo
-=================
-*/
-static void CG_DrawTeamInfo()
-{
-    int32              w, h;
-    int32              i, len;
-    tavros::math::vec4 hcolor;
-    int32              chatHeight;
-
-#define CHATLOC_Y 420 // bottom end
-#define CHATLOC_X 0
-
-    if (cg_teamChatHeight->integer < TEAMCHAT_HEIGHT) {
-        chatHeight = cg_teamChatHeight->integer;
-    } else {
-        chatHeight = TEAMCHAT_HEIGHT;
-    }
-    if (chatHeight <= 0) {
-        return; // disabled
-    }
-
-    if (cgs.teamLastChatPos != cgs.teamChatPos) {
-        if (cg.time - cgs.teamChatMsgTimes[cgs.teamLastChatPos % chatHeight] > cg_teamChatTime->integer) {
-            cgs.teamLastChatPos++;
-        }
-
-        h = (cgs.teamChatPos - cgs.teamLastChatPos) * TINYCHAR_HEIGHT;
-
-        w = 0;
-
-        for (i = cgs.teamLastChatPos; i < cgs.teamChatPos; i++) {
-            len = CG_DrawStrlen(cgs.teamChatMsgs[i % chatHeight]);
-            if (len > w) {
-                w = len;
-            }
-        }
-        w *= TINYCHAR_WIDTH;
-        w += TINYCHAR_WIDTH * 2;
-
-        if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_RED) {
-            hcolor[0] = 1.0f;
-            hcolor[1] = 0.0f;
-            hcolor[2] = 0.0f;
-            hcolor[3] = 0.33f;
-        } else if (cg.snap->ps.persistant[PERS_TEAM] == TEAM_BLUE) {
-            hcolor[0] = 0.0f;
-            hcolor[1] = 0.0f;
-            hcolor[2] = 1.0f;
-            hcolor[3] = 0.33f;
-        } else {
-            hcolor[0] = 0.0f;
-            hcolor[1] = 1.0f;
-            hcolor[2] = 0.0f;
-            hcolor[3] = 0.33f;
-        }
-
-        RE_SetColor(hcolor.data());
-        CG_DrawPic(CHATLOC_X, CHATLOC_Y - h, 640, h, cgs.media.teamStatusBar);
-        RE_SetColor(NULL);
-
-        hcolor[0] = hcolor[1] = hcolor[2] = 1.0f;
-        hcolor[3] = 1.0f;
-
-        for (i = cgs.teamChatPos - 1; i >= cgs.teamLastChatPos; i--) {
-            CG_DrawStringExt(CHATLOC_X + TINYCHAR_WIDTH, CHATLOC_Y - (cgs.teamChatPos - i) * TINYCHAR_HEIGHT, cgs.teamChatMsgs[i % chatHeight], hcolor, false, false, TINYCHAR_WIDTH, TINYCHAR_HEIGHT, 0);
-        }
-    }
-}
-
-/*
 ===================
 CG_DrawHoldableItem
 ===================
@@ -1072,7 +1000,7 @@ static void CG_DrawLagometer()
 
     RE_SetColor(NULL);
 
-    if (cg_nopredict->integer || cg_synchronousClients->integer) {
+    if (cg_synchronousClients->integer) {
         CG_DrawBigString(ax, ay, "snc", 1.0);
     }
 
@@ -1589,10 +1517,6 @@ static void CG_Draw2D()
             CG_DrawWeaponSelect();
             CG_DrawHoldableItem();
             CG_DrawReward();
-        }
-
-        if (cgs.gametype >= GT_TEAM) {
-            CG_DrawTeamInfo();
         }
     }
 

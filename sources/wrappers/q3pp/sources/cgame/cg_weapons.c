@@ -1195,11 +1195,7 @@ void CG_AddViewWeapon(playerState_t* ps)
     }
 
     // drop gun lower at higher fov
-    if (cg_fov->integer > 90) {
-        fovOffset = -0.2 * (cg_fov->integer - 90);
-    } else {
-        fovOffset = 0;
-    }
+    fovOffset = 0;
 
     cent = &cg.predictedPlayerEntity; // &cg_entities[cg.snap->ps.clientNum];
     CG_RegisterWeapon(ps->weapon);
@@ -1210,9 +1206,9 @@ void CG_AddViewWeapon(playerState_t* ps)
     // set up gun position
     CG_CalculateWeaponPosition(hand.origin, angles);
 
-    VectorMA(hand.origin, cg_gun_x->value, cg.refdef.viewaxis[0], hand.origin);
-    VectorMA(hand.origin, cg_gun_y->value, cg.refdef.viewaxis[1], hand.origin);
-    VectorMA(hand.origin, (cg_gun_z->value + fovOffset), cg.refdef.viewaxis[2], hand.origin);
+    VectorMA(hand.origin, 0, cg.refdef.viewaxis[0], hand.origin);
+    VectorMA(hand.origin, 0, cg.refdef.viewaxis[1], hand.origin);
+    VectorMA(hand.origin, (0 + fovOffset), cg.refdef.viewaxis[2], hand.origin);
 
     AnglesToAxis(angles, hand.axis);
 

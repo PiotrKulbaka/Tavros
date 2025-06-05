@@ -34,21 +34,9 @@ weaponInfo_t cg_weapons[MAX_WEAPONS];
 itemInfo_t   cg_items[MAX_ITEMS];
 
 
-cvar_t* cg_nopredict;
-cvar_t* cg_viewsize;
-cvar_t* cg_gun_x;
-cvar_t* cg_gun_y;
-cvar_t* cg_gun_z;
-cvar_t* cg_fov;
-cvar_t* cg_zoomFov;
 cvar_t* cg_lagometer;
 cvar_t* cg_synchronousClients;
-cvar_t* cg_teamChatTime;
-cvar_t* cg_teamChatHeight;
-cvar_t* cg_stats;
 cvar_t* cg_paused;
-cvar_t* cg_predictItems;
-cvar_t* cg_drawFriend;
 cvar_t* pmove_fixed;
 cvar_t* pmove_msec;
 cvar_t* cg_timescaleFadeEnd;
@@ -64,19 +52,7 @@ void CG_RegisterCvars()
 {
     char var[MAX_TOKEN_CHARS];
 
-    cg_zoomFov = Cvar_Get("cg_zoomfov", "22.5", CVAR_ARCHIVE);
-    cg_fov = Cvar_Get("cg_fov", "90", CVAR_ARCHIVE);
-    cg_viewsize = Cvar_Get("cg_viewsize", "100", CVAR_ARCHIVE);
     cg_lagometer = Cvar_Get("cg_lagometer", "1", CVAR_ARCHIVE);
-    cg_gun_x = Cvar_Get("cg_gunX", "0", CVAR_CHEAT);
-    cg_gun_y = Cvar_Get("cg_gunY", "0", CVAR_CHEAT);
-    cg_gun_z = Cvar_Get("cg_gunZ", "0", CVAR_CHEAT);
-    cg_nopredict = Cvar_Get("cg_nopredict", "0", 0);
-    cg_teamChatTime = Cvar_Get("cg_teamChatTime", "3000", CVAR_ARCHIVE);
-    cg_teamChatHeight = Cvar_Get("cg_teamChatHeight", "0", CVAR_ARCHIVE);
-    cg_predictItems = Cvar_Get("cg_predictItems", "1", CVAR_ARCHIVE);
-    cg_stats = Cvar_Get("cg_stats", "0", 0);
-    cg_drawFriend = Cvar_Get("cg_drawFriend", "1", CVAR_ARCHIVE);
     cg_paused = Cvar_Get("cl_paused", "0", CVAR_ROM);
     cg_synchronousClients = Cvar_Get("g_synchronousClients", "0", 0);
     cg_timescaleFadeEnd = Cvar_Get("cg_timescaleFadeEnd", "1", 0);

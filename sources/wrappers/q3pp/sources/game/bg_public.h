@@ -652,7 +652,6 @@ bool BG_CanItemBeGrabbed(int32 gametype, const entityState_t* ent, const playerS
 
 // g_dmflags->integer flags
 #define DF_NO_FALLING    8
-#define DF_FIXED_FOV     16
 #define DF_NO_FOOTSTEPS  32
 
 // content masks
