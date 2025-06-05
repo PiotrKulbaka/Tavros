@@ -911,7 +911,7 @@ static void CG_DrawLagometer()
     int32 color;
     float vscale;
 
-    if (!cg_lagometer->integer || cgs.localServer) {
+    if (cgs.localServer) {
         CG_DrawDisconnect();
         return;
     }

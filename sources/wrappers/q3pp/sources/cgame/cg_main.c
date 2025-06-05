@@ -34,14 +34,8 @@ weaponInfo_t cg_weapons[MAX_WEAPONS];
 itemInfo_t   cg_items[MAX_ITEMS];
 
 
-cvar_t* cg_lagometer;
 cvar_t* cg_synchronousClients;
 cvar_t* cg_paused;
-cvar_t* pmove_fixed;
-cvar_t* pmove_msec;
-cvar_t* cg_timescaleFadeEnd;
-cvar_t* cg_timescaleFadeSpeed;
-cvar_t* cg_timescale;
 
 /*
 =================
@@ -52,12 +46,8 @@ void CG_RegisterCvars()
 {
     char var[MAX_TOKEN_CHARS];
 
-    cg_lagometer = Cvar_Get("cg_lagometer", "1", CVAR_ARCHIVE);
     cg_paused = Cvar_Get("cl_paused", "0", CVAR_ROM);
     cg_synchronousClients = Cvar_Get("g_synchronousClients", "0", 0);
-    cg_timescaleFadeEnd = Cvar_Get("cg_timescaleFadeEnd", "1", 0);
-    cg_timescaleFadeSpeed = Cvar_Get("cg_timescaleFadeSpeed", "0", 0);
-    cg_timescale = Cvar_Get("timescale", "1", 0);
 
     // see if we are also running the server on this machine
     Cvar_VariableStringBuffer("sv_running", var, sizeof(var));

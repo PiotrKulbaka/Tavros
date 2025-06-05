@@ -206,8 +206,6 @@ void G_RegisterCvars()
     g_listEntity = Cvar_Get("g_listEntity", "0", 0);
 
     g_smoothClients = Cvar_Get("g_smoothClients", "1", 0);
-    pmove_fixed = Cvar_Get("pmove_fixed", "0", CVAR_SYSTEMINFO);
-    pmove_msec = Cvar_Get("pmove_msec", "8", CVAR_SYSTEMINFO);
 
     g_rankings = Cvar_Get("g_rankings", "0", 0);
 

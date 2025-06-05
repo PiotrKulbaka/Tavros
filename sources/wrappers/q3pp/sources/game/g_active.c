@@ -623,14 +623,8 @@ void ClientThink_real(gentity_t* ent)
         msec = 200;
     }
 
-    if (pmove_msec->integer < 8) {
-        Cvar_Set("pmove_msec", "8");
-    } else if (pmove_msec->integer > 33) {
-        Cvar_Set("pmove_msec", "33");
-    }
-
-    if (pmove_fixed->integer || client->pers.pmoveFixed) {
-        ucmd->serverTime = ((ucmd->serverTime + pmove_msec->integer - 1) / pmove_msec->integer) * pmove_msec->integer;
+    if (client->pers.pmoveFixed) {
+        ucmd->serverTime = ((ucmd->serverTime + 8 - 1) / 8) * 8;
     }
 
     //
@@ -711,8 +705,8 @@ void ClientThink_real(gentity_t* ent)
     pm.pointcontents = trap_PointContents;
     pm.noFootsteps = (g_dmflags->integer & DF_NO_FOOTSTEPS) > 0;
 
-    pm.pmove_fixed = pmove_fixed->integer | client->pers.pmoveFixed;
-    pm.pmove_msec = pmove_msec->integer;
+    pm.pmove_fixed = client->pers.pmoveFixed;
+    pm.pmove_msec = 8;
 
     VectorCopy(client->ps.origin, client->oldOrigin);
 

@@ -1005,14 +1005,8 @@ extern weaponInfo_t cg_weapons[MAX_WEAPONS];
 extern itemInfo_t   cg_items[MAX_ITEMS];
 extern markPoly_t   cg_markPolys[MAX_MARK_POLYS];
 
-extern cvar_t* cg_lagometer;
 extern cvar_t* cg_synchronousClients;
 extern cvar_t* cg_paused;
-extern cvar_t* pmove_fixed;
-extern cvar_t* pmove_msec;
-extern cvar_t* cg_timescaleFadeEnd;
-extern cvar_t* cg_timescaleFadeSpeed;
-extern cvar_t* cg_timescale;
 
 //
 // cg_main.c

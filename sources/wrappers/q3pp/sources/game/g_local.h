@@ -693,8 +693,6 @@ extern cvar_t* g_teamForceBalance;
 extern cvar_t* g_banIPs;
 extern cvar_t* g_filterBan;
 extern cvar_t* g_smoothClients;
-extern cvar_t* pmove_fixed;
-extern cvar_t* pmove_msec;
 extern cvar_t* g_rankings;
 
 void  trap_LocateGameData(gentity_t* gEnts, int32 numGEntities, int32 sizeofGEntity_t, playerState_t* gameClients, int32 sizeofGameClient);
