@@ -922,13 +922,13 @@ extern glstate_t      glState;  // outside of TR since it shouldn't be cleared d
 //
 // cvars
 //
-extern cvar_t* r_novis;           // disable/enable usage of PVS
+extern cvar_t* r_novis; // disable/enable usage of PVS
 extern cvar_t* r_nocurves;
 
 extern cvar_t* r_offsetFactor;
 extern cvar_t* r_offsetUnits;
 
-extern cvar_t* r_lightmap;    // render lightmaps only
+extern cvar_t* r_lightmap; // render lightmaps only
 
 extern cvar_t* r_lockpvs;
 
@@ -966,7 +966,6 @@ void R_RotateForEntity(const trRefEntity_t* ent, const viewParms_t* viewParms, o
 ** GL wrapper/helper functions
 */
 void GL_Bind(texture_type image);
-void GL_CheckErrors();
 void GL_State(uint32 stateVector);
 void GL_TexEnv(int32 env);
 void GL_Cull(int32 cullType);

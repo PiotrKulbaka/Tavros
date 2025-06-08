@@ -1313,12 +1313,12 @@ CM_TraceThroughPatchCollide
 */
 void CM_TraceThroughPatchCollide(traceWork_t* tw, const struct patchCollide_s* pc)
 {
-    int32          i, j, hit, hitnum;
-    float          offset, enterFrac, leaveFrac, t;
-    patchPlane_t*  planes;
-    facet_t*       facet;
-    float          plane[4], bestplane[4];
-    vec3_t         startp, endp;
+    int32         i, j, hit, hitnum;
+    float         offset, enterFrac, leaveFrac, t;
+    patchPlane_t* planes;
+    facet_t*      facet;
+    float         plane[4], bestplane[4];
+    vec3_t        startp, endp;
 
     if (tw->isPoint) {
         CM_TracePointThroughPatchCollide(tw, pc);

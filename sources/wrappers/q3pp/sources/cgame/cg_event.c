@@ -483,44 +483,43 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
     case EV_STEP_8:
     case EV_STEP_12:
     case EV_STEP_16: // smooth out step up transitions
-        {
-            float oldStep;
-            int32 delta;
-            int32 step;
+    {
+        float oldStep;
+        int32 delta;
+        int32 step;
 
-            if (clientNum != cg.predictedPlayerState.clientNum) {
-                break;
-            }
-            // if we are interpolating, we don't need to smooth steps
-            if (cg.demoPlayback || (cg.snap->ps.pm_flags & PMF_FOLLOW) || cg_synchronousClients->integer) {
-                break;
-            }
-            // check for stepping up before a previous step is completed
-            delta = cg.time - cg.stepTime;
-            if (delta < STEP_TIME) {
-                oldStep = cg.stepChange * (STEP_TIME - delta) / STEP_TIME;
-            } else {
-                oldStep = 0;
-            }
-
-            // add this amount
-            step = 4 * (event - EV_STEP_4 + 1);
-            cg.stepChange = oldStep + step;
-            if (cg.stepChange > MAX_STEP_CHANGE) {
-                cg.stepChange = MAX_STEP_CHANGE;
-            }
-            cg.stepTime = cg.time;
+        if (clientNum != cg.predictedPlayerState.clientNum) {
             break;
         }
-
-    case EV_JUMP_PAD:
-        {
-            localEntity_t* smoke;
-            vec3_t         up = {0, 0, 1};
-
-
-            smoke = CG_SmokePuff(cent->lerpOrigin, up, 32, 1, 1, 1, 0.33f, 1000, cg.time, 0, LEF_PUFF_DONT_SCALE, cgs.media.smokePuffShader);
+        // if we are interpolating, we don't need to smooth steps
+        if (cg.demoPlayback || (cg.snap->ps.pm_flags & PMF_FOLLOW) || cg_synchronousClients->integer) {
+            break;
         }
+        // check for stepping up before a previous step is completed
+        delta = cg.time - cg.stepTime;
+        if (delta < STEP_TIME) {
+            oldStep = cg.stepChange * (STEP_TIME - delta) / STEP_TIME;
+        } else {
+            oldStep = 0;
+        }
+
+        // add this amount
+        step = 4 * (event - EV_STEP_4 + 1);
+        cg.stepChange = oldStep + step;
+        if (cg.stepChange > MAX_STEP_CHANGE) {
+            cg.stepChange = MAX_STEP_CHANGE;
+        }
+        cg.stepTime = cg.time;
+        break;
+    }
+
+    case EV_JUMP_PAD: {
+        localEntity_t* smoke;
+        vec3_t         up = {0, 0, 1};
+
+
+        smoke = CG_SmokePuff(cent->lerpOrigin, up, 32, 1, 1, 1, 0.33f, 1000, cg.time, 0, LEF_PUFF_DONT_SCALE, cgs.media.smokePuffShader);
+    }
 
         // boing sound at origin, jump sound on player
         S_StartSound(cent->lerpOrigin, -1, CHAN_VOICE, cgs.media.jumpPadSound);
@@ -546,56 +545,52 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
         S_StartSound(NULL, es->number, CHAN_AUTO, CG_CustomSound(es->number, "*gasp.wav"));
         break;
 
-    case EV_ITEM_PICKUP:
-        {
-            gitem_t* item;
-            int32    index;
+    case EV_ITEM_PICKUP: {
+        gitem_t* item;
+        int32    index;
 
-            index = es->eventParm; // player predicted
+        index = es->eventParm; // player predicted
 
-            if (index < 1 || index >= bg_numItems) {
-                break;
-            }
-            item = &bg_itemlist[index];
-
-            // powerups and team items will have a separate global sound, this one
-            // will be played at prediction time
-            if (item->giType == IT_POWERUP || item->giType == IT_TEAM) {
-                S_StartSound(NULL, es->number, CHAN_AUTO, cgs.media.n_healthSound);
-            } else if (item->giType == IT_PERSISTANT_POWERUP) {
-            } else {
-                S_StartSound(NULL, es->number, CHAN_AUTO, S_RegisterSound(item->pickup_sound, false));
-            }
-
-            // show icon and name on status bar
-            if (es->number == cg.snap->ps.clientNum) {
-                CG_ItemPickup(index);
-            }
+        if (index < 1 || index >= bg_numItems) {
+            break;
         }
-        break;
+        item = &bg_itemlist[index];
 
-    case EV_GLOBAL_ITEM_PICKUP:
-        {
-            gitem_t* item;
-            int32    index;
-
-            index = es->eventParm; // player predicted
-
-            if (index < 1 || index >= bg_numItems) {
-                break;
-            }
-            item = &bg_itemlist[index];
-            // powerup pickups are global
-            if (item->pickup_sound) {
-                S_StartSound(NULL, cg.snap->ps.clientNum, CHAN_AUTO, S_RegisterSound(item->pickup_sound, false));
-            }
-
-            // show icon and name on status bar
-            if (es->number == cg.snap->ps.clientNum) {
-                CG_ItemPickup(index);
-            }
+        // powerups and team items will have a separate global sound, this one
+        // will be played at prediction time
+        if (item->giType == IT_POWERUP || item->giType == IT_TEAM) {
+            S_StartSound(NULL, es->number, CHAN_AUTO, cgs.media.n_healthSound);
+        } else if (item->giType == IT_PERSISTANT_POWERUP) {
+        } else {
+            S_StartSound(NULL, es->number, CHAN_AUTO, S_RegisterSound(item->pickup_sound, false));
         }
-        break;
+
+        // show icon and name on status bar
+        if (es->number == cg.snap->ps.clientNum) {
+            CG_ItemPickup(index);
+        }
+    } break;
+
+    case EV_GLOBAL_ITEM_PICKUP: {
+        gitem_t* item;
+        int32    index;
+
+        index = es->eventParm; // player predicted
+
+        if (index < 1 || index >= bg_numItems) {
+            break;
+        }
+        item = &bg_itemlist[index];
+        // powerup pickups are global
+        if (item->pickup_sound) {
+            S_StartSound(NULL, cg.snap->ps.clientNum, CHAN_AUTO, S_RegisterSound(item->pickup_sound, false));
+        }
+
+        // show icon and name on status bar
+        if (es->number == cg.snap->ps.clientNum) {
+            CG_ItemPickup(index);
+        }
+    } break;
 
     //
     // weapon events

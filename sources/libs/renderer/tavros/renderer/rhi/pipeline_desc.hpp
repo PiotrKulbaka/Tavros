@@ -1,0 +1,361 @@
+#pragma once
+
+#include <tavros/core/types.hpp>
+#include <tavros/core/string_view.hpp>
+#include <tavros/core/flags.hpp>
+#include <tavros/core/containers/array.hpp>
+#include <tavros/renderer/rhi/compare_op.hpp>
+#include <tavros/renderer/rhi/pixel_format.hpp>
+
+namespace tavros::renderer
+{
+
+    /**
+     * Contains source code strings for different shader stages.
+     */
+    struct shader_sources
+    {
+        /// Source code for the vertex shader stage.
+        core::string_view vertex_source;
+
+        /// Source code for the fragment shader stage.
+        core::string_view fragment_source;
+    };
+
+
+    /**
+     * Describes the data type of a single vertex attribute component.
+     * This defines how the GPU will interpret the raw vertex data in memory.
+     */
+    enum class attribute_format : uint8
+    {
+        u8,  /// Unsigned 8-bit integer vertex component format
+        i8,  /// Signed 8-bit integer vertex format
+        u16, /// Unsigned 16-bit integer vertex format
+        i16, /// Signed 16-bit integer vertex format
+        u32, /// Unsigned 32-bit integer vertex format
+        i32, /// Signed 32-bit integer vertex format
+        f16, /// 16-bit half-precision float vertex format
+        f32, /// 32-bit IEEE float vertex format
+    };
+
+    /**
+     * Defines the layout of a single vertex attribute in a vertex buffer.
+     * Used to describe how vertex data should be read and interpreted by the GPU vertex shader.
+     */
+    struct vertex_attribute
+    {
+        /// Number of components (e.g. 1 for scalar, 2 for vec2, 3 for vec3 and 4 for vec4)
+        uint8 size = 1;
+
+        /// Data format of each component
+        attribute_format format = attribute_format::f32;
+
+        /// If true, integer data will be normalized to [0,1] or [-1,1] (only valid for integer formats)
+        bool normalize = false;
+
+        /// Byte offset from start of vertex to this attribute, 0 = tightly packed
+        uint32 offset = 0;
+    };
+
+    /**
+     * Describes the layout of vertex data in a vertex buffer.
+     * Used to describe how vertex data should be read and interpreted by the GPU vertex shader.
+     */
+    struct vertex_layout
+    {
+        /// List of vertex attributes (max 16 attributes per vertex)
+        core::array<vertex_attribute, 16> attributes;
+
+        /// Number of vertex attributes
+        uint32 attributes_count = 0;
+
+        /// Byte distance to the next vertex in the buffer (0 = tightly packed)
+        uint32 stride = 0;
+    };
+
+
+    /**
+     * Blend operation for blending source and destination colors and alpha values
+     */
+    enum class blend_op : uint8
+    {
+        add,              /// result = src + dst
+        subtract,         /// result = src - dst
+        reverse_subtract, /// result = dst - src
+        min,              /// result = min(src, dst)
+        max,              /// result = max(src, dst)
+    };
+
+    /**
+     * Specifies the blend factor used in blending calculations.
+     * The source and destination factors are used to blend the source and destination colors
+     * and alpha values together to produce the final result.
+     */
+    enum class blend_factor : uint8
+    {
+        zero,                /// result = 0
+        one,                 /// result = 1
+        src_color,           /// result = src.rgb
+        one_minus_src_color, /// result = 1 - src.rgb
+        dst_color,           /// result = dst.rgb
+        one_minus_dst_color, /// result = 1 - dst.rgb
+        src_alpha,           /// result = src.a
+        one_minus_src_alpha, /// result = 1 - src.a
+        dst_alpha,           /// result = dst.a
+        one_minus_dst_alpha, /// result = 1 - dst.a
+        // constant_color,           /// result = constant_color.rgb
+        // one_minus_constant_color, /// result = 1 - constant_color.rgb
+        // constant_alpha,           /// result = constant_color.a
+        // one_minus_constant_alpha, /// result = 1 - constant_color.a
+    };
+
+    /**
+     * Describes the write mask for color channels in a render target.
+     * Used to select which color channels (red, green, blue, alpha) are updated
+     * during rendering operations.
+     */
+    enum color_mask : uint8
+    {
+        red = 0x1,
+        green = 0x2,
+        blue = 0x4,
+        alpha = 0x8,
+    };
+
+    constexpr core::flags<color_mask> operator|(color_mask lhs, color_mask rhs) noexcept
+    {
+        return core::flags<color_mask>(lhs) | core::flags<color_mask>(rhs);
+    }
+
+    constexpr core::flags<color_mask> k_default_color_mask = /// Default color mask
+        color_mask::red | color_mask::green | color_mask::blue | color_mask::alpha;
+
+    /**
+     * Describes the blending properties for a single render target.
+     * Controls how the source and destination colors and alpha values
+     * are combined during rendering operations.
+     */
+    struct blend_state
+    {
+        /// If false, the source fully changes the destination color
+        bool blend_enabled = false;
+
+        /// Source blend factor for color channels
+        blend_factor src_color_factor = blend_factor::one;
+
+        /// Destination blend factor for color channels
+        blend_factor src_alpha_factor = blend_factor::one;
+
+        /// Blend operation for color channels
+        blend_op color_blend_op = blend_op::add;
+
+        /// Source blend factor for alpha channel
+        blend_factor dst_color_factor = blend_factor::zero;
+
+        /// Destination blend factor for alpha channel
+        blend_factor dst_alpha_factor = blend_factor::zero;
+
+        /// Blend operation for alpha channel
+        blend_op alpha_blend_op = blend_op::add;
+
+        /// Mask specifying which color channels are written
+        core::flags<color_mask> mask = k_default_color_mask;
+    };
+
+    /**
+     * Describes the properties of a blend state for a multiple render targets.
+     * A blend state specifies how the source and destination colors and alpha values
+     * are combined during rendering operations.
+     */
+    struct blend_attachment
+    {
+        /// Blend states for each render target
+        core::array<blend_state, 8> blend_states;
+
+        /// Number of blend states
+        uint8 blend_state_count = 0;
+    };
+
+
+    /**
+     * Specifies the stencil operation to be performed during rendering
+     * This operation is applied to the stencil buffer value at the current pixel location
+     */
+    enum class stencil_op : uint8
+    {
+        keep,            /// Keep the current value in the stencil buffer unchanged
+        zero,            /// Set the value in the stencil buffer to 0
+        replace,         /// Replace the value in the stencil buffer with the reference value
+        increment_clamp, /// Increment the value, but not above 0xFF
+        decrement_clamp, /// Decrement the value, but not below 0
+        invert,          /// Bitwise invert the value in the stencil buffer
+        increment_wrap,  /// Increment the value with wrapping (255 + 1 = 0)
+        decrement_wrap,  /// Decrement the value with wrapping (0 - 1 = 255)
+    };
+
+    /**
+     * Represents the configuration and operations for stencil testing during rendering
+     */
+    struct stencil_state
+    {
+        /// Mask for reading from the stencil buffer
+        uint8 read_mask = 0xFF;
+
+        /// Mask for writing to the stencil buffer
+        uint8 write_mask = 0xFF;
+
+        /// Reference value for stencil testing
+        uint8 reference_value = 0;
+
+        /// The stencil buffer value is compared to the reference value using this function
+        compare_op compare = compare_op::always;
+
+        /// Stencil operation to perform if the stencil test fails
+        stencil_op stencil_fail_op = stencil_op::keep;
+
+        /// Stencil operation to perform if the depth test fails
+        stencil_op depth_fail_op = stencil_op::keep;
+
+        /// Stencil operation to perform if the stencil test passes
+        stencil_op pass_op = stencil_op::keep;
+    };
+
+    /**
+     * Represents the configuration for depth and stencil testing during rendering
+     */
+    struct depth_stencil_state
+    {
+        /// Enables or disables depth testing
+        bool depth_test_enable = false;
+
+        /// Enables or disables writing to the depth buffer
+        bool depth_write_enable = false;
+
+        /// Comparison function used for depth testing
+        compare_op depth_compare = compare_op::off;
+
+        /// Enables or disables stencil testing
+        bool stencil_test_enable = false;
+
+        /// Stencil state for front-facing geometry
+        stencil_state stencil_front;
+
+        /// Stencil state for back-facing geometry
+        stencil_state stencil_back;
+    };
+
+
+    /**
+     * Specifies which faces of a polygon will be culled during rendering
+     * Culling is the process of discarding polygons that are not visible in the scene
+     */
+    enum class cull_face : uint8
+    {
+        off,   /// No culling; all faces are rendered
+        front, /// Cull front-facing polygons
+        back,  /// Cull back-facing polygons
+    };
+
+    /**
+     * Specifies the winding order for front-facing polygons
+     * Front-facing polygons are the ones that are visible in the scene
+     */
+    enum class front_face : uint8
+    {
+        clockwise,         /// Front faces are clockwise
+        counter_clockwise, /// Front faces are counter-clockwise
+    };
+
+    /**
+     * Specifies the fill mode for polygons
+     */
+    enum class polygon_mode : uint8
+    {
+        fill,   /// Normal fill (the triangle is rendered fully)
+        lines,  /// Outline only (the triangle edges are rendered as lines)
+        points, /// Only vertices (each vertex is rendered as a pixel/point)
+    };
+
+    /**
+     * Describes the rasterizer state for a pipeline
+     * This structure defines how the GPU should rasterize and render
+     * geometric primitives such as points, lines, and triangles
+     */
+    struct rasterizer_state
+    {
+        /// Controls which faces of a polygon are culled during rendering
+        cull_face cull = cull_face::off;
+
+        /// Specifies the winding order for front-facing polygons
+        front_face face = front_face::counter_clockwise;
+
+        /// Specifies the fill mode for polygons
+        polygon_mode polygon = polygon_mode::fill;
+
+        /// Enable depth clamping, which will clamp the depth value to the range [near, far]
+        bool depth_clamp_enable = false;
+
+        /// Near plane value for depth clamping
+        float depth_clamp_near = 0.0f;
+
+        /// Far plane value for depth clamping
+        float depth_clamp_far = 1.0f;
+
+        /// Enable depth biasing, which will offset the depth value by the specified amount
+        bool depth_bias_enable = false;
+
+        /// Amount of depth bias to apply (D + depth_bias + depth_bias_slope * M)
+        float depth_bias = 0.0f;
+
+        /// Slope factor for depth biasing (D + depth_bias + depth_bias_slope * M)
+        float depth_bias_slope = 0.0f;
+
+        /// Clamp value for depth biasing
+        float depth_bias_clamp = 0.0f;
+    };
+
+
+    /**
+     * Describes the multisample state (MSAA) for a pipeline
+     */
+    struct multisample_state
+    {
+        ///  Number of samples per pixel should be 1, 2, 4, 8, or 16
+        uint8 sample_count = 1;
+
+        /// Enables or disables sample shading (rendering with a shader for each sample)
+        bool sample_shading_enabled = false;
+
+        /// Minimum sample shading value for running sample shading. Should be between [0.0..1.0]
+        float min_sample_shading = 1.0f;
+    };
+
+    /**
+     * Describes the color attachments and depth attachment for a pipeline
+     */
+    struct render_targets
+    {
+        /// Color attachment formats
+        core::array<pixel_format, 8> color_formats;
+
+        /// Number of color attachments
+        uint8 color_target_count = 0;
+
+        /// Depth attachment format
+        pixel_format depth_stencil_format = pixel_format::depth24_stencil8;
+    };
+
+
+    struct pipeline_desc
+    {
+        shader_sources      shaders;
+        vertex_layout       layout;
+        blend_attachment    blend;
+        depth_stencil_state depth_stencil;
+        rasterizer_state    rasterizer;
+        multisample_state   multisample;
+        render_targets      targets;
+    };
+
+} // namespace tavros::renderer

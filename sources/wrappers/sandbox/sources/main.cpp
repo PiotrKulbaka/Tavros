@@ -12,59 +12,80 @@
 #include <tavros/renderer/camera/camera.hpp>
 #include <tavros/renderer/shader.hpp>
 
+#include <tavros/renderer/rhi/command_list.hpp>
+#include <tavros/renderer/rhi/graphics_device.hpp>
+
+#include <tavros/renderer/internal/backend/gl/gl_command_list.hpp>
+#include <tavros/renderer/internal/backend/gl/gl_graphics_device.hpp>
+
 #include <glad/glad.h>
 
 #include <inttypes.h>
 
 #include <thread>
 
+#include <stb/stb_image.h>
+
 float vertices[] = {
-    // positions
-    0.0f, 0.5f, 0.0f,   // Top
-    -0.5f, -0.5f, 0.0f, // Bottom left
-    0.5f, -0.5f, 0.0f   // Bottom right
+    // positions        // texcoords
+    0.0f, 0.5f, 0.0f, 0.0f, 0.0f,  // Top
+    -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // Left
+    0.5f, 0.0f, 0.0f, 1.0f, 0.0f,  // Right
+
+    0.0f, -0.5f, 0.0f, 1.0f, 1.0f, // Bottom
+    -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // Left
+    0.5f, 0.0f, 0.0f, 1.0f, 0.0f   // Right
 };
 
 const char* vertex_shader_source = R"(
-#version 410 core
+#version 420 core
 layout (location = 0) in vec3 a_pos;
+layout (location = 1) in vec2 a_uv;
 
-uniform mat4 u_mvp;
+out vec2 v_uv;
 
 void main()
 {
-    gl_Position = u_mvp * vec4(a_pos, 1.0);
+    gl_Position = vec4(a_pos, 1.0);
+    v_uv = a_uv;
 }
 )";
 
 const char* fragment_shader_source = R"(
-#version 410 core
+#version 420 core
+
+layout(binding = 0) uniform sampler2D u_tex1;
+layout(binding = 2) uniform sampler2D u_tex2;
+in vec2 v_uv;
 out vec4 frag_color;
 
 void main()
 {
-    frag_color = vec4(1.0, 0.4, 0.2, 1.0); // РѕСЂР°РЅР¶РµРІС‹Р№
+    vec4 top = texture(u_tex2, v_uv);
+    vec4 bottom = texture(u_tex1, v_uv);
+    frag_color = bottom + top * (1.0 - bottom.a);
 }
 )";
 
+
+void* load_pixels_from_file(const char* filename, int32& w, int32& h, int32& c)
+{
+    return static_cast<void*>(stbi_load(filename, &w, &h, &c, STBI_rgb_alpha));
+}
+
+void free_pixels(void* p)
+{
+    stbi_image_free(p);
+}
+
 int main()
 {
-    namespace core = tavros::core;
-
-    tavros::core::logger::add_consumer([](core::severity_level, core::string_view tag, core::string_view msg) {
+    tavros::core::logger::add_consumer([](tavros::core::severity_level, tavros::core::string_view tag, tavros::core::string_view msg) {
         TAV_ASSERT(tag.data());
         std::cout << msg << std::endl;
     });
 
     auto logger = tavros::core::logger("main");
-
-    tavros::renderer::camera cam;
-    bool                     key_state[static_cast<int32>(tavros::system::keys::k_last_key)];
-
-    constexpr uint8 k_up = static_cast<uint8>(tavros::system::keys::k_W);
-    constexpr uint8 k_right = static_cast<uint8>(tavros::system::keys::k_D);
-    constexpr uint8 k_left = static_cast<uint8>(tavros::system::keys::k_A);
-    constexpr uint8 k_down = static_cast<uint8>(tavros::system::keys::k_S);
 
     auto app = tavros::system::interfaces::application::create();
 
@@ -74,68 +95,8 @@ int main()
 
     wnd->show();
     wnd->set_on_close_listener([&](tavros::system::window_ptr, tavros::system::close_event_args& e) {
-        logger.info("Before exit.");
         app->exit();
-        logger.info("After exit.");
     });
-
-
-    wnd->set_on_mouse_down_listener([&](tavros::system::window_ptr, tavros::system::mouse_event_args& e) {
-        logger.info("on_mouse_down: %s: %f %f", tavros::system::to_string(e.button).data(), e.pos.x, e.pos.y);
-    });
-
-    wnd->set_on_mouse_move_listener([&](tavros::system::window_ptr, tavros::system::mouse_event_args& e) {
-        if (e.is_relative_move) {
-            //            tavros::math::quat q(cam.up(), e.);
-            //            cam.rotate(<#const math::quat &q#>);
-            //            logger.info("on_mouse_move: %f %f", e.pos.x, e.pos.y);
-        }
-    });
-
-    wnd->set_on_mouse_up_listener([&](tavros::system::window_ptr, tavros::system::mouse_event_args& e) {
-        logger.info("on_mouse_up: %s: %f %f", tavros::system::to_string(e.button).data(), e.pos.x, e.pos.y);
-    });
-
-    wnd->set_on_mouse_wheel_listener([&](tavros::system::window_ptr, tavros::system::mouse_event_args& e) {
-        logger.info("on_mouse_up: wheel_x: %f; wheel_y: %f; %f %f", e.delta.x, e.delta.y, e.pos.x, e.pos.y);
-    });
-
-    wnd->set_on_key_down_listener([&](tavros::system::window_ptr, tavros::system::key_event_args& e) {
-        //        logger.info("on_key_down: %s", tavros::system::to_string(e.key).data());
-        key_state[static_cast<int32>(e.key)] = true;
-    });
-
-    wnd->set_on_key_up_listener([&](tavros::system::window_ptr, tavros::system::key_event_args& e) {
-        //        logger.info("on_key_up: %c", tavros::system::to_string(e.key).data());
-        key_state[static_cast<int32>(e.key)] = false;
-    });
-
-    wnd->set_on_key_press_listener([&](tavros::system::window_ptr, tavros::system::key_event_args& e) {
-        //        logger.info("on_key_press: %c", tavros::system::to_string(e.key).data());
-    });
-
-    wnd->set_on_activate_listener([&](tavros::system::window_ptr) {
-        //        logger.info("on_activate");
-        memset(&key_state, 0, sizeof(key_state));
-    });
-
-    wnd->set_on_deactivate_listener([&](tavros::system::window_ptr) {
-        //        logger.info("on_deactivate");
-        memset(&key_state, 0, sizeof(key_state));
-    });
-
-    wnd->set_on_move_listener([&](tavros::system::window_ptr, tavros::system::move_event_args& e) {
-        //        logger.info("on_move: %d %d", e.pos.x, e.pos.y);
-    });
-
-    wnd->set_on_resize_listener([&](tavros::system::window_ptr, tavros::system::size_event_args& e) {
-        //        logger.info("on_resize: %d %d", e.size.width, e.size.height);
-        cam.set_perspective(tavros::math::k_pi / 3.0f, e.size.width / e.size.height, 0.1f, 1000.0f);
-    });
-
-    cam.set_position({-10.0f, 0.0f, 0.0f});
-
-    app->run();
 
     auto context = tavros::renderer::interfaces::gl_context::create(wnd->get_handle());
 
@@ -146,7 +107,54 @@ int main()
     }
 
 
-    auto sh = tavros::renderer::shader::create(vertex_shader_source, fragment_shader_source);
+    app->run();
+
+    tavros::renderer::pipeline_desc ppl;
+
+    ppl.shaders.fragment_source = fragment_shader_source;
+    ppl.shaders.vertex_source = vertex_shader_source;
+
+    ppl.depth_stencil.depth_test_enable = true;
+    ppl.depth_stencil.depth_write_enable = true;
+    ppl.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
+
+    ppl.rasterizer.cull = tavros::renderer::cull_face::off;
+    ppl.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
+
+
+    auto gdevice = tavros::core::make_shared<tavros::renderer::gl_graphics_device>();
+    auto comlist = tavros::core::make_shared<tavros::renderer::gl_command_list>(gdevice.get());
+
+
+    tavros::renderer::texture2d_desc tex_desc;
+
+    int32 w, h, c;
+    void* pixels = load_pixels_from_file("D:\\Work\\q3pp_res\\baseq3\\textures\\base_support\\x_support3.tga", w, h, c);
+    tex_desc.data = pixels;
+    tex_desc.width = w;
+    tex_desc.height = h;
+    tex_desc.mip_levels = 1;
+
+    auto tex1 = gdevice->create_texture(tex_desc);
+    free_pixels(pixels);
+
+    pixels = load_pixels_from_file("D:\\Work\\q3pp_res\\baseq3\\textures\\base_wall\\metalfloor_wall_14_specular.tga", w, h, c);
+    tex_desc.data = pixels;
+    tex_desc.width = w;
+    tex_desc.height = h;
+    tex_desc.mip_levels = 1;
+
+    auto tex2 = gdevice->create_texture(tex_desc);
+    free_pixels(pixels);
+
+
+    tavros::renderer::sampler_desc samler_desc;
+    samler_desc.filter.mipmap_filter = tavros::renderer::mipmap_filter_mode::off;
+    samler_desc.filter.min_filter = tavros::renderer::filter_mode::linear;
+    samler_desc.filter.mag_filter = tavros::renderer::filter_mode::linear;
+
+    auto sampler1 = gdevice->create_sampler(samler_desc);
+    auto pipeline = gdevice->create_pipeline(ppl);
 
 
     GLuint vao, vbo;
@@ -158,73 +166,62 @@ int main()
     glBindBuffer(GL_ARRAY_BUFFER, vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*) 0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*) 0);
     glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*) (3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     glBindVertexArray(0);
 
+    // Создаём один UBO
+    /*constexpr size_t k_big_ubo_size = 4096;
+    GLuint big_ubo;
+    glGenBuffers(1, &big_ubo);
+    glBindBuffer(GL_UNIFORM_BUFFER, big_ubo);
+    glBufferData(GL_UNIFORM_BUFFER, k_big_ubo_size, nullptr, GL_DYNAMIC_DRAW);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
-    GLint u_mvp = glGetUniformLocation(sh.handle(), "u_mvp");
-
-
-    tavros::core::timer tm;
+    // Обновляем часть буфера
+    glBindBuffer(GL_UNIFORM_BUFFER, big_ubo);
+    constexpr auto offset_in_ubo = 0;
+    //glBufferSubData(GL_UNIFORM_BUFFER, offset_in_ubo, sizeof(GlobalData), &global_data);
+    glBindBuffer(GL_UNIFORM_BUFFER, 0);
+    */
+    /*
+    glBindBufferRange(GL_UNIFORM_BUFFER, 0, big_ubo, offset_global, sizeof(GlobalData)); // binding = 0
+    glBindBufferRange(GL_UNIFORM_BUFFER, 1, big_ubo, offset_object, sizeof(ObjectData)); // binding = 1
+    */
 
     while (app->is_runing()) {
-        auto f_time = static_cast<float>(tm.elapsed<std::chrono::microseconds>()) / 1000000.0f;
-        if (f_time > 1.0f) {
-            f_time = 1.0f;
-        }
-        tm.start();
         app->poll_events();
 
-
+        glClearDepth(1.0);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT);
+        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        sh.use();
+        glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        auto vp = tavros::math::mat4::identity(); // cam.get_view_projection_matrix();
-        glUniformMatrix4fv(u_mvp, 1, true, vp.data());
+        comlist->bind_pipeline(pipeline);
+
+        auto binding = 0;
+        glActiveTexture(GL_TEXTURE0 + binding);
+        glBindTexture(GL_TEXTURE_2D, tex1.id);
+        glBindSampler(binding, sampler1.id);
+
+        glActiveTexture(GL_TEXTURE2);
+        glBindTexture(GL_TEXTURE_2D, tex2.id);
+        glBindSampler(2, sampler1.id);
 
         glBindVertexArray(vao);
-
-        glDrawArrays(GL_TRIANGLES, 0, 3);
-
-
-        if (key_state[k_up]) {
-            cam.move(cam.forward() * f_time * 4.0f);
-            logger.info("cam_pos: %s", tavros::core::make_string(cam.position(), 2).c_str());
-
-            logger.info("cam_vp: %s", tavros::core::make_string(vp, 2).c_str());
-        }
-
-        if (key_state[k_down]) {
-            cam.move(-cam.forward() * f_time * 4.0f);
-            logger.info("cam_pos: %s", tavros::core::make_string(cam.position(), 2).c_str());
-
-            logger.info("cam_vp: %s", tavros::core::make_string(vp, 2).c_str());
-        }
-
-        if (key_state[k_right]) {
-            cam.move(cam.right() * f_time * 4.0f);
-            logger.info("cam_pos: %s", tavros::core::make_string(cam.position(), 2).c_str());
-
-            logger.info("cam_vp: %s", tavros::core::make_string(vp, 2).c_str());
-        }
-
-        if (key_state[k_left]) {
-            cam.move(-cam.right() * f_time * 4.0f);
-            logger.info("cam_pos: %s", tavros::core::make_string(cam.position(), 2).c_str());
-
-            logger.info("cam_vp: %s", tavros::core::make_string(vp, 2).c_str());
-        }
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+        glBindVertexArray(0);
 
         context->swap_buffers();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
-
-    logger.info("Will exit.");
 
     return 0;
 }

@@ -221,7 +221,6 @@ void CG_DrawFlagModel(float x, float y, float w, float h, int32 team)
         return;
     }
     CG_Draw3DModel(x, y, w, h, handle, 0, origin, angles);
-    
 }
 
 /*
@@ -1062,7 +1061,7 @@ static void CG_DrawCenterString()
         return;
     }
 
-    constexpr auto time_to_show_central_messages = 3; // time to show messages to center screen
+    constexpr auto     time_to_show_central_messages = 3; // time to show messages to center screen
     tavros::math::vec4 fadeColor = CG_FadeColor(cg.centerPrintTime, 1000 * time_to_show_central_messages);
     if (fadeColor.x == 0.0f) {
         return;
