@@ -5,6 +5,7 @@
 
 namespace tavros::core
 {
+
     /**
      * @brief A simple timer class for measuring elapsed time with pause/unpause support.
      *
@@ -74,4 +75,5 @@ namespace tavros::core
         duration m_accumulated;
         bool     m_is_paused;
     };
+
 } // namespace tavros::core

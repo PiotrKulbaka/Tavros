@@ -1,5 +1,6 @@
 #pragma once
 
+#include <stdexcept>
 #include <initializer_list>
 #include <iterator>
 #include <array>
@@ -98,6 +99,11 @@ namespace tavros::core
             return rend();
         }
 
+        constexpr size_t size() const noexcept
+        {
+            return m_size;
+        }
+
         constexpr size_t max_size() const noexcept
         {
             return N;
@@ -183,7 +189,7 @@ namespace tavros::core
                 throw std::out_of_range("static_vector::emplace_back - capacity exceeded");
             }
 
-            // Перестраиваем элемент на месте (можно заменить на placement new при переходе к сырой памяти)
+            // пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ пїЅпїЅпїЅпїЅпїЅ (пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅ placement new пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅ пїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ)
             m_data[m_size] = T(std::forward<Args>(args)...);
             return m_data[m_size++];
         }
