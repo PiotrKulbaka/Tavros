@@ -40,6 +40,7 @@ namespace tavros::core
          */
         scoped_owner(value_type value, scope_exit_type exit)
             : m_value(std::move(value))
+            , m_has_value(true)
             , m_exit_callback(std::move(exit))
         {
         }
@@ -184,5 +185,26 @@ namespace tavros::core
         bool            m_has_value = false;
         scope_exit_type m_exit_callback;
     };
+
+    /**
+     * @brief Creates a scoped_owner instance, automatically deducing template parameters.
+     *
+     * This factory function constructs a scoped_owner that manages the given value with the specified
+     * scope exit callback. It enables template argument deduction, so you don't need to explicitly
+     * specify template parameters when creating a scoped_owner.
+     *
+     * @tparam T The type of the managed resource.
+     * @tparam ScopeExit The type of the scope exit callback (deleter).
+     *
+     * @param value The resource to manage.
+     * @param exit The callback to be invoked on destruction or cleanup.
+     *
+     * @return scoped_owner<T, ScopeExit> A new scoped_owner instance managing the resource.
+     */
+    template<class T, class ScopeExit>
+    scoped_owner<T, ScopeExit> make_scoped_owner(T value, ScopeExit exit)
+    {
+        return scoped_owner<T, ScopeExit>(std::move(value), std::move(exit));
+    }
 
 } // namespace tavros::core
