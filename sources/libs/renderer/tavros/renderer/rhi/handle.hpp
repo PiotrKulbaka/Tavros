@@ -14,15 +14,27 @@ namespace tavros::renderer
     struct sampler_tag
     {
     };
-    struct texture2d_tag
+    struct texture_tag
     {
     };
     struct pipeline_tag
     {
     };
+    struct framebuffer_tag
+    {
+    };
+    struct buffer_tag
+    {
+    };
+    struct geometry_binding_tag
+    {
+    };
 
     using sampler_handle = handle_base<sampler_tag>;
-    using texture2d_handle = handle_base<texture2d_tag>;
+    using texture_handle = handle_base<texture_tag>;
     using pipeline_handle = handle_base<pipeline_tag>;
+    using framebuffer_handle = handle_base<framebuffer_tag>;
+    using buffer_handle = handle_base<buffer_tag>;
+    using geometry_binding_handle = handle_base<geometry_binding_tag>;
 
 } // namespace tavros::renderer

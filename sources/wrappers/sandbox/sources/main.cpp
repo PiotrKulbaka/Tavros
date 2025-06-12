@@ -10,7 +10,6 @@
 #include <tavros/system/interfaces/application.hpp>
 #include <tavros/renderer/interfaces/gl_context.hpp>
 #include <tavros/renderer/camera/camera.hpp>
-#include <tavros/renderer/shader.hpp>
 
 #include <tavros/renderer/rhi/command_list.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
@@ -18,36 +17,45 @@
 #include <tavros/renderer/internal/backend/gl/gl_command_list.hpp>
 #include <tavros/renderer/internal/backend/gl/gl_graphics_device.hpp>
 
+#include <tavros/core/containers/static_vector.hpp>
+
 #include <glad/glad.h>
 
 #include <inttypes.h>
 
 #include <thread>
 
+#include <tavros/core/scoped_owner.hpp>
+
+#include <tavros/renderer/rhi/geometry_binding_desc.hpp>
+
 #include <stb/stb_image.h>
 
 float vertices[] = {
     // positions        // texcoords
-    0.0f, 0.5f, 0.0f, 0.0f, 0.0f,  // Top
-    -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // Left
-    0.5f, 0.0f, 0.0f, 1.0f, 0.0f,  // Right
+    0.0f, 0.5f, 0.0f, 0.0f, 0.0f, 1.0, 0.0, 0.0, 1.0,  // Top
+    -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0, 1.0, 0.0, 1.0, // Left
+    0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0, 0.0, 1.0, 1.0,  // Right
 
-    0.0f, -0.5f, 0.0f, 1.0f, 1.0f, // Bottom
-    -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, // Left
-    0.5f, 0.0f, 0.0f, 1.0f, 0.0f   // Right
+    0.0f, -0.5f, 0.0f, 1.0f, 1.0f, 1.0, 0.0, 1.0, 1.0, // Bottom
+    -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0, 1.0, 1.0, 1.0, // Left
+    0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0, 1.0, 0.0, 1.0,  // Right
 };
 
 const char* vertex_shader_source = R"(
 #version 420 core
 layout (location = 0) in vec3 a_pos;
 layout (location = 1) in vec2 a_uv;
+layout (location = 2) in vec4 a_color;
 
 out vec2 v_uv;
+out vec4 v_color;
 
 void main()
 {
     gl_Position = vec4(a_pos, 1.0);
     v_uv = a_uv;
+    v_color = a_color;
 }
 )";
 
@@ -56,24 +64,99 @@ const char* fragment_shader_source = R"(
 
 layout(binding = 0) uniform sampler2D u_tex1;
 layout(binding = 2) uniform sampler2D u_tex2;
+
 in vec2 v_uv;
+in vec4 v_color;
+
 out vec4 frag_color;
 
 void main()
 {
     vec4 top = texture(u_tex2, v_uv);
     vec4 bottom = texture(u_tex1, v_uv);
-    frag_color = bottom + top * (1.0 - bottom.a);
+    frag_color = mix(bottom + top * (1.0 - bottom.a), v_color, 0.5);
+}
+)";
+
+const char* vertex_shader_source2 = R"(
+#version 450 core
+
+layout(location = 0) in vec3 in_position;
+layout(location = 1) in vec2 in_uv;
+
+out vec2 frag_uv;
+
+void main()
+{
+    frag_uv = in_uv;
+    gl_Position = vec4(in_position, 1.0);
+}
+)";
+
+const char* fragment_shader_source2 = R"(
+#version 450 core
+
+in vec2 frag_uv;
+
+// Первый вывод — в GL_COLOR_ATTACHMENT0 (rgba8un)
+layout(location = 0) out vec4 out_color0;
+
+// Второй вывод — в GL_COLOR_ATTACHMENT1 (rgb32f)
+layout(location = 1) out vec3 out_color1;
+
+void main()
+{
+    // Просто градиенты для теста
+    out_color0 = vec4(frag_uv, 0.0, 1.0);              // RG в виде UV
+    out_color1 = vec3(frag_uv.x, frag_uv.y, 1.0);      // RGB float градиент
+}
+)";
+
+const char* vertex_shader_source_blit = R"(
+#version 450 core
+
+layout(location = 0) in vec3 in_position;
+layout(location = 1) in vec2 in_uv;
+
+out vec2 frag_uv;
+
+void main()
+{
+    frag_uv = in_uv;
+    gl_Position = vec4(in_position, 1.0);
+}
+)";
+
+const char* fragment_shader_source_blit = R"(
+#version 450 core
+
+in vec2 frag_uv;
+
+// Самый обычный вывод в экранный фреймбуфер (GL_BACK)
+out vec4 out_color;
+
+// Две текстуры, полученные из предыдущего прохода
+layout(binding = 0) uniform sampler2D tex0; // rgba8un
+layout(binding = 0) uniform sampler2D tex1; // rgb32f
+
+void main()
+{
+    vec4 color0 = texture(tex0, frag_uv); // из GL_COLOR_ATTACHMENT0
+    vec3 color1 = texture(tex1, frag_uv); // из GL_COLOR_ATTACHMENT1
+
+    // Пример комбинирования двух текстур: наложение и яркость
+    vec3 result_rgb = color0.rgb * 0.5 + color1.rgb * 0.5;
+    out_color = vec4(result_rgb, 1.0);
 }
 )";
 
 
-void* load_pixels_from_file(const char* filename, int32& w, int32& h, int32& c)
+uint8* load_pixels_from_file(const char* filename, int32& w, int32& h, int32& c)
 {
-    return static_cast<void*>(stbi_load(filename, &w, &h, &c, STBI_rgb_alpha));
+    return static_cast<uint8*>(stbi_load(filename, &w, &h, &c, STBI_rgb_alpha));
 }
 
-void free_pixels(void* p)
+void free_pixels(uint8* p)
 {
     stbi_image_free(p);
 }
@@ -121,31 +204,100 @@ int main()
     ppl.rasterizer.cull = tavros::renderer::cull_face::off;
     ppl.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
 
-
     auto gdevice = tavros::core::make_shared<tavros::renderer::gl_graphics_device>();
     auto comlist = tavros::core::make_shared<tavros::renderer::gl_command_list>(gdevice.get());
 
 
-    tavros::renderer::texture2d_desc tex_desc;
+    tavros::renderer::texture_desc tex_desc;
 
     int32 w, h, c;
-    void* pixels = load_pixels_from_file("D:\\Work\\q3pp_res\\baseq3\\textures\\base_support\\x_support3.tga", w, h, c);
-    tex_desc.data = pixels;
+    auto* pixels = load_pixels_from_file("D:\\Work\\q3pp_res\\baseq3\\textures\\base_support\\x_support3.tga", w, h, c);
     tex_desc.width = w;
     tex_desc.height = h;
     tex_desc.mip_levels = 1;
 
-    auto tex1 = gdevice->create_texture(tex_desc);
+    auto tex1 = gdevice->create_texture(tex_desc, pixels);
     free_pixels(pixels);
 
     pixels = load_pixels_from_file("D:\\Work\\q3pp_res\\baseq3\\textures\\base_wall\\metalfloor_wall_14_specular.tga", w, h, c);
-    tex_desc.data = pixels;
     tex_desc.width = w;
     tex_desc.height = h;
     tex_desc.mip_levels = 1;
 
-    auto tex2 = gdevice->create_texture(tex_desc);
+    auto tex2 = gdevice->create_texture(tex_desc, pixels);
     free_pixels(pixels);
+
+
+    tavros::renderer::texture_desc atch_desc;
+    atch_desc.width = 1280;
+    atch_desc.height = 720;
+    atch_desc.format = tavros::renderer::pixel_format::rgba8un;
+    auto atch1 = gdevice->create_texture(atch_desc);
+
+    atch_desc.format = tavros::renderer::pixel_format::rgb32f;
+    auto atch2 = gdevice->create_texture(atch_desc);
+
+    atch_desc.format = tavros::renderer::pixel_format::depth24_stencil8;
+    auto atch_ds = gdevice->create_texture(atch_desc);
+
+    tavros::renderer::framebuffer_desc fb_desc;
+    fb_desc.width = 1280;
+    fb_desc.height = 720;
+    fb_desc.color_attachments.push_back(
+        {tavros::renderer::pixel_format::rgba8un,
+         tavros::renderer::load_op::clear,
+         tavros::renderer::store_op::store,
+         {1.0f, 0.0f, 0.0f, 1.0f}}
+    );
+
+    fb_desc.color_attachments.push_back(
+        {tavros::renderer::pixel_format::rgb32f,
+         tavros::renderer::load_op::clear,
+         tavros::renderer::store_op::store,
+         {1.0f, 1.0f, 1.0f, 0.0f}}
+    );
+
+    fb_desc.depth_stencil_attachment = {
+        tavros::renderer::pixel_format::depth24_stencil8,
+        tavros::renderer::load_op::clear,
+        tavros::renderer::store_op::dont_care,
+        1.0f,
+        0
+    };
+
+
+    tavros::renderer::texture_handle attachments[] = {atch1, atch2};
+
+    auto fb = gdevice->create_framebuffer(fb_desc, attachments, atch_ds);
+
+
+    tavros::renderer::pipeline_desc pipeline_d;
+
+    pipeline_d.shaders.fragment_source = fragment_shader_source;
+    pipeline_d.shaders.vertex_source = vertex_shader_source;
+
+    pipeline_d.depth_stencil.depth_test_enable = true;
+    pipeline_d.depth_stencil.depth_write_enable = true;
+    pipeline_d.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
+
+    pipeline_d.rasterizer.cull = tavros::renderer::cull_face::off;
+    pipeline_d.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
+
+    auto pipeline2 = gdevice->create_pipeline(pipeline_d);
+
+
+    tavros::renderer::pipeline_desc ppl_blit;
+
+    ppl_blit.shaders.fragment_source = fragment_shader_source_blit;
+    ppl_blit.shaders.vertex_source = vertex_shader_source_blit;
+
+    ppl_blit.depth_stencil.depth_test_enable = false;
+    ppl_blit.depth_stencil.depth_write_enable = false;
+
+    ppl_blit.rasterizer.cull = tavros::renderer::cull_face::off;
+    ppl_blit.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
+
+    auto pipeline_blit = gdevice->create_pipeline(ppl_blit);
 
 
     tavros::renderer::sampler_desc samler_desc;
@@ -157,42 +309,26 @@ int main()
     auto pipeline = gdevice->create_pipeline(ppl);
 
 
-    GLuint vao, vbo;
-    glGenVertexArrays(1, &vao);
-    glGenBuffers(1, &vbo);
+    namespace r = tavros::renderer;
+    r::buffer_desc bd;
+    bd.size = sizeof(vertices);
+    bd.usage = r::buffer_usage::vertex;
 
-    glBindVertexArray(vao);
+    auto buffer1 = gdevice->create_buffer(bd, (uint8*) vertices, sizeof(vertices));
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbo);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*) 0);
-    glEnableVertexAttribArray(0);
+    r::geometry_binding_desc gbd;
+    gbd.layout.attributes.push_back({3, r::attribute_format::f32, false});
+    gbd.layout.attributes.push_back({2, r::attribute_format::f32, false});
+    gbd.layout.attributes.push_back({4, r::attribute_format::f32, false});
+    gbd.attribute_mapping.push_back({0, 0});
+    gbd.attribute_mapping.push_back({0, 4 * 3});
+    gbd.attribute_mapping.push_back({0, 4 * 3 + 4 * 2});
+    gbd.buffer_mapping.push_back({0, 0, 4 * 9});
 
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*) (3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    glBindVertexArray(0);
-
-    // Создаём один UBO
-    /*constexpr size_t k_big_ubo_size = 4096;
-    GLuint big_ubo;
-    glGenBuffers(1, &big_ubo);
-    glBindBuffer(GL_UNIFORM_BUFFER, big_ubo);
-    glBufferData(GL_UNIFORM_BUFFER, k_big_ubo_size, nullptr, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-    // Обновляем часть буфера
-    glBindBuffer(GL_UNIFORM_BUFFER, big_ubo);
-    constexpr auto offset_in_ubo = 0;
-    //glBufferSubData(GL_UNIFORM_BUFFER, offset_in_ubo, sizeof(GlobalData), &global_data);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-    */
-    /*
-    glBindBufferRange(GL_UNIFORM_BUFFER, 0, big_ubo, offset_global, sizeof(GlobalData)); // binding = 0
-    glBindBufferRange(GL_UNIFORM_BUFFER, 1, big_ubo, offset_object, sizeof(ObjectData)); // binding = 1
-    */
+    r::buffer_handle buffers_to_binding[] = {buffer1};
+    auto             geometry1 = gdevice->create_geometry(gbd, buffers_to_binding);
 
     while (app->is_runing()) {
         app->poll_events();
@@ -206,6 +342,8 @@ int main()
 
         comlist->bind_pipeline(pipeline);
 
+        comlist->bind_geometry(geometry1);
+
         auto binding = 0;
         glActiveTexture(GL_TEXTURE0 + binding);
         glBindTexture(GL_TEXTURE_2D, tex1.id);
@@ -215,9 +353,9 @@ int main()
         glBindTexture(GL_TEXTURE_2D, tex2.id);
         glBindSampler(2, sampler1.id);
 
-        glBindVertexArray(vao);
+        // glBindVertexArray(vao);
         glDrawArrays(GL_TRIANGLES, 0, 6);
-        glBindVertexArray(0);
+        // glBindVertexArray(0);
 
         context->swap_buffers();
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

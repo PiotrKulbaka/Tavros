@@ -31,38 +31,36 @@ namespace tavros::renderer
         texture_usage::shader_resource | texture_usage::transfer_dst | texture_usage::cpu_write;
 
     /**
-     * Describes the properties of a 2D texture to be created by the renderer.
-     * Includes pixel format, dimensions, mipmapping, array layers, sample count for MSAA, usage flags, and optional initial data.
-     * This structure is passed to the texture creation function in the rendering backend.
+     * Describes properties of a texture to be created by the renderer.
+     * This includes pixel format, dimensions, usage, mipmaps, array layers, and multisampling.
+     * This struct is passed to the backend texture creation function.
      */
-    struct texture2d_desc
+    struct texture_desc
     {
-        /// Format of texture pixels (color channels and bit depth)
+        /// Pixel format defining color channels, bit depth, and data layout
         pixel_format format = pixel_format::rgba8un;
 
-        /// Width of the texture in pixels
+        /// Texture width in pixels. Must be > 0
         uint32 width = 0;
 
-        /// Height of the texture in pixels
+        /// Texture height in pixels. Must be > 0
         uint32 height = 0;
 
-        /// Number of mipmap levels (1 means no mipmaps)
-        uint32 mip_levels = 1;
+        /// Texture depth (for 3D textures). Must be > 1 for 3D, else 1
+        uint32 depth = 1;
 
-        /// Number of array layers (1 for regular 2D texture, >1 for texture arrays)
-        uint32 array_layers = 1;
-
-        /// Number of samples per pixel for multisampling (1 = no MSAA)
-        uint32 sample_count = 1;
-
-        /// Flags specifying intended usage scenarios of the texture
+        /// Bit flags describing allowed usage patterns of this texture (e.g., sampled, render target)
+        /// Used by renderer to optimize memory and access
         core::flags<texture_usage> usage = k_default_texture_usage;
 
-        /// Pointer to initial pixel data (can be nullptr if no initial data)
-        void* data = nullptr;
+        /// Number of mipmap levels, 1 indicates no mipmaps
+        uint32 mip_levels = 1;
 
-        /// Number of bytes per row (scanline) in the data buffer (can be 0 for auto-compute)
-        uint32 stride = 0;
+        ///  Number of array layers (for texture arrays). 1 means a single texture, must be >= 1
+        uint32 array_layers = 1;
+
+        /// Number of samples per pixel for multisampling (MSAA) (1 = no MSAA). Must be a power of two where supported
+        uint32 sample_count = 1;
     };
 
 } // namespace tavros::renderer

@@ -1,11 +1,12 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/flags.hpp>
-#include <tavros/core/containers/array.hpp>
+#include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/compare_op.hpp>
 #include <tavros/renderer/rhi/pixel_format.hpp>
+#include <tavros/renderer/rhi/vertex_layout.hpp>
+#include <tavros/renderer/rhi/limits.hpp>
 
 namespace tavros::renderer
 {
@@ -20,58 +21,6 @@ namespace tavros::renderer
 
         /// Source code for the fragment shader stage.
         core::string_view fragment_source;
-    };
-
-
-    /**
-     * Describes the data type of a single vertex attribute component.
-     * This defines how the GPU will interpret the raw vertex data in memory.
-     */
-    enum class attribute_format : uint8
-    {
-        u8,  /// Unsigned 8-bit integer vertex component format
-        i8,  /// Signed 8-bit integer vertex format
-        u16, /// Unsigned 16-bit integer vertex format
-        i16, /// Signed 16-bit integer vertex format
-        u32, /// Unsigned 32-bit integer vertex format
-        i32, /// Signed 32-bit integer vertex format
-        f16, /// 16-bit half-precision float vertex format
-        f32, /// 32-bit IEEE float vertex format
-    };
-
-    /**
-     * Defines the layout of a single vertex attribute in a vertex buffer.
-     * Used to describe how vertex data should be read and interpreted by the GPU vertex shader.
-     */
-    struct vertex_attribute
-    {
-        /// Number of components (e.g. 1 for scalar, 2 for vec2, 3 for vec3 and 4 for vec4)
-        uint8 size = 1;
-
-        /// Data format of each component
-        attribute_format format = attribute_format::f32;
-
-        /// If true, integer data will be normalized to [0,1] or [-1,1] (only valid for integer formats)
-        bool normalize = false;
-
-        /// Byte offset from start of vertex to this attribute, 0 = tightly packed
-        uint32 offset = 0;
-    };
-
-    /**
-     * Describes the layout of vertex data in a vertex buffer.
-     * Used to describe how vertex data should be read and interpreted by the GPU vertex shader.
-     */
-    struct vertex_layout
-    {
-        /// List of vertex attributes (max 16 attributes per vertex)
-        core::array<vertex_attribute, 16> attributes;
-
-        /// Number of vertex attributes
-        uint32 attributes_count = 0;
-
-        /// Byte distance to the next vertex in the buffer (0 = tightly packed)
-        uint32 stride = 0;
     };
 
 
@@ -171,7 +120,7 @@ namespace tavros::renderer
     struct blend_attachment
     {
         /// Blend states for each render target
-        core::array<blend_state, 8> blend_states;
+        core::static_vector<blend_state, k_max_color_attachments> blend_states;
 
         /// Number of blend states
         uint8 blend_state_count = 0;
@@ -321,7 +270,7 @@ namespace tavros::renderer
      */
     struct multisample_state
     {
-        ///  Number of samples per pixel should be 1, 2, 4, 8, or 16
+        ///  Number of samples per pixel should be 1 (no MSAA), 2, 4, 8, or 16
         uint8 sample_count = 1;
 
         /// Enables or disables sample shading (rendering with a shader for each sample)
@@ -337,7 +286,7 @@ namespace tavros::renderer
     struct render_targets
     {
         /// Color attachment formats
-        core::array<pixel_format, 8> color_formats;
+        core::static_vector<pixel_format, k_max_color_attachments> color_formats;
 
         /// Number of color attachments
         uint8 color_target_count = 0;

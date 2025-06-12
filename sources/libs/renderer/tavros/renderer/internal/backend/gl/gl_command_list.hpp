@@ -12,9 +12,11 @@ namespace tavros::renderer
         gl_command_list(gl_graphics_device* device);
         ~gl_command_list() override;
 
-        void bind_sampler(uint32 slot, sampler_handle sampler) override;
-        void bind_texture(uint32 slot, texture2d_handle texture) override;
         void bind_pipeline(pipeline_handle pipeline) override;
+
+        void bind_framebuffer(framebuffer_handle handle) override;
+
+        void bind_geometry(geometry_binding_handle geometry_binding) override;
 
     private:
         gl_graphics_device* m_device = nullptr;

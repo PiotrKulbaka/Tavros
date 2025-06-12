@@ -10,12 +10,12 @@ namespace tavros::renderer
      */
     enum class primitive_type : uint8
     {
-        points,
-        lines,
-        line_strip,
-        triangles,
-        triangle_strip,
-        triangle_fan,
+        points,         /// Points, each vertex is a point
+        lines,          /// Lines, each 2 vertices define a line
+        line_strip,     /// Line strip, each vertex is connected to the previous one
+        triangles,      /// Triangles, each 3 vertices define a triangle
+        triangle_strip, /// Triangle strip each vertex is connected to the previous two
+        triangle_fan,   /// Triangle fan, each vertex is connected to the first vertex
     };
 
 } // namespace tavros::renderer

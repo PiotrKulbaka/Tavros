@@ -27,6 +27,8 @@ namespace tavros::renderer
      */
     enum class pixel_format : uint8
     {
+        none = 0,          /// No texture format
+
         r8un,              /// 8-bit R channel, unsigned normalized [0, 1]
         r8in,              /// 8-bit R channel, signed normalized [-1, 1]
         r16un,             /// 16-bit R channel, unsigned normalized [0, 1]
@@ -87,6 +89,7 @@ namespace tavros::renderer
         depth16,           /// 16-bit depth, fixed-point [0, 1]
         depth24,           /// 24-bit depth, fixed-point [0, 1]
         depth32f,          /// 32-bit depth, IEEE float
+        stencil8,          /// 8-bit stencil
         depth24_stencil8,  /// Packed 24-bit depth + 8-bit stencil
         depth32f_stencil8, /// Packed 32-bit float depth + 8-bit stencil
     };

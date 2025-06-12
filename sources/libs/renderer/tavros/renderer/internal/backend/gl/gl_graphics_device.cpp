@@ -1,9 +1,8 @@
 #include <tavros/renderer/internal/backend/gl/gl_graphics_device.hpp>
 
+#include <tavros/core/scoped_owner.hpp>
 #include <tavros/core/prelude.hpp>
-#include <atomic>
 
-#include <glad/glad.h>
 
 using namespace tavros::renderer;
 
@@ -135,6 +134,8 @@ namespace
             return {GL_DEPTH_COMPONENT24, GL_DEPTH_COMPONENT, GL_UNSIGNED_INT, 4};
         case pixel_format::depth32f:
             return {GL_DEPTH_COMPONENT32F, GL_DEPTH_COMPONENT, GL_FLOAT, 4};
+        case pixel_format::stencil8:
+            return {GL_STENCIL_INDEX8, GL_STENCIL_INDEX, GL_UNSIGNED_BYTE, 1};
         case pixel_format::depth24_stencil8:
             return {GL_DEPTH24_STENCIL8, GL_DEPTH_STENCIL, GL_UNSIGNED_INT_24_8, 4};               // packed
         case pixel_format::depth32f_stencil8:
@@ -142,6 +143,141 @@ namespace
 
         default:
             TAV_UNREACHABLE();
+        }
+    }
+
+    bool is_color_fromat(pixel_format format)
+    {
+        switch (format) {
+        case pixel_format::r8un:
+            return true;
+        case pixel_format::r16un:
+            return true;
+        case pixel_format::rg8un:
+            return true;
+        case pixel_format::rg16un:
+            return true;
+        case pixel_format::rgb8un:
+            return true;
+        case pixel_format::rgb16un:
+            return true;
+        case pixel_format::rgba8un:
+            return true;
+        case pixel_format::rgba16un:
+            return true;
+
+        case pixel_format::r8in:
+            return true;
+        case pixel_format::r16in:
+            return true;
+        case pixel_format::rg8in:
+            return true;
+        case pixel_format::rg16in:
+            return true;
+        case pixel_format::rgb8in:
+            return true;
+        case pixel_format::rgb16in:
+            return true;
+        case pixel_format::rgba8in:
+            return true;
+        case pixel_format::rgba16in:
+            return true;
+
+        case pixel_format::r8u:
+            return true;
+        case pixel_format::r16u:
+            return true;
+        case pixel_format::r32u:
+            return true;
+        case pixel_format::rg8u:
+            return true;
+        case pixel_format::rg16u:
+            return true;
+        case pixel_format::rg32u:
+            return true;
+        case pixel_format::rgb8u:
+            return true;
+        case pixel_format::rgb16u:
+            return true;
+        case pixel_format::rgb32u:
+            return true;
+        case pixel_format::rgba8u:
+            return true;
+        case pixel_format::rgba16u:
+            return true;
+        case pixel_format::rgba32u:
+            return true;
+
+        case pixel_format::r8i:
+            return true;
+        case pixel_format::r16i:
+            return true;
+        case pixel_format::r32i:
+            return true;
+        case pixel_format::rg8i:
+            return true;
+        case pixel_format::rg16i:
+            return true;
+        case pixel_format::rg32i:
+            return true;
+        case pixel_format::rgb8i:
+            return true;
+        case pixel_format::rgb16i:
+            return true;
+        case pixel_format::rgb32i:
+            return true;
+        case pixel_format::rgba8i:
+            return true;
+        case pixel_format::rgba16i:
+            return true;
+        case pixel_format::rgba32i:
+            return true;
+
+        case pixel_format::r16f:
+            return true;
+        case pixel_format::r32f:
+            return true;
+        case pixel_format::rg16f:
+            return true;
+        case pixel_format::rg32f:
+            return true;
+        case pixel_format::rgb16f:
+            return true;
+        case pixel_format::rgb32f:
+            return true;
+        case pixel_format::rgba16f:
+            return true;
+        case pixel_format::rgba32f:
+            return true;
+        default:
+            return false;
+        }
+    }
+
+    struct gl_depth_stencil_format
+    {
+        bool   is_depth_stencil_format;
+        GLenum depth_stencil_attachment_type;
+    };
+
+    gl_depth_stencil_format to_depth_stencil_fromat(pixel_format format)
+    {
+        switch (format) {
+        case pixel_format::depth16:
+            return {true, GL_DEPTH_ATTACHMENT};
+        case pixel_format::depth24:
+            return {true, GL_DEPTH_ATTACHMENT};
+        case pixel_format::depth32f:
+            return {true, GL_DEPTH_ATTACHMENT};
+        case pixel_format::stencil8:
+            return {true, GL_STENCIL_ATTACHMENT};
+        case pixel_format::depth24_stencil8:
+            return {true, GL_DEPTH_STENCIL_ATTACHMENT};
+        case pixel_format::depth32f_stencil8:
+            return {true, GL_DEPTH_STENCIL_ATTACHMENT};
+
+        default:
+            return {false, 0};
         }
     }
 
@@ -315,7 +451,7 @@ namespace
         uint32 size;
     };
 
-    format_info to_gl_type(attribute_format format)
+    format_info to_gl_attribute_format(attribute_format format)
     {
         switch (format) {
         case attribute_format::u8:
@@ -375,51 +511,90 @@ namespace tavros::renderer
 
     sampler_handle gl_graphics_device::create_sampler(const sampler_desc& desc)
     {
-        GLuint sampler = 0;
-        glGenSamplers(1, &sampler);
+        gl_sampler sampler{desc, 0};
+
+        glGenSamplers(1, &sampler.sampler_obj);
 
         auto filter = to_gl_filter(desc.filter);
 
         // Filtering
-        glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, filter.min_filter);
-        glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
+        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_MIN_FILTER, filter.min_filter);
+        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
 
         // Wrapping
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(desc.wrap_mode.wrap_s));
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(desc.wrap_mode.wrap_t));
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(desc.wrap_mode.wrap_r));
+        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(desc.wrap_mode.wrap_s));
+        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(desc.wrap_mode.wrap_t));
+        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(desc.wrap_mode.wrap_r));
 
         // LOD parameters
-        glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, desc.mip_lod_bias);
-        glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, desc.min_lod);
-        glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, desc.max_lod);
+        glSamplerParameterf(sampler.sampler_obj, GL_TEXTURE_LOD_BIAS, desc.mip_lod_bias);
+        glSamplerParameterf(sampler.sampler_obj, GL_TEXTURE_MIN_LOD, desc.min_lod);
+        glSamplerParameterf(sampler.sampler_obj, GL_TEXTURE_MAX_LOD, desc.max_lod);
 
         // Depth compare
         if (desc.depth_compare != compare_op::off) {
-            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(desc.depth_compare));
+            glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+            glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(desc.depth_compare));
         } else {
-            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+            glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         }
 
-        sampler_handle handle;
-        handle.id = sampler;
-        return handle;
+        return {m_samplers.insert(sampler)};
     }
 
     void gl_graphics_device::destroy_sampler(sampler_handle handle)
     {
-        glDeleteSamplers(1, &handle.id);
+        if (auto* desc = m_samplers.try_get(handle.id)) {
+            glDeleteSamplers(1, &desc->sampler_obj);
+            m_samplers.remove(handle.id);
+        } else {
+            ::logger.error("Can't find sampler with id %d", handle.id);
+        }
     }
 
-    texture2d_handle gl_graphics_device::create_texture(const texture2d_desc& desc)
+    texture_handle gl_graphics_device::create_texture(
+        const texture_desc& desc,
+        const uint8*        pixels,
+        uint32              stride
+    )
     {
+        gl_texture texture{desc, 0};
+
+        // Validate texture width/height
+        if (desc.width == 0 || desc.height == 0) {
+            ::logger.error("Texture width and height must be greater than zero");
+            return {0};
+        }
+
+        // Validate texture depth
+        if (desc.depth == 0) {
+            ::logger.error("Texture depth must be at least 1");
+            return {0};
+        } else if (desc.depth != 1) {
+            ::logger.error("Texture depth support is only 2D textures");
+            return {0};
+        }
+
+        // Validate texture array layers
+        if (desc.array_layers == 0) {
+            ::logger.error("Texture array_layers must be at least 1");
+            return {0};
+        } else if (desc.array_layers != 1) {
+            ::logger.error("Texture array_layers support is only for single layer textures");
+            return {0};
+        }
+
+        if (desc.mip_levels == 0) {
+            ::logger.error("Texture mip_levels must be at least 1");
+            return {0};
+        }
+
+
         auto   is_multisample = desc.sample_count > 1;
         GLenum target = is_multisample ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
-        GLuint texture;
 
-        glGenTextures(1, &texture);
-        glBindTexture(target, texture);
+        glGenTextures(1, &texture.texture_obj);
+        glBindTexture(target, texture.texture_obj);
 
         auto f = to_gl_internal_format(desc.format);
 
@@ -435,17 +610,19 @@ namespace tavros::renderer
 
             if (desc.mip_levels != 1) {
                 ::logger.error("multisample textures can't have mipmaps");
-                TAV_ASSERT(false);
+                glDeleteTextures(1, &texture.texture_obj);
+                return {0};
             }
 
-            if (desc.data != nullptr) {
+            if (pixels != nullptr) {
                 ::logger.error("multisample textures can't have initial data");
-                TAV_ASSERT(false);
+                glDeleteTextures(1, &texture.texture_obj);
+                return {0};
             }
         } else {
-            if (desc.stride != 0) {
+            if (stride != 0) {
                 // Set the row length to match the stride
-                uint32 row_length_in_pixels = desc.stride / f.bytes;
+                uint32 row_length_in_pixels = stride / f.bytes;
                 glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_in_pixels);
             }
 
@@ -460,7 +637,7 @@ namespace tavros::renderer
                 0, // border
                 f.format,
                 f.type,
-                desc.data
+                pixels
             );
 
             // Set the default alignment
@@ -468,57 +645,395 @@ namespace tavros::renderer
             glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
             // Generate mipmaps
-            if (desc.mip_levels > 1 && desc.data != nullptr) {
+            if (desc.mip_levels > 1 && pixels != nullptr) {
                 glGenerateMipmap(target);
             }
         }
 
         glBindTexture(target, 0);
 
-        texture2d_handle handle;
-        handle.id = texture;
-        return handle;
+        return {m_textures.insert(texture)};
     }
 
-    void gl_graphics_device::destroy_texture(texture2d_handle texture)
+    void gl_graphics_device::destroy_texture(texture_handle handle)
     {
-        glDeleteTextures(1, &texture.id);
+        if (auto* desc = m_textures.try_get(handle.id)) {
+            glDeleteTextures(1, &desc->texture_obj);
+            m_textures.remove(handle.id);
+        } else {
+            ::logger.error("Can't find texture with id %d", handle.id);
+        }
     }
 
     pipeline_handle gl_graphics_device::create_pipeline(const pipeline_desc& desc)
     {
-        gl_pipeline pipeline;
-        pipeline.desc = desc;
-
-        static std::atomic<uint32> id = 1;
+        gl_pipeline pipeline{desc, 0};
 
         // create shader program
         auto v = compile_shader(desc.shaders.vertex_source, GL_VERTEX_SHADER);
         auto f = compile_shader(desc.shaders.fragment_source, GL_FRAGMENT_SHADER);
+
+        // Validate shaders
+        if (v == 0) {
+            ::logger.error("Can't compile vertex shader");
+            return {0};
+        }
+        if (f == 0) {
+            ::logger.error("Can't compile fragment shader");
+            glDeleteShader(v);
+            return {0};
+        }
+
+        // Validate program
         auto p = link_program(v, f);
+        if (p == 0) {
+            ::logger.error("Can't link program");
+            glDeleteShader(v);
+            glDeleteShader(f);
+            return {0};
+        }
+
+        // Everything is ok
         glDeleteShader(v);
         glDeleteShader(f);
-        pipeline.program = p;
-        ::logger.info("Shader successfully created");
+        pipeline.program_obj = p;
 
-        m_pipelines[id] = pipeline;
+        // create pipeline
+        pipeline_handle handle = {m_pipelines.insert(pipeline)};
 
-        pipeline_handle handle;
-        handle.id = id;
-        id++;
+        ::logger.debug("Pipeline with id %u created", handle.id);
+
         return handle;
     }
 
-    void gl_graphics_device::destroy_pipeline(pipeline_handle pipeline)
+    void gl_graphics_device::destroy_pipeline(pipeline_handle handle)
     {
-        auto id = pipeline.id;
-        if (auto it = m_pipelines.find(id); it != m_pipelines.end()) {
-            if (it->second.program != 0) {
-                glDeleteProgram(it->second.program);
-            }
-            m_pipelines.erase(it);
+        if (auto* desc = m_pipelines.try_get(handle.id)) {
+            glDeleteProgram(desc->program_obj);
+            m_pipelines.remove(handle.id);
         } else {
-            ::logger.error("Can't find pipeline with id %d", id);
+            ::logger.error("Can't find pipeline with id %d", handle.id);
+        }
+    }
+
+    framebuffer_handle gl_graphics_device::create_framebuffer(
+        const framebuffer_desc&                desc,
+        const core::span<const texture_handle> color_attachments,
+        core::optional<texture_handle>         depth_stencil_attachment
+    )
+    {
+        GLuint fbo;
+        glGenFramebuffers(1, &fbo);
+
+        ::logger.debug("OpenGL Framebuffer object with id %u created", fbo);
+
+        // Scope for framebuffer deletion if something goes wrong
+        auto fbo_owner = core::make_scoped_owner(fbo, [](GLuint id) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDeleteFramebuffers(1, &id);
+            ::logger.debug("OpenGL Framebuffer object with id %u deleted", id);
+        });
+
+        // Bind framebuffer and attach textures
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
+        // Validate attachments size
+        if (color_attachments.size() != desc.color_attachments.size()) {
+            ::logger.error("Incorrect number of attachments");
+            return {0};
+        }
+
+        // Validate attachments
+        core::static_vector<gl_texture*, 8> textures;
+        for (uint32 i = 0; i < textures.size(); ++i) {
+            auto attachment = color_attachments[i];
+            if (auto* tex = m_textures.try_get(attachment.id)) {
+                if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
+                    ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", desc.width, desc.height, tex->desc.width, tex->desc.height);
+                    return {0};
+                }
+
+                if (!is_color_fromat(desc.color_attachments[i].format)) {
+                    ::logger.error("Unsupported color format");
+                    return {0};
+                }
+
+                if (tex->desc.format != desc.color_attachments[i].format) {
+                    ::logger.error("Invalid attachment format");
+                    return {0};
+                }
+
+                textures.push_back(tex);
+            } else {
+                ::logger.error("Can't find texture with id %d", attachment.id);
+                return {0};
+            }
+        }
+
+        // Attach depth/stencil texture to the framebuffer
+        if (desc.depth_stencil_attachment.format != pixel_format::none) {
+            auto gl_format = to_depth_stencil_fromat(desc.depth_stencil_attachment.format);
+            if (gl_format.is_depth_stencil_format) {
+                if (!depth_stencil_attachment.has_value()) {
+                    ::logger.error("Has no depth/stencil attachment");
+                    return {0};
+                }
+                auto depth_stencil_attachment_value = depth_stencil_attachment.value();
+
+                if (auto* tex = m_textures.try_get(depth_stencil_attachment_value.id)) {
+                    // Validate depth/stencil size
+                    if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
+                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", desc.width, desc.height, tex->desc.width, tex->desc.height);
+                        return {0};
+                    }
+
+                    // Validate depth/stencil format
+                    if (tex->desc.format != desc.depth_stencil_attachment.format) {
+                        ::logger.error("Invalid depth/stencil attachment format");
+                        return {0};
+                    }
+
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, GL_TEXTURE_2D, tex->texture_obj, 0);
+                } else {
+                    ::logger.error("Can't find texture with id %d");
+                    return {0};
+                }
+            } else {
+                ::logger.error("Unsupported depth/stencil format");
+                return {0};
+            }
+        }
+
+        // Attach textures to the framebuffer
+        core::static_vector<GLenum, 8> draw_buffers;
+        for (uint32 i = 0; i < textures.size(); ++i) {
+            glBindTexture(GL_TEXTURE_2D, textures[i]->texture_obj);
+            GLenum attachment_type = GL_COLOR_ATTACHMENT0 + i;
+            draw_buffers.push_back(attachment_type);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_type, GL_TEXTURE_2D, textures[i]->texture_obj, 0);
+        }
+
+        if (draw_buffers.size() == 0) {
+            // Drawing only onto depth/stencil buffer
+            // Framebuffer will be incomplete if the depth/stencil texture is not attached
+            glDrawBuffer(GL_NONE);
+            glReadBuffer(GL_NONE);
+        } else {
+            // Drawing onto color attachments
+            glDrawBuffers(draw_buffers.size(), draw_buffers.data());
+        }
+
+        // Validate framebuffer
+        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+            ::logger.error("Framebuffer is not complete");
+            return {0};
+        }
+
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
+        framebuffer_handle handle = {m_framebuffers.insert({desc, fbo_owner.release()})};
+        ::logger.debug("Framebuffer with id %u created", handle.id);
+        return handle;
+    }
+
+    void gl_graphics_device::destroy_framebuffer(framebuffer_handle framebuffer)
+    {
+        if (auto* desc = m_framebuffers.try_get(framebuffer.id)) {
+            glDeleteFramebuffers(1, &desc->framebuffer_obj);
+            ::logger.debug("OpenGL Framebuffer object with id %u deleted", desc->framebuffer_obj);
+            m_framebuffers.remove(framebuffer.id);
+        } else {
+            ::logger.error("Can't find framebuffer with id %d", framebuffer.id);
+        }
+    }
+
+    buffer_handle gl_graphics_device::create_buffer(
+        const buffer_desc& desc,
+        const uint8*       data,
+        uint64             size
+    )
+    {
+        GLenum gl_target = 0;
+        switch (desc.usage) {
+        case buffer_usage::vertex:
+            gl_target = GL_ARRAY_BUFFER;
+            break;
+        case buffer_usage::index:
+            gl_target = GL_ELEMENT_ARRAY_BUFFER;
+            break;
+        case buffer_usage::uniform:
+            gl_target = GL_UNIFORM_BUFFER;
+            break;
+        default:
+            ::logger.error("Unknown buffer usage");
+            return {0};
+        }
+
+        GLenum gl_usage = 0;
+        switch (desc.access) {
+        case buffer_access::gpu_only:
+            gl_usage = GL_STATIC_DRAW;
+            break;
+        case buffer_access::cpu_to_gpu:
+            gl_usage = GL_DYNAMIC_DRAW;
+            break;
+        case buffer_access::gpu_to_cpu:
+            gl_usage = GL_DYNAMIC_READ;
+            break;
+        default:
+            ::logger.error("Unknown buffer access");
+            return {0};
+        }
+
+        GLuint bo;
+        glGenBuffers(1, &bo);
+        ::logger.debug("OpenGL Buffer object with id %u created", bo);
+
+        glBindBuffer(gl_target, bo);
+
+        if (data != nullptr) {
+            glBufferData(gl_target, static_cast<GLsizeiptr>(size), data, gl_usage);
+        }
+
+        glBindBuffer(gl_target, 0); // Unbind for safety
+
+        buffer_handle handle = {m_buffers.insert({desc, bo})};
+        ::logger.debug("Buffer with id %u created", handle.id);
+        return handle;
+    }
+
+    void gl_graphics_device::destroy_buffer(buffer_handle buffer)
+    {
+        if (auto* desc = m_buffers.try_get(buffer.id)) {
+            glDeleteBuffers(1, &desc->buffer_obj);
+            ::logger.debug("OpenGL Buffer object with id %u deleted", desc->buffer_obj);
+            m_buffers.remove(buffer.id);
+        } else {
+            ::logger.error("Can't find buffer with id %d", buffer.id);
+        }
+    }
+
+    geometry_binding_handle gl_graphics_device::create_geometry(
+        const geometry_binding_desc&          desc,
+        const core::span<const buffer_handle> vertex_buffers,
+        core::optional<buffer_handle>         index_buffer
+    )
+    {
+        // Validate desc
+        if (desc.layout.attributes.size() != desc.attribute_mapping.size()) {
+            ::logger.error("Invalid vertex attribute mapping size");
+            return {0};
+        }
+
+        // Check vertex buffers
+        if (vertex_buffers.size() == 0) {
+            ::logger.error("No vertex buffers");
+            return {0};
+        }
+
+        if (vertex_buffers.size() != desc.buffer_mapping.size()) {
+            ::logger.error("Invalid vertex mapping");
+            return {0};
+        }
+
+        // Check index buffer
+        if (desc.has_index_buffer && index_buffer == core::nullopt) {
+            ::logger.error("Index buffer is missing");
+            return {0};
+        }
+
+        if (!desc.has_index_buffer && index_buffer != core::nullopt) {
+            ::logger.error("Index buffer is not enabled");
+            return {0};
+        }
+
+        // Create VAO
+        GLuint vao;
+        glGenVertexArrays(1, &vao);
+
+        ::logger.debug("OpenGL Vertex Array object with id %u created", vao);
+
+        // Scope for vertex array deletion if something goes wrong
+        auto vao_owner = core::make_scoped_owner(vao, [](GLuint id) {
+            glBindVertexArray(0);
+            glDeleteVertexArrays(1, &id);
+            ::logger.debug("OpenGL Vertex Array object with id %u deleted", id);
+        });
+
+        glBindVertexArray(vao);
+
+        // Bind vertex buffers
+        for (uint32 i = 0; i < vertex_buffers.size(); ++i) {
+            const auto  buffer = vertex_buffers[i];
+            const auto& mapping = desc.buffer_mapping[i];
+            if (auto* desc = m_buffers.try_get(buffer.id)) {
+                glBindVertexBuffer(mapping.binding, desc->buffer_obj, mapping.offset, mapping.stride);
+
+                // Validate usage
+                if (desc->desc.usage != buffer_usage::vertex) {
+                    ::logger.error("Invalid vertex buffer usage");
+                    return {0};
+                }
+            } else {
+                ::logger.error("Can't find vertex buffer with id %u", buffer.id);
+                return {0};
+            }
+        }
+
+        // Bind vertex attributes
+        for (uint32 i = 0; i < desc.layout.attributes.size(); ++i) {
+            const auto& attribute = desc.layout.attributes[i];
+            const auto& attribute_mapping = desc.attribute_mapping[i];
+
+            auto buffer_index = static_cast<GLuint>(attribute_mapping.buffer_index);
+
+            // Validate buffer index
+            if (buffer_index >= vertex_buffers.size()) {
+                ::logger.error("Invalid buffer index in vertex attribute mapping");
+                return {0};
+            }
+
+            // OpenGL format info
+            auto gl_format = to_gl_attribute_format(attribute.format);
+            auto attrib_index = static_cast<GLuint>(i);
+            auto normalie = attribute.normalize ? GL_TRUE : GL_FALSE;
+            auto binding = static_cast<GLuint>(desc.buffer_mapping[buffer_index].binding);
+
+            // Enable attribute and set pointer
+            glEnableVertexAttribArray(attrib_index);
+            glVertexAttribFormat(attrib_index, gl_format.size, gl_format.type, normalie, attribute_mapping.offset);
+            glVertexAttribBinding(attrib_index, binding);
+        }
+
+        if (desc.has_index_buffer) {
+            if (auto* desc = m_buffers.try_get(index_buffer->id)) {
+                if (desc->desc.usage != buffer_usage::index) {
+                    ::logger.error("Invalid index buffer usage");
+                    return {0};
+                }
+
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, desc->buffer_obj);
+            } else {
+                ::logger.error("Can't find index buffer with id %u", index_buffer->id);
+                return {0};
+            }
+        }
+
+        glBindVertexArray(0);
+
+        geometry_binding_handle handle = {m_geometry_bindings.insert({desc, vao_owner.release()})};
+        ::logger.debug("Geometry binding with id %u created", handle.id);
+        return handle;
+    }
+
+    void gl_graphics_device::destroy_geometry_binding(geometry_binding_handle geometry_binding)
+    {
+        if (auto* desc = m_geometry_bindings.try_get(geometry_binding.id)) {
+            glDeleteVertexArrays(1, &desc->vao_obj);
+            ::logger.debug("OpenGL Vertex Array object with id %u deleted", desc->vao_obj);
+            m_geometry_bindings.remove(geometry_binding.id);
+        } else {
+            ::logger.error("Can't find geometry binding with id %d", geometry_binding.id);
         }
     }
 

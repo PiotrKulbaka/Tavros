@@ -5,8 +5,7 @@
 namespace tavros::renderer
 {
 
-    struct render_pass_desc
-    {
-    };
+    constexpr uint32 k_max_color_attachments = 8;
+    constexpr uint32 k_max_vertex_attributes = 16;
 
 } // namespace tavros::renderer

@@ -58,6 +58,37 @@ namespace
             TAV_UNREACHABLE();
         }
     }
+
+    struct gl_vertex_format
+    {
+        GLenum type;
+        uint32 size;
+    };
+
+    gl_vertex_format to_gl_vertex_format(attribute_format format)
+    {
+        switch (format) {
+        case attribute_format::u8:
+            return {GL_UNSIGNED_BYTE, 1};
+        case attribute_format::i8:
+            return {GL_BYTE, 1};
+        case attribute_format::u16:
+            return {GL_UNSIGNED_SHORT, 2};
+        case attribute_format::i16:
+            return {GL_SHORT, 2};
+        case attribute_format::u32:
+            return {GL_UNSIGNED_INT, 4};
+        case attribute_format::i32:
+            return {GL_INT, 4};
+        case attribute_format::f16:
+            return {GL_HALF_FLOAT, 2};
+        case attribute_format::f32:
+            return {GL_FLOAT, 4};
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
 } // namespace
 
 namespace tavros::renderer
@@ -74,120 +105,133 @@ namespace tavros::renderer
         ::logger.info("gl_command_list destroyed");
     }
 
-    void gl_command_list::bind_sampler(uint32 slot, sampler_handle sampler)
-    {
-        glBindSampler(slot, sampler.id);
-    }
-
-    void gl_command_list::bind_texture(uint32 slot, texture2d_handle texture)
-    {
-        glActiveTexture(GL_TEXTURE0 + slot);
-        glBindTexture(GL_TEXTURE_2D, texture.id);
-    }
-
     void gl_command_list::bind_pipeline(pipeline_handle pipeline)
     {
         m_current_pipeline_id = pipeline.id;
-        auto& p = m_device->m_pipelines[m_current_pipeline_id];
-        auto& desc = p.desc;
+        if (auto* p = m_device->m_pipelines.try_get(pipeline.id)) {
+            auto& desc = p->desc;
 
-        glUseProgram(p.program);
+            glUseProgram(p->program_obj);
 
-        // depth test
-        if (desc.depth_stencil.depth_test_enable) {
-            glEnable(GL_DEPTH_TEST);
+            // depth test
+            if (desc.depth_stencil.depth_test_enable) {
+                glEnable(GL_DEPTH_TEST);
 
-            // depth write
-            glDepthMask(desc.depth_stencil.depth_write_enable ? GL_TRUE : GL_FALSE);
+                // depth write
+                glDepthMask(desc.depth_stencil.depth_write_enable ? GL_TRUE : GL_FALSE);
 
-            // depth compare func
-            glDepthFunc(to_gl_compare_func(desc.depth_stencil.depth_compare));
+                // depth compare func
+                glDepthFunc(to_gl_compare_func(desc.depth_stencil.depth_compare));
+            } else {
+                glDisable(GL_DEPTH_TEST);
+            }
+
+            // stencil test
+            if (desc.depth_stencil.stencil_test_enable) {
+                glEnable(GL_STENCIL_TEST);
+
+                // stencil front
+                glStencilFuncSeparate(
+                    GL_FRONT,
+                    to_gl_compare_func(desc.depth_stencil.stencil_front.compare),
+                    desc.depth_stencil.stencil_front.reference_value,
+                    desc.depth_stencil.stencil_front.read_mask
+                );
+                glStencilOpSeparate(
+                    GL_FRONT,
+                    to_gl_stencil_op(desc.depth_stencil.stencil_front.stencil_fail_op),
+                    to_gl_stencil_op(desc.depth_stencil.stencil_front.depth_fail_op),
+                    to_gl_stencil_op(desc.depth_stencil.stencil_front.pass_op)
+                );
+                glStencilMaskSeparate(GL_FRONT, desc.depth_stencil.stencil_front.write_mask);
+
+                // stencil back
+                glStencilFuncSeparate(
+                    GL_BACK,
+                    to_gl_compare_func(desc.depth_stencil.stencil_back.compare),
+                    desc.depth_stencil.stencil_back.reference_value,
+                    desc.depth_stencil.stencil_back.read_mask
+                );
+                glStencilOpSeparate(
+                    GL_BACK,
+                    to_gl_stencil_op(desc.depth_stencil.stencil_back.stencil_fail_op),
+                    to_gl_stencil_op(desc.depth_stencil.stencil_back.depth_fail_op),
+                    to_gl_stencil_op(desc.depth_stencil.stencil_back.pass_op)
+                );
+                glStencilMaskSeparate(GL_BACK, desc.depth_stencil.stencil_back.write_mask);
+            } else {
+                glDisable(GL_STENCIL_TEST);
+            }
+
+            // rasterizer state
+            // cull face
+            if (desc.rasterizer.cull == cull_face::off) {
+                glDisable(GL_CULL_FACE);
+            } else {
+                glEnable(GL_CULL_FACE);
+                glCullFace(desc.rasterizer.cull == cull_face::front ? GL_FRONT : GL_BACK);
+            }
+
+            // front face
+            glFrontFace(desc.rasterizer.face == front_face::clockwise ? GL_CW : GL_CCW);
+
+            // polygon mode
+            if (desc.rasterizer.polygon == polygon_mode::lines) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+            } else if (desc.rasterizer.polygon == polygon_mode::points) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+            } else if (desc.rasterizer.polygon == polygon_mode::fill) {
+                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+            } else {
+                TAV_UNREACHABLE();
+            }
+
+            // depth clamp
+            if (desc.rasterizer.depth_clamp_enable) {
+                glEnable(GL_DEPTH_CLAMP);
+            } else {
+                glDisable(GL_DEPTH_CLAMP);
+            }
+
+            // depth bias
+            if (desc.rasterizer.depth_bias_enable) {
+                glEnable(GL_POLYGON_OFFSET_FILL);
+                glPolygonOffset(desc.rasterizer.depth_bias_slope, desc.rasterizer.depth_bias);
+            } else {
+                glDisable(GL_POLYGON_OFFSET_FILL);
+            }
+
+            // multisample state
+            // uint8 sample_count = 1; cant be initialized here
+            if (desc.multisample.sample_shading_enabled) {
+                glEnable(GL_SAMPLE_SHADING);
+                glMinSampleShading(desc.multisample.min_sample_shading);
+            } else {
+                glDisable(GL_SAMPLE_SHADING);
+            }
         } else {
-            glDisable(GL_DEPTH_TEST);
+            ::logger.error("Can't bind the pipeline with id `%u`", pipeline.id);
+            glUseProgram(0);
         }
+    }
 
-        // stencil test
-        if (desc.depth_stencil.stencil_test_enable) {
-            glEnable(GL_STENCIL_TEST);
-
-            // stencil front
-            glStencilFuncSeparate(
-                GL_FRONT,
-                to_gl_compare_func(desc.depth_stencil.stencil_front.compare),
-                desc.depth_stencil.stencil_front.reference_value,
-                desc.depth_stencil.stencil_front.read_mask
-            );
-            glStencilOpSeparate(
-                GL_FRONT,
-                to_gl_stencil_op(desc.depth_stencil.stencil_front.stencil_fail_op),
-                to_gl_stencil_op(desc.depth_stencil.stencil_front.depth_fail_op),
-                to_gl_stencil_op(desc.depth_stencil.stencil_front.pass_op)
-            );
-            glStencilMaskSeparate(GL_FRONT, desc.depth_stencil.stencil_front.write_mask);
-
-            // stencil back
-            glStencilFuncSeparate(
-                GL_BACK,
-                to_gl_compare_func(desc.depth_stencil.stencil_back.compare),
-                desc.depth_stencil.stencil_back.reference_value,
-                desc.depth_stencil.stencil_back.read_mask
-            );
-            glStencilOpSeparate(
-                GL_BACK,
-                to_gl_stencil_op(desc.depth_stencil.stencil_back.stencil_fail_op),
-                to_gl_stencil_op(desc.depth_stencil.stencil_back.depth_fail_op),
-                to_gl_stencil_op(desc.depth_stencil.stencil_back.pass_op)
-            );
-            glStencilMaskSeparate(GL_BACK, desc.depth_stencil.stencil_back.write_mask);
+    void gl_command_list::bind_framebuffer(framebuffer_handle pipeline)
+    {
+        if (auto* fb = m_device->m_framebuffers.try_get(pipeline.id)) {
+            glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
         } else {
-            glDisable(GL_STENCIL_TEST);
+            ::logger.error("Can't bind the pipeline with id `%u`", pipeline.id);
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
         }
+    }
 
-        // rasterizer state
-        // cull face
-        if (desc.rasterizer.cull == cull_face::off) {
-            glDisable(GL_CULL_FACE);
+    void gl_command_list::bind_geometry(geometry_binding_handle geometry_binding)
+    {
+        if (auto* gb = m_device->m_geometry_bindings.try_get(geometry_binding.id)) {
+            glBindVertexArray(gb->vao_obj);
         } else {
-            glEnable(GL_CULL_FACE);
-            glCullFace(desc.rasterizer.cull == cull_face::front ? GL_FRONT : GL_BACK);
-        }
-
-        // front face
-        glFrontFace(desc.rasterizer.face == front_face::clockwise ? GL_CW : GL_CCW);
-
-        // polygon mode
-        if (desc.rasterizer.polygon == polygon_mode::lines) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        } else if (desc.rasterizer.polygon == polygon_mode::points) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-        } else if (desc.rasterizer.polygon == polygon_mode::fill) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        } else {
-            TAV_UNREACHABLE();
-        }
-
-        // depth clamp
-        if (desc.rasterizer.depth_clamp_enable) {
-            glEnable(GL_DEPTH_CLAMP);
-        } else {
-            glDisable(GL_DEPTH_CLAMP);
-        }
-
-        // depth bias
-        if (desc.rasterizer.depth_bias_enable) {
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(desc.rasterizer.depth_bias_slope, desc.rasterizer.depth_bias);
-        } else {
-            glDisable(GL_POLYGON_OFFSET_FILL);
-        }
-
-        // multisample state
-        // uint8 sample_count = 1; cant be initialized here
-        if (desc.multisample.sample_shading_enabled) {
-            glEnable(GL_SAMPLE_SHADING);
-            glMinSampleShading(desc.multisample.min_sample_shading);
-        } else {
-            glDisable(GL_SAMPLE_SHADING);
+            ::logger.error("Can't bind the geometry binding with id `%u`", geometry_binding.id);
+            glBindVertexArray(0);
         }
     }
 
