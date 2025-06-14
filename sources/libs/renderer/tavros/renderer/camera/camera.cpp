@@ -33,6 +33,7 @@ void camera::set_perspective(float fov_y, float aspect, float z_near, float z_fa
     m_aspect = aspect;
     m_z_near = z_near;
     m_z_far = z_far;
+    m_projection = mat4::perspective(m_fov_y, m_aspect, m_z_near, m_z_far);
     m_dirty = true;
 }
 
@@ -82,24 +83,23 @@ vec3 camera::position() const noexcept
     return m_position;
 }
 
-mat4 camera::get_view_matrix() const noexcept
+mat4 camera::get_view_matrix() noexcept
 {
     if (m_dirty) {
-        m_view = mat4::look_at(m_position, m_position + m_forward, m_up);
-        m_projection = mat4::perspective(m_fov_y, m_aspect, m_z_near, m_z_far);
-        m_view_projection = m_projection * m_view;
+        m_view = mat4::look_at(m_position, m_forward, m_up);
+        m_view_projection = m_view * m_projection;
         m_dirty = false;
     }
     return m_view;
 }
 
-mat4 camera::get_projection_matrix() const noexcept
+mat4 camera::get_projection_matrix() noexcept
 {
     get_view_matrix();
     return m_projection;
 }
 
-mat4 camera::get_view_projection_matrix() const noexcept
+mat4 camera::get_view_projection_matrix() noexcept
 {
     get_view_matrix();
     return m_view_projection;

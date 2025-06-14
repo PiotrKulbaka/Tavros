@@ -26,9 +26,9 @@ namespace tavros::renderer
         math::vec3 right() const noexcept;
         math::vec3 position() const noexcept;
 
-        math::mat4 get_view_matrix() const noexcept;
-        math::mat4 get_projection_matrix() const noexcept;
-        math::mat4 get_view_projection_matrix() const noexcept;
+        math::mat4 get_view_matrix() noexcept;
+        math::mat4 get_projection_matrix() noexcept;
+        math::mat4 get_view_projection_matrix() noexcept;
 
     private:
         math::vec3 m_position;                // Положение камеры

@@ -889,15 +889,32 @@ namespace tavros::renderer
         glGenBuffers(1, &bo);
         ::logger.debug("OpenGL Buffer object with id %u created", bo);
 
+        auto bo_owner = core::make_scoped_owner(bo, [gl_target](GLuint id) {
+            glBindBuffer(gl_target, 0);
+            glDeleteBuffers(1, &id);
+            ::logger.debug("OpenGL Buffer object with id %u deleted", id);
+        });
+
         glBindBuffer(gl_target, bo);
 
+        // Allocate buffer
+        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(desc.size), nullptr, gl_usage);
+
+        // Set buffer data
         if (data != nullptr) {
+            if (size > desc.size) {
+                ::logger.debug("Buffer size is greater than buffer description size");
+                return {0};
+            } else if (size == 0) {
+                ::logger.debug("Buffer size is zero");
+                return {0};
+            }
             glBufferData(gl_target, static_cast<GLsizeiptr>(size), data, gl_usage);
         }
 
         glBindBuffer(gl_target, 0); // Unbind for safety
 
-        buffer_handle handle = {m_buffers.insert({desc, bo})};
+        buffer_handle handle = {m_buffers.insert({desc, bo_owner.release()})};
         ::logger.debug("Buffer with id %u created", handle.id);
         return handle;
     }
