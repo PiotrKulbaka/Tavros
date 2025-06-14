@@ -1,5 +1,6 @@
-#include <tavros/renderer/internal/backend/gl/gl_graphics_device.hpp>
+#include <tavros/renderer/internal/opengl/graphics_device_opengl.hpp>
 
+#include <tavros/renderer/internal/opengl/swapchain_opengl.hpp>
 #include <tavros/core/scoped_owner.hpp>
 #include <tavros/core/prelude.hpp>
 
@@ -8,7 +9,7 @@ using namespace tavros::renderer;
 
 namespace
 {
-    tavros::core::logger logger("gl_graphics_device");
+    tavros::core::logger logger("graphics_device_opengl");
 
     struct gl_format
     {
@@ -489,27 +490,117 @@ namespace
         }
     }
 
+    template<class Pool, class Del>
+    void destroy_for(Pool& pool, Del deleter)
+    {
+        tavros::core::vector<uint32> handles;
+        handles.reserve(pool.size());
+        for (auto& it : pool) {
+            handles.push_back(it.first);
+        }
+
+        for (auto handle : handles) {
+            deleter({handle});
+        }
+    }
+
 } // namespace
 
 namespace tavros::renderer
 {
 
-    gl_graphics_device::gl_graphics_device()
+    graphics_device_opengl::graphics_device_opengl()
     {
-        ::logger.info("gl_graphics_device created");
+        ::logger.info("graphics_device_opengl created");
+    }
 
+    graphics_device_opengl::~graphics_device_opengl()
+    {
+        destroy();
+        ::logger.info("graphics_device_opengl destroyed");
+    }
+
+    void graphics_device_opengl::destroy()
+    {
+        destroy_for(m_resources.samplers, [this](sampler_handle h) {
+            destroy_sampler(h);
+        });
+
+        destroy_for(m_resources.textures, [this](texture_handle h) {
+            destroy_texture(h);
+        });
+
+        destroy_for(m_resources.pipelines, [this](pipeline_handle h) {
+            destroy_pipeline(h);
+        });
+
+        destroy_for(m_resources.framebuffers, [this](framebuffer_handle h) {
+            destroy_framebuffer(h);
+        });
+
+        destroy_for(m_resources.buffers, [this](buffer_handle h) {
+            destroy_buffer(h);
+        });
+
+        destroy_for(m_resources.geometry_bindings, [this](geometry_binding_handle h) {
+            destroy_geometry(h);
+        });
+
+        // Should be removed in last turn because swapchain owns the OpenGL context
+        destroy_for(m_resources.swapchains, [this](swapchain_handle h) {
+            destroy_swapchain(h);
+        });
+    }
+
+    swapchain_handle graphics_device_opengl::create_swapchain(const swapchain_desc& desc, void* native_handle)
+    {
+        for (auto& sc : m_resources.swapchains) {
+            if (native_handle == sc.second.native_handle) {
+                ::logger.error("Swapchain with native handle %p already created", native_handle);
+                return {0};
+            }
+        }
+
+        auto sc = create_swapchain_opengl(this, desc, native_handle);
+
+        if (!sc) {
+            ::logger.error("Swapchain creation failed");
+            return {0};
+        }
+
+        swapchain_handle handle = {m_resources.swapchains.insert({desc, sc, native_handle})};
+        ::logger.debug("Swapchain with id %u created", handle.id);
+
+        // Initialize debug callback for OpenGL here, because it's not possible to do it in the constructor
+        // the first call of create_swapchain_opengl() will create the context
         glEnable(GL_DEBUG_OUTPUT);
         glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
         glDebugMessageCallback(gl_debug_callback, nullptr);
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+
+        return handle;
     }
 
-    gl_graphics_device::~gl_graphics_device()
+    void graphics_device_opengl::destroy_swapchain(swapchain_handle swapchain)
     {
-        ::logger.info("gl_graphics_device destroyed");
+        if (auto* desc = m_resources.swapchains.try_get(swapchain.id)) {
+            m_resources.swapchains.remove(swapchain.id);
+        } else {
+            ::logger.error("Can't destroy swapchain with id %d because it doesn't exist", swapchain.id);
+        }
     }
 
-    sampler_handle gl_graphics_device::create_sampler(const sampler_desc& desc)
+    swapchain* graphics_device_opengl::get_swapchain_ptr_by_handle(swapchain_handle swapchain)
+    {
+        if (auto* desc = m_resources.swapchains.try_get(swapchain.id)) {
+            return desc->swapchain_ptr.get();
+        } else {
+            ::logger.error("Can't find swapchain with id %d", swapchain.id);
+            return nullptr;
+        }
+    }
+
+    sampler_handle graphics_device_opengl::create_sampler(const sampler_desc& desc)
     {
         gl_sampler sampler{desc, 0};
 
@@ -539,20 +630,20 @@ namespace tavros::renderer
             glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         }
 
-        return {m_samplers.insert(sampler)};
+        return {m_resources.samplers.insert(sampler)};
     }
 
-    void gl_graphics_device::destroy_sampler(sampler_handle handle)
+    void graphics_device_opengl::destroy_sampler(sampler_handle handle)
     {
-        if (auto* desc = m_samplers.try_get(handle.id)) {
+        if (auto* desc = m_resources.samplers.try_get(handle.id)) {
             glDeleteSamplers(1, &desc->sampler_obj);
-            m_samplers.remove(handle.id);
+            m_resources.samplers.remove(handle.id);
         } else {
-            ::logger.error("Can't find sampler with id %d", handle.id);
+            ::logger.error("Can't destroy sampler with id %d because it doesn't exist", handle.id);
         }
     }
 
-    texture_handle gl_graphics_device::create_texture(
+    texture_handle graphics_device_opengl::create_texture(
         const texture_desc& desc,
         const uint8*        pixels,
         uint32              stride
@@ -652,20 +743,20 @@ namespace tavros::renderer
 
         glBindTexture(target, 0);
 
-        return {m_textures.insert(texture)};
+        return {m_resources.textures.insert(texture)};
     }
 
-    void gl_graphics_device::destroy_texture(texture_handle handle)
+    void graphics_device_opengl::destroy_texture(texture_handle handle)
     {
-        if (auto* desc = m_textures.try_get(handle.id)) {
+        if (auto* desc = m_resources.textures.try_get(handle.id)) {
             glDeleteTextures(1, &desc->texture_obj);
-            m_textures.remove(handle.id);
+            m_resources.textures.remove(handle.id);
         } else {
-            ::logger.error("Can't find texture with id %d", handle.id);
+            ::logger.error("Can't destroy texture with id %d because it doesn't exist", handle.id);
         }
     }
 
-    pipeline_handle gl_graphics_device::create_pipeline(const pipeline_desc& desc)
+    pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_desc& desc)
     {
         gl_pipeline pipeline{desc, 0};
 
@@ -699,24 +790,24 @@ namespace tavros::renderer
         pipeline.program_obj = p;
 
         // create pipeline
-        pipeline_handle handle = {m_pipelines.insert(pipeline)};
+        pipeline_handle handle = {m_resources.pipelines.insert(pipeline)};
 
         ::logger.debug("Pipeline with id %u created", handle.id);
 
         return handle;
     }
 
-    void gl_graphics_device::destroy_pipeline(pipeline_handle handle)
+    void graphics_device_opengl::destroy_pipeline(pipeline_handle handle)
     {
-        if (auto* desc = m_pipelines.try_get(handle.id)) {
+        if (auto* desc = m_resources.pipelines.try_get(handle.id)) {
             glDeleteProgram(desc->program_obj);
-            m_pipelines.remove(handle.id);
+            m_resources.pipelines.remove(handle.id);
         } else {
-            ::logger.error("Can't find pipeline with id %d", handle.id);
+            ::logger.error("Can't destroy pipeline with id %d because it doesn't exist", handle.id);
         }
     }
 
-    framebuffer_handle gl_graphics_device::create_framebuffer(
+    framebuffer_handle graphics_device_opengl::create_framebuffer(
         const framebuffer_desc&                desc,
         const core::span<const texture_handle> color_attachments,
         core::optional<texture_handle>         depth_stencil_attachment
@@ -747,7 +838,7 @@ namespace tavros::renderer
         core::static_vector<gl_texture*, 8> textures;
         for (uint32 i = 0; i < textures.size(); ++i) {
             auto attachment = color_attachments[i];
-            if (auto* tex = m_textures.try_get(attachment.id)) {
+            if (auto* tex = m_resources.textures.try_get(attachment.id)) {
                 if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
                     ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", desc.width, desc.height, tex->desc.width, tex->desc.height);
                     return {0};
@@ -780,7 +871,7 @@ namespace tavros::renderer
                 }
                 auto depth_stencil_attachment_value = depth_stencil_attachment.value();
 
-                if (auto* tex = m_textures.try_get(depth_stencil_attachment_value.id)) {
+                if (auto* tex = m_resources.textures.try_get(depth_stencil_attachment_value.id)) {
                     // Validate depth/stencil size
                     if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
                         ::logger.error("Invalid depth/stencil attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", desc.width, desc.height, tex->desc.width, tex->desc.height);
@@ -831,23 +922,23 @@ namespace tavros::renderer
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        framebuffer_handle handle = {m_framebuffers.insert({desc, fbo_owner.release()})};
+        framebuffer_handle handle = {m_resources.framebuffers.insert({desc, fbo_owner.release(), false})};
         ::logger.debug("Framebuffer with id %u created", handle.id);
         return handle;
     }
 
-    void gl_graphics_device::destroy_framebuffer(framebuffer_handle framebuffer)
+    void graphics_device_opengl::destroy_framebuffer(framebuffer_handle framebuffer)
     {
-        if (auto* desc = m_framebuffers.try_get(framebuffer.id)) {
+        if (auto* desc = m_resources.framebuffers.try_get(framebuffer.id)) {
             glDeleteFramebuffers(1, &desc->framebuffer_obj);
             ::logger.debug("OpenGL Framebuffer object with id %u deleted", desc->framebuffer_obj);
-            m_framebuffers.remove(framebuffer.id);
+            m_resources.framebuffers.remove(framebuffer.id);
         } else {
-            ::logger.error("Can't find framebuffer with id %d", framebuffer.id);
+            ::logger.error("Can't destroy framebuffer with id %d because it doesn't exist", framebuffer.id);
         }
     }
 
-    buffer_handle gl_graphics_device::create_buffer(
+    buffer_handle graphics_device_opengl::create_buffer(
         const buffer_desc& desc,
         const uint8*       data,
         uint64             size
@@ -898,7 +989,7 @@ namespace tavros::renderer
         glBindBuffer(gl_target, bo);
 
         // Allocate buffer
-        glBufferData(GL_ARRAY_BUFFER, static_cast<GLsizeiptr>(desc.size), nullptr, gl_usage);
+        glBufferData(gl_target, static_cast<GLsizeiptr>(desc.size), nullptr, gl_usage);
 
         // Set buffer data
         if (data != nullptr) {
@@ -914,23 +1005,23 @@ namespace tavros::renderer
 
         glBindBuffer(gl_target, 0); // Unbind for safety
 
-        buffer_handle handle = {m_buffers.insert({desc, bo_owner.release()})};
+        buffer_handle handle = {m_resources.buffers.insert({desc, bo_owner.release()})};
         ::logger.debug("Buffer with id %u created", handle.id);
         return handle;
     }
 
-    void gl_graphics_device::destroy_buffer(buffer_handle buffer)
+    void graphics_device_opengl::destroy_buffer(buffer_handle buffer)
     {
-        if (auto* desc = m_buffers.try_get(buffer.id)) {
+        if (auto* desc = m_resources.buffers.try_get(buffer.id)) {
             glDeleteBuffers(1, &desc->buffer_obj);
             ::logger.debug("OpenGL Buffer object with id %u deleted", desc->buffer_obj);
-            m_buffers.remove(buffer.id);
+            m_resources.buffers.remove(buffer.id);
         } else {
-            ::logger.error("Can't find buffer with id %d", buffer.id);
+            ::logger.error("Can't destroy buffer with id %d because it doesn't exist", buffer.id);
         }
     }
 
-    geometry_binding_handle gl_graphics_device::create_geometry(
+    geometry_binding_handle graphics_device_opengl::create_geometry(
         const geometry_binding_desc&          desc,
         const core::span<const buffer_handle> vertex_buffers,
         core::optional<buffer_handle>         index_buffer
@@ -983,7 +1074,7 @@ namespace tavros::renderer
         for (uint32 i = 0; i < vertex_buffers.size(); ++i) {
             const auto  buffer = vertex_buffers[i];
             const auto& mapping = desc.buffer_mapping[i];
-            if (auto* desc = m_buffers.try_get(buffer.id)) {
+            if (auto* desc = m_resources.buffers.try_get(buffer.id)) {
                 glBindVertexBuffer(mapping.binding, desc->buffer_obj, mapping.offset, mapping.stride);
 
                 // Validate usage
@@ -1023,7 +1114,7 @@ namespace tavros::renderer
         }
 
         if (desc.has_index_buffer) {
-            if (auto* desc = m_buffers.try_get(index_buffer->id)) {
+            if (auto* desc = m_resources.buffers.try_get(index_buffer->id)) {
                 if (desc->desc.usage != buffer_usage::index) {
                     ::logger.error("Invalid index buffer usage");
                     return {0};
@@ -1038,20 +1129,25 @@ namespace tavros::renderer
 
         glBindVertexArray(0);
 
-        geometry_binding_handle handle = {m_geometry_bindings.insert({desc, vao_owner.release()})};
+        geometry_binding_handle handle = {m_resources.geometry_bindings.insert({desc, vao_owner.release()})};
         ::logger.debug("Geometry binding with id %u created", handle.id);
         return handle;
     }
 
-    void gl_graphics_device::destroy_geometry_binding(geometry_binding_handle geometry_binding)
+    void graphics_device_opengl::destroy_geometry(geometry_binding_handle geometry_binding)
     {
-        if (auto* desc = m_geometry_bindings.try_get(geometry_binding.id)) {
+        if (auto* desc = m_resources.geometry_bindings.try_get(geometry_binding.id)) {
             glDeleteVertexArrays(1, &desc->vao_obj);
             ::logger.debug("OpenGL Vertex Array object with id %u deleted", desc->vao_obj);
-            m_geometry_bindings.remove(geometry_binding.id);
+            m_resources.geometry_bindings.remove(geometry_binding.id);
         } else {
-            ::logger.error("Can't find geometry binding with id %d", geometry_binding.id);
+            ::logger.error("Can't destroy geometry binding with id %d because it doesn't exist", geometry_binding.id);
         }
+    }
+
+    device_resources_opengl* graphics_device_opengl::get_resources()
+    {
+        return &m_resources;
     }
 
 } // namespace tavros::renderer

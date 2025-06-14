@@ -1,4 +1,4 @@
-#include <tavros/renderer/internal/backend/gl/gl_command_list.hpp>
+#include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
 
 #include <tavros/core/prelude.hpp>
 
@@ -8,7 +8,7 @@ using namespace tavros::renderer;
 
 namespace
 {
-    tavros::core::logger logger("gl_command_list");
+    tavros::core::logger logger("command_list_opengl");
 
     GLenum to_gl_compare_func(compare_op op)
     {
@@ -94,21 +94,21 @@ namespace
 namespace tavros::renderer
 {
 
-    gl_command_list::gl_command_list(gl_graphics_device* device)
+    command_list_opengl::command_list_opengl(graphics_device_opengl* device)
         : m_device(device)
     {
-        ::logger.info("gl_command_list created");
+        ::logger.info("command_list_opengl created");
     }
 
-    gl_command_list::~gl_command_list()
+    command_list_opengl::~command_list_opengl()
     {
-        ::logger.info("gl_command_list destroyed");
+        ::logger.info("command_list_opengl destroyed");
     }
 
-    void gl_command_list::bind_pipeline(pipeline_handle pipeline)
+    void command_list_opengl::bind_pipeline(pipeline_handle pipeline)
     {
         m_current_pipeline_id = pipeline.id;
-        if (auto* p = m_device->m_pipelines.try_get(pipeline.id)) {
+        if (auto* p = m_device->get_resources()->pipelines.try_get(pipeline.id)) {
             auto& desc = p->desc;
 
             glUseProgram(p->program_obj);
@@ -215,9 +215,9 @@ namespace tavros::renderer
         }
     }
 
-    void gl_command_list::bind_framebuffer(framebuffer_handle pipeline)
+    void command_list_opengl::bind_framebuffer(framebuffer_handle pipeline)
     {
-        if (auto* fb = m_device->m_framebuffers.try_get(pipeline.id)) {
+        if (auto* fb = m_device->get_resources()->framebuffers.try_get(pipeline.id)) {
             glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
         } else {
             ::logger.error("Can't bind the pipeline with id `%u`", pipeline.id);
@@ -225,9 +225,9 @@ namespace tavros::renderer
         }
     }
 
-    void gl_command_list::bind_geometry(geometry_binding_handle geometry_binding)
+    void command_list_opengl::bind_geometry(geometry_binding_handle geometry_binding)
     {
-        if (auto* gb = m_device->m_geometry_bindings.try_get(geometry_binding.id)) {
+        if (auto* gb = m_device->get_resources()->geometry_bindings.try_get(geometry_binding.id)) {
             glBindVertexArray(gb->vao_obj);
         } else {
             ::logger.error("Can't bind the geometry binding with id `%u`", geometry_binding.id);

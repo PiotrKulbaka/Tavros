@@ -4,12 +4,15 @@
 #include <tavros/core/optional.hpp>
 
 #include <tavros/renderer/rhi/handle.hpp>
+#include <tavros/renderer/rhi/swapchain_desc.hpp>
 #include <tavros/renderer/rhi/sampler_desc.hpp>
 #include <tavros/renderer/rhi/texture_desc.hpp>
 #include <tavros/renderer/rhi/pipeline_desc.hpp>
 #include <tavros/renderer/rhi/framebuffer_desc.hpp>
 #include <tavros/renderer/rhi/buffer_desc.hpp>
 #include <tavros/renderer/rhi/geometry_binding_desc.hpp>
+
+#include <tavros/renderer/rhi/swapchain.hpp>
 
 namespace tavros::renderer
 {
@@ -18,6 +21,16 @@ namespace tavros::renderer
     {
     public:
         virtual ~graphics_device() = default;
+
+        virtual swapchain_handle create_swapchain(
+            const swapchain_desc& desc,
+            void*                 native_handle
+        ) = 0;
+        virtual void destroy_swapchain(swapchain_handle swapchain) = 0;
+
+        /// Returns swapchain pointer by handle, or nullptr if handle is invalid
+        /// This pointer is valid until swapchain handle is destroyed (destroy_swapchain method)
+        virtual swapchain* get_swapchain_ptr_by_handle(swapchain_handle swapchain) = 0;
 
         virtual sampler_handle create_sampler(
             const sampler_desc& desc
@@ -55,7 +68,7 @@ namespace tavros::renderer
             const core::span<const buffer_handle> vertex_buffers,
             core::optional<buffer_handle>         index_buffer = core::nullopt
         ) = 0;
-        virtual void destroy_geometry_binding(geometry_binding_handle geometry_binding) = 0;
+        virtual void destroy_geometry(geometry_binding_handle geometry_binding) = 0;
     };
 
 } // namespace tavros::renderer

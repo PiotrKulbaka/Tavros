@@ -11,6 +11,9 @@ namespace tavros::renderer
         uint32 id = 0;
     };
 
+    struct swapchain_tag
+    {
+    };
     struct sampler_tag
     {
     };
@@ -30,6 +33,7 @@ namespace tavros::renderer
     {
     };
 
+    using swapchain_handle = handle_base<swapchain_tag>;
     using sampler_handle = handle_base<sampler_tag>;
     using texture_handle = handle_base<texture_tag>;
     using pipeline_handle = handle_base<pipeline_tag>;

@@ -14,8 +14,8 @@
 #include <tavros/renderer/rhi/command_list.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 
-#include <tavros/renderer/internal/backend/gl/gl_command_list.hpp>
-#include <tavros/renderer/internal/backend/gl/gl_graphics_device.hpp>
+#include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
+#include <tavros/renderer/internal/opengl/graphics_device_opengl.hpp>
 
 #include <tavros/core/containers/static_vector.hpp>
 
@@ -31,532 +31,135 @@
 
 #include <stb/stb_image.h>
 
+// clang-format off
 float cube_vertices[] = {
-    // X      Y      Z    pad    U     V
+    // X      Y      Z    pad      U      V    pad    pad
     // Front face (Z+)
-    -0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f, // bottom-left
-    0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.0f, // bottom-right
-    0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f, // top-right
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f, // bottom-left
+     0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f, // bottom-right
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f, // top-right
 
-    -0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f, // bottom-left
-    0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f, // top-right
-    -0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f, // top-left
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f, // bottom-left
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f, // top-right
+    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f, // top-left
 
     // Back face (Z-)
-    -0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.0f, // bottom-right
-    0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f, // bottom-left
-    0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f, // top-left
+    -0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f, // bottom-right
+     0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f, // bottom-left
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f, // top-left
 
-    -0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.0f, // bottom-right
-    0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f, // top-left
-    -0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f, // top-right
+    -0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f, // bottom-right
+     0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f, // top-left
+    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f, // top-right
 
     // Left face (X-)
-    -0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
 
-    -0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
     // Right face (X+)
-    0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
 
-    0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
     // Top face (Y+)
-    -0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
 
-    -0.5f,
-    0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
+    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 
     // Bottom face (Y-)
-    -0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+     0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
 
-    -0.5f,
-    -0.5f,
-    -0.5f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.0f,
-    0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    -0.5f,
-    -0.5f,
-    0.5f,
-    0.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-
+    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
+     0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
+    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
 };
 
-float cube_colors[] = {
+float cube_colors[] =
+{
     // Front face (red)
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
+    1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 0.0f, 0.0f, 1.0f,
 
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
+    1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 0.0f, 0.0f, 1.0f,
+    1.0f, 0.0f, 0.0f, 1.0f,
 
     // Back face (green)
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
 
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    0.0f,
-    1.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
+    0.0f, 1.0f, 0.0f, 1.0f,
 
     // Left face (blue)
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
+    0.0f, 0.0f, 1.0f, 1.0f,
+    0.0f, 0.0f, 1.0f, 1.0f,
+    0.0f, 0.0f, 1.0f, 1.0f,
 
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    0.0f,
-    1.0f,
-    1.0f,
+    0.0f, 0.0f, 1.0f, 1.0f,
+    0.0f, 0.0f, 1.0f, 1.0f,
+    0.0f, 0.0f, 1.0f, 1.0f,
 
     // Right face (yellow)
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f,
 
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f,
+    1.0f, 1.0f, 0.0f, 1.0f,
 
     // Top face (purple)
-    0.7f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.7f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.7f,
-    0.0f,
-    1.0f,
-    1.0f,
+    0.7f, 0.0f, 1.0f, 1.0f,
+    0.7f, 0.0f, 1.0f, 1.0f,
+    0.7f, 0.0f, 1.0f, 1.0f,
 
-    0.7f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.7f,
-    0.0f,
-    1.0f,
-    1.0f,
-    0.7f,
-    0.0f,
-    1.0f,
-    1.0f,
+    0.7f, 0.0f, 1.0f, 1.0f,
+    0.7f, 0.0f, 1.0f, 1.0f,
+    0.7f, 0.0f, 1.0f, 1.0f,
 
     // Bottom face (white blue)
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
+    0.0f, 1.0f, 1.0f, 1.0f,
+    0.0f, 1.0f, 1.0f, 1.0f,
+    0.0f, 1.0f, 1.0f, 1.0f,
 
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
-    0.0f,
-    1.0f,
-    1.0f,
-    1.0f,
+    0.0f, 1.0f, 1.0f, 1.0f,
+    0.0f, 1.0f, 1.0f, 1.0f,
+    0.0f, 1.0f, 1.0f, 1.0f,
 };
 
-uint16 cube_indices[] = {
-    // Front face
-    0,
-    1,
-    2,
-    3,
-    4,
-    5,
-
-    // Back face
-    6,
-    7,
-    8,
-    9,
-    10,
-    11,
-
-    // Left face
-    12,
-    13,
-    14,
-    15,
-    16,
-    17,
-
-    // Right face
-    18,
-    19,
-    20,
-    21,
-    22,
-    23,
-
-    // Top face
-    24,
-    25,
-    26,
-    27,
-    28,
-    29,
-
-    // Bottom face
-    30,
-    31,
-    32,
-    33,
-    34,
-    35,
+uint16 cube_indices[] =
+{
+     0,  1,  2,  3,  4,  5, // Front face
+     6,  7,  8,  9, 10, 11, // Back face
+    12, 13, 14, 15, 16, 17, // Left face
+    18, 19, 20, 21, 22, 23, // Right face
+    24, 25, 26, 27, 28, 29, // Top face
+    30, 31, 32, 33, 34, 35, // Bottom face
 };
+
+// clang-format on
 
 const char* vertex_shader_source = R"(
-#version 450 core
+#version 420 core
 layout (location = 0) in vec3 a_pos;
 layout (location = 1) in vec2 a_uv;
 layout (location = 2) in vec4 a_color;
@@ -578,7 +181,7 @@ void main()
 )";
 
 const char* fragment_shader_source = R"(
-#version 450 core
+#version 420 core
 
 layout(binding = 0) uniform sampler2D u_tex1;
 layout(binding = 2) uniform sampler2D u_tex2;
@@ -685,7 +288,7 @@ int main()
     float aspect_ratio = 1280.0f / 720.0f;
 
     wnd->set_on_resize_listener([&](tavros::system::window_ptr, tavros::system::size_event_args& e) {
-        aspect_ratio = e.size.height / e.size.width;
+        aspect_ratio = static_cast<float>(e.size.width) / static_cast<float>(e.size.height);
         glViewport(0, 0, e.size.width, e.size.height);
     });
 
@@ -719,20 +322,31 @@ int main()
         }
     });
 
-    auto context = tavros::renderer::interfaces::gl_context::create(wnd->get_handle());
-
-    context->make_current();
-
-    if (!gladLoadGL()) {
-        throw std::runtime_error("Failed to initialize OpenGL context via GLAD");
-    }
-
-
     app->run();
 
-    auto gdevice = tavros::core::make_shared<tavros::renderer::gl_graphics_device>();
-    auto comlist = tavros::core::make_shared<tavros::renderer::gl_command_list>(gdevice.get());
 
+    auto gdevice = tavros::core::make_shared<tavros::renderer::graphics_device_opengl>();
+    auto comlist = tavros::core::make_shared<tavros::renderer::command_list_opengl>(gdevice.get());
+
+    tavros::renderer::swapchain_desc main_swapchain_desc;
+    main_swapchain_desc.width = wnd->get_client_size().width;
+    main_swapchain_desc.height = wnd->get_client_size().height;
+    main_swapchain_desc.buffer_count = 3;
+    main_swapchain_desc.vsync = true;
+    main_swapchain_desc.color_attachment.format = tavros::renderer::pixel_format::rgba8un;
+    main_swapchain_desc.color_attachment.load = tavros::renderer::load_op::clear;
+    main_swapchain_desc.color_attachment.store = tavros::renderer::store_op::store;
+    main_swapchain_desc.color_attachment.clear_value[0] = 0.1f;
+    main_swapchain_desc.color_attachment.clear_value[1] = 0.2f;
+    main_swapchain_desc.color_attachment.clear_value[2] = 0.3f;
+    main_swapchain_desc.color_attachment.clear_value[3] = 1.0f;
+    main_swapchain_desc.depth_stencil_attachment.format = tavros::renderer::pixel_format::depth24_stencil8;
+    main_swapchain_desc.depth_stencil_attachment.load = tavros::renderer::load_op::clear;
+    main_swapchain_desc.depth_stencil_attachment.store = tavros::renderer::store_op::dont_care;
+    main_swapchain_desc.depth_stencil_attachment.depth_clear_value = 0.0f;
+    main_swapchain_desc.depth_stencil_attachment.stencil_clear_value = 0;
+
+    auto main_swapchain_handle = gdevice->create_swapchain(main_swapchain_desc, wnd->get_handle());
 
     tavros::renderer::texture_desc tex_desc;
 
@@ -860,7 +474,6 @@ int main()
     auto             geometry1 = gdevice->create_geometry(gbd, buffers_to_binding, buffer_indices);
 
     auto cam = tavros::renderer::camera({0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 1.0, 0.0});
-    cam.set_perspective(3.14159265358979f / 3.0f, 1.0f, 0.1f, 1000.0f);
 
 
     GLuint ubo;
@@ -873,6 +486,10 @@ int main()
 
     while (app->is_runing()) {
         app->poll_events();
+
+        auto* main_swapchain_ptr = gdevice->get_swapchain_ptr_by_handle(main_swapchain_handle);
+        auto  backbuffer_index = main_swapchain_ptr->acquire_next_backbuffer_index();
+        auto  main_framebuffer = main_swapchain_ptr->get_framebuffer(backbuffer_index);
 
         float elapsed = tm.elapsed<std::chrono::microseconds>() / 1000000.0f;
         tm.start();
@@ -914,7 +531,8 @@ int main()
 
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
 
-        context->swap_buffers();
+        main_swapchain_ptr->present(backbuffer_index);
+
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
