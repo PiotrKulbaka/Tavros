@@ -218,7 +218,12 @@ namespace tavros::renderer
     void command_list_opengl::bind_framebuffer(framebuffer_handle pipeline)
     {
         if (auto* fb = m_device->get_resources()->framebuffers.try_get(pipeline.id)) {
-            glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
+            if (fb->is_default) {
+                TAV_ASSERT(fb->framebuffer_obj == 0);
+                glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            } else {
+                glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
+            }
         } else {
             ::logger.error("Can't bind the pipeline with id `%u`", pipeline.id);
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -232,6 +237,20 @@ namespace tavros::renderer
         } else {
             ::logger.error("Can't bind the geometry binding with id `%u`", geometry_binding.id);
             glBindVertexArray(0);
+        }
+    }
+
+    void command_list_opengl::bind_texture(uint32 slot, texture_handle texture)
+    {
+        if (auto* tex = m_device->get_resources()->textures.try_get(texture.id)) {
+            if (!tex->desc.usage.has_flag(texture_usage::sampled)) {
+                ::logger.error("Can't bind not sampled texture with id `%u`", texture.id);
+                return;
+            }
+            glActiveTexture(GL_TEXTURE0 + slot);
+            glBindTexture(GL_TEXTURE_2D, tex->texture_obj);
+        } else {
+            ::logger.error("Can't bind the texture with id `%u`", texture.id);
         }
     }
 

@@ -14,12 +14,18 @@ namespace tavros::renderer
      */
     enum class texture_usage : uint8
     {
-        shader_resource = 0x1, /// Texture will be used as a shader resource (sampled in shaders)
-        render_target = 0x2,   /// Texture can be used as a render target (output of rendering)
-        depth_stencil = 0x4,   /// Texture can be used as a depth and/or stencil buffer
-        transfer_src = 0x8,    /// Texture can be used as source for copy operations
-        transfer_dst = 0x10,   /// Texture can be used as destination for copy operations
-        cpu_write = 0x20,      /// Texture memory can be updated/written from the CPU
+        render_target = 0x01,        /// Texture can be used as a render target (color attachment in a framebuffer)
+        depth_stencil_target = 0x02, /// Texture can be used as a depth and/or stencil attachment
+
+        sampled = 0x04,              /// Texture can be sampled in shaders (e.g., as sampler2D)
+
+        storage = 0x08,              /// Texture can be used as a storage image (read/write access in shaders)
+
+        transfer_source = 0x10,      /// Texture can be used as the source in copy or blit operations
+        transfer_destination = 0x20, /// Texture can be used as the destination in copy or blit operations
+
+        resolve_source = 0x40,       /// Texture can be used as the source in a multisample resolve operation (typically a MSAA render target)
+        resolve_destination = 0x80,  /// Texture can be used as the destination of a resolve operation (must be non-multisampled)
     };
 
     constexpr core::flags<texture_usage> operator|(texture_usage lhs, texture_usage rhs) noexcept
@@ -28,7 +34,7 @@ namespace tavros::renderer
     }
 
     constexpr core::flags<texture_usage> k_default_texture_usage = /// Default texture usage
-        texture_usage::shader_resource | texture_usage::transfer_dst | texture_usage::cpu_write;
+        texture_usage::sampled | texture_usage::transfer_destination;
 
     /**
      * Describes properties of a texture to be created by the renderer.

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/containers/static_vector.hpp>
-#include <tavros/renderer/rhi/attachment_info.hpp>
+#include <tavros/renderer/rhi/pixel_format.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
 namespace tavros::renderer
@@ -13,10 +13,10 @@ namespace tavros::renderer
     struct framebuffer_desc
     {
         /// List of color attachments. Must match the pipeline layout
-        core::static_vector<color_attachment_info, k_max_color_attachments> color_attachments;
+        core::static_vector<pixel_format, k_max_color_attachments> color_attachment_formats;
 
         /// Optional depth/stencil attachment. Must match the pipeline layout
-        depth_stencil_attachment_info depth_stencil_attachment;
+        pixel_format depth_stencil_attachment_format;
 
         /// Framebuffer width, in pixels. Must match all attachments
         uint32 width = 0;

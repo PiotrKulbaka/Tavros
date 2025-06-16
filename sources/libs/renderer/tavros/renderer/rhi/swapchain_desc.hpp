@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
-#include <tavros/renderer/rhi/attachment_info.hpp>
+#include <tavros/renderer/rhi/pixel_format.hpp>
 
 namespace tavros::renderer
 {
@@ -21,10 +21,10 @@ namespace tavros::renderer
         bool vsync = false;
 
         /// Description of the color attachment used for rendering to the swapchain
-        color_attachment_info color_attachment;
+        pixel_format color_attachment_format;
 
         /// Description of the optional depth/stencil attachment used during rendering (format may be none)
-        depth_stencil_attachment_info depth_stencil_attachment;
+        pixel_format depth_stencil_attachment_format;
 
         /// Number of back buffers to create (usually 2 for double-buffering or 3 for triple-buffering)
         uint32 buffer_count = 3;

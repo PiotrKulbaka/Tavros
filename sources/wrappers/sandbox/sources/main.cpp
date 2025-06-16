@@ -184,7 +184,7 @@ const char* fragment_shader_source = R"(
 #version 420 core
 
 layout(binding = 0) uniform sampler2D u_tex1;
-layout(binding = 2) uniform sampler2D u_tex2;
+layout(binding = 1) uniform sampler2D u_tex2;
 
 in vec2 v_uv;
 in vec4 v_color;
@@ -267,9 +267,11 @@ void update_cameta(const bool* keys, tavros::math::vec2 mouse_delta, float elaps
 
 int main()
 {
-    tavros::core::logger::add_consumer([](tavros::core::severity_level, tavros::core::string_view tag, tavros::core::string_view msg) {
+    tavros::core::logger::add_consumer([](tavros::core::severity_level lvl, tavros::core::string_view tag, tavros::core::string_view msg) {
         TAV_ASSERT(tag.data());
+        // if (lvl == tavros::core::severity_level::error) {
         std::cout << msg << std::endl;
+        //}
     });
 
     auto logger = tavros::core::logger("main");
@@ -333,18 +335,8 @@ int main()
     main_swapchain_desc.height = wnd->get_client_size().height;
     main_swapchain_desc.buffer_count = 3;
     main_swapchain_desc.vsync = true;
-    main_swapchain_desc.color_attachment.format = tavros::renderer::pixel_format::rgba8un;
-    main_swapchain_desc.color_attachment.load = tavros::renderer::load_op::clear;
-    main_swapchain_desc.color_attachment.store = tavros::renderer::store_op::store;
-    main_swapchain_desc.color_attachment.clear_value[0] = 0.1f;
-    main_swapchain_desc.color_attachment.clear_value[1] = 0.2f;
-    main_swapchain_desc.color_attachment.clear_value[2] = 0.3f;
-    main_swapchain_desc.color_attachment.clear_value[3] = 1.0f;
-    main_swapchain_desc.depth_stencil_attachment.format = tavros::renderer::pixel_format::depth24_stencil8;
-    main_swapchain_desc.depth_stencil_attachment.load = tavros::renderer::load_op::clear;
-    main_swapchain_desc.depth_stencil_attachment.store = tavros::renderer::store_op::dont_care;
-    main_swapchain_desc.depth_stencil_attachment.depth_clear_value = 0.0f;
-    main_swapchain_desc.depth_stencil_attachment.stencil_clear_value = 0;
+    main_swapchain_desc.color_attachment_format = tavros::renderer::pixel_format::rgba8un;
+    main_swapchain_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
 
     auto main_swapchain_handle = gdevice->create_swapchain(main_swapchain_desc, wnd->get_handle());
 
@@ -372,38 +364,22 @@ int main()
     atch_desc.width = 1280;
     atch_desc.height = 720;
     atch_desc.format = tavros::renderer::pixel_format::rgba8un;
+    atch_desc.usage |= tavros::renderer::texture_usage::render_target;
     auto atch1 = gdevice->create_texture(atch_desc);
 
     atch_desc.format = tavros::renderer::pixel_format::rgb32f;
     auto atch2 = gdevice->create_texture(atch_desc);
 
     atch_desc.format = tavros::renderer::pixel_format::depth24_stencil8;
+    atch_desc.usage |= tavros::renderer::texture_usage::depth_stencil_target;
     auto atch_ds = gdevice->create_texture(atch_desc);
 
     tavros::renderer::framebuffer_desc fb_desc;
     fb_desc.width = 1280;
     fb_desc.height = 720;
-    fb_desc.color_attachments.push_back(
-        {tavros::renderer::pixel_format::rgba8un,
-         tavros::renderer::load_op::clear,
-         tavros::renderer::store_op::store,
-         {1.0f, 0.0f, 0.0f, 1.0f}}
-    );
-
-    fb_desc.color_attachments.push_back(
-        {tavros::renderer::pixel_format::rgb32f,
-         tavros::renderer::load_op::clear,
-         tavros::renderer::store_op::store,
-         {1.0f, 1.0f, 1.0f, 0.0f}}
-    );
-
-    fb_desc.depth_stencil_attachment = {
-        tavros::renderer::pixel_format::depth24_stencil8,
-        tavros::renderer::load_op::clear,
-        tavros::renderer::store_op::dont_care,
-        1.0f,
-        0
-    };
+    fb_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
+    fb_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgb32f);
+    fb_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
 
 
     tavros::renderer::texture_handle attachments[] = {atch1, atch2};
@@ -497,7 +473,6 @@ int main()
         update_cameta(keys, mouse_delta, elapsed, aspect_ratio, cam);
         mouse_delta = tavros::math::vec2();
 
-
         glClearDepth(1.0);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -509,15 +484,12 @@ int main()
 
         comlist->bind_geometry(geometry1);
 
-        auto binding = 0;
-        glActiveTexture(GL_TEXTURE0 + binding);
-        glBindTexture(GL_TEXTURE_2D, tex1.id);
-        glBindSampler(binding, sampler1.id);
+        comlist->bind_texture(0, tex1);
 
-        glActiveTexture(GL_TEXTURE2);
-        glBindTexture(GL_TEXTURE_2D, tex2.id);
-        glBindSampler(2, sampler1.id);
+        glBindSampler(0, sampler1.id);
 
+        comlist->bind_texture(1, tex2);
+        glBindSampler(1, sampler1.id);
 
         auto cam_mat = cam.get_view_projection_matrix();
         cam_mat = tavros::math::transpose(cam_mat);

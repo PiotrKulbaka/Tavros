@@ -27,6 +27,7 @@ namespace tavros::renderer
     {
         texture_desc desc;
         GLuint       texture_obj = 0;
+        GLenum       target = 0;
     };
 
     struct gl_pipeline

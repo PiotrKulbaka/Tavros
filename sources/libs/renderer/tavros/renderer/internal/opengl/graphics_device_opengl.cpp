@@ -485,9 +485,19 @@ namespace
             l.warning("%s", message);
         } else if (severity == GL_DEBUG_SEVERITY_LOW) {
             l.warning("%s", message);
+        } else if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) {
+            l.info("%s", message);
         } else {
-            l.debug("%s", message);
+            l.debug("Unknown severity: %s", message);
         }
+    }
+
+    void init_gl_debug()
+    {
+        glEnable(GL_DEBUG_OUTPUT);
+        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
+        glDebugMessageCallback(gl_debug_callback, nullptr);
+        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
     }
 
     template<class Pool, class Del>
@@ -554,6 +564,7 @@ namespace tavros::renderer
 
     swapchain_handle graphics_device_opengl::create_swapchain(const swapchain_desc& desc, void* native_handle)
     {
+        // Check if swapchain with native handle already created
         for (auto& sc : m_resources.swapchains) {
             if (native_handle == sc.second.native_handle) {
                 ::logger.error("Swapchain with native handle %p already created", native_handle);
@@ -568,16 +579,12 @@ namespace tavros::renderer
             return {0};
         }
 
-        swapchain_handle handle = {m_resources.swapchains.insert({desc, sc, native_handle})};
-        ::logger.debug("Swapchain with id %u created", handle.id);
-
         // Initialize debug callback for OpenGL here, because it's not possible to do it in the constructor
         // the first call of create_swapchain_opengl() will create the context
-        glEnable(GL_DEBUG_OUTPUT);
-        glEnable(GL_DEBUG_OUTPUT_SYNCHRONOUS);
-        glDebugMessageCallback(gl_debug_callback, nullptr);
-        glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
+        init_gl_debug();
 
+        swapchain_handle handle = {m_resources.swapchains.insert({desc, sc, native_handle})};
+        ::logger.debug("Swapchain with id %u created", handle.id);
         return handle;
     }
 
@@ -585,8 +592,9 @@ namespace tavros::renderer
     {
         if (auto* desc = m_resources.swapchains.try_get(swapchain.id)) {
             m_resources.swapchains.remove(swapchain.id);
+            ::logger.debug("Swapchain with id %u destroyed", swapchain.id);
         } else {
-            ::logger.error("Can't destroy swapchain with id %d because it doesn't exist", swapchain.id);
+            ::logger.error("Can't destroy swapchain with id %u because it doesn't exist", swapchain.id);
         }
     }
 
@@ -595,51 +603,53 @@ namespace tavros::renderer
         if (auto* desc = m_resources.swapchains.try_get(swapchain.id)) {
             return desc->swapchain_ptr.get();
         } else {
-            ::logger.error("Can't find swapchain with id %d", swapchain.id);
+            ::logger.error("Can't find swapchain with id %u", swapchain.id);
             return nullptr;
         }
     }
 
     sampler_handle graphics_device_opengl::create_sampler(const sampler_desc& desc)
     {
-        gl_sampler sampler{desc, 0};
-
-        glGenSamplers(1, &sampler.sampler_obj);
+        GLuint sampler;
+        glGenSamplers(1, &sampler);
 
         auto filter = to_gl_filter(desc.filter);
 
         // Filtering
-        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_MIN_FILTER, filter.min_filter);
-        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
+        glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, filter.min_filter);
+        glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
 
         // Wrapping
-        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(desc.wrap_mode.wrap_s));
-        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(desc.wrap_mode.wrap_t));
-        glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(desc.wrap_mode.wrap_r));
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(desc.wrap_mode.wrap_s));
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(desc.wrap_mode.wrap_t));
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(desc.wrap_mode.wrap_r));
 
         // LOD parameters
-        glSamplerParameterf(sampler.sampler_obj, GL_TEXTURE_LOD_BIAS, desc.mip_lod_bias);
-        glSamplerParameterf(sampler.sampler_obj, GL_TEXTURE_MIN_LOD, desc.min_lod);
-        glSamplerParameterf(sampler.sampler_obj, GL_TEXTURE_MAX_LOD, desc.max_lod);
+        glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, desc.mip_lod_bias);
+        glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, desc.min_lod);
+        glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, desc.max_lod);
 
         // Depth compare
         if (desc.depth_compare != compare_op::off) {
-            glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-            glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(desc.depth_compare));
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(desc.depth_compare));
         } else {
-            glSamplerParameteri(sampler.sampler_obj, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         }
 
-        return {m_resources.samplers.insert(sampler)};
+        sampler_handle handle = {m_resources.samplers.insert({desc, sampler})};
+        ::logger.debug("Sampler with id %u created", handle.id);
+        return handle;
     }
 
-    void graphics_device_opengl::destroy_sampler(sampler_handle handle)
+    void graphics_device_opengl::destroy_sampler(sampler_handle sampler)
     {
-        if (auto* desc = m_resources.samplers.try_get(handle.id)) {
+        if (auto* desc = m_resources.samplers.try_get(sampler.id)) {
             glDeleteSamplers(1, &desc->sampler_obj);
-            m_resources.samplers.remove(handle.id);
+            m_resources.samplers.remove(sampler.id);
+            ::logger.debug("Sampler with id %u destroyed", sampler.id);
         } else {
-            ::logger.error("Can't destroy sampler with id %d because it doesn't exist", handle.id);
+            ::logger.error("Can't destroy sampler with id %u because it doesn't exist", sampler.id);
         }
     }
 
@@ -649,7 +659,8 @@ namespace tavros::renderer
         uint32              stride
     )
     {
-        gl_texture texture{desc, 0};
+        auto gl_internal_format = to_gl_internal_format(desc.format);
+        auto gl_depth_stencil_format = to_depth_stencil_fromat(desc.format);
 
         // Validate texture width/height
         if (desc.width == 0 || desc.height == 0) {
@@ -680,40 +691,101 @@ namespace tavros::renderer
             return {0};
         }
 
+        // Validate sample count
+        if (desc.sample_count > 1) {
+            // Resolve source texture must be a render target with sample_count == 1
+            if (desc.usage.has_flag(texture_usage::resolve_destination)) {
+                ::logger.error("Resolve destination texture must have sample_count == 1");
+                return {0};
+            }
+
+            // Multisample texture cannot be used as storage
+            if (desc.usage.has_flag(texture_usage::storage)) {
+                ::logger.error("Multisample texture cannot be used as storage");
+                return {0};
+            }
+
+            // Multisample texture cannot be used as sampled
+            if (desc.usage.has_flag(texture_usage::sampled)) {
+                ::logger.error("Multisample texture cannot be used as sampled");
+                return {0};
+            }
+
+            // Resolve source texture must have sample_count == 1
+            if (desc.usage.has_flag(texture_usage::resolve_source)) {
+                ::logger.error("Resolve source texture must have sample_count == 1");
+                return {0};
+            }
+
+            // Mip levels should be 1 for multisample textures
+            if (desc.mip_levels > 1) {
+                ::logger.error("Multisample texture cannot have mip levels");
+                return {0};
+            }
+
+            // Pixels can't be provided for multisample textures
+            if (pixels != nullptr) {
+                ::logger.error("Texture pixels can't be provided for multisample textures");
+                return {0};
+            }
+        }
+
+        if (desc.usage.has_flag(texture_usage::resolve_source)) {
+            // Resolve source texture must be a render target
+            if (!desc.usage.has_flag(texture_usage::render_target)) {
+                ::logger.error("Resolve source texture must be a render target");
+                return {0};
+            }
+        }
+
+        if (desc.usage.has_flag(texture_usage::depth_stencil_target)) {
+            // Depth stencil target texture must be a depth stencil format
+            if (!gl_depth_stencil_format.is_depth_stencil_format) {
+                ::logger.error("Depth stencil target texture must be a depth stencil format");
+                return {0};
+            }
+
+            // Depth stencil target texture cannot be used as sampled
+            if (desc.usage.has_flag(texture_usage::storage)) {
+                ::logger.error("Depth stencil target texture cannot be used as sampled");
+                return {0};
+            }
+        }
+
+        if (pixels != nullptr && !desc.usage.has_flag(texture_usage::transfer_destination)) {
+            ::logger.error("Texture pixels can only be provided for transfer_destination textures");
+            return {0};
+        }
 
         auto   is_multisample = desc.sample_count > 1;
         GLenum target = is_multisample ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
-        glGenTextures(1, &texture.texture_obj);
-        glBindTexture(target, texture.texture_obj);
+        GLuint tex;
+        glGenTextures(1, &tex);
+        ::logger.debug("OpenGL Texture object with id %u created", tex);
 
-        auto f = to_gl_internal_format(desc.format);
+        auto texture_owner = core::make_scoped_owner(tex, [target](GLuint id) {
+            glBindTexture(target, 0);
+            glDeleteTextures(1, &id);
+            ::logger.debug("OpenGL Texture object with id %u deleted", id);
+        });
+
+        // Bind texture
+        glBindTexture(target, tex);
 
         if (is_multisample) {
             glTexImage2DMultisample(
                 target,
                 desc.sample_count,
-                f.internal_format,
+                gl_internal_format.internal_format,
                 desc.width,
                 desc.height,
                 GL_TRUE
             );
-
-            if (desc.mip_levels != 1) {
-                ::logger.error("multisample textures can't have mipmaps");
-                glDeleteTextures(1, &texture.texture_obj);
-                return {0};
-            }
-
-            if (pixels != nullptr) {
-                ::logger.error("multisample textures can't have initial data");
-                glDeleteTextures(1, &texture.texture_obj);
-                return {0};
-            }
         } else {
             if (stride != 0) {
                 // Set the row length to match the stride
-                uint32 row_length_in_pixels = stride / f.bytes;
+                uint32 row_length_in_pixels = stride / gl_internal_format.bytes;
                 glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_in_pixels);
             }
 
@@ -722,12 +794,12 @@ namespace tavros::renderer
             glTexImage2D(
                 target,
                 0, // mip level
-                f.internal_format,
+                gl_internal_format.internal_format,
                 desc.width,
                 desc.height,
                 0, // border
-                f.format,
-                f.type,
+                gl_internal_format.format,
+                gl_internal_format.type,
                 pixels
             );
 
@@ -743,23 +815,25 @@ namespace tavros::renderer
 
         glBindTexture(target, 0);
 
-        return {m_resources.textures.insert(texture)};
+        texture_handle handle = {m_resources.textures.insert({desc, texture_owner.release(), target})};
+        ::logger.debug("Texture with id %u created", handle.id);
+        return handle;
     }
 
-    void graphics_device_opengl::destroy_texture(texture_handle handle)
+    void graphics_device_opengl::destroy_texture(texture_handle texture)
     {
-        if (auto* desc = m_resources.textures.try_get(handle.id)) {
+        if (auto* desc = m_resources.textures.try_get(texture.id)) {
             glDeleteTextures(1, &desc->texture_obj);
-            m_resources.textures.remove(handle.id);
+            ::logger.debug("OpenGL Texture object with id %u deleted", desc->texture_obj);
+            m_resources.textures.remove(texture.id);
+            ::logger.debug("Texture with id %u destroyed", texture.id);
         } else {
-            ::logger.error("Can't destroy texture with id %d because it doesn't exist", handle.id);
+            ::logger.error("Can't destroy texture with id %u because it doesn't exist", texture.id);
         }
     }
 
     pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_desc& desc)
     {
-        gl_pipeline pipeline{desc, 0};
-
         // create shader program
         auto v = compile_shader(desc.shaders.vertex_source, GL_VERTEX_SHADER);
         auto f = compile_shader(desc.shaders.fragment_source, GL_FRAGMENT_SHADER);
@@ -767,6 +841,9 @@ namespace tavros::renderer
         // Validate shaders
         if (v == 0) {
             ::logger.error("Can't compile vertex shader");
+            if (f) {
+                glDeleteShader(f);
+            }
             return {0};
         }
         if (f == 0) {
@@ -775,25 +852,19 @@ namespace tavros::renderer
             return {0};
         }
 
+        auto program = link_program(v, f);
+        glDeleteShader(v);
+        glDeleteShader(f);
+
         // Validate program
-        auto p = link_program(v, f);
-        if (p == 0) {
+        if (program == 0) {
             ::logger.error("Can't link program");
-            glDeleteShader(v);
-            glDeleteShader(f);
             return {0};
         }
 
-        // Everything is ok
-        glDeleteShader(v);
-        glDeleteShader(f);
-        pipeline.program_obj = p;
-
         // create pipeline
-        pipeline_handle handle = {m_resources.pipelines.insert(pipeline)};
-
+        pipeline_handle handle = {m_resources.pipelines.insert({desc, program})};
         ::logger.debug("Pipeline with id %u created", handle.id);
-
         return handle;
     }
 
@@ -802,8 +873,9 @@ namespace tavros::renderer
         if (auto* desc = m_resources.pipelines.try_get(handle.id)) {
             glDeleteProgram(desc->program_obj);
             m_resources.pipelines.remove(handle.id);
+            ::logger.debug("Pipeline with id %u destroyed", handle.id);
         } else {
-            ::logger.error("Can't destroy pipeline with id %d because it doesn't exist", handle.id);
+            ::logger.error("Can't destroy pipeline with id %u because it doesn't exist", handle.id);
         }
     }
 
@@ -829,48 +901,127 @@ namespace tavros::renderer
         glBindFramebuffer(GL_FRAMEBUFFER, fbo);
 
         // Validate attachments size
-        if (color_attachments.size() != desc.color_attachments.size()) {
+        if (color_attachments.size() != desc.color_attachment_formats.size()) {
             ::logger.error("Incorrect number of attachments");
             return {0};
         }
 
         // Validate attachments
-        core::static_vector<gl_texture*, 8> textures;
-        for (uint32 i = 0; i < textures.size(); ++i) {
-            auto attachment = color_attachments[i];
-            if (auto* tex = m_resources.textures.try_get(attachment.id)) {
+        core::static_vector<gl_texture*, k_max_color_attachments> color_attachment_textures;
+        core::static_vector<gl_texture*, k_max_color_attachments> resolve_textures;
+        for (uint32 i = 0; i < color_attachments.size(); ++i) {
+            const texture_handle& handle = color_attachments[i];
+            if (auto* tex = m_resources.textures.try_get(handle.id)) {
                 if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
                     ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", desc.width, desc.height, tex->desc.width, tex->desc.height);
                     return {0};
                 }
 
-                if (!is_color_fromat(desc.color_attachments[i].format)) {
-                    ::logger.error("Unsupported color format");
+                // Validate formats
+                if (!is_color_fromat(desc.color_attachment_formats[i])) {
+                    ::logger.error("Unsupported color attachment format");
                     return {0};
                 }
 
-                if (tex->desc.format != desc.color_attachments[i].format) {
-                    ::logger.error("Invalid attachment format");
+                if (!is_color_fromat(tex->desc.format)) {
+                    ::logger.error("Unsupported texture format for color attachment");
                     return {0};
                 }
 
-                textures.push_back(tex);
+                if (desc.color_attachment_formats[i] != tex->desc.format) {
+                    ::logger.error("Color attachment format mismatch with texture format");
+                    return {0};
+                }
+
+                // If multisampling is not eanbled for framebuffer, it must be disabled for attachments
+                if (desc.sample_count == 1) {
+                    // All attachments must use the same sample count
+                    if (tex->desc.sample_count != 1) {
+                        ::logger.error("Multisampling is not enabled for framebuffer, but enabled for attachment");
+                        return {0};
+                    }
+
+                    // All the attachments must be used as color attachments
+                    if (!tex->desc.usage.has_flag(texture_usage::render_target)) {
+                        ::logger.error("Texture attachment is not a render target");
+                        return {0};
+                    }
+
+                    // All the attachments must be used as color attachments
+                    color_attachment_textures.push_back(tex);
+                } else {
+                    // Multisampling is enabled for framebuffer
+                    if (tex->desc.sample_count == 1) {
+                        // The attachment will be used as a resolve target because tex->desc.sample_count == 1
+                        // Also the attachmend with sample count 1 should be with usage flag texture_usage::resolve_destination
+                        if (!tex->desc.usage.has_flag(texture_usage::resolve_destination)) {
+                            ::logger.error("Texture attachment is not a resolve destination target");
+                            return {0};
+                        }
+
+                        // The attachment will be used as a resolve target
+                        resolve_textures.push_back(tex);
+                    } else if (tex->desc.sample_count == desc.sample_count) {
+                        // The attachment will be used as a color attachment because tex->desc.sample_count == desc.sample_count
+                        // This texture sould be with usage flag texture_usage::render_target
+                        if (!tex->desc.usage.has_flag(texture_usage::render_target)) {
+                            ::logger.error("Texture attachment is not a render target");
+                            return {0};
+                        }
+
+                        // Texture with sample count more than 1 should be with usage flag texture_usage::resolve_source
+                        if (!tex->desc.usage.has_flag(texture_usage::resolve_source)) {
+                            ::logger.error("Texture attachment is not a resolve source target");
+                            return {0};
+                        }
+
+                        // The attachment will be used as a color attachment
+                        color_attachment_textures.push_back(tex);
+                    } else {
+                        // Not a resolve target and not a color attachment
+                        ::logger.error("Multisampling is enabled for framebuffer, but attachment has invalid sample count");
+                        return {0};
+                    }
+                }
             } else {
-                ::logger.error("Can't find texture with id %d", attachment.id);
+                // Texture not found, so the framebuffer can't be created
+                ::logger.error("Can't find texture with id %u", handle.id);
                 return {0};
             }
         }
 
-        // Attach depth/stencil texture to the framebuffer
-        if (desc.depth_stencil_attachment.format != pixel_format::none) {
-            auto gl_format = to_depth_stencil_fromat(desc.depth_stencil_attachment.format);
+        // Verify only resolve attachments
+        if (desc.sample_count != 1) {
+            // If multisampling is enabled, then for each color attachment there may be only one resolve attachment
+            if (resolve_textures.size() > color_attachment_textures.size()) {
+                ::logger.error("Multisampling is enabled for framebuffer, but the number of resolve attachments is greater than the number of color attachments");
+                return {0};
+            }
+        }
+
+        // Attach color textures to the framebuffer
+        core::static_vector<GLenum, k_max_color_attachments> draw_buffers;
+        for (uint32 i = 0; i < color_attachment_textures.size(); ++i) {
+            auto* tex = color_attachment_textures[i];
+            glBindTexture(tex->target, tex->texture_obj);
+            GLenum attachment_type = GL_COLOR_ATTACHMENT0 + i;
+            draw_buffers.push_back(attachment_type);
+            glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_type, tex->target, tex->texture_obj, 0);
+        }
+
+        // Attach depth/stencil texture to the framebuffer if provided
+        if (desc.depth_stencil_attachment_format != pixel_format::none) {
+            auto gl_format = to_depth_stencil_fromat(desc.depth_stencil_attachment_format);
             if (gl_format.is_depth_stencil_format) {
+                // Should be with depth/stencil attachment
                 if (!depth_stencil_attachment.has_value()) {
-                    ::logger.error("Has no depth/stencil attachment");
+                    ::logger.error("Depth/stencil attachment is not provided");
                     return {0};
                 }
+
                 auto depth_stencil_attachment_value = depth_stencil_attachment.value();
 
+                // Get depth/stencil texture and attach it
                 if (auto* tex = m_resources.textures.try_get(depth_stencil_attachment_value.id)) {
                     // Validate depth/stencil size
                     if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
@@ -879,31 +1030,43 @@ namespace tavros::renderer
                     }
 
                     // Validate depth/stencil format
-                    if (tex->desc.format != desc.depth_stencil_attachment.format) {
+                    if (tex->desc.format != desc.depth_stencil_attachment_format) {
                         ::logger.error("Invalid depth/stencil attachment format");
                         return {0};
                     }
 
+                    // Validate depth/stencil usage
+                    if (!tex->desc.usage.has_flag(texture_usage::depth_stencil_target)) {
+                        ::logger.error("Depth/stencil attachment is not a depth/stencil target");
+                        return {0};
+                    }
+
+                    // Everything is ok, attach depth/stencil texture
                     glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, GL_TEXTURE_2D, tex->texture_obj, 0);
                 } else {
-                    ::logger.error("Can't find texture with id %d");
+                    ::logger.error("Can't find texture with id %u");
                     return {0};
                 }
             } else {
                 ::logger.error("Unsupported depth/stencil format");
                 return {0};
             }
+        } else {
+            // Check if depth/stencil attachment is provided
+            if (depth_stencil_attachment.has_value()) {
+                ::logger.error("Depth/stencil attachment is provided, but depth/stencil is not enabled");
+                return {0};
+            }
         }
 
-        // Attach textures to the framebuffer
-        core::static_vector<GLenum, 8> draw_buffers;
-        for (uint32 i = 0; i < textures.size(); ++i) {
-            glBindTexture(GL_TEXTURE_2D, textures[i]->texture_obj);
-            GLenum attachment_type = GL_COLOR_ATTACHMENT0 + i;
-            draw_buffers.push_back(attachment_type);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_type, GL_TEXTURE_2D, textures[i]->texture_obj, 0);
+        // Framebuffer will be incomplete if the depth/stencil texture is not attached and
+        // there are no color attachments
+        if (draw_buffers.size() == 0 && desc.depth_stencil_attachment_format == pixel_format::none) {
+            ::logger.error("There are no attachments for framebuffer");
+            return {0};
         }
 
+        // Enable color attachments
         if (draw_buffers.size() == 0) {
             // Drawing only onto depth/stencil buffer
             // Framebuffer will be incomplete if the depth/stencil texture is not attached
@@ -933,8 +1096,9 @@ namespace tavros::renderer
             glDeleteFramebuffers(1, &desc->framebuffer_obj);
             ::logger.debug("OpenGL Framebuffer object with id %u deleted", desc->framebuffer_obj);
             m_resources.framebuffers.remove(framebuffer.id);
+            ::logger.debug("Framebuffer with id %u destroyed", framebuffer.id);
         } else {
-            ::logger.error("Can't destroy framebuffer with id %d because it doesn't exist", framebuffer.id);
+            ::logger.error("Can't destroy framebuffer with id %u because it doesn't exist", framebuffer.id);
         }
     }
 
@@ -1017,7 +1181,7 @@ namespace tavros::renderer
             ::logger.debug("OpenGL Buffer object with id %u deleted", desc->buffer_obj);
             m_resources.buffers.remove(buffer.id);
         } else {
-            ::logger.error("Can't destroy buffer with id %d because it doesn't exist", buffer.id);
+            ::logger.error("Can't destroy buffer with id %u because it doesn't exist", buffer.id);
         }
     }
 
@@ -1141,7 +1305,7 @@ namespace tavros::renderer
             ::logger.debug("OpenGL Vertex Array object with id %u deleted", desc->vao_obj);
             m_resources.geometry_bindings.remove(geometry_binding.id);
         } else {
-            ::logger.error("Can't destroy geometry binding with id %d because it doesn't exist", geometry_binding.id);
+            ::logger.error("Can't destroy geometry binding with id %u because it doesn't exist", geometry_binding.id);
         }
     }
 
@@ -1151,4 +1315,3 @@ namespace tavros::renderer
     }
 
 } // namespace tavros::renderer
-

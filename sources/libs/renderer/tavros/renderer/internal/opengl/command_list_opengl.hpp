@@ -18,6 +18,8 @@ namespace tavros::renderer
 
         void bind_geometry(geometry_binding_handle geometry_binding) override;
 
+        void bind_texture(uint32 slot, texture_handle texture) override;
+
     private:
         graphics_device_opengl* m_device = nullptr;
         uint32                  m_current_pipeline_id = 0;

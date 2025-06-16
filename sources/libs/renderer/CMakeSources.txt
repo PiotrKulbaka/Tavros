@@ -12,12 +12,10 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_list_opengl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_list_opengl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/device_resources_opengl.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/gl_pipeline.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/graphics_device_opengl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/graphics_device_opengl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/swapchain_opengl.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/attachment_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_desc.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/command_list.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/compare_op.hpp
