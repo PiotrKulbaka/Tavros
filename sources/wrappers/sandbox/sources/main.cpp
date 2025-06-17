@@ -269,9 +269,9 @@ int main()
 {
     tavros::core::logger::add_consumer([](tavros::core::severity_level lvl, tavros::core::string_view tag, tavros::core::string_view msg) {
         TAV_ASSERT(tag.data());
-        // if (lvl == tavros::core::severity_level::error) {
+        if (lvl == tavros::core::severity_level::error) {
         std::cout << msg << std::endl;
-        //}
+        }
     });
 
     auto logger = tavros::core::logger("main");
@@ -328,7 +328,6 @@ int main()
 
 
     auto gdevice = tavros::core::make_shared<tavros::renderer::graphics_device_opengl>();
-    auto comlist = tavros::core::make_shared<tavros::renderer::command_list_opengl>(gdevice.get());
 
     tavros::renderer::frame_composer_desc main_composer_desc;
     main_composer_desc.width = wnd->get_client_size().width;
@@ -359,32 +358,43 @@ int main()
     auto tex2 = gdevice->create_texture(tex_desc, pixels);
     free_pixels(pixels);
 
+    // msaa texture
+    tavros::renderer::texture_desc msaa_texture_desc;
+    msaa_texture_desc.width = 1280;
+    msaa_texture_desc.height = 720;
+    msaa_texture_desc.format = tavros::renderer::pixel_format::rgba8un;
+    msaa_texture_desc.usage = tavros::renderer::texture_usage::render_target | tavros::renderer::texture_usage::resolve_source;
+    msaa_texture_desc.sample_count = 16;
+    auto msaa_texture = gdevice->create_texture(msaa_texture_desc);
 
-    tavros::renderer::texture_desc atch_desc;
-    atch_desc.width = 1280;
-    atch_desc.height = 720;
-    atch_desc.format = tavros::renderer::pixel_format::rgba8un;
-    atch_desc.usage |= tavros::renderer::texture_usage::render_target;
-    auto atch1 = gdevice->create_texture(atch_desc);
+    // resolve texture
+    tavros::renderer::texture_desc msaa_resolve_desc;
+    msaa_resolve_desc.width = 1280;
+    msaa_resolve_desc.height = 720;
+    msaa_resolve_desc.format = tavros::renderer::pixel_format::rgba8un;
+    msaa_resolve_desc.usage = tavros::renderer::texture_usage::sampled | tavros::renderer::texture_usage::resolve_destination;
+    msaa_resolve_desc.sample_count = 1;
+    auto msaa_resolve_texture = gdevice->create_texture(msaa_resolve_desc);
 
-    atch_desc.format = tavros::renderer::pixel_format::rgb32f;
-    auto atch2 = gdevice->create_texture(atch_desc);
+    // depth/stencil texture
+    tavros::renderer::texture_desc msaa_depth_stencil_desc;
+    msaa_depth_stencil_desc.width = 1280;
+    msaa_depth_stencil_desc.height = 720;
+    msaa_depth_stencil_desc.format = tavros::renderer::pixel_format::depth24_stencil8;
+    msaa_depth_stencil_desc.usage = tavros::renderer::texture_usage::depth_stencil_target;
+    msaa_depth_stencil_desc.sample_count = 16;
+    auto msaa_depth_stencil_texture = gdevice->create_texture(msaa_depth_stencil_desc);
 
-    atch_desc.format = tavros::renderer::pixel_format::depth24_stencil8;
-    atch_desc.usage |= tavros::renderer::texture_usage::depth_stencil_target;
-    auto atch_ds = gdevice->create_texture(atch_desc);
-
-    tavros::renderer::framebuffer_desc fb_desc;
-    fb_desc.width = 1280;
-    fb_desc.height = 720;
-    fb_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
-    fb_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgb32f);
-    fb_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
-
-
-    tavros::renderer::texture_handle attachments[] = {atch1, atch2};
-
-    auto fb = gdevice->create_framebuffer(fb_desc, attachments, atch_ds);
+    // msaa framebuffer
+    tavros::renderer::framebuffer_desc msaa_framebuffer_desc;
+    msaa_framebuffer_desc.width = 1280;
+    msaa_framebuffer_desc.height = 720;
+    msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
+    msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
+    msaa_framebuffer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
+    msaa_framebuffer_desc.sample_count = 16;
+    tavros::renderer::texture_handle msaa_attachments[] = {msaa_texture, msaa_resolve_texture};
+    auto msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_desc, msaa_attachments, msaa_depth_stencil_texture);
 
 
     tavros::renderer::sampler_desc samler_desc;
@@ -464,12 +474,15 @@ int main()
         app->poll_events();
 
         auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
+        auto* cbuf = composer->create_command_list();
+        composer->begin_frame();
 
         float elapsed = tm.elapsed<std::chrono::microseconds>() / 1000000.0f;
         tm.start();
 
         update_cameta(keys, mouse_delta, elapsed, aspect_ratio, cam);
         mouse_delta = tavros::math::vec2();
+
 
         glClearDepth(1.0);
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
@@ -478,15 +491,15 @@ int main()
         glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
 
-        comlist->bind_pipeline(main_pipeline);
+        cbuf->bind_pipeline(main_pipeline);
 
-        comlist->bind_geometry(geometry1);
+        cbuf->bind_geometry(geometry1);
 
-        comlist->bind_texture(0, tex1);
+        cbuf->bind_texture(0, tex1);
 
         glBindSampler(0, sampler1.id);
 
-        comlist->bind_texture(1, tex2);
+        cbuf->bind_texture(1, tex2);
         glBindSampler(1, sampler1.id);
 
         auto cam_mat = cam.get_view_projection_matrix();
@@ -501,6 +514,10 @@ int main()
 
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
 
+        cbuf->bind_framebuffer(composer->backbuffer());
+
+        composer->submit_command_list(cbuf);
+        composer->end_frame();
         composer->present();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));

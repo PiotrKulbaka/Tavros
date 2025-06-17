@@ -51,6 +51,8 @@ namespace tavros::renderer
         backbuffer_desc.height = desc.height;
         backbuffer_desc.sample_count = 1; // For backbuffer, sample count must be 1
 
+        m_internal_command_list = core::make_unique<command_list_opengl>(device);
+
         m_backbuffer = {m_device->get_resources()->framebuffers.insert({backbuffer_desc, 0, true})};
         ::logger.debug("Default framebuffer with id %u for frame composer created", m_backbuffer.id);
     }
@@ -103,20 +105,31 @@ namespace tavros::renderer
 
     void frame_composer_opengl::present()
     {
+        if (m_frame_started) {
+            ::logger.error("Frame is not completed yet, but trying to present it");
+        }
         m_context->swap_buffers();
     }
 
     void frame_composer_opengl::begin_frame()
     {
+        if (m_frame_started) {
+            ::logger.error("Frame already started");
+        }
+        m_frame_started = true;
     }
 
     void frame_composer_opengl::end_frame()
     {
+        if (!m_frame_started) {
+            ::logger.error("Frame not started");
+        }
+        m_frame_started = false;
     }
 
     command_list* frame_composer_opengl::create_command_list()
     {
-        return nullptr;
+        return m_internal_command_list.get();
     }
 
     void frame_composer_opengl::submit_command_list(command_list* list)
@@ -125,11 +138,12 @@ namespace tavros::renderer
 
     bool frame_composer_opengl::is_frame_complete()
     {
-        return true;
+        return !m_frame_started;
     }
 
     void frame_composer_opengl::wait_for_frame_complete()
     {
+        // Do nothing for now
     }
 
 } // namespace tavros::renderer

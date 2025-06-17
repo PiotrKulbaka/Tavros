@@ -694,7 +694,7 @@ namespace tavros::renderer
 
         // Validate sample count
         if (desc.sample_count > 1) {
-            // Resolve source texture must be a render target with sample_count == 1
+            // Resolve destination texture must be a render target with sample_count == 1
             if (desc.usage.has_flag(texture_usage::resolve_destination)) {
                 ::logger.error("Resolve destination texture must have sample_count == 1");
                 return {0};
@@ -712,12 +712,6 @@ namespace tavros::renderer
                 return {0};
             }
 
-            // Resolve source texture must have sample_count == 1
-            if (desc.usage.has_flag(texture_usage::resolve_source)) {
-                ::logger.error("Resolve source texture must have sample_count == 1");
-                return {0};
-            }
-
             // Mip levels should be 1 for multisample textures
             if (desc.mip_levels > 1) {
                 ::logger.error("Multisample texture cannot have mip levels");
@@ -729,6 +723,15 @@ namespace tavros::renderer
                 ::logger.error("Texture pixels can't be provided for multisample textures");
                 return {0};
             }
+        } else if (desc.sample_count == 1) {
+            // Resolve source texture must be a render target with sample_count > 1
+            if (desc.usage.has_flag(texture_usage::resolve_source)) {
+                ::logger.error("Resolve source texture must have sample_count > 1");
+                return {0};
+            }
+        } else {
+            ::logger.error("Sample count must be 1 or greater");
+            return {0};
         }
 
         if (desc.usage.has_flag(texture_usage::resolve_source)) {
@@ -747,7 +750,7 @@ namespace tavros::renderer
             }
 
             // Depth stencil target texture cannot be used as sampled
-            if (desc.usage.has_flag(texture_usage::storage)) {
+            if (desc.usage.has_flag(texture_usage::sampled)) {
                 ::logger.error("Depth stencil target texture cannot be used as sampled");
                 return {0};
             }
@@ -886,21 +889,6 @@ namespace tavros::renderer
         core::optional<texture_handle>         depth_stencil_attachment
     )
     {
-        GLuint fbo;
-        glGenFramebuffers(1, &fbo);
-
-        ::logger.debug("OpenGL Framebuffer object with id %u created", fbo);
-
-        // Scope for framebuffer deletion if something goes wrong
-        auto fbo_owner = core::make_scoped_owner(fbo, [](GLuint id) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &id);
-            ::logger.debug("OpenGL Framebuffer object with id %u deleted", id);
-        });
-
-        // Bind framebuffer and attach textures
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
-
         // Validate attachments size
         if (color_attachments.size() != desc.color_attachment_formats.size()) {
             ::logger.error("Incorrect number of attachments");
@@ -991,6 +979,17 @@ namespace tavros::renderer
             }
         }
 
+        // Validate depth/stencil texture
+        bool depth_stencil_enabled = desc.depth_stencil_attachment_format != pixel_format::none;
+        bool depth_stencil_provided = depth_stencil_attachment.has_value();
+        if (depth_stencil_enabled && !depth_stencil_provided) {
+            ::logger.error("Depth/stencil attachment is not provided, but is enabled for framebuffer");
+            return {0};
+        } else if (!depth_stencil_enabled && depth_stencil_provided) {
+            ::logger.error("Depth/stencil attachment is provided, but is not enabled for framebuffer");
+            return {0};
+        }
+
         // Verify only resolve attachments
         if (desc.sample_count != 1) {
             // If multisampling is enabled, then for each color attachment there may be only one resolve attachment
@@ -1000,26 +999,37 @@ namespace tavros::renderer
             }
         }
 
+        GLuint fbo;
+        glGenFramebuffers(1, &fbo);
+
+        ::logger.debug("OpenGL Framebuffer object with id %u created", fbo);
+
+        // Scope for framebuffer deletion if something goes wrong
+        auto fbo_owner = core::make_scoped_owner(fbo, [](GLuint id) {
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            glDeleteFramebuffers(1, &id);
+            ::logger.debug("OpenGL Framebuffer object with id %u deleted", id);
+        });
+
+        // Bind framebuffer and attach textures
+        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+
         // Attach color textures to the framebuffer
         core::static_vector<GLenum, k_max_color_attachments> draw_buffers;
         for (uint32 i = 0; i < color_attachment_textures.size(); ++i) {
             auto* tex = color_attachment_textures[i];
-            glBindTexture(tex->target, tex->texture_obj);
+            //glBindTexture(tex->target, tex->texture_obj);
             GLenum attachment_type = GL_COLOR_ATTACHMENT0 + i;
             draw_buffers.push_back(attachment_type);
             glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_type, tex->target, tex->texture_obj, 0);
         }
 
         // Attach depth/stencil texture to the framebuffer if provided
-        if (desc.depth_stencil_attachment_format != pixel_format::none) {
+        if (depth_stencil_enabled) {
+            TAV_ASSERT(depth_stencil_provided);
+
             auto gl_format = to_depth_stencil_fromat(desc.depth_stencil_attachment_format);
             if (gl_format.is_depth_stencil_format) {
-                // Should be with depth/stencil attachment
-                if (!depth_stencil_attachment.has_value()) {
-                    ::logger.error("Depth/stencil attachment is not provided");
-                    return {0};
-                }
-
                 auto depth_stencil_attachment_value = depth_stencil_attachment.value();
 
                 // Get depth/stencil texture and attach it
@@ -1042,20 +1052,20 @@ namespace tavros::renderer
                         return {0};
                     }
 
+                    // Validate depth/stencil sample count
+                    if (tex->desc.sample_count != desc.sample_count) {
+                        ::logger.error("Depth/stencil attachment has invalid sample count");
+                        return {0};
+                    }
+
                     // Everything is ok, attach depth/stencil texture
-                    glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, GL_TEXTURE_2D, tex->texture_obj, 0);
+                    glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, tex->target, tex->texture_obj, 0);
                 } else {
                     ::logger.error("Can't find texture with id %u");
                     return {0};
                 }
             } else {
-                ::logger.error("Unsupported depth/stencil format");
-                return {0};
-            }
-        } else {
-            // Check if depth/stencil attachment is provided
-            if (depth_stencil_attachment.has_value()) {
-                ::logger.error("Depth/stencil attachment is provided, but depth/stencil is not enabled");
+                ::logger.error("Is not a depth/stencil format");
                 return {0};
             }
         }
