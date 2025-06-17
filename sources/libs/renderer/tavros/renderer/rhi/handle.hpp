@@ -11,7 +11,7 @@ namespace tavros::renderer
         uint32 id = 0;
     };
 
-    struct swapchain_tag
+    struct frame_composer_tag
     {
     };
     struct sampler_tag
@@ -32,13 +32,17 @@ namespace tavros::renderer
     struct geometry_binding_tag
     {
     };
+    struct render_pass_tag
+    {
+    };
 
-    using swapchain_handle = handle_base<swapchain_tag>;
+    using frame_composer_handle = handle_base<frame_composer_tag>;
     using sampler_handle = handle_base<sampler_tag>;
     using texture_handle = handle_base<texture_tag>;
     using pipeline_handle = handle_base<pipeline_tag>;
     using framebuffer_handle = handle_base<framebuffer_tag>;
     using buffer_handle = handle_base<buffer_tag>;
     using geometry_binding_handle = handle_base<geometry_binding_tag>;
+    using render_pass_handle = handle_base<render_pass_tag>;
 
 } // namespace tavros::renderer

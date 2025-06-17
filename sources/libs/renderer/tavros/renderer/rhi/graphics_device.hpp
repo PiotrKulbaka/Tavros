@@ -4,15 +4,16 @@
 #include <tavros/core/optional.hpp>
 
 #include <tavros/renderer/rhi/handle.hpp>
-#include <tavros/renderer/rhi/swapchain_desc.hpp>
+#include <tavros/renderer/rhi/frame_composer_desc.hpp>
 #include <tavros/renderer/rhi/sampler_desc.hpp>
 #include <tavros/renderer/rhi/texture_desc.hpp>
 #include <tavros/renderer/rhi/pipeline_desc.hpp>
 #include <tavros/renderer/rhi/framebuffer_desc.hpp>
 #include <tavros/renderer/rhi/buffer_desc.hpp>
 #include <tavros/renderer/rhi/geometry_binding_desc.hpp>
+#include <tavros/renderer/rhi/render_pass_desc.hpp>
 
-#include <tavros/renderer/rhi/swapchain.hpp>
+#include <tavros/renderer/rhi/frame_composer.hpp>
 
 namespace tavros::renderer
 {
@@ -22,15 +23,13 @@ namespace tavros::renderer
     public:
         virtual ~graphics_device() = default;
 
-        virtual swapchain_handle create_swapchain(
-            const swapchain_desc& desc,
-            void*                 native_handle
+        virtual frame_composer_handle create_frame_composer(
+            const frame_composer_desc& desc,
+            void*                      native_handle
         ) = 0;
-        virtual void destroy_swapchain(swapchain_handle swapchain) = 0;
+        virtual void destroy_frame_composer(frame_composer_handle composer) = 0;
 
-        /// Returns swapchain pointer by handle, or nullptr if handle is invalid
-        /// This pointer is valid until swapchain handle is destroyed (destroy_swapchain method)
-        virtual swapchain* get_swapchain_ptr_by_handle(swapchain_handle swapchain) = 0;
+        virtual frame_composer* get_frame_composer_ptr(frame_composer_handle composer) = 0;
 
         virtual sampler_handle create_sampler(
             const sampler_desc& desc
@@ -69,6 +68,11 @@ namespace tavros::renderer
             core::optional<buffer_handle>         index_buffer = core::nullopt
         ) = 0;
         virtual void destroy_geometry(geometry_binding_handle geometry_binding) = 0;
+
+        virtual render_pass_handle create_render_pass(
+            const render_pass_desc& desc
+        ) = 0;
+        virtual void destroy_render_pass(render_pass_handle render_pass) = 0;
     };
 
 } // namespace tavros::renderer

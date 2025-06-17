@@ -1,6 +1,6 @@
 #include <tavros/renderer/internal/opengl/graphics_device_opengl.hpp>
 
-#include <tavros/renderer/internal/opengl/swapchain_opengl.hpp>
+#include <tavros/renderer/internal/opengl/frame_composer_opengl.hpp>
 #include <tavros/core/scoped_owner.hpp>
 #include <tavros/core/prelude.hpp>
 
@@ -557,53 +557,54 @@ namespace tavros::renderer
         });
 
         // Should be removed in last turn because swapchain owns the OpenGL context
-        destroy_for(m_resources.swapchains, [this](swapchain_handle h) {
-            destroy_swapchain(h);
+        destroy_for(m_resources.composers, [this](frame_composer_handle h) {
+            destroy_frame_composer(h);
         });
     }
 
-    swapchain_handle graphics_device_opengl::create_swapchain(const swapchain_desc& desc, void* native_handle)
+    frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_desc& desc, void* native_handle)
     {
-        // Check if swapchain with native handle already created
-        for (auto& sc : m_resources.swapchains) {
+        // Check if frame composer with native handle already created
+        for (auto& sc : m_resources.composers) {
             if (native_handle == sc.second.native_handle) {
-                ::logger.error("Swapchain with native handle %p already created", native_handle);
+                ::logger.error("Frame composer with native handle %p already created", native_handle);
                 return {0};
             }
         }
 
-        auto sc = create_swapchain_opengl(this, desc, native_handle);
+        // Create a new frame composer
+        auto composer = frame_composer_opengl::create(this, desc, native_handle);
 
-        if (!sc) {
-            ::logger.error("Swapchain creation failed");
+        if (!composer) {
+            ::logger.error("Frame composer creation failed");
             return {0};
         }
 
         // Initialize debug callback for OpenGL here, because it's not possible to do it in the constructor
-        // the first call of create_swapchain_opengl() will create the context
+        // the first call of frame_composer_opengl::create() will create the context
         init_gl_debug();
 
-        swapchain_handle handle = {m_resources.swapchains.insert({desc, sc, native_handle})};
-        ::logger.debug("Swapchain with id %u created", handle.id);
+        frame_composer_handle handle = {m_resources.composers.insert({desc, std::move(composer), native_handle})};
+        ::logger.debug("Frame composer with id %u created", handle.id);
         return handle;
     }
 
-    void graphics_device_opengl::destroy_swapchain(swapchain_handle swapchain)
+    void graphics_device_opengl::destroy_frame_composer(frame_composer_handle composer)
     {
-        if (auto* desc = m_resources.swapchains.try_get(swapchain.id)) {
-            m_resources.swapchains.remove(swapchain.id);
-            ::logger.debug("Swapchain with id %u destroyed", swapchain.id);
+        if (auto* desc = m_resources.composers.try_get(composer.id)) {
+            m_resources.composers.remove(composer.id);
+            ::logger.debug("Frame composer with id %u destroyed", composer.id);
         } else {
-            ::logger.error("Can't destroy swapchain with id %u because it doesn't exist", swapchain.id);
+            ::logger.error("Can't destroy frame composer with id %u because it doesn't exist", composer.id);
         }
     }
 
-    swapchain* graphics_device_opengl::get_swapchain_ptr_by_handle(swapchain_handle swapchain)
+    frame_composer* graphics_device_opengl::get_frame_composer_ptr(frame_composer_handle composer)
     {
-        if (auto* desc = m_resources.swapchains.try_get(swapchain.id)) {
-            return desc->swapchain_ptr.get();
+        if (auto* desc = m_resources.composers.try_get(composer.id)) {
+            return desc->composer_ptr.get();
         } else {
-            ::logger.error("Can't find swapchain with id %u", swapchain.id);
+            ::logger.error("Can't find frame composer with id %u", composer.id);
             return nullptr;
         }
     }
@@ -1304,8 +1305,48 @@ namespace tavros::renderer
             glDeleteVertexArrays(1, &desc->vao_obj);
             ::logger.debug("OpenGL Vertex Array object with id %u deleted", desc->vao_obj);
             m_resources.geometry_bindings.remove(geometry_binding.id);
+            ::logger.debug("Geometry binding with id %u destroyed", geometry_binding.id);
         } else {
             ::logger.error("Can't destroy geometry binding with id %u because it doesn't exist", geometry_binding.id);
+        }
+    }
+
+    render_pass_handle graphics_device_opengl::create_render_pass(const render_pass_desc& desc)
+    {
+        // Validate attachments
+        for (const auto& attachment : desc.color_attachments) {
+            if (!is_color_fromat(attachment.format)) {
+                ::logger.error("Invalid color attachment format");
+                return {0};
+            }
+        }
+
+        auto depth_stencil_is_none = desc.depth_stencil_attachment.format != pixel_format::none;
+        if (depth_stencil_is_none) {
+            auto f = to_depth_stencil_fromat(desc.depth_stencil_attachment.format);
+            if (!f.is_depth_stencil_format) {
+                ::logger.error("Invalid depth/stencil attachment format");
+                return {0};
+            }
+        }
+
+        if (desc.color_attachments.size() == 0 && depth_stencil_is_none) {
+            ::logger.error("Render pass has no attachments");
+            return {0};
+        }
+
+        render_pass_handle handle = {m_resources.render_passes.insert({desc})};
+        ::logger.debug("Render pass with id %u created", handle.id);
+        return handle;
+    }
+
+    void graphics_device_opengl::destroy_render_pass(render_pass_handle render_pass)
+    {
+        if (auto* desc = m_resources.render_passes.try_get(render_pass.id)) {
+            m_resources.render_passes.remove(render_pass.id);
+            ::logger.debug("Render pass with id %u destroyed", render_pass.id);
+        } else {
+            ::logger.error("Can't destroy render pass with id %u because it doesn't exist", render_pass.id);
         }
     }
 

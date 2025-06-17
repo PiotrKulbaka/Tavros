@@ -9,7 +9,7 @@ namespace tavros::renderer
     /**
      * Describes a swapchain to be created for a window or view.
      */
-    struct swapchain_desc
+    struct frame_composer_desc
     {
         /// Width of the rendering surface, in pixels
         uint32 width = 0;

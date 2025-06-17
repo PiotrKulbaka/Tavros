@@ -7,7 +7,7 @@ namespace tavros::renderer
 {
     class gl_command_list;
 
-    class graphics_device_opengl final : public tavros::renderer::graphics_device
+    class graphics_device_opengl final : public graphics_device
     {
     public:
         graphics_device_opengl();
@@ -15,13 +15,13 @@ namespace tavros::renderer
 
         void destroy();
 
-        virtual swapchain_handle create_swapchain(
-            const swapchain_desc& desc,
-            void*                 native_handle
+        virtual frame_composer_handle create_frame_composer(
+            const frame_composer_desc& desc,
+            void*                      native_handle
         ) override;
-        virtual void destroy_swapchain(swapchain_handle swapchain) override;
+        virtual void destroy_frame_composer(frame_composer_handle composer) override;
 
-        virtual swapchain* get_swapchain_ptr_by_handle(swapchain_handle swapchain) override;
+        virtual frame_composer* get_frame_composer_ptr(frame_composer_handle composer) override;
 
         sampler_handle create_sampler(
             const sampler_desc& desc
@@ -59,6 +59,9 @@ namespace tavros::renderer
             core::optional<buffer_handle>         index_buffer = core::nullopt
         ) override;
         void destroy_geometry(geometry_binding_handle geometry_binding) override;
+
+        render_pass_handle create_render_pass(const render_pass_desc& desc) override;
+        void               destroy_render_pass(render_pass_handle render_pass) override;
 
         device_resources_opengl* get_resources();
 

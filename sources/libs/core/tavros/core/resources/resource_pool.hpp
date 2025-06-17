@@ -8,11 +8,11 @@
 namespace tavros::core
 {
 
-    template<class T>
+    template<class T, class H = uint32>
     class resource_pool
     {
     public:
-        using handle_t = uint32;
+        using handle_t = H;
 
     public:
         resource_pool() = default;
@@ -67,10 +67,18 @@ namespace tavros::core
             return try_get(handle);
         }
 
-        [[nodiscard]] handle_t insert(const T& desc)
+        [[nodiscard]] handle_t insert(T&& desc)
         {
             auto handle = m_counter.fetch_add(1);
-            m_storage[handle] = desc;
+            m_storage[handle] = std::move(desc);
+            return handle;
+        }
+
+        template<typename... Args>
+        [[nodiscard]] handle_t emplace(Args&&... args)
+        {
+            auto handle = m_counter.fetch_add(1);
+            m_storage.emplace(std::piecewise_construct, std::forward_as_tuple(handle), std::forward_as_tuple(std::forward<Args>(args)...));
             return handle;
         }
 
@@ -85,8 +93,8 @@ namespace tavros::core
         }
 
     private:
-        std::atomic<handle_t>          m_counter = 1;
-        core::unordered_map<uint32, T> m_storage;
+        std::atomic<handle_t>            m_counter = 1;
+        core::unordered_map<handle_t, T> m_storage;
     };
 
 } // namespace tavros::core

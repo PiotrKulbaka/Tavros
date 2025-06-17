@@ -1,17 +1,19 @@
-#include <tavros/renderer/internal/opengl/platform/win32/swapchain_opengl.hpp>
+#include <tavros/renderer/internal/opengl/platform/win32/context_opengl.hpp>
 
-#include <tavros/renderer/internal/opengl/swapchain_opengl.hpp>
-#include <tavros/core/logger/logger.hpp>
-#include <tavros/core/debug/assert.hpp>
+#include <tavros/core/prelude.hpp>
 #include <tavros/core/scoped_owner.hpp>
 
 #include <WinUser.h>
 #include <windef.h>
 #include <wingdi.h>
 
+#include <glad/glad.h>
+
+using namespace tavros::renderer;
+
 namespace
 {
-    tavros::core::logger logger("swapchain_opengl");
+    tavros::core::logger logger("gl_context");
 
     typedef HGLRC(WINAPI* fn_wglCreateContext_t)(HDC);
     fn_wglCreateContext_t _wglCreateContext;
@@ -44,14 +46,12 @@ namespace
 
         return true;
     }
-
-
 } // namespace
 
 namespace tavros::renderer
 {
 
-    core::shared_ptr<swapchain> create_swapchain_opengl(graphics_device_opengl* device, const swapchain_desc& desc, void* native_handle)
+    core::unique_ptr<context_opengl> context_opengl::create(const frame_composer_desc& desc, void* native_handle)
     {
         // Validate the swapchain desc
         // Validate width and height
@@ -129,65 +129,43 @@ namespace tavros::renderer
             return nullptr;
         }
 
-        return core::make_shared<swapchain_opengl>(device, desc, hWnd, dc_owner.release(), hGLRC);
-    }
-
-
-    swapchain_opengl::swapchain_opengl(graphics_device_opengl* device, const swapchain_desc& desc, HWND hWnd, HDC hDC, HGLRC hGLRC)
-        : m_device(device)
-        , m_desc(desc)
-        , m_hWnd(hWnd)
-        , m_hDC(hDC)
-        , m_hGLRC(hGLRC)
-        , m_width(desc.width)
-        , m_height(desc.height)
-    {
-        TAV_ASSERT(hWnd);
-        TAV_ASSERT(hDC);
-        TAV_ASSERT(hGLRC);
-
-        framebuffer_desc fb_screen;
-        fb_screen.width = m_width;
-        fb_screen.height = m_height;
-        fb_screen.color_attachment_formats.push_back(desc.color_attachment_format);
-        fb_screen.depth_stencil_attachment_format = desc.depth_stencil_attachment_format;
-
-        // Create screen framebuffer
-        m_framebuffer = {m_device->get_resources()->framebuffers.insert({fb_screen, 0, true})};
-
-        ::logger.debug("Default framebuffer with id %u for swapchain", m_framebuffer.id);
-
-        make_current();
+        if (!_wglMakeCurrent(hDC, hGLRC)) {
+            ::logger.error("Activate OpenGL context failed" /*, last_win_error_str()*/);
+            return nullptr;
+        }
 
         static bool glad_initialized = false;
         if (!glad_initialized) {
             glad_initialized = true;
             if (!gladLoadGL()) {
-                throw std::runtime_error("Failed to initialize OpenGL context via GLAD");
+                ::logger.error("gladLoadGL failed" /*, last_win_error_str()*/);
+                return nullptr;
             }
         }
+
+        return core::make_unique<context_opengl_win32>(hWnd, dc_owner.release(), hGLRC);
     }
 
-    swapchain_opengl::~swapchain_opengl()
+    context_opengl_win32::context_opengl_win32(HWND hWnd, HDC hDC, HGLRC hGLRC)
+        : m_hWnd(hWnd)
+        , m_hDC(hDC)
+        , m_hGLRC(hGLRC)
     {
-        // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
-        if (m_device->get_resources()->framebuffers.size() != 0) {
-            if (auto* desc = m_device->get_resources()->framebuffers.try_get(m_framebuffer.id)) {
-                m_device->get_resources()->framebuffers.remove(m_framebuffer.id);
-            } else {
-                ::logger.error("Can't destroy default framebuffer with id %u because it doesn't exist", m_framebuffer.id);
-            }
-        }
+        TAV_ASSERT(hWnd);
+        TAV_ASSERT(hDC);
+        TAV_ASSERT(hGLRC);
+    }
 
-        // Destroy OpenGL context
+    context_opengl_win32::~context_opengl_win32()
+    {
+        make_inactive();
         if (m_hGLRC) {
             if (!_wglDeleteContext(m_hGLRC)) {
-                ::logger.error("Detete OpenGL context failed" /*, last_win_error_str()*/);
+                ::logger.error("Detete OpenGL context failed" /*, last_win_error_str()*/); // TODO: print error
             }
             m_hGLRC = nullptr;
         }
 
-        // Destroy DC
         if (m_hDC) {
             if (!ReleaseDC(m_hWnd, m_hDC)) {
                 ::logger.error("ReleaseDC failed.");
@@ -197,64 +175,30 @@ namespace tavros::renderer
         m_hWnd = nullptr;
     }
 
-    uint32 swapchain_opengl::acquire_next_backbuffer_index() noexcept
+    void context_opengl_win32::make_current()
     {
-        return 0;
+        if (!_wglMakeCurrent(m_hDC, m_hGLRC)) {
+            ::logger.error("OpenGL activate context failed" /*, last_win_error_str()*/);
+        }
     }
 
-    framebuffer_handle swapchain_opengl::get_framebuffer(uint32 backbuffer_index)
+    void context_opengl_win32::make_inactive()
     {
-        TAV_ASSERT(backbuffer_index == 0);
-
-        return m_framebuffer;
+        if (!_wglMakeCurrent(nullptr, nullptr)) {
+            ::logger.error("OpenGL deactivate context failed" /*, last_win_error_str()*/);
+        }
     }
 
-    void swapchain_opengl::present(uint32 backbuffer_index)
+    void context_opengl_win32::swap_buffers()
     {
-        TAV_ASSERT(backbuffer_index == 0);
-
         if (!SwapBuffers(m_hDC)) {
             ::logger.error("OpenGL swap buffers failed" /*, last_win_error_str()*/);
         }
     }
 
-    void swapchain_opengl::resize(uint32 width, uint32 height)
+    bool context_opengl_win32::is_current()
     {
-        TAV_ASSERT(width > 0 && height > 0);
-
-        m_width = width;
-        m_height = height;
-
-        if (auto* desc = m_device->get_resources()->framebuffers.try_get(m_framebuffer.id)) {
-            desc->desc.width = m_width;
-            desc->desc.height = m_height;
-        } else {
-            ::logger.error("Can't find default framebuffer with id %u", m_framebuffer.id);
-        }
-    }
-
-    uint32 swapchain_opengl::width() const noexcept
-    {
-        return m_width;
-    }
-
-    uint32 swapchain_opengl::height() const noexcept
-    {
-        return m_height;
-    }
-
-    void swapchain_opengl::make_current()
-    {
-        if (!_wglMakeCurrent(m_hDC, m_hGLRC)) {
-            ::logger.error("OpenGL context activation failed" /*, last_win_error_str()*/);
-        }
-    }
-
-    void swapchain_opengl::make_inactive()
-    {
-        if (!_wglMakeCurrent(nullptr, nullptr)) {
-            ::logger.error("OpenGL deactivate context failed" /*, last_win_error_str()*/);
-        }
+        return _wglGetCurrentContext() == m_hGLRC;
     }
 
 } // namespace tavros::renderer

@@ -330,15 +330,15 @@ int main()
     auto gdevice = tavros::core::make_shared<tavros::renderer::graphics_device_opengl>();
     auto comlist = tavros::core::make_shared<tavros::renderer::command_list_opengl>(gdevice.get());
 
-    tavros::renderer::swapchain_desc main_swapchain_desc;
-    main_swapchain_desc.width = wnd->get_client_size().width;
-    main_swapchain_desc.height = wnd->get_client_size().height;
-    main_swapchain_desc.buffer_count = 3;
-    main_swapchain_desc.vsync = true;
-    main_swapchain_desc.color_attachment_format = tavros::renderer::pixel_format::rgba8un;
-    main_swapchain_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
+    tavros::renderer::frame_composer_desc main_composer_desc;
+    main_composer_desc.width = wnd->get_client_size().width;
+    main_composer_desc.height = wnd->get_client_size().height;
+    main_composer_desc.buffer_count = 3;
+    main_composer_desc.vsync = true;
+    main_composer_desc.color_attachment_format = tavros::renderer::pixel_format::rgba8un;
+    main_composer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
 
-    auto main_swapchain_handle = gdevice->create_swapchain(main_swapchain_desc, wnd->get_handle());
+    auto main_composer_handle = gdevice->create_frame_composer(main_composer_desc, wnd->get_handle());
 
     tavros::renderer::texture_desc tex_desc;
 
@@ -463,9 +463,7 @@ int main()
     while (app->is_runing()) {
         app->poll_events();
 
-        auto* main_swapchain_ptr = gdevice->get_swapchain_ptr_by_handle(main_swapchain_handle);
-        auto  backbuffer_index = main_swapchain_ptr->acquire_next_backbuffer_index();
-        auto  main_framebuffer = main_swapchain_ptr->get_framebuffer(backbuffer_index);
+        auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
 
         float elapsed = tm.elapsed<std::chrono::microseconds>() / 1000000.0f;
         tm.start();
@@ -503,7 +501,7 @@ int main()
 
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
 
-        main_swapchain_ptr->present(backbuffer_index);
+        composer->present();
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

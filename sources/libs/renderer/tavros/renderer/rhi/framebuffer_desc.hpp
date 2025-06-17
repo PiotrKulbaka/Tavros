@@ -25,7 +25,7 @@ namespace tavros::renderer
         uint32 height = 0;
 
         /// Number of samples per pixel. Must be 1 (no MSAA), 2, 4, 8, or 16
-        /// All attachments must use the same sample count.
+        /// All attachments must use the same sample count. (Except resolve attachments)
         uint32 sample_count = 1;
     };
 
