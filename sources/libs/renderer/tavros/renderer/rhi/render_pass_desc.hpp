@@ -41,6 +41,9 @@ namespace tavros::renderer
         /// Store operation performed at the end of the render pass
         store_op store = store_op::dont_care;
 
+        // Index of the resolve attachment, used when store_op is set to `resolve`
+        uint32 resolve_attachment_index = 0;
+
         /// Clear color value used when load_op is set to `clear`
         float clear_value[4] = {0.0f, 0.0f, 0.0f, 0.0f};
     };

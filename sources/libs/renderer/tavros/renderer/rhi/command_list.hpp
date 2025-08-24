@@ -37,11 +37,13 @@ namespace tavros::renderer
 
         virtual void bind_pipeline(pipeline_handle pipeline) = 0;
 
-        virtual void bind_framebuffer(framebuffer_handle handle) = 0;
-
         virtual void bind_geometry(geometry_binding_handle geometry_binding) = 0;
 
         virtual void bind_texture(uint32 slot, texture_handle texture) = 0;
+
+        virtual void begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer) = 0;
+
+        virtual void end_render_pass() = 0;
     };
 
 } // namespace tavros::renderer

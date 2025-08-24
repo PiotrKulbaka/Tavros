@@ -39,8 +39,11 @@ namespace tavros::renderer
     struct gl_framebuffer
     {
         framebuffer_desc desc;
-        GLuint           framebuffer_obj = 0;
-        bool             is_default = false;
+        GLuint framebuffer_obj = 0;
+        bool   is_default = false;
+
+        core::static_vector<texture_handle, k_max_color_attachments> color_attachments;
+        texture_handle   depth_stencil_attachment = {0};
     };
 
     struct gl_buffer
