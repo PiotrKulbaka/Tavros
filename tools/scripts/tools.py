@@ -1,8 +1,42 @@
 import os
 from concurrent.futures.thread import ThreadPoolExecutor
+from concurrent.futures import as_completed
 from pathlib import Path
 from .config import Config
-from .utils import run_command
+from .utils import run_command, tool_list, tool_version, parse_version
+from .log import log_print, CL_FATAL, CL_INFO, CL_GREEN, CL_INVERT, CL_ERROR, CL_COMMAND, CL_NORMAL, CL_RESET
+
+
+def get_clang_format_tool(clang_format_cfg):
+    """
+    Find a suitable clang-format executable in PATH that meets the minimum version requirement.
+
+    Args:
+        clang_format_cfg: Configuration object containing at least 'min_version'.
+
+    Returns:
+        Path to the clang-format executable.
+
+    Raises:
+        Exception: If no clang-format is found or no version meets the minimum requirement.
+    """
+
+    tools = tool_list("clang-format")
+    if not tools:
+        msg = "clang-format not found in PATH"
+        log_print(f'{CL_FATAL}{msg}')
+        raise Exception(msg)
+
+    min_ver = parse_version(clang_format_cfg.min_version)
+    for tool in tools:
+        ver = tool_version(tool)
+        if ver >= min_ver:
+            log_print(f"{CL_INFO}{CL_INVERT}Using clang-format {ver[0]}.{ver[1]}.{ver[2]}{CL_RESET} from {CL_GREEN}{tool}")
+            return tool
+
+    msg = f"No clang-format >= {clang_format_cfg.min_version} found in PATH"
+    log_print(f'{CL_FATAL}{msg}')
+    raise Exception(msg)
 
 def collect_files_by_exts_recursive(include, exclude, exts):
     """
@@ -53,22 +87,41 @@ def autoformat(cfg: Config):
 
     :param cfg: Config object with the project configuration.
     """
+    log_print(f'{CL_INFO}{CL_INVERT}Applying clang-format...')
+
     exts = cfg.command.autoformat.exts
     include = cfg.command.autoformat.include
     exclude = cfg.command.autoformat.exclude if "exclude" in cfg.command.autoformat else []
-    clang_foramt_tool_path = cfg.command.autoformat.clang_format_tool_path
+    clang_foramt_tool_path = get_clang_format_tool(cfg.command.autoformat)
     style_param = f"--style=file:{str(cfg.command.autoformat.clang_format_style_file)}"
 
     files = collect_files_by_exts_recursive(include, exclude, exts)
 
     def apply_clang_format(path):
-        run_command([clang_foramt_tool_path, style_param, '-i', str(path)])
+        result = run_command([clang_foramt_tool_path, style_param, '-i', str(path)])
+        return result.returncode == 0
 
     cores = os.cpu_count()
     workers = cores if cores else 8
+    futures = []
     with ThreadPoolExecutor(max_workers=workers) as executor:
         for f in files:
-            executor.submit(apply_clang_format, f)
+            futures.append(executor.submit(apply_clang_format, f))
+    
+    all_ok = True
+    for future in as_completed(futures):
+        try:
+            ok = future.result()
+            if not ok:
+                all_ok = False
+        except Exception as e:
+            all_ok = False
+
+    if not all_ok:
+        log_print(f"{CL_FATAL}Some files were not formatted.")
+        raise Exception("Some files were not formatted.")
+
+    log_print(f'{CL_INFO}{CL_INVERT}Applying clang-format...{CL_RESET} {CL_GREEN}Done')
 
 
 def collect_sources(cfg: Config):
@@ -78,6 +131,8 @@ def collect_sources(cfg: Config):
 
     :param cfg: Config object with the project configuration.
     """
+    log_print(f'{CL_INFO}{CL_INVERT}Collecting sources...')
+
     exts = cfg.command.collect_sources.exts
     test_exts = cfg.command.collect_sources.test_exts
     exclude = cfg.command.collect_sources.exclude if "exclude" in cfg.command.collect_sources else []
@@ -108,7 +163,7 @@ def collect_sources(cfg: Config):
 
         cmake_sources_filename = lib_dir / 'CMakeSources.txt'
 
-        print(f'Sources: `{cmake_sources_filename}`')
+        log_print(f'{CL_INFO}Sources: {CL_GREEN}{CL_NORMAL}`{cmake_sources_filename}`')
 
         with open(cmake_sources_filename, 'w') as f:
             def print_sources_list(sources):
@@ -145,4 +200,6 @@ def collect_sources(cfg: Config):
         if dir.exists():
             collect_lib_sources(dir, dir.name)
         else:
-            print(f'Directory is not exists: {str(dir.as_posix())}')
+            print(f'{CL_ERROR}Directory is not exists: {CL_COMMAND}{str(dir.as_posix())}')
+    
+    log_print(f'{CL_INFO}{CL_INVERT}Collecting sources...{CL_RESET} {CL_GREEN}Done')

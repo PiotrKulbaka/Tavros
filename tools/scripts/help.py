@@ -5,17 +5,18 @@ def get_doc():
         Command line interface for Tavros tools.
 
         Usage:
-            tavros.py autoformat
-            tavros.py collect_sources
-            tavros.py cmake_gen (xcode | visual_studio | ninja | makefiles) [--collect_sources] [--autoformat]
-            tavros.py (--show_resolved_config)
-            tavros.py (-h | --help)
+            tavros.py autoformat [--colored]
+            tavros.py collect_sources [--colored]
+            tavros.py cmake_gen (xcode | visual_studio | ninja | makefiles) [--collect_sources] [--autoformat] [--colored]
+            tavros.py (--show_resolved_config) [--colored]
+            tavros.py (-h | --help) [--colored]
 
         Options:
             -h, --help              Show this screen
             --autoformat            Autoformat all source code files, executed before the main command
             --collect_sources       Collect source code files to the `CMakeSources.txt`, executed before the main command
             --show_resolved_config  Show resolved configuration file
+            --colored               Use colors in the output
 
         Commands:
             autoformat              Autoformat all source code files

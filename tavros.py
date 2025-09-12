@@ -33,7 +33,7 @@ def main() -> int:
         pyenv_bin = pyenv / ('Scripts' if platform.system().startswith('Win') else 'bin')
         venv.create(pyenv, with_pip=True)
 
-        for package in ['docopt==0.6.2', 'toml==0.10.2']:
+        for package in ['docopt==0.6.2', 'toml==0.10.2', 'colorama==0.4.6']:
             subprocess.check_call([
                 str(pyenv_bin / 'pip'),
                 'install',

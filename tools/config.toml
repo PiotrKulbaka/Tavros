@@ -15,8 +15,8 @@ lib_system = "${path.libs}/system"
 
 
 [command.autoformat]
-clang_format_tool_path = "${builtin_clang_format_tool_path}"
 clang_format_style_file = "${path.tools}/.clang-format"
+min_version = "3.20"
 exts = [".cpp", ".hpp", ".h", ".c", ".inl", ".m", ".mm"]
 include = [
     "${path.lib_core}",
@@ -53,6 +53,7 @@ win32 = "platform/win32"
 cmake_tool_path = "cmake"
 generator = "Xcode"
 architecture = ""
+min_version = "3.20"
 compile_options = [
     "-Wno-gnu-anonymous-struct",
     "-Wno-nested-anon-types",
@@ -62,13 +63,16 @@ compile_options = [
 cmake_tool_path = "cmake.exe"
 generator = ""
 architecture = "x64" # Win32 or ARM64
+min_version = "3.20"
 
 [command.cmake_gen.ninja]
 cmake_tool_path = "cmake"
 generator = "Ninja"
 architecture = ""
+min_version = "3.20"
 
 [command.cmake_gen.makefiles]
 cmake_tool_path = "cmake"
 generator = "Unix Makefiles"
 architecture = ""
+min_version = "3.20"

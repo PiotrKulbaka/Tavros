@@ -6,6 +6,7 @@ from .tools import autoformat
 from .tools import collect_sources
 from .cmake import cmake_gen
 from .help import get_doc
+from .log import log_print, CL_FATAL, CL_INFO
 from .variable_resolver import VariableResolver
 from .builtin_variables import get_builtin_variables
 
@@ -22,7 +23,7 @@ def main(root_dir) -> int:
 
     try:
         if args['--show_resolved_config']:
-            print(cfg.to_str())
+            log_print(cfg.to_str())
         elif args['autoformat']:
             autoformat(cfg)
         elif args['collect_sources']:
@@ -41,14 +42,14 @@ def main(root_dir) -> int:
             if args['makefiles']:
                 cmake_gen(cfg, 'makefiles')
         else:
-            print('Unknown command.')
-            print(doc)
+            log_print(f'{CL_FATAL}Unknown command.')
+            log_print(doc)
             return 1
     except Exception as e:
-        print('An exception was thrown.')
+        log_print(f'{CL_FATAL}An exception was thrown.')
         raise e
 
     end = time.perf_counter()
-    print(f'Execution time: {end - start:.2f} seconds')
+    log_print(f'{CL_INFO}Execution time: {end - start:.2f} seconds')
 
     return 0
