@@ -383,7 +383,7 @@ namespace tavros::renderer
         }
 
         // Collect resolve attachments
-        core::static_vector<GLuint, k_max_color_attachments> resolve_attachments;
+        core::static_vector<GLuint, k_max_color_attachments>      resolve_attachments;
         core::static_vector<gl_texture*, k_max_color_attachments> resolve_textures;
         for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
             auto& rp_color_attachment = rp->desc.color_attachments[i];
@@ -395,7 +395,7 @@ namespace tavros::renderer
                 auto resolve_index = rp_color_attachment.resolve_attachment_index;
                 if (fb->color_attachments.size() > resolve_index) {
                     resolve_attachments.push_back(GL_COLOR_ATTACHMENT0 + i); // TODO: fix it, because it's not correct
-                    resolve_textures.push_back(tex); // TODO: fix it, because it's not correct
+                    resolve_textures.push_back(tex);                         // TODO: fix it, because it's not correct
                 } else {
                     ::logger.error("Invalid resolve attachment index `%u`", resolve_index);
                     return;
@@ -430,7 +430,7 @@ namespace tavros::renderer
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
             glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         }
-        
+
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         m_current_framebuffer = {0};
         m_current_render_pass = {0};

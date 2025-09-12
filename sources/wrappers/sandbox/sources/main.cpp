@@ -270,7 +270,7 @@ int main()
     tavros::core::logger::add_consumer([](tavros::core::severity_level lvl, tavros::core::string_view tag, tavros::core::string_view msg) {
         TAV_ASSERT(tag.data());
         if (lvl == tavros::core::severity_level::error) {
-        std::cout << msg << std::endl;
+            std::cout << msg << std::endl;
         }
     });
 
@@ -394,14 +394,13 @@ int main()
     msaa_framebuffer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
     msaa_framebuffer_desc.sample_count = 16;
     tavros::renderer::texture_handle msaa_attachments[] = {msaa_texture, msaa_resolve_texture};
-    auto msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_desc, msaa_attachments, msaa_depth_stencil_texture);
-
+    auto                             msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_desc, msaa_attachments, msaa_depth_stencil_texture);
 
 
     tavros::renderer::render_pass_desc msaa_render_pass;
-    msaa_render_pass.color_attachments.push_back({ tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.1f, 0.3f, 0.1f, 1.0f} });
-    msaa_render_pass.color_attachments.push_back({ tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::store, 0, {0.0f, 0.0f, 0.0f, 0.0f} });
-    msaa_render_pass.depth_stencil_attachment = { tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, 0};
+    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.1f, 0.3f, 0.1f, 1.0f}});
+    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::store, 0, {0.0f, 0.0f, 0.0f, 0.0f}});
+    msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, 0};
     auto msaa_pass = gdevice->create_render_pass(msaa_render_pass);
 
 
@@ -536,10 +535,10 @@ int main()
         glReadBuffer(GL_COLOR_ATTACHMENT0);
 
         glBlitFramebuffer(
-            0, 0, composer->width(), composer->height(),   // src rect
-            0, 0, composer->width(), composer->height(),   // dst rect
+            0, 0, composer->width(), composer->height(), // src rect
+            0, 0, composer->width(), composer->height(), // dst rect
             GL_COLOR_BUFFER_BIT,
-            GL_NEAREST // GL_LINEAR
+            GL_NEAREST                                   // GL_LINEAR
         );
 
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);

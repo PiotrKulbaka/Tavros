@@ -896,8 +896,8 @@ namespace tavros::renderer
         }
 
         // Validate attachments
-        core::static_vector<gl_texture*, k_max_color_attachments> color_attachment_textures;
-        core::static_vector<gl_texture*, k_max_color_attachments> resolve_textures;
+        core::static_vector<gl_texture*, k_max_color_attachments>    color_attachment_textures;
+        core::static_vector<gl_texture*, k_max_color_attachments>    resolve_textures;
         core::static_vector<texture_handle, k_max_color_attachments> color_attachments_h;
         for (uint32 i = 0; i < color_attachments.size(); ++i) {
             const texture_handle& handle = color_attachments[i];
@@ -982,9 +982,9 @@ namespace tavros::renderer
         }
 
         // Validate depth/stencil texture
-        bool depth_stencil_enabled = desc.depth_stencil_attachment_format != pixel_format::none;
-        bool depth_stencil_provided = depth_stencil_attachment.has_value();
-        texture_handle depth_stencil_attachmnet_h = { 0 };
+        bool           depth_stencil_enabled = desc.depth_stencil_attachment_format != pixel_format::none;
+        bool           depth_stencil_provided = depth_stencil_attachment.has_value();
+        texture_handle depth_stencil_attachmnet_h = {0};
         if (depth_stencil_enabled && !depth_stencil_provided) {
             ::logger.error("Depth/stencil attachment is not provided, but is enabled for framebuffer");
             return {0};
@@ -1020,7 +1020,7 @@ namespace tavros::renderer
         // Attach color textures to the framebuffer
         core::static_vector<GLenum, k_max_color_attachments> draw_buffers;
         for (uint32 i = 0; i < color_attachment_textures.size(); ++i) {
-            auto* tex = color_attachment_textures[i];
+            auto*  tex = color_attachment_textures[i];
             GLenum attachment_type = GL_COLOR_ATTACHMENT0 + i;
             draw_buffers.push_back(attachment_type);
             glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_type, tex->target, tex->texture_obj, 0);
@@ -1060,7 +1060,7 @@ namespace tavros::renderer
                         return {0};
                     }
 
-                    depth_stencil_attachmnet_h = { depth_stencil_attachment_value.id };
+                    depth_stencil_attachmnet_h = {depth_stencil_attachment_value.id};
 
                     // Everything is ok, attach depth/stencil texture
                     glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, tex->target, tex->texture_obj, 0);

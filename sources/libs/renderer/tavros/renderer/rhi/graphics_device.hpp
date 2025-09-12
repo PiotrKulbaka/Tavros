@@ -39,7 +39,7 @@ namespace tavros::renderer
         virtual texture_handle create_texture(
             const texture_desc& desc,
             const uint8*        pixels = nullptr,
-            uint32 stride = 0
+            uint32              stride = 0
         ) = 0;
         virtual void destroy_texture(texture_handle texture) = 0;
 
