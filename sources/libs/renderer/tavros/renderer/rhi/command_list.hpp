@@ -41,6 +41,8 @@ namespace tavros::renderer
 
         virtual void bind_texture(uint32 slot, texture_handle texture) = 0;
 
+        virtual void bind_sampler(uint32 slot, sampler_handle texture) = 0;
+
         virtual void begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer) = 0;
 
         virtual void end_render_pass() = 0;

@@ -237,9 +237,18 @@ namespace tavros::renderer
                 return;
             }
             glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(GL_TEXTURE_2D, tex->texture_obj);
+            glBindTexture(tex->target, tex->texture_obj);
         } else {
             ::logger.error("Can't bind the texture with id `%u`", texture.id);
+        }
+    }
+
+    void command_list_opengl::bind_sampler(uint32 slot, sampler_handle sampler)
+    {
+        if (auto* s = m_device->get_resources()->samplers.try_get(sampler.id)) {
+            glBindSampler(slot, s->sampler_obj);
+        } else {
+            ::logger.error("Can't bind the sampler with id `%u`", sampler.id);
         }
     }
 
@@ -291,6 +300,11 @@ namespace tavros::renderer
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         } else {
             glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
+
+            if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
+                ::logger.error("Framebuffer is not complete");
+                return;
+            }
         }
 
         // Set viewport
@@ -333,7 +347,7 @@ namespace tavros::renderer
                         // Apply load operation (only clear)
                         // Any other load operation doesn't need to be applied
                         if (load_op::clear == rp_color_attachment.load) {
-                            glClearBufferfv(GL_COLOR, GL_COLOR_ATTACHMENT0 + attachment_index, rp_color_attachment.clear_value);
+                            glClearBufferfv(GL_COLOR, attachment_index, rp_color_attachment.clear_value);
                         }
 
                         attachment_index++;
@@ -354,7 +368,7 @@ namespace tavros::renderer
 
                 // Apply load operation to stencil component
                 if (rp_depth_stencil_attachment.stencil_load == load_op::clear) {
-                    glClearBufferuiv(GL_STENCIL, 0, &rp_depth_stencil_attachment.stencil_clear_value);
+                    glClearBufferiv(GL_STENCIL, 0, &rp_depth_stencil_attachment.stencil_clear_value);
                 }
             }
         }
@@ -383,8 +397,14 @@ namespace tavros::renderer
         }
 
         // Collect resolve attachments
-        core::static_vector<GLuint, k_max_color_attachments>      resolve_attachments;
-        core::static_vector<gl_texture*, k_max_color_attachments> resolve_textures;
+        struct blit_info
+        {
+            GLuint      attachment = 0;
+            gl_texture* source = nullptr;
+            gl_texture* destination = nullptr;
+        };
+        core::static_vector<blit_info, k_max_color_attachments> blit_data;
+        GLuint                                                  attachment_index = 0;
         for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
             auto& rp_color_attachment = rp->desc.color_attachments[i];
             auto* tex = m_device->get_resources()->textures.try_get(fb->color_attachments[i].id);
@@ -394,8 +414,16 @@ namespace tavros::renderer
                 // Resolve attachments
                 auto resolve_index = rp_color_attachment.resolve_attachment_index;
                 if (fb->color_attachments.size() > resolve_index) {
-                    resolve_attachments.push_back(GL_COLOR_ATTACHMENT0 + i); // TODO: fix it, because it's not correct
-                    resolve_textures.push_back(tex);                         // TODO: fix it, because it's not correct
+                    // Find the resolve texture and validate it
+                    auto* resolve_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[resolve_index].id);
+                    if (resolve_tex == nullptr) {
+                        ::logger.error("Invalid resolve attachment index `%u`", resolve_index);
+                        return;
+                    }
+
+                    // everything is ok, add to the list
+                    blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, tex, resolve_tex});
+                    attachment_index++;
                 } else {
                     ::logger.error("Invalid resolve attachment index `%u`", resolve_index);
                     return;
@@ -405,20 +433,20 @@ namespace tavros::renderer
 
 
         // Check if need to resolve
-        if (resolve_attachments.size() > 0) {
+        if (blit_data.size() > 0) {
             // Bind for resolve and attach textures
             glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo);
 
-            for (uint32 i = 0; i < resolve_attachments.size(); ++i) {
-                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, resolve_attachments[i], GL_TEXTURE_2D, resolve_textures[i]->texture_obj, 0);
+            for (uint32 i = 0; i < blit_data.size(); ++i) {
+                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, blit_data[i].attachment, GL_TEXTURE_2D, blit_data[i].destination->texture_obj, 0);
             }
 
             glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj);
 
             // Resolve
-            for (uint32 i = 0; i < resolve_attachments.size(); ++i) {
-                glReadBuffer(resolve_attachments[i]);
-                glDrawBuffer(resolve_attachments[i]);
+            for (uint32 i = 0; i < blit_data.size(); ++i) {
+                glReadBuffer(blit_data[i].attachment);
+                glDrawBuffer(blit_data[i].attachment);
                 glBlitFramebuffer(
                     0, 0, fb->desc.width, fb->desc.height,
                     0, 0, fb->desc.width, fb->desc.height,

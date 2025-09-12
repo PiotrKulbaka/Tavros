@@ -214,7 +214,7 @@ void free_pixels(uint8* p)
     stbi_image_free(p);
 }
 
-void update_cameta(const bool* keys, tavros::math::vec2 mouse_delta, float elapsed, float aspect_ratio, tavros::renderer::camera& cam)
+void update_camera(const bool* keys, tavros::math::vec2 mouse_delta, float elapsed, float aspect_ratio, tavros::renderer::camera& cam)
 {
     tavros::math::vec3 dir;
     constexpr float    k_speed_factor = 2.0f;
@@ -269,9 +269,9 @@ int main()
 {
     tavros::core::logger::add_consumer([](tavros::core::severity_level lvl, tavros::core::string_view tag, tavros::core::string_view msg) {
         TAV_ASSERT(tag.data());
-        if (lvl == tavros::core::severity_level::error) {
-            std::cout << msg << std::endl;
-        }
+        // if (lvl == tavros::core::severity_level::error) {
+        std::cout << msg << std::endl;
+        //}
     });
 
     auto logger = tavros::core::logger("main");
@@ -342,21 +342,23 @@ int main()
     tavros::renderer::texture_desc tex_desc;
 
     int32 w, h, c;
-    auto* pixels = load_pixels_from_file("D:\\Work\\q3pp_res\\baseq3\\textures\\base_support\\x_support3.tga", w, h, c);
+    auto* pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\textures\\base_support\\x_support3.tga", w, h, c);
     tex_desc.width = w;
     tex_desc.height = h;
-    tex_desc.mip_levels = 1;
+    tex_desc.mip_levels = 16;
 
     auto tex1 = gdevice->create_texture(tex_desc, pixels);
     free_pixels(pixels);
 
-    pixels = load_pixels_from_file("D:\\Work\\q3pp_res\\baseq3\\textures\\base_wall\\metalfloor_wall_14_specular.tga", w, h, c);
+    pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\textures\\base_wall\\metalfloor_wall_14_specular.tga", w, h, c);
     tex_desc.width = w;
     tex_desc.height = h;
-    tex_desc.mip_levels = 1;
+    tex_desc.mip_levels = 16;
 
     auto tex2 = gdevice->create_texture(tex_desc, pixels);
     free_pixels(pixels);
+
+    int msaa_level = 2;
 
     // msaa texture
     tavros::renderer::texture_desc msaa_texture_desc;
@@ -364,10 +366,10 @@ int main()
     msaa_texture_desc.height = 720;
     msaa_texture_desc.format = tavros::renderer::pixel_format::rgba8un;
     msaa_texture_desc.usage = tavros::renderer::texture_usage::render_target | tavros::renderer::texture_usage::resolve_source;
-    msaa_texture_desc.sample_count = 16;
+    msaa_texture_desc.sample_count = msaa_level;
     auto msaa_texture = gdevice->create_texture(msaa_texture_desc);
 
-    // resolve texture
+    // resolve textureu
     tavros::renderer::texture_desc msaa_resolve_desc;
     msaa_resolve_desc.width = 1280;
     msaa_resolve_desc.height = 720;
@@ -382,7 +384,7 @@ int main()
     msaa_depth_stencil_desc.height = 720;
     msaa_depth_stencil_desc.format = tavros::renderer::pixel_format::depth24_stencil8;
     msaa_depth_stencil_desc.usage = tavros::renderer::texture_usage::depth_stencil_target;
-    msaa_depth_stencil_desc.sample_count = 16;
+    msaa_depth_stencil_desc.sample_count = msaa_level;
     auto msaa_depth_stencil_texture = gdevice->create_texture(msaa_depth_stencil_desc);
 
     // msaa framebuffer
@@ -392,13 +394,13 @@ int main()
     msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
     msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
     msaa_framebuffer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
-    msaa_framebuffer_desc.sample_count = 16;
+    msaa_framebuffer_desc.sample_count = msaa_level;
     tavros::renderer::texture_handle msaa_attachments[] = {msaa_texture, msaa_resolve_texture};
     auto                             msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_desc, msaa_attachments, msaa_depth_stencil_texture);
 
 
     tavros::renderer::render_pass_desc msaa_render_pass;
-    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.1f, 0.3f, 0.1f, 1.0f}});
+    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.0f, 0.0f, 0.4f, 1.0f}});
     msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::store, 0, {0.0f, 0.0f, 0.0f, 0.0f}});
     msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, 0};
     auto msaa_pass = gdevice->create_render_pass(msaa_render_pass);
@@ -428,30 +430,29 @@ int main()
     auto main_pipeline = gdevice->create_pipeline(main_pipeline_desc);
 
 
-    namespace r = tavros::renderer;
-    r::buffer_desc xyz_uv_desc;
+    tavros::renderer::buffer_desc xyz_uv_desc;
     xyz_uv_desc.size = 1024 * 128; // 128 KiB
-    xyz_uv_desc.usage = r::buffer_usage::vertex;
+    xyz_uv_desc.usage = tavros::renderer::buffer_usage::vertex;
 
     auto buffer_xyz_uv = gdevice->create_buffer(xyz_uv_desc, (uint8*) cube_vertices, sizeof(cube_vertices));
 
-    r::buffer_desc rgba_desc;
+    tavros::renderer::buffer_desc rgba_desc;
     xyz_uv_desc.size = 1024 * 128; // 128 KiB
-    xyz_uv_desc.usage = r::buffer_usage::vertex;
+    xyz_uv_desc.usage = tavros::renderer::buffer_usage::vertex;
 
     auto buffer_rgba = gdevice->create_buffer(xyz_uv_desc, (uint8*) cube_colors, sizeof(cube_colors));
 
-    r::buffer_desc indices_desc;
+    tavros::renderer::buffer_desc indices_desc;
     indices_desc.size = 1024 * 128; // 128 KiB
-    indices_desc.usage = r::buffer_usage::index;
+    indices_desc.usage = tavros::renderer::buffer_usage::index;
 
     auto buffer_indices = gdevice->create_buffer(indices_desc, (uint8*) cube_indices, sizeof(cube_indices));
 
 
-    r::geometry_binding_desc gbd;
-    gbd.layout.attributes.push_back({3, r::attribute_format::f32, false});
-    gbd.layout.attributes.push_back({2, r::attribute_format::f32, false});
-    gbd.layout.attributes.push_back({4, r::attribute_format::f32, false});
+    tavros::renderer::geometry_binding_desc gbd;
+    gbd.layout.attributes.push_back({3, tavros::renderer::attribute_format::f32, false});
+    gbd.layout.attributes.push_back({2, tavros::renderer::attribute_format::f32, false});
+    gbd.layout.attributes.push_back({4, tavros::renderer::attribute_format::f32, false});
 
     gbd.attribute_mapping.push_back({0, 0});
     gbd.attribute_mapping.push_back({0, 4 * 4});
@@ -461,10 +462,10 @@ int main()
     gbd.buffer_mapping.push_back({1, 0, 4 * 4});
 
     gbd.has_index_buffer = true;
-    gbd.index_format = r::index_buffer_format::u16;
+    gbd.index_format = tavros::renderer::index_buffer_format::u16;
 
-    r::buffer_handle buffers_to_binding[] = {buffer_xyz_uv, buffer_rgba};
-    auto             geometry1 = gdevice->create_geometry(gbd, buffers_to_binding, buffer_indices);
+    tavros::renderer::buffer_handle buffers_to_binding[] = {buffer_xyz_uv, buffer_rgba};
+    auto                            geometry1 = gdevice->create_geometry(gbd, buffers_to_binding, buffer_indices);
 
     auto cam = tavros::renderer::camera({0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 1.0, 0.0});
 
@@ -486,7 +487,7 @@ int main()
         float elapsed = tm.elapsed<std::chrono::microseconds>() / 1000000.0f;
         tm.start();
 
-        update_cameta(keys, mouse_delta, elapsed, aspect_ratio, cam);
+        update_camera(keys, mouse_delta, elapsed, aspect_ratio, cam);
         mouse_delta = tavros::math::vec2();
 
 
@@ -505,11 +506,10 @@ int main()
         cbuf->bind_geometry(geometry1);
 
         cbuf->bind_texture(0, tex1);
-
-        glBindSampler(0, sampler1.id);
+        cbuf->bind_sampler(0, sampler1);
 
         cbuf->bind_texture(1, tex2);
-        glBindSampler(1, sampler1.id);
+        cbuf->bind_sampler(1, sampler1);
 
         auto cam_mat = cam.get_view_projection_matrix();
         cam_mat = tavros::math::transpose(cam_mat);
@@ -517,13 +517,13 @@ int main()
         glBindBuffer(GL_UNIFORM_BUFFER, ubo);
         glBufferData(GL_UNIFORM_BUFFER, sizeof(tavros::math::mat4), cam_mat.data(), GL_DYNAMIC_DRAW);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-
         glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
+
 
         glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
 
         cbuf->end_render_pass();
+
 
         // from
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 1);
@@ -541,7 +541,7 @@ int main()
             GL_NEAREST                                   // GL_LINEAR
         );
 
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+        glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
         composer->submit_command_list(cbuf);
         composer->end_frame();

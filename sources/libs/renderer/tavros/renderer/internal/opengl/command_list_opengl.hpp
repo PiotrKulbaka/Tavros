@@ -18,6 +18,8 @@ namespace tavros::renderer
 
         void bind_texture(uint32 slot, texture_handle texture) override;
 
+        void bind_sampler(uint32 slot, sampler_handle texture) override;
+
         void begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer) override;
 
         void end_render_pass() override;

@@ -24,6 +24,9 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         MACOSX_BUNDLE_INFO_PLIST_FILE ${CMAKE_SOURCE_DIR}/tools/cmake/Info.plist.in
     )
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Windows")
+    set_target_properties(q3pp PROPERTIES
+        LINK_FLAGS "/SUBSYSTEM:WINDOWS"
+    )
 endif()
 
 target_include_directories(q3pp PUBLIC ${CMAKE_CURRENT_LIST_DIR}/sources)

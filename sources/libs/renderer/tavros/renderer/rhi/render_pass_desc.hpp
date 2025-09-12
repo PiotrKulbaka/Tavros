@@ -73,7 +73,7 @@ namespace tavros::renderer
         float depth_clear_value = 1.0f;
 
         /// Clear value for the stencil component (used only if stencil_load == clear)
-        uint32 stencil_clear_value = 0;
+        int32 stencil_clear_value = 0;
     };
 
     /**

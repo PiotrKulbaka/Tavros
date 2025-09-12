@@ -535,7 +535,7 @@ const char* Sys_DefaultInstallPath()
 {
     static char s[MAX_OSPATH];
     // char*       end = _getcwd(s, sizeof(s) - 1);
-    strcpy(s, "D:\\Work\\q3pp_res\\");
+    strcpy(s, "C:\\Work\\q3pp_res\\");
     s[MAX_OSPATH - 1] = 0;
 
     return s;
