@@ -16,7 +16,7 @@ lib_system = "${path.libs}/system"
 
 [command.autoformat]
 clang_format_style_file = "${path.tools}/.clang-format"
-min_version = "3.20"
+min_version = "21.1"
 exts = [".cpp", ".hpp", ".h", ".c", ".inl", ".m", ".mm"]
 include = [
     "${path.lib_core}",
