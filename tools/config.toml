@@ -50,7 +50,6 @@ win32 = "platform/win32"
 
 
 [command.cmake_gen.xcode]
-cmake_tool_path = "cmake"
 generator = "Xcode"
 architecture = ""
 min_version = "3.20"
@@ -60,19 +59,16 @@ compile_options = [
 ]
 
 [command.cmake_gen.visual_studio]
-cmake_tool_path = "cmake.exe"
 generator = ""
 architecture = "x64" # Win32 or ARM64
 min_version = "3.20"
 
 [command.cmake_gen.ninja]
-cmake_tool_path = "cmake"
 generator = "Ninja"
 architecture = ""
 min_version = "3.20"
 
 [command.cmake_gen.makefiles]
-cmake_tool_path = "cmake"
 generator = "Unix Makefiles"
 architecture = ""
 min_version = "3.20"

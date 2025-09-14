@@ -55,12 +55,8 @@ namespace tavros::renderer
         ) = 0;
         virtual void destroy_framebuffer(framebuffer_handle framebuffer) = 0;
 
-        virtual buffer_handle create_buffer(
-            const buffer_desc& desc,
-            const uint8*       data,
-            uint64             size
-        ) = 0;
-        virtual void destroy_buffer(buffer_handle buffer) = 0;
+        virtual buffer_handle create_buffer(const buffer_desc& desc) = 0;
+        virtual void          destroy_buffer(buffer_handle buffer) = 0;
 
         virtual geometry_binding_handle create_geometry(
             const geometry_binding_desc&          desc,

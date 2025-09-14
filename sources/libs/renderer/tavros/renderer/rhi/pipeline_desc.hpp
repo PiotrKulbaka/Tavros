@@ -295,6 +295,19 @@ namespace tavros::renderer
         pixel_format depth_stencil_format = pixel_format::depth24_stencil8;
     };
 
+    /**
+     * Represents the type of a primitive, such as points, lines, or triangles.
+     */
+    enum class primitive_topology : uint8
+    {
+        points,         /// Points, each vertex is a point
+        lines,          /// Lines, each 2 vertices define a line
+        line_strip,     /// Line strip, each vertex is connected to the previous one
+        triangles,      /// Triangles, each 3 vertices define a triangle
+        triangle_strip, /// Triangle strip each vertex is connected to the previous two
+        triangle_fan,   /// Triangle fan, each vertex is connected to the first vertex
+    };
+
 
     struct pipeline_desc
     {
@@ -305,6 +318,7 @@ namespace tavros::renderer
         rasterizer_state    rasterizer;
         multisample_state   multisample;
         render_targets      targets;
+        primitive_topology  topology = primitive_topology::triangles;
     };
 
 } // namespace tavros::renderer

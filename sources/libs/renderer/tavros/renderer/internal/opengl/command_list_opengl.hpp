@@ -24,11 +24,18 @@ namespace tavros::renderer
 
         void end_render_pass() override;
 
+        void draw_indexed(uint32 index_count, uint32 first_index = 0, uint32 vertex_offset = 0, uint32 instance_count = 1, uint32 first_instance = 0) override;
+
+        void copy_buffer_data(buffer_handle buffer, const void* data, uint64 size, uint64 offset = 0) override;
+
+        void copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, uint64 size, uint64 dst_offset = 0, uint64 src_offset = 0) override;
+
     private:
         graphics_device_opengl* m_device = nullptr;
-        uint32                  m_current_pipeline_id = 0;
+        pipeline_handle         m_current_pipeline = {0};
         render_pass_handle      m_current_render_pass = {0};
         framebuffer_handle      m_current_framebuffer = {0};
+        geometry_binding_handle m_current_geometry_binding = {0};
 
         GLuint m_resolve_fbo = 0;
     };

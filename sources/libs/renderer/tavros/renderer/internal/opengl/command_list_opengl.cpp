@@ -1,6 +1,7 @@
 #include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
 
 #include <tavros/core/prelude.hpp>
+#include <tavros/renderer/rhi/string_utils.hpp>
 
 #include <glad/glad.h>
 
@@ -89,6 +90,44 @@ namespace
         }
     }
 
+    struct gl_index_format
+    {
+        GLenum type;
+        uint32 size;
+    };
+
+    gl_index_format to_gl_index_format(index_buffer_format format)
+    {
+        switch (format) {
+        case index_buffer_format::u16:
+            return {GL_UNSIGNED_SHORT, 2};
+        case index_buffer_format::u32:
+            return {GL_UNSIGNED_INT, 4};
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    GLenum to_gl_topology(primitive_topology topology)
+    {
+        switch (topology) {
+        case tavros::renderer::primitive_topology::points:
+            return GL_POINTS;
+        case tavros::renderer::primitive_topology::lines:
+            return GL_LINES;
+        case tavros::renderer::primitive_topology::line_strip:
+            return GL_LINE_STRIP;
+        case tavros::renderer::primitive_topology::triangles:
+            return GL_TRIANGLES;
+        case tavros::renderer::primitive_topology::triangle_strip:
+            return GL_TRIANGLE_STRIP;
+        case tavros::renderer::primitive_topology::triangle_fan:
+            return GL_TRIANGLE_FAN;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
 } // namespace
 
 namespace tavros::renderer
@@ -111,7 +150,7 @@ namespace tavros::renderer
 
     void command_list_opengl::bind_pipeline(pipeline_handle pipeline)
     {
-        m_current_pipeline_id = pipeline.id;
+        m_current_pipeline = pipeline;
         if (auto* p = m_device->get_resources()->pipelines.try_get(pipeline.id)) {
             auto& desc = p->desc;
 
@@ -223,9 +262,11 @@ namespace tavros::renderer
     {
         if (auto* gb = m_device->get_resources()->geometry_bindings.try_get(geometry_binding.id)) {
             glBindVertexArray(gb->vao_obj);
+            m_current_geometry_binding = geometry_binding;
         } else {
             ::logger.error("Can't bind the geometry binding with id `%u`", geometry_binding.id);
             glBindVertexArray(0);
+            m_current_geometry_binding = {0};
         }
     }
 
@@ -412,12 +453,12 @@ namespace tavros::renderer
 
             if (rp_color_attachment.store == store_op::resolve) {
                 // Resolve attachments
-                auto resolve_index = rp_color_attachment.resolve_attachment_index;
-                if (fb->color_attachments.size() > resolve_index) {
+                auto resolve_to_index = rp_color_attachment.resolve_target_attachment_index;
+                if (fb->color_attachments.size() > resolve_to_index) {
                     // Find the resolve texture and validate it
-                    auto* resolve_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[resolve_index].id);
+                    auto* resolve_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[resolve_to_index].id);
                     if (resolve_tex == nullptr) {
-                        ::logger.error("Invalid resolve attachment index `%u`", resolve_index);
+                        ::logger.error("Invalid resolve attachment index `%u`", resolve_to_index);
                         return;
                     }
 
@@ -425,7 +466,7 @@ namespace tavros::renderer
                     blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, tex, resolve_tex});
                     attachment_index++;
                 } else {
-                    ::logger.error("Invalid resolve attachment index `%u`", resolve_index);
+                    ::logger.error("Invalid resolve attachment index `%u`", resolve_to_index);
                     return;
                 }
             }
@@ -462,6 +503,155 @@ namespace tavros::renderer
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         m_current_framebuffer = {0};
         m_current_render_pass = {0};
+    }
+
+    void command_list_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
+    {
+        if (auto* gb = m_device->get_resources()->geometry_bindings.try_get(m_current_geometry_binding.id)) {
+            if (!gb->desc.has_index_buffer) {
+                ::logger.error("Can't draw indexsed because current geometry binding doesn't have index buffer");
+                return;
+            }
+
+            auto* p = m_device->get_resources()->pipelines.try_get(m_current_pipeline.id);
+            if (!p) {
+                ::logger.error("Can't draw indexsed because no pipeline is bound");
+                return;
+            }
+
+
+            auto        index_format = to_gl_index_format(gb->desc.index_format);
+            auto        topology = to_gl_topology(p->desc.topology);
+            const void* index_offset = reinterpret_cast<const void*>(first_index * index_format.size);
+
+            if (instance_count > 1) {
+                glDrawElementsInstanced(
+                    topology,          // или другой примитив из pipeline
+                    index_count,
+                    index_format.type, // тип индекса (надо хранить в твоём index buffer desc)
+                    index_offset,
+                    instance_count
+                );
+            } else {
+                glDrawElements(
+                    topology,
+                    index_count,
+                    index_format.type,
+                    index_offset
+                );
+            }
+        } else {
+            ::logger.error("Can't find the geometry binding with id `%u`", m_current_geometry_binding.id);
+        }
+    }
+
+    void command_list_opengl::copy_buffer_data(buffer_handle buffer, const void* data, uint64 size, uint64 offset)
+    {
+        TAV_ASSERT(data != nullptr);
+
+        if (auto* b = m_device->get_resources()->buffers.try_get(buffer.id)) {
+            if (offset + size > b->desc.size) {
+                ::logger.error("Can't copy data to buffer with id `%u` because the size is out of range", buffer.id);
+                return;
+            }
+            if (b->desc.access != buffer_access::cpu_to_gpu) {
+                ::logger.error("Can't copy data to buffer with id `%u` because the buffer is not cpu_to_gpu", buffer.id);
+                return;
+            }
+
+            TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER);
+
+            auto target = b->gl_target;
+
+            // Get buffer range
+            glBindBuffer(target, b->buffer_obj);
+
+            void* ptr = glMapBufferRange(
+                target,
+                static_cast<GLintptr>(offset),
+                static_cast<GLsizeiptr>(size),
+                GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT
+            );
+
+            // Write data
+            memcpy(ptr, data, size);
+
+            glUnmapBuffer(target);
+
+            glBindBuffer(target, 0);
+        } else {
+            ::logger.error("Can't copy buffer data because buffer with id `%u` not found", buffer.id);
+        }
+    }
+
+    void command_list_opengl::copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, uint64 size, uint64 dst_offset, uint64 src_offset)
+    {
+        // Get dst and src buffers
+        auto* dst = m_device->get_resources()->buffers.try_get(dst_buffer.id);
+        if (!dst) {
+            ::logger.error("Cannot copy buffer: destination buffer with id `%u` not found", dst_buffer.id);
+            return;
+        }
+
+        auto* src = m_device->get_resources()->buffers.try_get(src_buffer.id);
+        if (!src) {
+            ::logger.error("Cannot copy buffer: source buffer with id `%u` not found", src_buffer.id);
+            return;
+        }
+
+        // Check memory region
+        if (dst_offset + size > dst->desc.size) {
+            ::logger.error(
+                "Cannot copy buffer: destination buffer with id `%u` overflow (offset %llu + size %llu > buffer size %llu)",
+                dst_buffer.id, dst_offset, size, dst->desc.size
+            );
+            return;
+        }
+
+        if (src_offset + size > src->desc.size) {
+            ::logger.error(
+                "Cannot copy buffer: source buffer with id `%u` overflow (offset %llu + size %llu > buffer size %llu)",
+                src_buffer.id, src_offset, size, src->desc.size
+            );
+            return;
+        }
+
+        // Check access
+        // Allowed: cpu_to_gpu -> gpu_only
+        // Allowed: gpu_only   -> gpu_only
+        auto dst_access = dst->desc.access;
+        auto src_access = src->desc.access;
+
+        if (dst_access != buffer_access::gpu_only) {
+            ::logger.error(
+                "Cannot copy buffer: destination buffer with id `%u` has invalid access `%s`",
+                dst_buffer.id, to_string(dst_access).data()
+            );
+            return;
+        }
+
+        if (src_access != buffer_access::cpu_to_gpu && src_access != buffer_access::gpu_only) {
+            ::logger.error(
+                "Cannot copy buffer: source buffer with id `%u` has invalid access `%s`",
+                src_buffer.id, to_string(src_access).data()
+            );
+            return;
+        }
+
+        // Make copy data
+        glBindBuffer(GL_COPY_READ_BUFFER, src->buffer_obj);
+        glBindBuffer(GL_COPY_WRITE_BUFFER, dst->buffer_obj);
+
+        glCopyBufferSubData(
+            GL_COPY_READ_BUFFER,
+            GL_COPY_WRITE_BUFFER,
+            static_cast<GLintptr>(src_offset),
+            static_cast<GLintptr>(dst_offset),
+            static_cast<GLsizeiptr>(size)
+        );
+
+        glBindBuffer(GL_COPY_READ_BUFFER, 0);
+        glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
     }
 
 } // namespace tavros::renderer

@@ -31,6 +31,8 @@
 
 #include <stb/stb_image.h>
 
+#include <fstream>
+
 // clang-format off
 float cube_vertices[] = {
     // X      Y      Z    pad      U      V    pad    pad
@@ -161,11 +163,10 @@ uint16 cube_indices[] =
 const char* vertex_shader_source = R"(
 #version 420 core
 layout (location = 0) in vec3 a_pos;
-layout (location = 1) in vec2 a_uv;
-layout (location = 2) in vec4 a_color;
+layout (location = 1) in vec3 a_normal;
+layout (location = 2) in vec2 a_uv;
 
 out vec2 v_uv;
-out vec4 v_color;
 
 layout (binding = 0) uniform Camera
 {
@@ -176,7 +177,6 @@ void main()
 {
     gl_Position = u_camera * vec4(a_pos, 1.0);
     v_uv = a_uv;
-    v_color = a_color;
 }
 )";
 
@@ -184,22 +184,14 @@ const char* fragment_shader_source = R"(
 #version 420 core
 
 layout(binding = 0) uniform sampler2D u_tex1;
-layout(binding = 1) uniform sampler2D u_tex2;
 
 in vec2 v_uv;
-in vec4 v_color;
 
 out vec4 frag_color;
 
 void main()
 {
-    vec4 top = texture(u_tex2, v_uv);
-    vec4 bottom = texture(u_tex1, v_uv);
-    float a = bottom.a + top.a * (1.0 - bottom.a);
-
-
-    frag_color = mix(bottom + top * (1.0 - bottom.a), v_color, 0.1 * a);
-    frag_color.a = a;
+    frag_color = texture(u_tex1, v_uv);
 }
 )";
 
@@ -264,6 +256,196 @@ void update_camera(const bool* keys, tavros::math::vec2 mouse_delta, float elaps
 
     cam.set_perspective(3.14159265358979f / 3.0f, aspect_ratio, 0.1f, 1000.0f);
 }
+
+constexpr auto MAX_QPATH = 64;
+
+
+#define MD3_IDENT   (('3' << 24) + ('P' << 16) + ('D' << 8) + 'I')
+#define MD3_VERSION 15
+
+
+/*
+** md3Surface_t
+**
+** CHUNK            SIZE
+** header            sizeof( md3Surface_t )
+** shaders            sizeof( md3Shader_t ) * numShaders
+** triangles[0]        sizeof( md3Triangle_t ) * numTriangles
+** st                sizeof( md3St_t ) * numVerts
+** XyzNormals        sizeof( md3XyzNormal_t ) * numVerts * numFrames
+*/
+
+
+struct md3_header_t
+{
+    int32 ident;           // "IDP3"
+    int32 version;
+    char  name[MAX_QPATH]; // model name
+    int32 flags;
+    int32 num_frames;
+    int32 num_tags;
+    int32 num_surfaces;
+    int32 num_skins;
+    int32 ofs_frames;   // offset for first frame
+    int32 ofs_tags;     // numFrames * numTags
+    int32 ofs_surfaces; // first surface, others follow
+    int32 ofs_end;      // end of file
+};
+
+struct md3_surface_t
+{
+    int32 ident;           //
+    char  name[MAX_QPATH]; // polyset name
+    int32 flags;
+    int32 num_frames;      // all surfaces in a model should have the same
+    int32 num_shaders;     // all surfaces in a model should have the same
+    int32 num_verts;
+    int32 num_triangles;
+    int32 ofs_triangles;
+    int32 ofs_shaders;     // offset from start of md3Surface_t
+    int32 ofs_st;          // texture coords are common for all frames
+    int32 ofs_xyz_normals; // numVerts * numFrames
+    int32 ofs_end;         // next surface follows
+};
+
+struct md3_triangle_t
+{
+    int32 indices[3];
+};
+
+struct md3_shader_t
+{
+    char  name[MAX_QPATH];
+    int32 shader_index; // for in-game use
+};
+
+struct md3_vertex_t
+{
+    int16 xyz[3];
+    int16 normal;
+};
+
+struct md3_frame_t
+{
+    tavros::math::vec3 bounds[2];
+    tavros::math::vec3 local_origin;
+    float              radius;
+    char               name[16];
+};
+
+struct md3_tag_t
+{
+    char               name[MAX_QPATH]; // tag name
+    tavros::math::vec3 origin;
+    tavros::math::vec3 axis[3];
+};
+
+
+struct texture_t
+{
+    std::string name;
+};
+
+struct surface_t
+{
+    tavros::core::vector<uint32>    indices;
+    tavros::core::vector<texture_t> textures;
+};
+
+struct model_t
+{
+    tavros::core::vector<tavros::math::vec3> xyz;
+    tavros::core::vector<tavros::math::vec3> norm;
+    tavros::core::vector<tavros::math::vec2> uv;
+    tavros::core::vector<surface_t>          surfaces;
+};
+
+
+tavros::math::vec3 decode_normal(uint16 latlng)
+{
+    float lat = (latlng & 0xFF) * (2.0f * 3.14159265358979f / 255.0f);
+    float lng = ((latlng >> 8) & 0xFF) * (2.0f * 3.14159265358979f / 255.0f);
+
+    float x = std::cos(lng) * std::sin(lat);
+    float y = std::sin(lng) * std::sin(lat);
+    float z = std::cos(lat);
+
+    return {x, y, z};
+}
+
+
+bool load_md3(std::string path, model_t* model)
+{
+    std::ifstream file(path, std::ios::binary);
+    if (!file) {
+        tavros::core::logger::print(tavros::core::severity_level::warning, "R_LoadMD3: couldn't read %s", path.c_str());
+        return false;
+    }
+
+    md3_header_t header{};
+    file.read(reinterpret_cast<char*>(&header), sizeof(header));
+    if (header.ident != MD3_IDENT || header.version != MD3_VERSION) {
+        tavros::core::logger::print(tavros::core::severity_level::warning, "R_LoadMD3: %s has wrong version", path.c_str());
+        return false;
+    }
+
+    file.seekg(header.ofs_surfaces, std::ios::beg);
+
+    for (int32 s = 0; s < header.num_surfaces; ++s) {
+        std::streampos surf_pos = file.tellg();
+
+        md3_surface_t surf{};
+        file.read(reinterpret_cast<char*>(&surf), sizeof(surf));
+
+        surface_t surface{};
+        // Read shaders
+        file.seekg(surf_pos + std::streamoff(surf.ofs_shaders), std::ios::beg);
+        for (int32 sh = 0; sh < surf.num_shaders; ++sh) {
+            md3_shader_t shader{};
+            file.read(reinterpret_cast<char*>(&shader), sizeof(shader));
+            texture_t texture{};
+            texture.name = shader.name;
+            surface.textures.push_back(texture);
+        }
+
+        // Read triangles
+        file.seekg(surf_pos + std::streamoff(surf.ofs_triangles), std::ios::beg);
+        for (int32 t = 0; t < surf.num_triangles; ++t) {
+            md3_triangle_t triangle{};
+            file.read(reinterpret_cast<char*>(&triangle), sizeof(triangle));
+            surface.indices.push_back(triangle.indices[0]);
+            surface.indices.push_back(triangle.indices[1]);
+            surface.indices.push_back(triangle.indices[2]);
+        }
+
+        // Read vertices
+        file.seekg(surf_pos + std::streamoff(surf.ofs_xyz_normals), std::ios::beg);
+        for (int32 v = 0; v < surf.num_verts * surf.num_frames; ++v) {
+            md3_vertex_t md3_vert{};
+            file.read(reinterpret_cast<char*>(&md3_vert), sizeof(md3_vert));
+
+            model->xyz.push_back(tavros::math::vec3(md3_vert.xyz[0] / 64.0f, md3_vert.xyz[1] / 64.0f, md3_vert.xyz[2] / 64.0f) / 10.0f);
+            model->norm.push_back(decode_normal(md3_vert.normal)); // Placeholder normal
+        }
+
+        // Read texture coordinates
+        file.seekg(surf_pos + std::streamoff(surf.ofs_st), std::ios::beg);
+        for (int32 v = 0; v < surf.num_verts; ++v) {
+            struct
+            {
+                float u, v;
+            } st{};
+            file.read(reinterpret_cast<char*>(&st), sizeof(st));
+            model->uv.push_back(tavros::math::vec2(st.u, st.v));
+        }
+        model->surfaces.push_back(surface);
+        // Move to the next surface
+        file.seekg(surf_pos + std::streamoff(surf.ofs_end), std::ios::beg);
+    }
+
+    return true;
+}
+
 
 int main()
 {
@@ -341,24 +523,22 @@ int main()
 
     tavros::renderer::texture_desc tex_desc;
 
+    model_t model;
+    if (!load_md3("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.md3", &model)) {
+        logger.error("Failed to load model");
+        return -1;
+    }
+
     int32 w, h, c;
-    auto* pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\textures\\base_support\\x_support3.tga", w, h, c);
+    auto* pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.jpg", w, h, c);
     tex_desc.width = w;
     tex_desc.height = h;
-    tex_desc.mip_levels = 16;
+    tex_desc.mip_levels = 1;
 
     auto tex1 = gdevice->create_texture(tex_desc, pixels);
     free_pixels(pixels);
 
-    pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\textures\\base_wall\\metalfloor_wall_14_specular.tga", w, h, c);
-    tex_desc.width = w;
-    tex_desc.height = h;
-    tex_desc.mip_levels = 16;
-
-    auto tex2 = gdevice->create_texture(tex_desc, pixels);
-    free_pixels(pixels);
-
-    int msaa_level = 2;
+    int msaa_level = 16;
 
     // msaa texture
     tavros::renderer::texture_desc msaa_texture_desc;
@@ -369,7 +549,7 @@ int main()
     msaa_texture_desc.sample_count = msaa_level;
     auto msaa_texture = gdevice->create_texture(msaa_texture_desc);
 
-    // resolve textureu
+    // resolve target texture
     tavros::renderer::texture_desc msaa_resolve_desc;
     msaa_resolve_desc.width = 1280;
     msaa_resolve_desc.height = 720;
@@ -400,7 +580,7 @@ int main()
 
 
     tavros::renderer::render_pass_desc msaa_render_pass;
-    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.0f, 0.0f, 0.4f, 1.0f}});
+    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.1f, 0.1f, 0.1f, 1.0f}});
     msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::store, 0, {0.0f, 0.0f, 0.0f, 0.0f}});
     msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, 0};
     auto msaa_pass = gdevice->create_render_pass(msaa_render_pass);
@@ -415,57 +595,83 @@ int main()
 
 
     tavros::renderer::pipeline_desc main_pipeline_desc;
-
     main_pipeline_desc.shaders.fragment_source = fragment_shader_source;
     main_pipeline_desc.shaders.vertex_source = vertex_shader_source;
-
     main_pipeline_desc.depth_stencil.depth_test_enable = true;
     main_pipeline_desc.depth_stencil.depth_write_enable = true;
     main_pipeline_desc.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
-
-    main_pipeline_desc.rasterizer.cull = tavros::renderer::cull_face::off;
+    main_pipeline_desc.rasterizer.cull = tavros::renderer::cull_face::back;
     main_pipeline_desc.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
-
+    main_pipeline_desc.topology = tavros::renderer::primitive_topology::triangles;
 
     auto main_pipeline = gdevice->create_pipeline(main_pipeline_desc);
 
 
-    tavros::renderer::buffer_desc xyz_uv_desc;
-    xyz_uv_desc.size = 1024 * 128; // 128 KiB
-    xyz_uv_desc.usage = tavros::renderer::buffer_usage::vertex;
+    tavros::renderer::buffer_desc stage_buffer_desc;
+    stage_buffer_desc.size = 1024 * 1024; // 1 Mb
+    stage_buffer_desc.access = tavros::renderer::buffer_access::cpu_to_gpu;
+    auto stage_buffer = gdevice->create_buffer(stage_buffer_desc);
 
-    auto buffer_xyz_uv = gdevice->create_buffer(xyz_uv_desc, (uint8*) cube_vertices, sizeof(cube_vertices));
+    auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
+    auto* cbuf = composer->create_command_list();
 
-    tavros::renderer::buffer_desc rgba_desc;
-    xyz_uv_desc.size = 1024 * 128; // 128 KiB
-    xyz_uv_desc.usage = tavros::renderer::buffer_usage::vertex;
+    // Copy XYZ
+    uint32 xyz_offset = 0;
+    uint32 xyz_size = model.xyz.size() * sizeof(tavros::math::vec3);
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.xyz.data()), xyz_size, xyz_offset);
 
-    auto buffer_rgba = gdevice->create_buffer(xyz_uv_desc, (uint8*) cube_colors, sizeof(cube_colors));
+    // Copy Normals
+    uint32 norm_offset = xyz_offset + xyz_size;
+    uint32 norm_size = model.norm.size() * sizeof(tavros::math::vec3);
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.norm.data()), norm_size, norm_offset);
+
+    // Copy UV
+    uint32 uv_offset = norm_offset + norm_size;
+    uint32 uv_size = model.uv.size() * sizeof(tavros::math::vec2);
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.uv.data()), uv_size, uv_offset);
+
+    // Copy Indices
+    uint64 indices_offset = uv_offset + uv_size;
+    uint64 indices_size = model.surfaces[0].indices.size() * sizeof(uint32);
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[0].indices.data()), indices_size, indices_offset);
+
+
+    // Make vertices buffer
+    tavros::renderer::buffer_desc xyz_normal_uv_desc;
+    xyz_normal_uv_desc.size = 1024 * 1024; // 1 Mb
+    xyz_normal_uv_desc.usage = tavros::renderer::buffer_usage::vertex;
+    xyz_normal_uv_desc.access = tavros::renderer::buffer_access::gpu_only;
+    auto buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_desc);
+
+    cbuf->copy_buffer(buffer_xyz_normal_uv, stage_buffer, xyz_size + norm_size + uv_size, 0, 0);
+
 
     tavros::renderer::buffer_desc indices_desc;
-    indices_desc.size = 1024 * 128; // 128 KiB
+    indices_desc.size = 1024 * 128; // 128 Kb
     indices_desc.usage = tavros::renderer::buffer_usage::index;
+    auto buffer_indices = gdevice->create_buffer(indices_desc);
 
-    auto buffer_indices = gdevice->create_buffer(indices_desc, (uint8*) cube_indices, sizeof(cube_indices));
+    cbuf->copy_buffer(buffer_indices, stage_buffer, indices_size, 0, indices_offset);
 
 
     tavros::renderer::geometry_binding_desc gbd;
-    gbd.layout.attributes.push_back({3, tavros::renderer::attribute_format::f32, false});
-    gbd.layout.attributes.push_back({2, tavros::renderer::attribute_format::f32, false});
-    gbd.layout.attributes.push_back({4, tavros::renderer::attribute_format::f32, false});
+    gbd.buffer_bindings.push_back({0, xyz_offset, 4 * 3});
+    gbd.buffer_bindings.push_back({0, norm_offset, 4 * 3});
+    gbd.buffer_bindings.push_back({0, uv_offset, 4 * 2});
 
-    gbd.attribute_mapping.push_back({0, 0});
-    gbd.attribute_mapping.push_back({0, 4 * 4});
-    gbd.attribute_mapping.push_back({1, 0});
-
-    gbd.buffer_mapping.push_back({0, 0, 4 * 8});
-    gbd.buffer_mapping.push_back({1, 0, 4 * 4});
+    gbd.attribute_bindings.push_back({0, 0, 0, 3, tavros::renderer::attribute_format::f32, false});
+    gbd.attribute_bindings.push_back({1, 1, 0, 3, tavros::renderer::attribute_format::f32, false});
+    gbd.attribute_bindings.push_back({2, 2, 0, 3, tavros::renderer::attribute_format::f32, false});
 
     gbd.has_index_buffer = true;
-    gbd.index_format = tavros::renderer::index_buffer_format::u16;
+    gbd.index_format = tavros::renderer::index_buffer_format::u32;
 
-    tavros::renderer::buffer_handle buffers_to_binding[] = {buffer_xyz_uv, buffer_rgba};
+    tavros::renderer::buffer_handle buffers_to_binding[] = {buffer_xyz_normal_uv};
     auto                            geometry1 = gdevice->create_geometry(gbd, buffers_to_binding, buffer_indices);
+
+
+    composer->submit_command_list(cbuf);
+
 
     auto cam = tavros::renderer::camera({0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 1.0, 0.0});
 
@@ -495,8 +701,8 @@ int main()
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-        glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+        /*glEnable(GL_BLEND);
+        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
 
 
         cbuf->begin_render_pass(msaa_pass, msaa_framebuffer);
@@ -508,11 +714,9 @@ int main()
         cbuf->bind_texture(0, tex1);
         cbuf->bind_sampler(0, sampler1);
 
-        cbuf->bind_texture(1, tex2);
-        cbuf->bind_sampler(1, sampler1);
-
         auto cam_mat = cam.get_view_projection_matrix();
         cam_mat = tavros::math::transpose(cam_mat);
+
 
         glBindBuffer(GL_UNIFORM_BUFFER, ubo);
         glBufferData(GL_UNIFORM_BUFFER, sizeof(tavros::math::mat4), cam_mat.data(), GL_DYNAMIC_DRAW);
@@ -520,17 +724,15 @@ int main()
         glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
 
 
-        glDrawElements(GL_TRIANGLES, 36, GL_UNSIGNED_SHORT, 0);
+        cbuf->draw_indexed(model.surfaces[0].indices.size());
 
         cbuf->end_render_pass();
 
 
         // from
         glBindFramebuffer(GL_READ_FRAMEBUFFER, 1);
-
         // to
         glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-
         //
         glReadBuffer(GL_COLOR_ATTACHMENT0);
 
@@ -538,7 +740,7 @@ int main()
             0, 0, composer->width(), composer->height(), // src rect
             0, 0, composer->width(), composer->height(), // dst rect
             GL_COLOR_BUFFER_BIT,
-            GL_NEAREST                                   // GL_LINEAR
+            GL_LINEAR                                    // GL_LINEAR
         );
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);

@@ -47,11 +47,8 @@ namespace tavros::renderer
         ) override;
         void destroy_framebuffer(framebuffer_handle framebuffer) override;
 
-        buffer_handle create_buffer(
-            const buffer_desc& desc,
-            const uint8* data, uint64 size
-        ) override;
-        void destroy_buffer(buffer_handle buffer) override;
+        buffer_handle create_buffer(const buffer_desc& desc) override;
+        void          destroy_buffer(buffer_handle buffer) override;
 
         geometry_binding_handle create_geometry(
             const geometry_binding_desc&          desc,

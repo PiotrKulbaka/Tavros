@@ -1117,42 +1117,39 @@ namespace tavros::renderer
         }
     }
 
-    buffer_handle graphics_device_opengl::create_buffer(
-        const buffer_desc& desc,
-        const uint8*       data,
-        uint64             size
-    )
+    buffer_handle graphics_device_opengl::create_buffer(const buffer_desc& desc)
     {
         GLenum gl_target = 0;
-        switch (desc.usage) {
-        case buffer_usage::vertex:
-            gl_target = GL_ARRAY_BUFFER;
-            break;
-        case buffer_usage::index:
-            gl_target = GL_ELEMENT_ARRAY_BUFFER;
-            break;
-        case buffer_usage::uniform:
-            gl_target = GL_UNIFORM_BUFFER;
-            break;
-        default:
-            ::logger.error("Unknown buffer usage");
-            return {0};
-        }
-
         GLenum gl_usage = 0;
-        switch (desc.access) {
-        case buffer_access::gpu_only:
-            gl_usage = GL_STATIC_DRAW;
-            break;
-        case buffer_access::cpu_to_gpu:
-            gl_usage = GL_DYNAMIC_DRAW;
-            break;
-        case buffer_access::gpu_to_cpu:
-            gl_usage = GL_DYNAMIC_READ;
-            break;
-        default:
-            ::logger.error("Unknown buffer access");
-            return {0};
+
+        if (desc.access == buffer_access::cpu_to_gpu) {
+            gl_target = GL_COPY_WRITE_BUFFER;
+            gl_usage = GL_STREAM_COPY;
+        } else {
+            switch (desc.usage) {
+            case buffer_usage::vertex:
+                gl_target = GL_ARRAY_BUFFER;
+                break;
+            case buffer_usage::index:
+                gl_target = GL_ELEMENT_ARRAY_BUFFER;
+                break;
+            case buffer_usage::uniform:
+                gl_target = GL_UNIFORM_BUFFER;
+                break;
+            default:
+                TAV_UNREACHABLE();
+            }
+
+            switch (desc.access) {
+            case buffer_access::gpu_only:
+                gl_usage = GL_STATIC_DRAW; // GL_STREAM_COPY - is also possible (for suppress warning)
+                break;
+            case buffer_access::gpu_to_cpu:
+                gl_usage = GL_DYNAMIC_READ;
+                break;
+            default:
+                TAV_UNREACHABLE();
+            }
         }
 
         GLuint bo;
@@ -1170,21 +1167,9 @@ namespace tavros::renderer
         // Allocate buffer
         glBufferData(gl_target, static_cast<GLsizeiptr>(desc.size), nullptr, gl_usage);
 
-        // Set buffer data
-        if (data != nullptr) {
-            if (size > desc.size) {
-                ::logger.debug("Buffer size is greater than buffer description size");
-                return {0};
-            } else if (size == 0) {
-                ::logger.debug("Buffer size is zero");
-                return {0};
-            }
-            glBufferData(gl_target, static_cast<GLsizeiptr>(size), data, gl_usage);
-        }
-
         glBindBuffer(gl_target, 0); // Unbind for safety
 
-        buffer_handle handle = {m_resources.buffers.insert({desc, bo_owner.release()})};
+        buffer_handle handle = {m_resources.buffers.insert({desc, bo_owner.release(), gl_target, gl_usage})};
         ::logger.debug("Buffer with id %u created", handle.id);
         return handle;
     }
@@ -1206,21 +1191,30 @@ namespace tavros::renderer
         core::optional<buffer_handle>         index_buffer
     )
     {
-        // Validate desc
-        if (desc.layout.attributes.size() != desc.attribute_mapping.size()) {
-            ::logger.error("Invalid vertex attribute mapping size");
-            return {0};
-        }
-
         // Check vertex buffers
         if (vertex_buffers.size() == 0) {
             ::logger.error("No vertex buffers");
             return {0};
         }
 
-        if (vertex_buffers.size() != desc.buffer_mapping.size()) {
-            ::logger.error("Invalid vertex mapping");
-            return {0};
+        // Check buffer bindings
+        for (auto i = 0; i < desc.buffer_bindings.size(); ++i) {
+            auto buffer_index = desc.buffer_bindings[i].buffer_index;
+            if (buffer_index >= vertex_buffers.size()) {
+                uint32 provided = static_cast<uint32>(vertex_buffers.size());
+                ::logger.error("Invalid vertex buffer binding index: `%u`, max available: `%u`", buffer_index, provided);
+                return {0};
+            }
+        }
+
+        // Check attribute bindings
+        for (auto i = 0; i < desc.attribute_bindings.size(); ++i) {
+            auto buffer_binding_index = desc.attribute_bindings[i].buffer_binding_index;
+            if (buffer_binding_index >= desc.buffer_bindings.size()) {
+                uint32 provided = static_cast<uint32>(desc.buffer_bindings.size());
+                ::logger.error("Invalid vertex attribute binding index: `%u`, max available: `%u`", buffer_binding_index, provided);
+                return {0};
+            }
         }
 
         // Check index buffer
@@ -1249,49 +1243,31 @@ namespace tavros::renderer
 
         glBindVertexArray(vao);
 
-        // Bind vertex buffers
-        for (uint32 i = 0; i < vertex_buffers.size(); ++i) {
-            const auto  buffer = vertex_buffers[i];
-            const auto& mapping = desc.buffer_mapping[i];
-            if (auto* desc = m_resources.buffers.try_get(buffer.id)) {
-                glBindVertexBuffer(mapping.binding, desc->buffer_obj, mapping.offset, mapping.stride);
 
-                // Validate usage
-                if (desc->desc.usage != buffer_usage::vertex) {
-                    ::logger.error("Invalid vertex buffer usage");
-                    return {0};
-                }
-            } else {
-                ::logger.error("Can't find vertex buffer with id %u", buffer.id);
-                return {0};
-            }
-        }
+        // Setup attribute bindings
+        for (auto i = 0; i < desc.attribute_bindings.size(); ++i) {
+            auto attrib = desc.attribute_bindings[i];
+            auto buf_binding = desc.buffer_bindings[attrib.buffer_binding_index];
+            auto vertex_buf_index = buf_binding.buffer_index;
+            auto gl_format = to_gl_attribute_format(attrib.format);
 
-        // Bind vertex attributes
-        for (uint32 i = 0; i < desc.layout.attributes.size(); ++i) {
-            const auto& attribute = desc.layout.attributes[i];
-            const auto& attribute_mapping = desc.attribute_mapping[i];
-
-            auto buffer_index = static_cast<GLuint>(attribute_mapping.buffer_index);
-
-            // Validate buffer index
-            if (buffer_index >= vertex_buffers.size()) {
-                ::logger.error("Invalid buffer index in vertex attribute mapping");
+            // Get the buffer
+            auto* b = m_resources.buffers.try_get(vertex_buffers[buf_binding.buffer_index].id);
+            if (!b) {
+                ::logger.error("Can't find vertex buffer with id %u", vertex_buffers[buf_binding.buffer_index].id);
                 return {0};
             }
 
-            // OpenGL format info
-            auto gl_format = to_gl_attribute_format(attribute.format);
-            auto attrib_index = static_cast<GLuint>(i);
-            auto normalie = attribute.normalize ? GL_TRUE : GL_FALSE;
-            auto binding = static_cast<GLuint>(desc.buffer_mapping[buffer_index].binding);
+            // Enable the vertex buffer
+            glBindVertexBuffer(i, b->buffer_obj, buf_binding.base_offset, buf_binding.stride);
 
             // Enable attribute and set pointer
-            glEnableVertexAttribArray(attrib_index);
-            glVertexAttribFormat(attrib_index, gl_format.size, gl_format.type, normalie, attribute_mapping.offset);
-            glVertexAttribBinding(attrib_index, binding);
+            glEnableVertexAttribArray(attrib.location);
+            glVertexAttribFormat(attrib.location, gl_format.size, gl_format.type, attrib.normalize, attrib.offset);
+            glVertexAttribBinding(attrib.location, i);
         }
 
+        // Bind index buffer if present
         if (desc.has_index_buffer) {
             if (auto* desc = m_resources.buffers.try_get(index_buffer->id)) {
                 if (desc->desc.usage != buffer_usage::index) {

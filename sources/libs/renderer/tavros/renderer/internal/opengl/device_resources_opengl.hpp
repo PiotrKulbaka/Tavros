@@ -50,6 +50,8 @@ namespace tavros::renderer
     {
         buffer_desc desc;
         GLuint      buffer_obj = 0;
+        GLenum      gl_target = 0;
+        GLenum      gl_usage = 0;
     };
 
     struct gl_geometry_binding

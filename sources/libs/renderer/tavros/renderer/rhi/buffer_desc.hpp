@@ -34,6 +34,7 @@ namespace tavros::renderer
         uint64 size = 0;
 
         /// Buffer usage
+        /// Used only if access is gpu_only or gpu_to_cpu
         buffer_usage usage = buffer_usage::index;
 
         /// Access pattern indicating who reads/writes this buffer
