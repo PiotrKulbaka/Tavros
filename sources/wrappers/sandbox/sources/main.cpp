@@ -167,16 +167,33 @@ layout (location = 1) in vec3 a_normal;
 layout (location = 2) in vec2 a_uv;
 
 out vec2 v_uv;
+out vec3 v_world_pos;
+out vec3 v_normal;
 
 layout (binding = 0) uniform Camera
 {
     mat4 u_camera;
 };
 
+layout (binding = 1) uniform Scene
+{
+    mat4 u_view;       // view matrix (world->view)
+    vec3 u_camera_pos; // world-space camera position
+    // padding rules apply in std140 Ч pad on CPU side if using UBO
+    vec3 u_sun_dir;    // world-space, should be normalized
+    vec3 u_sun_color;  // linear RGB
+    float u_sun_intensity;
+    float u_ambient;
+    float u_specular_power;
+};
+
 void main()
 {
-    gl_Position = u_camera * vec4(a_pos, 1.0);
     v_uv = a_uv;
+    v_world_pos = a_pos;
+    v_normal = normalize(a_normal);
+
+    gl_Position = u_camera * vec4(a_pos, 1.0);
 }
 )";
 
@@ -185,13 +202,78 @@ const char* fragment_shader_source = R"(
 
 layout(binding = 0) uniform sampler2D u_tex1;
 
+layout (binding = 1) uniform Scene
+{
+    mat4 u_view;
+    vec3 u_camera_pos;
+    vec3 u_sun_dir;
+    vec3 u_sun_color;
+    float u_sun_intensity;
+    float u_ambient;
+    float u_specular_power;
+};
+
 in vec2 v_uv;
+in vec3 v_world_pos;
+in vec3 v_normal;
+
+const float PI = 3.14159265;
+
+// Simple fresnel-like factor for rim (optional)
+float fresnel_schlick(float cosTheta, float f0)
+{
+    return f0 + (1.0 - f0) * pow(1.0 - cosTheta, 5.0);
+}
 
 out vec4 frag_color;
 
 void main()
 {
-    frag_color = texture(u_tex1, v_uv);
+    // fetch albedo
+    vec3 albedo = texture(u_tex1, v_uv).rgb;
+
+    // normalize inputs
+    vec3 N = normalize(v_normal);
+    vec3 L = normalize(u_sun_dir); // direction from surface toward light (sun)
+    vec3 V = normalize(u_camera_pos - v_world_pos); // view direction (toward camera)
+    vec3 H = normalize(L + V);
+
+    // Lambertian diffuse
+    float NdotL = max(dot(N, L), 0.0);
+    vec3 diffuse = albedo * NdotL;
+
+    // Blinn-Phong specular (simple)
+    float NdotH = max(dot(N, H), 0.0);
+    float specular_strength = pow(NdotH, max(1.0, u_specular_power));
+    // optionally scale specular by some factor derived from albedo brightness
+    float specular_factor = specular_strength;
+
+    // Sun direct contribution
+    vec3 sun_light = u_sun_color * u_sun_intensity;
+
+    // Sun "disk" / glow seen when looking close to sun direction:
+    // measure how close view direction is to opposite of sun dir (we look toward sun when dot(V, -L) ~ 1)
+    float view_sun_cos = clamp(dot(V, -L), 0.0, 1.0);
+    // sharp disk + soft halo: exponent controls sharpness of disk
+    float sun_disk = pow(view_sun_cos, 400.0);     // sharp core
+    float sun_halo = pow(view_sun_cos, 20.0) * 0.5; // soft halo
+    float sun_glow = clamp(sun_disk + sun_halo, 0.0, 10.0);
+
+    // combine lighting:
+    vec3 ambient = u_ambient * albedo;
+    vec3 direct = (diffuse + specular_factor) * sun_light;
+
+    // add sun glow as additive highlight (not multiplied by albedo)
+    vec3 glow = u_sun_color * sun_glow * u_sun_intensity;
+
+    vec3 color = ambient + direct + glow;
+
+    // simple tonemapping (Reinhard) and gamma correction
+    color = color / (color + vec3(1.0));
+    // gamma to sRGB
+    color = pow(color, vec3(1.0/2.2));
+
+    frag_color = vec4(color, 1.0);
 }
 )";
 
@@ -636,6 +718,7 @@ int main()
     cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[0].indices.data()), indices_size, indices_offset);
 
 
+
     // Make vertices buffer
     tavros::renderer::buffer_desc xyz_normal_uv_desc;
     xyz_normal_uv_desc.size = 1024 * 1024; // 1 Mb
@@ -678,10 +761,16 @@ int main()
     GLuint ubo;
     glGenBuffers(1, &ubo);
     glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-    glBufferData(GL_UNIFORM_BUFFER, 1024, nullptr, GL_DYNAMIC_DRAW);
+    glBufferData(GL_UNIFORM_BUFFER, 2048, nullptr, GL_DYNAMIC_DRAW);
     glBindBuffer(GL_UNIFORM_BUFFER, 0);
 
     tavros::core::timer tm;
+
+	float sun_angle = 0.0f;
+    
+
+    GLint align = 0;
+    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &align);
 
     while (app->is_runing()) {
         app->poll_events();
@@ -718,10 +807,69 @@ int main()
         cam_mat = tavros::math::transpose(cam_mat);
 
 
+        struct camera_shader_t
+        {
+            tavros::math::mat4 u_camera;
+		};
+
+        struct scene_shader_t
+        {
+            tavros::math::mat4 u_view;
+            tavros::math::vec3 u_camera_pos;
+            float              pad1;
+            tavros::math::vec3 u_sun_dir;
+            float              padg2;
+            tavros::math::vec3 u_sun_color;
+            float              u_sun_intensity = 20.0f;
+            float              u_ambient = 0.1f;
+            float              u_specular_power = 16.0f;
+            float              pad3;
+		};
+
+        camera_shader_t camera_shader_data;
+        scene_shader_t scene_shader_data;
+
+		camera_shader_data.u_camera = cam_mat;
+
+		scene_shader_data.u_view = tavros::math::transpose(cam.get_view_matrix());
+		scene_shader_data.u_camera_pos = cam.position();
+		scene_shader_data.u_sun_dir = tavros::math::normalize(tavros::math::vec3(std::cos(sun_angle), std::sin(sun_angle), -0.5f));
+        scene_shader_data.u_sun_color = tavros::math::vec3(1.0f, 0.9f, 0.5f);
+		scene_shader_data.u_sun_intensity = 1.0f;
+		scene_shader_data.u_ambient = 0.1f;
+		scene_shader_data.u_specular_power = 256.0f;
+
+
+        auto align_in_ubo = (sizeof(camera_shader_t) + align - 1) & ~ (align - 1);
+
         glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-        glBufferData(GL_UNIFORM_BUFFER, sizeof(tavros::math::mat4), cam_mat.data(), GL_DYNAMIC_DRAW);
+        glBufferSubData(GL_UNIFORM_BUFFER,
+            0, // смещение в буфере
+            sizeof(camera_shader_t),
+            &camera_shader_data);
+
+        // ќбновл€ем Scene
+        glBufferSubData(GL_UNIFORM_BUFFER,
+            align_in_ubo, // смещение после Camera
+            sizeof(scene_shader_t),
+            &scene_shader_data);
         glBindBuffer(GL_UNIFORM_BUFFER, 0);
-        glBindBufferBase(GL_UNIFORM_BUFFER, 0, ubo);
+
+
+
+        glBindBufferRange(
+            GL_UNIFORM_BUFFER,
+            0,              // binding in shader
+            ubo,            // buffer
+            0,              // offset
+            sizeof(camera_shader_t)); // size
+
+        glBindBufferRange(
+            GL_UNIFORM_BUFFER,
+            1,              // binding in shader
+            ubo,            // buffer
+            align_in_ubo, // offset
+            sizeof(scene_shader_t)); // size
 
 
         cbuf->draw_indexed(model.surfaces[0].indices.size());
@@ -748,6 +896,8 @@ int main()
         composer->submit_command_list(cbuf);
         composer->end_frame();
         composer->present();
+
+		sun_angle += elapsed * 0.5f;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
