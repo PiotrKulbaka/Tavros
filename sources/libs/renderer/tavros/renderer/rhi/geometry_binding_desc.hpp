@@ -18,7 +18,7 @@ namespace tavros::renderer
     /**
      * Describes how a single vertex buffer is bound to the GPU
      */
-    struct buffer_binding
+    struct buffer_layout
     {
         /// Index of the vertex buffer
         uint32 buffer_index = 0;
@@ -35,8 +35,8 @@ namespace tavros::renderer
      */
     struct attribute_binding
     {
-        /// Index of the buffer binding that contains this attribute (refers to geometry_binding_desc::buffer_bindings)
-        uint32 buffer_binding_index = 0;
+        /// Index of the buffer binding that contains this attribute (refers to geometry_binding_desc::buffer_layouts)
+        uint32 buffer_layout_index = 0;
 
         /// Attribute location in the shader
         uint32 location = 0;
@@ -61,7 +61,7 @@ namespace tavros::renderer
     struct geometry_binding_desc
     {
         /// /// Array of buffer bindings describing physical vertex buffers
-        core::static_vector<buffer_binding, k_max_vertex_buffers> buffer_bindings;
+        core::static_vector<buffer_layout, k_max_vertex_buffers> buffer_layouts;
 
         /// Array of attribute bindings describing how vertex attributes are read from buffers
         core::static_vector<attribute_binding, k_max_vertex_attributes> attribute_bindings;

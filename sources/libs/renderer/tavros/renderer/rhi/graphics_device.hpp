@@ -12,6 +12,7 @@
 #include <tavros/renderer/rhi/buffer_desc.hpp>
 #include <tavros/renderer/rhi/geometry_binding_desc.hpp>
 #include <tavros/renderer/rhi/render_pass_desc.hpp>
+#include <tavros/renderer/rhi/shader_binding_desc.hpp>
 
 #include <tavros/renderer/rhi/frame_composer.hpp>
 
@@ -69,6 +70,14 @@ namespace tavros::renderer
             const render_pass_desc& desc
         ) = 0;
         virtual void destroy_render_pass(render_pass_handle render_pass) = 0;
+
+        virtual shader_binding_handle create_shader_binding(
+            const shader_binding_desc&             desc,
+            const core::span<const texture_handle> textures,
+            const core::span<const sampler_handle> samplers,
+            const core::span<const buffer_handle>  buffers
+        ) = 0;
+        virtual void destroy_shader_binding(shader_binding_handle shader_binding) = 0;
     };
 
 } // namespace tavros::renderer

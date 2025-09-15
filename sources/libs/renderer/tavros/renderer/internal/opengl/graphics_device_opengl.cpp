@@ -486,7 +486,7 @@ namespace
         } else if (severity == GL_DEBUG_SEVERITY_LOW) {
             l.warning("%s", message);
         } else if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) {
-            l.info("%s", message);
+            // l.info("%s", message);
         } else {
             l.debug("Unknown severity: %s", message);
         }
@@ -1124,7 +1124,7 @@ namespace tavros::renderer
 
         if (desc.access == buffer_access::cpu_to_gpu) {
             gl_target = GL_COPY_WRITE_BUFFER;
-            gl_usage = GL_STREAM_COPY;
+            gl_usage = GL_STREAM_DRAW;
         } else {
             switch (desc.usage) {
             case buffer_usage::vertex:
@@ -1142,7 +1142,7 @@ namespace tavros::renderer
 
             switch (desc.access) {
             case buffer_access::gpu_only:
-                gl_usage = GL_STATIC_DRAW; // GL_STREAM_COPY - is also possible (for suppress warning)
+                gl_usage = GL_DYNAMIC_DRAW; // GL_STREAM_COPY - is also possible (for suppress warning)
                 break;
             case buffer_access::gpu_to_cpu:
                 gl_usage = GL_DYNAMIC_READ;
@@ -1198,8 +1198,8 @@ namespace tavros::renderer
         }
 
         // Check buffer bindings
-        for (auto i = 0; i < desc.buffer_bindings.size(); ++i) {
-            auto buffer_index = desc.buffer_bindings[i].buffer_index;
+        for (auto i = 0; i < desc.buffer_layouts.size(); ++i) {
+            auto buffer_index = desc.buffer_layouts[i].buffer_index;
             if (buffer_index >= vertex_buffers.size()) {
                 uint32 provided = static_cast<uint32>(vertex_buffers.size());
                 ::logger.error("Invalid vertex buffer binding index: `%u`, max available: `%u`", buffer_index, provided);
@@ -1209,9 +1209,9 @@ namespace tavros::renderer
 
         // Check attribute bindings
         for (auto i = 0; i < desc.attribute_bindings.size(); ++i) {
-            auto buffer_binding_index = desc.attribute_bindings[i].buffer_binding_index;
-            if (buffer_binding_index >= desc.buffer_bindings.size()) {
-                uint32 provided = static_cast<uint32>(desc.buffer_bindings.size());
+            auto buffer_binding_index = desc.attribute_bindings[i].buffer_layout_index;
+            if (buffer_binding_index >= desc.buffer_layouts.size()) {
+                uint32 provided = static_cast<uint32>(desc.buffer_layouts.size());
                 ::logger.error("Invalid vertex attribute binding index: `%u`, max available: `%u`", buffer_binding_index, provided);
                 return {0};
             }
@@ -1247,19 +1247,19 @@ namespace tavros::renderer
         // Setup attribute bindings
         for (auto i = 0; i < desc.attribute_bindings.size(); ++i) {
             auto attrib = desc.attribute_bindings[i];
-            auto buf_binding = desc.buffer_bindings[attrib.buffer_binding_index];
-            auto vertex_buf_index = buf_binding.buffer_index;
+            auto buf_layout = desc.buffer_layouts[attrib.buffer_layout_index];
+            auto vertex_buf_index = buf_layout.buffer_index;
             auto gl_format = to_gl_attribute_format(attrib.format);
 
             // Get the buffer
-            auto* b = m_resources.buffers.try_get(vertex_buffers[buf_binding.buffer_index].id);
+            auto* b = m_resources.buffers.try_get(vertex_buffers[buf_layout.buffer_index].id);
             if (!b) {
-                ::logger.error("Can't find vertex buffer with id %u", vertex_buffers[buf_binding.buffer_index].id);
+                ::logger.error("Can't find vertex buffer with id %u", vertex_buffers[buf_layout.buffer_index].id);
                 return {0};
             }
 
             // Enable the vertex buffer
-            glBindVertexBuffer(i, b->buffer_obj, buf_binding.base_offset, buf_binding.stride);
+            glBindVertexBuffer(i, b->buffer_obj, buf_layout.base_offset, buf_layout.stride);
 
             // Enable attribute and set pointer
             glEnableVertexAttribArray(attrib.location);
@@ -1338,6 +1338,75 @@ namespace tavros::renderer
             ::logger.debug("Render pass with id %u destroyed", render_pass.id);
         } else {
             ::logger.error("Can't destroy render pass with id %u because it doesn't exist", render_pass.id);
+        }
+    }
+
+    shader_binding_handle graphics_device_opengl::create_shader_binding(
+        const shader_binding_desc&             desc,
+        const core::span<const texture_handle> textures,
+        const core::span<const sampler_handle> samplers,
+        const core::span<const buffer_handle>  buffers
+    )
+    {
+        // Validate texture bindings
+        for (auto i = 0; i < desc.texture_bindings.size(); ++i) {
+            auto binding = desc.texture_bindings[i];
+            if (binding.texture_index >= textures.size()) {
+                uint32 provided = static_cast<uint32>(textures.size());
+                ::logger.error("Invalid texture binding index: `%u`, max available: `%u`", binding.texture_index, provided);
+                return {0};
+            }
+            if (binding.sampler_index >= samplers.size()) {
+                uint32 provided = static_cast<uint32>(samplers.size());
+                ::logger.error("Invalid sampler binding index: `%u`, max available: `%u`", binding.sampler_index, provided);
+                return {0};
+            }
+        }
+
+        // Validate buffer bindings
+        for (auto i = 0; i < desc.buffer_bindings.size(); ++i) {
+            auto binding = desc.buffer_bindings[i];
+            if (binding.buffer_index >= buffers.size()) {
+                uint32 provided = static_cast<uint32>(buffers.size());
+                ::logger.error("Invalid buffer binding index: `%u`, max available: `%u`", binding.buffer_index, provided);
+                return {0};
+            }
+        }
+
+
+        core::static_vector<texture_handle, k_max_shader_textures> texture_handles;
+        core::static_vector<sampler_handle, k_max_shader_textures> sampler_handles;
+        core::static_vector<buffer_handle, k_max_shader_buffers>   buffer_handles;
+
+        for (auto i = 0; i < textures.size(); ++i) {
+            texture_handles.push_back(textures[i]);
+        }
+
+        for (auto i = 0; i < samplers.size(); ++i) {
+            sampler_handles.push_back(samplers[i]);
+        }
+
+        for (auto i = 0; i < buffers.size(); ++i) {
+            buffer_handles.push_back(buffers[i]);
+            auto* b = m_resources.buffers.try_get(buffers[i].id);
+            if (b->desc.usage != buffer_usage::uniform) {
+                ::logger.error("Buffer with id %u is not a uniform buffer", buffers[i].id);
+                return {0};
+            }
+        }
+
+        shader_binding_handle handle = {m_resources.shader_bindings.insert({desc, texture_handles, sampler_handles, buffer_handles})};
+        ::logger.debug("Shader binding with id %u created", handle.id);
+        return handle;
+    }
+
+    void graphics_device_opengl::destroy_shader_binding(shader_binding_handle shader_binding)
+    {
+        if (auto* desc = m_resources.shader_bindings.try_get(shader_binding.id)) {
+            m_resources.shader_bindings.remove(shader_binding.id);
+            ::logger.debug("Shader binding with id %u destroyed", shader_binding.id);
+        } else {
+            ::logger.error("Can't destroy shader binding with id %u because it doesn't exist", shader_binding.id);
         }
     }
 

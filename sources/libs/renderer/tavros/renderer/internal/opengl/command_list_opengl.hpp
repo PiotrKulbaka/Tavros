@@ -16,9 +16,7 @@ namespace tavros::renderer
 
         void bind_geometry(geometry_binding_handle geometry_binding) override;
 
-        void bind_texture(uint32 slot, texture_handle texture) override;
-
-        void bind_sampler(uint32 slot, sampler_handle texture) override;
+        void bind_shader_binding(shader_binding_handle shader_binding) override;
 
         void begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer) override;
 

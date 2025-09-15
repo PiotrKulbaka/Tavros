@@ -65,6 +65,14 @@ namespace tavros::renderer
         render_pass_desc desc;
     };
 
+    struct gl_shader_binding
+    {
+        shader_binding_desc                                        desc;
+        core::static_vector<texture_handle, k_max_shader_textures> textures;
+        core::static_vector<sampler_handle, k_max_shader_textures> samplers;
+        core::static_vector<buffer_handle, k_max_shader_buffers>   buffers;
+    };
+
     struct device_resources_opengl
     {
         core::resource_pool<gl_composer>         composers;
@@ -75,6 +83,7 @@ namespace tavros::renderer
         core::resource_pool<gl_buffer>           buffers;
         core::resource_pool<gl_geometry_binding> geometry_bindings;
         core::resource_pool<gl_render_pass>      render_passes;
+        core::resource_pool<gl_shader_binding>   shader_bindings;
     };
 
 } // namespace tavros::renderer

@@ -270,26 +270,64 @@ namespace tavros::renderer
         }
     }
 
-    void command_list_opengl::bind_texture(uint32 slot, texture_handle texture)
+    void command_list_opengl::bind_shader_binding(shader_binding_handle shader_binding)
     {
-        if (auto* tex = m_device->get_resources()->textures.try_get(texture.id)) {
-            if (!tex->desc.usage.has_flag(texture_usage::sampled)) {
-                ::logger.error("Can't bind not sampled texture with id `%u`", texture.id);
-                return;
-            }
-            glActiveTexture(GL_TEXTURE0 + slot);
-            glBindTexture(tex->target, tex->texture_obj);
-        } else {
-            ::logger.error("Can't bind the texture with id `%u`", texture.id);
-        }
-    }
+        if (auto* sb = m_device->get_resources()->shader_bindings.try_get(shader_binding.id)) {
+            auto& desc = sb->desc;
 
-    void command_list_opengl::bind_sampler(uint32 slot, sampler_handle sampler)
-    {
-        if (auto* s = m_device->get_resources()->samplers.try_get(sampler.id)) {
-            glBindSampler(slot, s->sampler_obj);
+            // Bind textures and samplers
+            for (uint32 i = 0; i < desc.texture_bindings.size(); ++i) {
+                auto& binding = desc.texture_bindings[i];
+
+                // Bind texture
+                auto tex_id = sb->textures[binding.texture_index].id;
+                if (auto* t = m_device->get_resources()->textures.try_get(tex_id)) {
+                    if (!t->desc.usage.has_flag(texture_usage::sampled)) {
+                        ::logger.error("Can't bind not sampled texture with id `%u`", tex_id);
+                        continue;
+                    }
+                    glActiveTexture(GL_TEXTURE0 + binding.binding);
+                    glBindTexture(t->target, t->texture_obj);
+                } else {
+                    ::logger.error("Can't bind the texture with id `%u`", tex_id);
+                }
+
+                // Bind sampler
+                auto sampler_id = sb->samplers[binding.sampler_index].id;
+                if (auto* s = m_device->get_resources()->samplers.try_get(sampler_id)) {
+                    glBindSampler(binding.binding, s->sampler_obj);
+                } else {
+                    ::logger.error("Can't bind the sampler with id `%u`", sampler_id);
+                }
+            }
+
+            // Bind buffers (UBO buffers)
+            for (uint32 i = 0; i < desc.buffer_bindings.size(); ++i) {
+                auto& binding = desc.buffer_bindings[i];
+
+                auto buf_id = sb->buffers[binding.buffer_index].id;
+                if (auto* b = m_device->get_resources()->buffers.try_get(buf_id)) {
+                    TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER);
+
+                    if (binding.size == 0) {
+                        // Bind the entire buffer
+                        glBindBufferBase(b->gl_target, binding.binding, b->buffer_obj);
+                    } else {
+                        // Bind a range of the buffer (subbuffer)
+                        glBindBufferRange(
+                            b->gl_target,
+                            binding.binding,
+                            b->buffer_obj,
+                            static_cast<GLintptr>(binding.offset),
+                            static_cast<GLsizeiptr>(binding.size)
+                        );
+                    }
+                } else {
+                    ::logger.error("Can't bind the buffer with id `%u`", buf_id);
+                }
+            }
         } else {
-            ::logger.error("Can't bind the sampler with id `%u`", sampler.id);
+            ::logger.error("Can't bind the shader binding with id `%u` because shader binding is not found", shader_binding.id);
         }
     }
 

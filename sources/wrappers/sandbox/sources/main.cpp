@@ -714,9 +714,10 @@ int main()
 
     // Copy Indices
     uint64 indices_offset = uv_offset + uv_size;
-    uint64 indices_size = model.surfaces[0].indices.size() * sizeof(uint32);
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[0].indices.data()), indices_size, indices_offset);
-
+    uint64 indices_size = (model.surfaces[0].indices.size() + model.surfaces[1].indices.size() + model.surfaces[2].indices.size()) * sizeof(uint32);
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[0].indices.data()), model.surfaces[0].indices.size() * sizeof(uint32), indices_offset);
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[1].indices.data()), model.surfaces[1].indices.size() * sizeof(uint32), indices_offset);
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[2].indices.data()), model.surfaces[2].indices.size() * sizeof(uint32), indices_offset);
 
 
     // Make vertices buffer
@@ -738,9 +739,9 @@ int main()
 
 
     tavros::renderer::geometry_binding_desc gbd;
-    gbd.buffer_bindings.push_back({0, xyz_offset, 4 * 3});
-    gbd.buffer_bindings.push_back({0, norm_offset, 4 * 3});
-    gbd.buffer_bindings.push_back({0, uv_offset, 4 * 2});
+    gbd.buffer_layouts.push_back({0, xyz_offset, 4 * 3});
+    gbd.buffer_layouts.push_back({0, norm_offset, 4 * 3});
+    gbd.buffer_layouts.push_back({0, uv_offset, 4 * 2});
 
     gbd.attribute_bindings.push_back({0, 0, 0, 3, tavros::renderer::attribute_format::f32, false});
     gbd.attribute_bindings.push_back({1, 1, 0, 3, tavros::renderer::attribute_format::f32, false});
@@ -758,16 +759,46 @@ int main()
 
     auto cam = tavros::renderer::camera({0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 1.0, 0.0});
 
-    GLuint ubo;
-    glGenBuffers(1, &ubo);
-    glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-    glBufferData(GL_UNIFORM_BUFFER, 2048, nullptr, GL_DYNAMIC_DRAW);
-    glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
     tavros::core::timer tm;
 
-	float sun_angle = 0.0f;
-    
+    float sun_angle = 0.0f;
+
+
+    tavros::renderer::buffer_desc uniform_buffer_desc{1024, tavros::renderer::buffer_usage::uniform, tavros::renderer::buffer_access::gpu_only};
+    auto                          uniform_buffer = gdevice->create_buffer(uniform_buffer_desc);
+
+
+    struct camera_shader_t
+    {
+        tavros::math::mat4 u_camera;
+    };
+
+    struct scene_shader_t
+    {
+        tavros::math::mat4 u_view;
+        tavros::math::vec3 u_camera_pos;
+        float              pad1;
+        tavros::math::vec3 u_sun_dir;
+        float              padg2;
+        tavros::math::vec3 u_sun_color;
+        float              u_sun_intensity = 20.0f;
+        float              u_ambient = 0.1f;
+        float              u_specular_power = 16.0f;
+        float              pad3;
+    };
+
+
+    tavros::renderer::shader_binding_desc shader_binding_info;
+    shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(camera_shader_t), 0});
+    shader_binding_info.buffer_bindings.push_back({0, 256, sizeof(scene_shader_t), 1});
+    shader_binding_info.texture_bindings.push_back({0, 0, 0});
+
+    tavros::renderer::texture_handle textures_to_binding[] = {tex1};
+    tavros::renderer::sampler_handle samplers_to_binding[] = {sampler1};
+    tavros::renderer::buffer_handle  ubo_buffers_to_binding[] = {uniform_buffer};
+
+    auto shader_binding = gdevice->create_shader_binding(shader_binding_info, textures_to_binding, samplers_to_binding, ubo_buffers_to_binding);
+
 
     GLint align = 0;
     glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &align);
@@ -775,9 +806,6 @@ int main()
     while (app->is_runing()) {
         app->poll_events();
 
-        auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
-        auto* cbuf = composer->create_command_list();
-        composer->begin_frame();
 
         float elapsed = tm.elapsed<std::chrono::microseconds>() / 1000000.0f;
         tm.start();
@@ -794,83 +822,42 @@ int main()
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
 
 
+        auto cam_mat = cam.get_view_projection_matrix();
+        cam_mat = tavros::math::transpose(cam_mat);
+
+
+        camera_shader_t camera_shader_data;
+        scene_shader_t  scene_shader_data;
+
+        camera_shader_data.u_camera = cam_mat;
+
+        scene_shader_data.u_view = tavros::math::transpose(cam.get_view_matrix());
+        scene_shader_data.u_camera_pos = cam.position();
+        scene_shader_data.u_sun_dir = tavros::math::normalize(tavros::math::vec3(std::cos(sun_angle), std::sin(sun_angle), -0.5f));
+        scene_shader_data.u_sun_color = tavros::math::vec3(1.0f, 0.9f, 0.5f);
+        scene_shader_data.u_sun_intensity = 1.0f;
+        scene_shader_data.u_ambient = 0.1f;
+        scene_shader_data.u_specular_power = 256.0f;
+
+
+        auto align_in_ubo = (sizeof(camera_shader_t) + align - 1) & ~(align - 1);
+
+
+        auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
+        auto* cbuf = composer->create_command_list();
+        composer->begin_frame();
+
+        cbuf->copy_buffer_data(stage_buffer, &camera_shader_data, sizeof(camera_shader_t), 0);
+        cbuf->copy_buffer_data(stage_buffer, &scene_shader_data, sizeof(scene_shader_t), align_in_ubo);
+        cbuf->copy_buffer(uniform_buffer, stage_buffer, 512, 0, 0);
+
         cbuf->begin_render_pass(msaa_pass, msaa_framebuffer);
 
         cbuf->bind_pipeline(main_pipeline);
 
         cbuf->bind_geometry(geometry1);
 
-        cbuf->bind_texture(0, tex1);
-        cbuf->bind_sampler(0, sampler1);
-
-        auto cam_mat = cam.get_view_projection_matrix();
-        cam_mat = tavros::math::transpose(cam_mat);
-
-
-        struct camera_shader_t
-        {
-            tavros::math::mat4 u_camera;
-		};
-
-        struct scene_shader_t
-        {
-            tavros::math::mat4 u_view;
-            tavros::math::vec3 u_camera_pos;
-            float              pad1;
-            tavros::math::vec3 u_sun_dir;
-            float              padg2;
-            tavros::math::vec3 u_sun_color;
-            float              u_sun_intensity = 20.0f;
-            float              u_ambient = 0.1f;
-            float              u_specular_power = 16.0f;
-            float              pad3;
-		};
-
-        camera_shader_t camera_shader_data;
-        scene_shader_t scene_shader_data;
-
-		camera_shader_data.u_camera = cam_mat;
-
-		scene_shader_data.u_view = tavros::math::transpose(cam.get_view_matrix());
-		scene_shader_data.u_camera_pos = cam.position();
-		scene_shader_data.u_sun_dir = tavros::math::normalize(tavros::math::vec3(std::cos(sun_angle), std::sin(sun_angle), -0.5f));
-        scene_shader_data.u_sun_color = tavros::math::vec3(1.0f, 0.9f, 0.5f);
-		scene_shader_data.u_sun_intensity = 1.0f;
-		scene_shader_data.u_ambient = 0.1f;
-		scene_shader_data.u_specular_power = 256.0f;
-
-
-        auto align_in_ubo = (sizeof(camera_shader_t) + align - 1) & ~ (align - 1);
-
-        glBindBuffer(GL_UNIFORM_BUFFER, ubo);
-        glBufferSubData(GL_UNIFORM_BUFFER,
-            0, // смещение в буфере
-            sizeof(camera_shader_t),
-            &camera_shader_data);
-
-        // Обновляем Scene
-        glBufferSubData(GL_UNIFORM_BUFFER,
-            align_in_ubo, // смещение после Camera
-            sizeof(scene_shader_t),
-            &scene_shader_data);
-        glBindBuffer(GL_UNIFORM_BUFFER, 0);
-
-
-
-        glBindBufferRange(
-            GL_UNIFORM_BUFFER,
-            0,              // binding in shader
-            ubo,            // buffer
-            0,              // offset
-            sizeof(camera_shader_t)); // size
-
-        glBindBufferRange(
-            GL_UNIFORM_BUFFER,
-            1,              // binding in shader
-            ubo,            // buffer
-            align_in_ubo, // offset
-            sizeof(scene_shader_t)); // size
-
+        cbuf->bind_shader_binding(shader_binding);
 
         cbuf->draw_indexed(model.surfaces[0].indices.size());
 
@@ -885,10 +872,10 @@ int main()
         glReadBuffer(GL_COLOR_ATTACHMENT0);
 
         glBlitFramebuffer(
-            0, 0, composer->width(), composer->height(), // src rect
-            0, 0, composer->width(), composer->height(), // dst rect
+            0, 0, composer->width(), composer->height(),                       // src rect
+            0, 0, wnd->get_window_size().width, wnd->get_window_size().height, // dst rect
             GL_COLOR_BUFFER_BIT,
-            GL_LINEAR                                    // GL_LINEAR
+            GL_LINEAR                                                          // GL_LINEAR
         );
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -897,7 +884,7 @@ int main()
         composer->end_frame();
         composer->present();
 
-		sun_angle += elapsed * 0.5f;
+        sun_angle += elapsed * 0.5f;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }

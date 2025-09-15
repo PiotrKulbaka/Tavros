@@ -33,6 +33,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/primirive_type.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/render_pass_desc.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/sampler_desc.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_binding_desc.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/string_utils.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/texture_desc.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/vertex_layout.hpp
