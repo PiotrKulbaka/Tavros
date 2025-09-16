@@ -28,7 +28,8 @@ namespace
         if (window* wnd = reinterpret_cast<tavros::system::window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
             return wnd->process_window_message(hWnd, uMsg, wParam, lParam);
         }
-        logger.warning("Event '%s' occurred but the window was not found.", wm_message_to_str(uMsg));
+        // Does not log here to avoid spam, because some messages can be sent before GWLP_USERDATA is set
+        // logger.warning("Event '%s' occurred but the window was not found.", wm_message_to_str(uMsg));
         return DefWindowProc(hWnd, uMsg, wParam, lParam);
     }
 
@@ -71,7 +72,8 @@ namespace
         mouse.dwFlags = 0;
         mouse.hwndTarget = hWnd;
         if (RegisterRawInputDevices(&mouse, 1, sizeof(mouse))) {
-            ::logger.debug("Register raw input mouse: succeeded");
+            // Don't log this, because it is not critical
+            //::logger.debug("Register raw input mouse: succeeded");
         } else {
             ::logger.error("Register raw input mouse: %s", last_win_error_str());
         }
@@ -83,9 +85,11 @@ namespace
         mouse.usUsagePage = HID_USAGE_PAGE_GENERIC;
         mouse.usUsage = HID_USAGE_GENERIC_MOUSE;
         mouse.dwFlags = RIDEV_REMOVE;
-        mouse.hwndTarget = hWnd;
+        mouse.hwndTarget = nullptr; // if hwndTarget is hWnd, it will fail with ERROR
+
         if (RegisterRawInputDevices(&mouse, 1, sizeof(mouse))) {
-            ::logger.debug("Remove raw input mouse: succeeded");
+            // Don't log this, because it is not critical
+            //::logger.debug("Remove raw input mouse: succeeded");
         } else {
             ::logger.error("Remove raw input mouse: %s", last_win_error_str());
         }
@@ -96,9 +100,11 @@ namespace
         char name[256];
         GetWindowText(hWnd, name, sizeof(name));
 
-        remove_raw_inpput_mouse(hWnd);
+        // No need to remove raw input, it is removed automatically on window destruction
+        // because remove_raw_inpput_mouse() will remove raw input for all windows (for this process)
+        // remove_raw_inpput_mouse(hWnd);
         if (DestroyWindow(hWnd)) {
-            ::logger.debug("Destroy window '%s': succeeded", name);
+            ::logger.info("Destroy window '%s': succeeded", name);
         } else {
             ::logger.error("Destroy window '%s': %s", name, last_win_error_str());
         }
@@ -132,12 +138,12 @@ window::window(tavros::core::string_view name)
     );
 
     if (hWnd) {
-        ::logger.debug("Create window '%s': succeeded", name);
+        ::logger.info("Create window '%s': succeeded", name.data());
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<uint64>(this));
         m_hWnd = hWnd;
         register_raw_inpput_mouse(hWnd);
     } else {
-        ::logger.error("Create window '%s': failed", name);
+        ::logger.error("Create window '%s': failed", name.data());
     }
 }
 
