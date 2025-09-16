@@ -1,5 +1,7 @@
 #include <tavros/core/logger/logger.hpp>
 
+#include <tavros/core/debug/debug_break.hpp>
+
 #include <exception>
 #include <cstdlib>
 
@@ -14,7 +16,6 @@ bool g_tav_assert_was_called = false;
 
 #if TAV_DEBUG
     #include <tavros/core/debug/assert.hpp>
-    #include <tavros/core/debug/debug_break.hpp>
     #include <tavros/core/debug/check.hpp>
     #include <tavros/core/debug/verify.hpp>
 

@@ -70,10 +70,10 @@
 #endif
 
 // Build
-#if defined(NDEBUG)
-    #define TAV_DEBUG   0
-    #define TAV_RELEASE 1
-#else
+#if defined(_DEBUG)
     #define TAV_DEBUG   1
     #define TAV_RELEASE 0
+#else
+    #define TAV_DEBUG   0
+    #define TAV_RELEASE 1
 #endif

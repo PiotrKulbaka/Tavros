@@ -2,6 +2,7 @@
 
 #include <tavros/core/memory/allocator.hpp>
 #include <tavros/core/pimpl.hpp>
+#include <tavros/core/defines.hpp>
 
 namespace tavros::core
 {
@@ -60,7 +61,8 @@ namespace tavros::core
 
     private:
         struct impl;
-        pimpl<impl, pointer_size * 20, pointer_size> m_impl;
+        static constexpr size_t              impl_size = TAV_DEBUG ? pointer_size * 20 : pointer_size * 16;
+        pimpl<impl, impl_size, pointer_size> m_impl;
     };
 
 } // namespace tavros::core
