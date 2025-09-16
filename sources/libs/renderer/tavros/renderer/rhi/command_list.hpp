@@ -45,6 +45,8 @@ namespace tavros::renderer
 
         virtual void end_render_pass() = 0;
 
+        virtual void draw(uint32 count, uint32 first_vertex = 0) = 0;
+
         virtual void draw_indexed(uint32 index_count, uint32 first_index = 0, uint32 vertex_offset = 0, uint32 instance_count = 1, uint32 first_instance = 0) = 0;
 
         virtual void copy_buffer_data(buffer_handle buffer, const void* data, uint64 size, uint64 offset = 0) = 0;

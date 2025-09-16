@@ -160,7 +160,7 @@ uint16 cube_indices[] =
 
 // clang-format on
 
-const char* vertex_shader_source = R"(
+const char* msaa_vertex_shader_source = R"(
 #version 420 core
 layout (location = 0) in vec3 a_pos;
 layout (location = 1) in vec3 a_normal;
@@ -197,7 +197,7 @@ void main()
 }
 )";
 
-const char* fragment_shader_source = R"(
+const char* msaa_fragment_shader_source = R"(
 #version 420 core
 
 layout(binding = 0) uniform sampler2D u_tex1;
@@ -274,6 +274,39 @@ void main()
     color = pow(color, vec3(1.0/2.2));
 
     frag_color = vec4(color, 1.0);
+}
+)";
+
+const char* fullscreen_quad_vertex_shader_source = R"(
+#version 420 core
+
+const vec2 quadVerts[4] = vec2[](
+    vec2(-1.0, -1.0),
+    vec2( 1.0, -1.0),
+    vec2(-1.0,  1.0),
+    vec2( 1.0,  1.0)
+);
+out vec2 texCoord;
+
+void main()
+{
+    vec2 pos = quadVerts[gl_VertexID];
+    texCoord = (pos + 1.0) * 0.5; // [-1..1] -> [0..1]
+    gl_Position = vec4(pos, 0.0, 1.0);
+}
+)";
+
+const char* fullscreen_quad_fragment_shader_source = R"(
+#version 420 core
+
+in vec2 texCoord;
+out vec4 FragColor;
+
+layout(binding = 0) uniform sampler2D uTex;
+
+void main()
+{
+    FragColor = texture(uTex, texCoord);
 }
 )";
 
@@ -528,6 +561,20 @@ bool load_md3(std::string path, model_t* model)
     return true;
 }
 
+class application_example
+{
+public:
+    application_example()
+    {
+    }
+    ~application_example()
+    {
+    }
+};
+
+constexpr auto k_window_size_factor = 2.0;
+constexpr auto k_initial_window_width = static_cast<int32>(1280 * k_window_size_factor);
+constexpr auto k_initial_window_height = static_cast<int32>(720 * k_window_size_factor);
 
 int main()
 {
@@ -543,7 +590,7 @@ int main()
     auto app = tavros::system::interfaces::application::create();
 
     auto wnd = tavros::system::interfaces::window::create("TavrosEngine");
-    wnd->set_window_size(1280, 720);
+    wnd->set_window_size(k_initial_window_width, k_initial_window_height);
     wnd->set_location(100, 100);
 
     wnd->show();
@@ -551,11 +598,12 @@ int main()
         app->exit();
     });
 
-    float aspect_ratio = 1280.0f / 720.0f;
+    float aspect_ratio = k_initial_window_width / (float) k_initial_window_height;
+    bool  size_changed = true;
 
     wnd->set_on_resize_listener([&](tavros::system::window_ptr, tavros::system::size_event_args& e) {
         aspect_ratio = static_cast<float>(e.size.width) / static_cast<float>(e.size.height);
-        glViewport(0, 0, e.size.width, e.size.height);
+        size_changed = true;
     });
 
     static bool keys[256] = {false};
@@ -594,8 +642,8 @@ int main()
     auto gdevice = tavros::core::make_shared<tavros::renderer::graphics_device_opengl>();
 
     tavros::renderer::frame_composer_desc main_composer_desc;
-    main_composer_desc.width = wnd->get_client_size().width;
-    main_composer_desc.height = wnd->get_client_size().height;
+    main_composer_desc.width = k_initial_window_width;
+    main_composer_desc.height = k_initial_window_height;
     main_composer_desc.buffer_count = 3;
     main_composer_desc.vsync = true;
     main_composer_desc.color_attachment_format = tavros::renderer::pixel_format::rgba8un;
@@ -624,8 +672,8 @@ int main()
 
     // msaa texture
     tavros::renderer::texture_desc msaa_texture_desc;
-    msaa_texture_desc.width = 1280;
-    msaa_texture_desc.height = 720;
+    msaa_texture_desc.width = k_initial_window_width;
+    msaa_texture_desc.height = k_initial_window_height;
     msaa_texture_desc.format = tavros::renderer::pixel_format::rgba8un;
     msaa_texture_desc.usage = tavros::renderer::texture_usage::render_target | tavros::renderer::texture_usage::resolve_source;
     msaa_texture_desc.sample_count = msaa_level;
@@ -633,8 +681,8 @@ int main()
 
     // resolve target texture
     tavros::renderer::texture_desc msaa_resolve_desc;
-    msaa_resolve_desc.width = 1280;
-    msaa_resolve_desc.height = 720;
+    msaa_resolve_desc.width = k_initial_window_width;
+    msaa_resolve_desc.height = k_initial_window_height;
     msaa_resolve_desc.format = tavros::renderer::pixel_format::rgba8un;
     msaa_resolve_desc.usage = tavros::renderer::texture_usage::sampled | tavros::renderer::texture_usage::resolve_destination;
     msaa_resolve_desc.sample_count = 1;
@@ -642,8 +690,8 @@ int main()
 
     // depth/stencil texture
     tavros::renderer::texture_desc msaa_depth_stencil_desc;
-    msaa_depth_stencil_desc.width = 1280;
-    msaa_depth_stencil_desc.height = 720;
+    msaa_depth_stencil_desc.width = k_initial_window_width;
+    msaa_depth_stencil_desc.height = k_initial_window_height;
     msaa_depth_stencil_desc.format = tavros::renderer::pixel_format::depth24_stencil8;
     msaa_depth_stencil_desc.usage = tavros::renderer::texture_usage::depth_stencil_target;
     msaa_depth_stencil_desc.sample_count = msaa_level;
@@ -651,8 +699,8 @@ int main()
 
     // msaa framebuffer
     tavros::renderer::framebuffer_desc msaa_framebuffer_desc;
-    msaa_framebuffer_desc.width = 1280;
-    msaa_framebuffer_desc.height = 720;
+    msaa_framebuffer_desc.width = k_initial_window_width;
+    msaa_framebuffer_desc.height = k_initial_window_height;
     msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
     msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
     msaa_framebuffer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
@@ -664,8 +712,13 @@ int main()
     tavros::renderer::render_pass_desc msaa_render_pass;
     msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.1f, 0.1f, 0.1f, 1.0f}});
     msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::store, 0, {0.0f, 0.0f, 0.0f, 0.0f}});
-    msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, 0};
+    msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0};
     auto msaa_pass = gdevice->create_render_pass(msaa_render_pass);
+
+    tavros::renderer::render_pass_desc main_render_pass;
+    main_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0, {0.1f, 0.1f, 0.4f, 1.0f}});
+    main_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 0};
+    auto main_pass = gdevice->create_render_pass(main_render_pass);
 
 
     tavros::renderer::sampler_desc samler_desc;
@@ -676,18 +729,30 @@ int main()
     auto sampler1 = gdevice->create_sampler(samler_desc);
 
 
+    tavros::renderer::pipeline_desc msaa_pipeline_desc;
+    msaa_pipeline_desc.shaders.fragment_source = msaa_fragment_shader_source;
+    msaa_pipeline_desc.shaders.vertex_source = msaa_vertex_shader_source;
+    msaa_pipeline_desc.depth_stencil.depth_test_enable = true;
+    msaa_pipeline_desc.depth_stencil.depth_write_enable = true;
+    msaa_pipeline_desc.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
+    msaa_pipeline_desc.rasterizer.cull = tavros::renderer::cull_face::off;
+    msaa_pipeline_desc.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
+    msaa_pipeline_desc.topology = tavros::renderer::primitive_topology::triangles;
+
+    auto msaa_pipeline = gdevice->create_pipeline(msaa_pipeline_desc);
+
+
     tavros::renderer::pipeline_desc main_pipeline_desc;
-    main_pipeline_desc.shaders.fragment_source = fragment_shader_source;
-    main_pipeline_desc.shaders.vertex_source = vertex_shader_source;
-    main_pipeline_desc.depth_stencil.depth_test_enable = true;
-    main_pipeline_desc.depth_stencil.depth_write_enable = true;
+    main_pipeline_desc.shaders.fragment_source = fullscreen_quad_fragment_shader_source;
+    main_pipeline_desc.shaders.vertex_source = fullscreen_quad_vertex_shader_source;
+    main_pipeline_desc.depth_stencil.depth_test_enable = false;
+    main_pipeline_desc.depth_stencil.depth_write_enable = false;
     main_pipeline_desc.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
-    main_pipeline_desc.rasterizer.cull = tavros::renderer::cull_face::back;
+    main_pipeline_desc.rasterizer.cull = tavros::renderer::cull_face::off;
     main_pipeline_desc.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
-    main_pipeline_desc.topology = tavros::renderer::primitive_topology::triangles;
+    main_pipeline_desc.topology = tavros::renderer::primitive_topology::triangle_strip;
 
     auto main_pipeline = gdevice->create_pipeline(main_pipeline_desc);
-
 
     tavros::renderer::buffer_desc stage_buffer_desc;
     stage_buffer_desc.size = 1024 * 1024; // 1 Mb
@@ -714,10 +779,8 @@ int main()
 
     // Copy Indices
     uint64 indices_offset = uv_offset + uv_size;
-    uint64 indices_size = (model.surfaces[0].indices.size() + model.surfaces[1].indices.size() + model.surfaces[2].indices.size()) * sizeof(uint32);
+    uint64 indices_size = model.surfaces[0].indices.size() * sizeof(uint32);
     cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[0].indices.data()), model.surfaces[0].indices.size() * sizeof(uint32), indices_offset);
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[1].indices.data()), model.surfaces[1].indices.size() * sizeof(uint32), indices_offset);
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[2].indices.data()), model.surfaces[2].indices.size() * sizeof(uint32), indices_offset);
 
 
     // Make vertices buffer
@@ -777,14 +840,14 @@ int main()
     {
         tavros::math::mat4 u_view;
         tavros::math::vec3 u_camera_pos;
-        float              pad1;
+        float              pad1 = 0.0f;
         tavros::math::vec3 u_sun_dir;
-        float              padg2;
+        float              padg2 = 0.0f;
         tavros::math::vec3 u_sun_color;
         float              u_sun_intensity = 20.0f;
         float              u_ambient = 0.1f;
         float              u_specular_power = 16.0f;
-        float              pad3;
+        float              pad3 = 0.0f;
     };
 
 
@@ -800,8 +863,14 @@ int main()
     auto shader_binding = gdevice->create_shader_binding(shader_binding_info, textures_to_binding, samplers_to_binding, ubo_buffers_to_binding);
 
 
-    GLint align = 0;
-    glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &align);
+    tavros::renderer::shader_binding_desc fullstreen_shader_binding_info;
+    fullstreen_shader_binding_info.texture_bindings.push_back({0, 0, 0});
+
+    tavros::renderer::texture_handle textures_to_binding_main[] = {msaa_resolve_texture};
+    tavros::renderer::sampler_handle samplers_to_binding_main[] = {sampler1};
+
+    auto fullstreen_shader_binding = gdevice->create_shader_binding(fullstreen_shader_binding_info, textures_to_binding_main, samplers_to_binding_main, {});
+
 
     while (app->is_runing()) {
         app->poll_events();
@@ -813,10 +882,6 @@ int main()
         update_camera(keys, mouse_delta, elapsed, aspect_ratio, cam);
         mouse_delta = tavros::math::vec2();
 
-
-        glClearDepth(1.0);
-        glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
-        glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
         /*glEnable(GL_BLEND);
         glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
@@ -840,10 +905,16 @@ int main()
         scene_shader_data.u_specular_power = 256.0f;
 
 
-        auto align_in_ubo = (sizeof(camera_shader_t) + align - 1) & ~(align - 1);
+        auto align_in_ubo = (sizeof(camera_shader_t) + 255) & ~255;
 
 
         auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
+
+        if (size_changed) {
+            composer->resize(wnd->get_client_size().width, wnd->get_client_size().height);
+            size_changed = false;
+        }
+
         auto* cbuf = composer->create_command_list();
         composer->begin_frame();
 
@@ -851,9 +922,10 @@ int main()
         cbuf->copy_buffer_data(stage_buffer, &scene_shader_data, sizeof(scene_shader_t), align_in_ubo);
         cbuf->copy_buffer(uniform_buffer, stage_buffer, 512, 0, 0);
 
+
         cbuf->begin_render_pass(msaa_pass, msaa_framebuffer);
 
-        cbuf->bind_pipeline(main_pipeline);
+        cbuf->bind_pipeline(msaa_pipeline);
 
         cbuf->bind_geometry(geometry1);
 
@@ -864,21 +936,15 @@ int main()
         cbuf->end_render_pass();
 
 
-        // from
-        glBindFramebuffer(GL_READ_FRAMEBUFFER, 1);
-        // to
-        glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-        //
-        glReadBuffer(GL_COLOR_ATTACHMENT0);
+        cbuf->begin_render_pass(main_pass, composer->backbuffer());
 
-        glBlitFramebuffer(
-            0, 0, composer->width(), composer->height(),                       // src rect
-            0, 0, wnd->get_window_size().width, wnd->get_window_size().height, // dst rect
-            GL_COLOR_BUFFER_BIT,
-            GL_LINEAR                                                          // GL_LINEAR
-        );
+        cbuf->bind_pipeline(main_pipeline);
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        cbuf->bind_shader_binding(fullstreen_shader_binding);
+
+        cbuf->draw(4);
+
+        cbuf->end_render_pass();
 
         composer->submit_command_list(cbuf);
         composer->end_frame();

@@ -63,14 +63,14 @@ namespace tavros::renderer
         /// Store operation for the depth component
         store_op depth_store = store_op::dont_care;
 
+        /// Clear value for the depth component (used only if depth_load == clear)
+        float depth_clear_value = 1.0f;
+
         /// Load operation for the stencil component
         load_op stencil_load = load_op::dont_care;
 
         /// Store operation for the stencil component
         store_op stencil_store = store_op::dont_care;
-
-        /// Clear value for the depth component (used only if depth_load == clear)
-        float depth_clear_value = 1.0f;
 
         /// Clear value for the stencil component (used only if stencil_load == clear)
         int32 stencil_clear_value = 0;

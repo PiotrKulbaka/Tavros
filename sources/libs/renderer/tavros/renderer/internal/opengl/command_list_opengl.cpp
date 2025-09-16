@@ -365,6 +365,57 @@ namespace tavros::renderer
             }
         }
 
+        // Validate resolve attachments
+        for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
+            auto& attachment = rp->desc.color_attachments[i];
+            if (attachment.store == store_op::resolve) {
+                auto resolve_attachment_index = attachment.resolve_target_attachment_index;
+                // Validate resolve target index
+                if (resolve_attachment_index >= rp->desc.color_attachments.size()) {
+                    ::logger.error("Invalid resolve target attachment index for render pass with id `%u`", render_pass.id);
+                    return;
+                }
+                // Validate that the resolve target attachment format matches
+                auto resolve_target_format = rp->desc.color_attachments[resolve_attachment_index].format;
+                if (attachment.format != resolve_target_format) {
+                    ::logger.error("Mismatched resolve target attachment format for render pass with id `%u`", render_pass.id);
+                    return;
+                }
+                // Validate that the framebuffer has the resolve target attachment texture
+                auto resolve_texture_handle = fb->color_attachments[resolve_attachment_index];
+                if (resolve_texture_handle.id == 0) {
+                    ::logger.error("Framebuffer with id `%u` does not have the resolve target attachment texture for render pass with id `%u`", framebuffer.id, render_pass.id);
+                    return;
+                }
+                // Validate that the resolve target attachment texture is single-sampled
+                if (auto* tex = m_device->get_resources()->textures.try_get(resolve_texture_handle.id)) {
+                    if (tex->desc.sample_count != 1) {
+                        ::logger.error("Resolve target attachment texture must be single-sampled for render pass with id `%u`", render_pass.id);
+                        return;
+                    }
+                } else {
+                    ::logger.error("Can't find the texture with id `%u`", resolve_texture_handle.id);
+                    return;
+                }
+                // Validate that the framebuffer has the source attachment texture
+                auto source_texture_handle = fb->color_attachments[i];
+                if (source_texture_handle.id == 0) {
+                    ::logger.error("Framebuffer with id `%u` does not have the source attachment texture for render pass with id `%u`", framebuffer.id, render_pass.id);
+                    return;
+                }
+                // Validate that the source attachment texture is multi-sampled
+                if (auto* tex = m_device->get_resources()->textures.try_get(source_texture_handle.id)) {
+                    if (tex->desc.sample_count == 1) {
+                        ::logger.error("Source attachment texture must be multi-sampled for render pass with id `%u`", render_pass.id);
+                        return;
+                    }
+                } else {
+                    ::logger.error("Can't find the texture with id `%u`", source_texture_handle.id);
+                    return;
+                }
+            }
+        }
+
         // Validate depth/stencil attachment format
         if (rp->desc.depth_stencil_attachment.format != fb->desc.depth_stencil_attachment_format) {
             ::logger.error("Mismatched depth/stencil attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
@@ -396,16 +447,20 @@ namespace tavros::renderer
             // Clear for color buffer
             if (rp->desc.color_attachments[0].load == load_op::clear) {
                 clear_mask |= GL_COLOR_BUFFER_BIT;
+                auto color = rp->desc.color_attachments[0].clear_value;
+                glClearColor(color[0], color[1], color[2], color[3]);
             }
 
             if (rp->desc.depth_stencil_attachment.format != pixel_format::none) {
                 // Clear for depth buffer
                 if (rp->desc.depth_stencil_attachment.depth_load == load_op::clear) {
                     clear_mask |= GL_DEPTH_BUFFER_BIT;
+                    glClearDepth(rp->desc.depth_stencil_attachment.depth_clear_value);
                 }
                 // Clear for stencil buffer
                 if (rp->desc.depth_stencil_attachment.stencil_load == load_op::clear) {
                     clear_mask |= GL_STENCIL_BUFFER_BIT;
+                    glClearStencil(rp->desc.depth_stencil_attachment.stencil_clear_value);
                 }
             }
 
@@ -475,72 +530,117 @@ namespace tavros::renderer
             return;
         }
 
-        // Collect resolve attachments
-        struct blit_info
-        {
-            GLuint      attachment = 0;
-            gl_texture* source = nullptr;
-            gl_texture* destination = nullptr;
-        };
-        core::static_vector<blit_info, k_max_color_attachments> blit_data;
-        GLuint                                                  attachment_index = 0;
-        for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
-            auto& rp_color_attachment = rp->desc.color_attachments[i];
-            auto* tex = m_device->get_resources()->textures.try_get(fb->color_attachments[i].id);
-            TAV_ASSERT(tex);
+        if (fb->is_default) {
+            TAV_ASSERT(rp->desc.color_attachments[0].store != store_op::resolve);
+        } else {
+            // Collect resolve attachments
+            struct blit_info
+            {
+                GLuint      attachment = 0;
+                gl_texture* source = nullptr;
+                gl_texture* destination = nullptr;
+            };
+            core::static_vector<blit_info, k_max_color_attachments> blit_data;
+            GLuint                                                  attachment_index = 0;
+            for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
+                auto& rp_color_attachment = rp->desc.color_attachments[i];
+                auto* tex = m_device->get_resources()->textures.try_get(fb->color_attachments[i].id);
+                TAV_ASSERT(tex);
 
-            if (rp_color_attachment.store == store_op::resolve) {
-                // Resolve attachments
-                auto resolve_to_index = rp_color_attachment.resolve_target_attachment_index;
-                if (fb->color_attachments.size() > resolve_to_index) {
-                    // Find the resolve texture and validate it
-                    auto* resolve_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[resolve_to_index].id);
-                    if (resolve_tex == nullptr) {
+                if (rp_color_attachment.store == store_op::resolve) {
+                    // Resolve attachments
+                    auto resolve_to_index = rp_color_attachment.resolve_target_attachment_index;
+                    if (fb->color_attachments.size() > resolve_to_index) {
+                        // Find the resolve texture and validate it
+                        auto* resolve_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[resolve_to_index].id);
+                        if (resolve_tex == nullptr) {
+                            ::logger.error("Invalid resolve attachment index `%u`", resolve_to_index);
+                            return;
+                        }
+
+                        // everything is ok, add to the list
+                        blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, tex, resolve_tex});
+                        attachment_index++;
+                    } else {
                         ::logger.error("Invalid resolve attachment index `%u`", resolve_to_index);
                         return;
                     }
-
-                    // everything is ok, add to the list
-                    blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, tex, resolve_tex});
-                    attachment_index++;
-                } else {
-                    ::logger.error("Invalid resolve attachment index `%u`", resolve_to_index);
-                    return;
                 }
             }
-        }
 
-
-        // Check if need to resolve
-        if (blit_data.size() > 0) {
-            // Bind for resolve and attach textures
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo);
-
-            for (uint32 i = 0; i < blit_data.size(); ++i) {
-                glFramebufferTexture2D(GL_DRAW_FRAMEBUFFER, blit_data[i].attachment, GL_TEXTURE_2D, blit_data[i].destination->texture_obj, 0);
+            // Blit mask for depth/stencil attachment
+            GLbitfield depth_stencil_blit_mask = 0;
+            if (rp->desc.depth_stencil_attachment.depth_store == store_op::resolve) {
+                depth_stencil_blit_mask |= GL_DEPTH_BUFFER_BIT;
+            }
+            if (rp->desc.depth_stencil_attachment.stencil_store == store_op::resolve) {
+                depth_stencil_blit_mask |= GL_STENCIL_BUFFER_BIT;
             }
 
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj);
+            auto need_resolve = depth_stencil_blit_mask != 0 || blit_data.size() > 0;
 
-            // Resolve
-            for (uint32 i = 0; i < blit_data.size(); ++i) {
-                glReadBuffer(blit_data[i].attachment);
-                glDrawBuffer(blit_data[i].attachment);
-                glBlitFramebuffer(
-                    0, 0, fb->desc.width, fb->desc.height,
-                    0, 0, fb->desc.width, fb->desc.height,
-                    GL_COLOR_BUFFER_BIT,
-                    GL_NEAREST
-                );
+            if (need_resolve) {
+                // Bind for resolve and attach textures
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj);
+
+                // Check if need to resolve for any attachment
+                if (blit_data.size() > 0) {
+                    for (uint32 i = 0; i < blit_data.size(); ++i) {
+                        glFramebufferTexture2D(
+                            GL_DRAW_FRAMEBUFFER,
+                            GL_COLOR_ATTACHMENT0,
+                            GL_TEXTURE_2D,
+                            blit_data[i].destination->texture_obj,
+                            0
+                        );
+                    }
+
+                    // Resolve color attachments
+                    for (uint32 i = 0; i < blit_data.size(); ++i) {
+                        glReadBuffer(blit_data[i].attachment);
+                        glDrawBuffer(GL_COLOR_ATTACHMENT0);
+                        glBlitFramebuffer(
+                            0, 0, fb->desc.width, fb->desc.height,
+                            0, 0, fb->desc.width, fb->desc.height,
+                            GL_COLOR_BUFFER_BIT,
+                            GL_NEAREST
+                        );
+                    }
+                }
+
+                // Check if need to resolve depth/stencil attachment
+                if (depth_stencil_blit_mask) {
+                    // Resolve depth/stencil attachment
+                    glBlitFramebuffer(
+                        0, 0, fb->desc.width, fb->desc.height,
+                        0, 0, fb->desc.width, fb->desc.height,
+                        depth_stencil_blit_mask,
+                        GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
+                    );
+                }
+
+
+                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+                glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
             }
-
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         m_current_framebuffer = {0};
         m_current_render_pass = {0};
+    }
+
+    void command_list_opengl::draw(uint32 count, uint32 first_vertex)
+    {
+        auto* p = m_device->get_resources()->pipelines.try_get(m_current_pipeline.id);
+        if (!p) {
+            ::logger.error("Can't draw indexsed because no pipeline is bound");
+            return;
+        }
+
+        auto topology = to_gl_topology(p->desc.topology);
+        glDrawArrays(topology, static_cast<GLint>(first_vertex), static_cast<GLsizei>(count));
     }
 
     void command_list_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
@@ -564,9 +664,9 @@ namespace tavros::renderer
 
             if (instance_count > 1) {
                 glDrawElementsInstanced(
-                    topology,          // или другой примитив из pipeline
+                    topology,
                     index_count,
-                    index_format.type, // тип индекса (надо хранить в твоём index buffer desc)
+                    index_format.type,
                     index_offset,
                     instance_count
                 );

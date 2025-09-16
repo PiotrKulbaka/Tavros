@@ -73,16 +73,17 @@ namespace tavros::renderer
 
     void frame_composer_opengl::resize(uint32 width, uint32 height)
     {
-        TAV_ASSERT(width > 0 && height > 0);
+        auto w = width > 0 ? width : 1;
+        auto h = height > 0 ? height : 1;
 
         // Update frame composer size
-        m_desc.width = width;
-        m_desc.height = height;
+        m_desc.width = w;
+        m_desc.height = h;
 
         // Update framebuffer size
         if (auto* desc = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
-            desc->desc.width = width;
-            desc->desc.height = height;
+            desc->desc.width = w;
+            desc->desc.height = h;
         } else {
             ::logger.error("Can't find default framebuffer for frame composer with id %u", m_backbuffer.id);
         }
