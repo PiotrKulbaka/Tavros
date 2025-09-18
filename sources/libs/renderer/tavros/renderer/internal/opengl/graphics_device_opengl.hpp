@@ -15,13 +15,17 @@ namespace tavros::renderer
 
         void destroy();
 
-        virtual frame_composer_handle create_frame_composer(
+        frame_composer_handle create_frame_composer(
             const frame_composer_desc& desc,
             void*                      native_handle
         ) override;
-        virtual void destroy_frame_composer(frame_composer_handle composer) override;
+        void destroy_frame_composer(frame_composer_handle composer) override;
 
-        virtual frame_composer* get_frame_composer_ptr(frame_composer_handle composer) override;
+        frame_composer* get_frame_composer_ptr(frame_composer_handle composer) override;
+
+        shader_handle create_shader(const shader_info& info) override;
+
+        void destroy_shader(shader_handle shader) override;
 
         sampler_handle create_sampler(
             const sampler_desc& desc
@@ -36,7 +40,8 @@ namespace tavros::renderer
         void destroy_texture(texture_handle handle) override;
 
         pipeline_handle create_pipeline(
-            const pipeline_desc& desc
+            const pipeline_desc&                  desc,
+            const core::span<const shader_handle> shaders
         ) override;
         void destroy_pipeline(pipeline_handle pipeline) override;
 

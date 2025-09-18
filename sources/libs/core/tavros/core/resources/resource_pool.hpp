@@ -55,9 +55,14 @@ namespace tavros::core
 
         T* try_get(handle_t handle)
         {
+            if (m_last_handle == handle) {
+                return m_last;
+            }
             auto it = m_storage.find(handle);
             if (it != m_storage.end()) {
-                return &it->second;
+                m_last_handle = handle;
+                m_last = &it->second;
+                return m_last;
             }
             return nullptr;
         }
@@ -71,6 +76,7 @@ namespace tavros::core
         {
             auto handle = m_counter.fetch_add(1);
             m_storage[handle] = std::move(desc);
+            reset_last_cache();
             return handle;
         }
 
@@ -79,22 +85,34 @@ namespace tavros::core
         {
             auto handle = m_counter.fetch_add(1);
             m_storage.emplace(std::piecewise_construct, std::forward_as_tuple(handle), std::forward_as_tuple(std::forward<Args>(args)...));
+            reset_last_cache();
             return handle;
         }
 
         void remove(handle_t handle)
         {
             m_storage.erase(handle);
+            reset_last_cache();
         }
 
         void clear()
         {
             m_storage.clear();
+            reset_last_cache();
+        }
+
+    private:
+        void reset_last_cache()
+        {
+            m_last_handle = 0;
+            m_last = nullptr;
         }
 
     private:
         std::atomic<handle_t>            m_counter = 1;
         core::unordered_map<handle_t, T> m_storage;
+        handle_t                         m_last_handle = 0;
+        T*                               m_last = nullptr;
     };
 
 } // namespace tavros::core

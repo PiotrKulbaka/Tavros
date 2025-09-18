@@ -600,9 +600,13 @@ int main()
     auto sampler1 = gdevice->create_sampler(samler_desc);
 
 
+    auto msaa_vertex_shader = gdevice->create_shader({msaa_vertex_shader_source, tavros::renderer::shader_stage::vertex, "main"});
+    auto msaa_fragment_shader = gdevice->create_shader({msaa_fragment_shader_source, tavros::renderer::shader_stage::fragment, "main"});
+
+
     tavros::renderer::pipeline_desc msaa_pipeline_desc;
-    msaa_pipeline_desc.shaders.fragment_source = msaa_fragment_shader_source;
-    msaa_pipeline_desc.shaders.vertex_source = msaa_vertex_shader_source;
+    msaa_pipeline_desc.shaders.push_back({tavros::renderer::shader_stage::vertex, "main"});
+    msaa_pipeline_desc.shaders.push_back({tavros::renderer::shader_stage::fragment, "main"});
     msaa_pipeline_desc.depth_stencil.depth_test_enable = true;
     msaa_pipeline_desc.depth_stencil.depth_write_enable = true;
     msaa_pipeline_desc.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
@@ -610,14 +614,16 @@ int main()
     msaa_pipeline_desc.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
     msaa_pipeline_desc.topology = tavros::renderer::primitive_topology::triangles;
 
-    auto msaa_pipeline = gdevice->create_pipeline(msaa_pipeline_desc);
+    tavros::renderer::shader_handle msaa_shaders[] = {msaa_vertex_shader, msaa_fragment_shader};
+    auto                            msaa_pipeline = gdevice->create_pipeline(msaa_pipeline_desc, msaa_shaders);
 
+
+    auto fullscreen_quad_vertex_shader = gdevice->create_shader({fullscreen_quad_vertex_shader_source, tavros::renderer::shader_stage::vertex, "main"});
+    auto fullscreen_quad_fragment_shader = gdevice->create_shader({fullscreen_quad_fragment_shader_source, tavros::renderer::shader_stage::fragment, "main"});
 
     tavros::renderer::pipeline_desc main_pipeline_desc;
-    main_pipeline_desc.shaders.fragment_source = fullscreen_quad_fragment_shader_source;
-    main_pipeline_desc.shaders.vertex_source = fullscreen_quad_vertex_shader_source;
-
-
+    main_pipeline_desc.shaders.push_back({tavros::renderer::shader_stage::vertex, "main"});
+    main_pipeline_desc.shaders.push_back({tavros::renderer::shader_stage::fragment, "main"});
     main_pipeline_desc.depth_stencil.depth_test_enable = false;
     main_pipeline_desc.depth_stencil.depth_write_enable = false;
     main_pipeline_desc.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
@@ -625,7 +631,8 @@ int main()
     main_pipeline_desc.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
     main_pipeline_desc.topology = tavros::renderer::primitive_topology::triangle_strip;
 
-    auto main_pipeline = gdevice->create_pipeline(main_pipeline_desc);
+    tavros::renderer::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
+    auto                            main_pipeline = gdevice->create_pipeline(main_pipeline_desc, fullscreen_quad_shaders);
 
     tavros::renderer::buffer_desc stage_buffer_desc;
     stage_buffer_desc.size = 1024 * 1024; // 1 Mb

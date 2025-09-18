@@ -74,8 +74,31 @@ namespace tavros::renderer
         core::static_vector<buffer_handle, k_max_shader_buffers>   buffers;
     };
 
+    struct gl_shader
+    {
+        shader_info info;
+        GLuint      shader_obj = 0;
+    };
+
     struct device_resources_opengl
     {
+    public:
+        gl_shader* try_get(shader_handle shader)
+        {
+            return shaders.try_get(shader.id);
+        }
+
+        void remove(shader_handle handle)
+        {
+            shaders.remove(handle.id);
+        }
+
+        shader_handle create(gl_shader&& data)
+        {
+            return {shaders.insert(std::move(data))};
+        }
+
+    public:
         core::resource_pool<gl_composer>         composers;
         core::resource_pool<gl_sampler>          samplers;
         core::resource_pool<gl_texture>          textures;
@@ -85,6 +108,7 @@ namespace tavros::renderer
         core::resource_pool<gl_geometry_binding> geometry_bindings;
         core::resource_pool<gl_render_pass>      render_passes;
         core::resource_pool<gl_shader_binding>   shader_bindings;
+        core::resource_pool<gl_shader>           shaders;
     };
 
 } // namespace tavros::renderer

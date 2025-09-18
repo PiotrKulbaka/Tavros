@@ -13,6 +13,7 @@
 #include <tavros/renderer/rhi/geometry_binding_desc.hpp>
 #include <tavros/renderer/rhi/render_pass_desc.hpp>
 #include <tavros/renderer/rhi/shader_binding_desc.hpp>
+#include <tavros/renderer/rhi/shader_info.hpp>
 
 #include <tavros/renderer/rhi/frame_composer.hpp>
 
@@ -32,6 +33,11 @@ namespace tavros::renderer
 
         virtual frame_composer* get_frame_composer_ptr(frame_composer_handle composer) = 0;
 
+
+        virtual shader_handle create_shader(const shader_info& info) = 0;
+        virtual void          destroy_shader(shader_handle shader) = 0;
+
+
         virtual sampler_handle create_sampler(
             const sampler_desc& desc
         ) = 0;
@@ -45,7 +51,8 @@ namespace tavros::renderer
         virtual void destroy_texture(texture_handle texture) = 0;
 
         virtual pipeline_handle create_pipeline(
-            const pipeline_desc& desc
+            const pipeline_desc&                  desc,
+            const core::span<const shader_handle> shaders
         ) = 0;
         virtual void destroy_pipeline(pipeline_handle pipeline) = 0;
 

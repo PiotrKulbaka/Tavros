@@ -374,6 +374,18 @@ namespace
         }
     }
 
+    GLenum to_gl_shader_stage(shader_stage type)
+    {
+        switch (type) {
+        case shader_stage::vertex:
+            return GL_VERTEX_SHADER;
+        case shader_stage::fragment:
+            return GL_FRAGMENT_SHADER;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
     GLuint compile_shader(tavros::core::string_view program, GLenum shader_type)
     {
         auto shader = glCreateShader(shader_type);
@@ -609,6 +621,36 @@ namespace tavros::renderer
         }
     }
 
+    shader_handle graphics_device_opengl::create_shader(const shader_info& info)
+    {
+        if (info.entry_point != "main") {
+            ::logger.error("Only 'main' entry point is supported in OpenGL shaders");
+            return {0};
+        }
+
+        auto shader_obj = compile_shader(info.source_code, to_gl_shader_stage(info.stage));
+        if (shader_obj == 0) {
+            ::logger.error("Shader compilation failed");
+            return {0};
+        }
+
+        auto h = m_resources.create({info, shader_obj});
+        ::logger.debug("Shader with id `%u` created", h.id);
+        return h;
+    }
+
+    void graphics_device_opengl::destroy_shader(shader_handle shader)
+    {
+        if (auto* s = m_resources.try_get(shader)) {
+            glDeleteShader(s->shader_obj);
+            s->shader_obj = 0;
+            m_resources.remove(shader);
+            ::logger.debug("Shader with id %u destroyed", shader.id);
+        } else {
+            ::logger.error("Can't destroy shader with id %u because it doesn't exist", shader.id);
+        }
+    }
+
     sampler_handle graphics_device_opengl::create_sampler(const sampler_desc& desc)
     {
         GLuint sampler;
@@ -638,7 +680,7 @@ namespace tavros::renderer
             glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         }
 
-        sampler_handle handle = {m_resources.samplers.insert({desc, sampler})};
+        sampler_handle handle = {m_resources.samplers.emplace(desc, sampler)};
         ::logger.debug("Sampler with id %u created", handle.id);
         return handle;
     }
@@ -836,29 +878,57 @@ namespace tavros::renderer
         }
     }
 
-    pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_desc& desc)
+    pipeline_handle graphics_device_opengl::create_pipeline(
+        const pipeline_desc&                  desc,
+        const core::span<const shader_handle> shaders
+    )
     {
-        // create shader program
-        auto v = compile_shader(desc.shaders.vertex_source, GL_VERTEX_SHADER);
-        auto f = compile_shader(desc.shaders.fragment_source, GL_FRAGMENT_SHADER);
+        if (desc.shaders.size() != 2) {
+            ::logger.error("Pipeline must have exactly 2 shaders (vertex and fragment)");
+            return {0};
+        }
 
-        // Validate shaders
-        if (v == 0) {
-            ::logger.error("Can't compile vertex shader");
-            if (f) {
-                glDeleteShader(f);
+        if (desc.shaders.size() != shaders.size()) {
+            ::logger.error("Pipeline shaders size mismatch");
+            return {0};
+        }
+
+        GLuint vs = 0;
+        GLuint fs = 0;
+        for (auto i = 0; i < desc.shaders.size(); ++i) {
+            if (auto* s = m_resources.try_get(shaders[i])) {
+                if (s->info.stage != desc.shaders[i].stage) {
+                    ::logger.error("Shader stage mismatch");
+                    return {0};
+                }
+                if (s->info.stage == shader_stage::vertex) {
+                    if (vs != 0) {
+                        ::logger.error("Multiple vertex shaders provided");
+                        return {0};
+                    }
+                    vs = s->shader_obj;
+                } else if (s->info.stage == shader_stage::fragment) {
+                    if (fs != 0) {
+                        ::logger.error("Multiple fragment shaders provided");
+                        return {0};
+                    }
+                    fs = s->shader_obj;
+                } else {
+                    ::logger.error("Unsupported shader stage");
+                    return {0};
+                }
+            } else {
+                ::logger.error("Can't find shader with id `%u`", shaders[i].id);
+                return {0};
             }
-            return {0};
         }
-        if (f == 0) {
-            ::logger.error("Can't compile fragment shader");
-            glDeleteShader(v);
+
+        if (vs == 0 || fs == 0) {
+            ::logger.error("Pipeline must have both vertex and fragment shaders");
             return {0};
         }
 
-        auto program = link_program(v, f);
-        glDeleteShader(v);
-        glDeleteShader(f);
+        auto program = link_program(vs, fs);
 
         // Validate program
         if (program == 0) {

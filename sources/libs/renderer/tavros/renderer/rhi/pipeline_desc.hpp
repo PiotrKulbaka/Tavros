@@ -7,20 +7,21 @@
 #include <tavros/renderer/rhi/pixel_format.hpp>
 #include <tavros/renderer/rhi/vertex_attribute.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
+#include <tavros/renderer/rhi/shader_info.hpp>
 
 namespace tavros::renderer
 {
 
     /**
-     * Contains source code strings for different shader stages.
+     * Contains shader include info for the pipeline.
      */
-    struct shader_sources
+    struct pipeline_shader
     {
-        /// Source code for the vertex shader stage.
-        core::string_view vertex_source;
+        /// Shader should be compiled for this stage
+        shader_stage stage = shader_stage::vertex;
 
-        /// Source code for the fragment shader stage.
-        core::string_view fragment_source;
+        /// Source code for the shader
+        core::string_view entry_point = "main";
     };
 
     /**
@@ -292,7 +293,8 @@ namespace tavros::renderer
 
     struct pipeline_desc
     {
-        shader_sources shaders;
+        /// List with descriptions of shaders to be used in the pipeline
+        core::static_vector<pipeline_shader, k_max_pipeline_shaders> shaders;
 
         /// List of vertex attributes
         core::static_vector<vertex_attribute, k_max_vertex_attributes> attributes;
@@ -309,9 +311,11 @@ namespace tavros::renderer
         /// Describes how the GPU rasterizes and renders geometric primitives
         rasterizer_state rasterizer;
 
-
+        /// Describes the multisample state (MSAA) for a pipeline
         multisample_state multisample;
-        render_targets    targets;
+
+
+        render_targets targets;
     };
 
 } // namespace tavros::renderer

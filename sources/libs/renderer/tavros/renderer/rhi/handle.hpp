@@ -38,6 +38,9 @@ namespace tavros::renderer
     struct shader_binding_tag
     {
     };
+    struct shader_tag
+    {
+    };
 
     using frame_composer_handle = handle_base<frame_composer_tag>;
     using sampler_handle = handle_base<sampler_tag>;
@@ -48,5 +51,6 @@ namespace tavros::renderer
     using geometry_binding_handle = handle_base<geometry_binding_tag>;
     using render_pass_handle = handle_base<render_pass_tag>;
     using shader_binding_handle = handle_base<shader_binding_tag>;
+    using shader_handle = handle_base<shader_tag>;
 
 } // namespace tavros::renderer
