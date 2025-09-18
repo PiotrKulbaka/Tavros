@@ -1208,7 +1208,7 @@ namespace tavros::renderer
     }
 
     geometry_binding_handle graphics_device_opengl::create_geometry(
-        const geometry_binding_desc&          desc,
+        const geometry_binding_info&          info,
         const core::span<const buffer_handle> vertex_buffers,
         core::optional<buffer_handle>         index_buffer
     )
@@ -1220,8 +1220,8 @@ namespace tavros::renderer
         }
 
         // Check buffer bindings
-        for (auto i = 0; i < desc.buffer_layouts.size(); ++i) {
-            auto buffer_index = desc.buffer_layouts[i].buffer_index;
+        for (auto i = 0; i < info.buffer_layouts.size(); ++i) {
+            auto buffer_index = info.buffer_layouts[i].buffer_index;
             if (buffer_index >= vertex_buffers.size()) {
                 uint32 provided = static_cast<uint32>(vertex_buffers.size());
                 ::logger.error("Invalid vertex buffer binding index: `%u`, max available: `%u`", buffer_index, provided);
@@ -1230,22 +1230,22 @@ namespace tavros::renderer
         }
 
         // Check attribute bindings
-        for (auto i = 0; i < desc.attribute_bindings.size(); ++i) {
-            auto buffer_binding_index = desc.attribute_bindings[i].buffer_layout_index;
-            if (buffer_binding_index >= desc.buffer_layouts.size()) {
-                uint32 provided = static_cast<uint32>(desc.buffer_layouts.size());
+        for (auto i = 0; i < info.attribute_bindings.size(); ++i) {
+            auto buffer_binding_index = info.attribute_bindings[i].buffer_layout_index;
+            if (buffer_binding_index >= info.buffer_layouts.size()) {
+                uint32 provided = static_cast<uint32>(info.buffer_layouts.size());
                 ::logger.error("Invalid vertex attribute binding index: `%u`, max available: `%u`", buffer_binding_index, provided);
                 return {0};
             }
         }
 
         // Check index buffer
-        if (desc.has_index_buffer && index_buffer == core::nullopt) {
+        if (info.has_index_buffer && index_buffer == core::nullopt) {
             ::logger.error("Index buffer is missing");
             return {0};
         }
 
-        if (!desc.has_index_buffer && index_buffer != core::nullopt) {
+        if (!info.has_index_buffer && index_buffer != core::nullopt) {
             ::logger.error("Index buffer is not enabled");
             return {0};
         }
@@ -1267,10 +1267,10 @@ namespace tavros::renderer
 
 
         // Setup attribute bindings
-        for (auto i = 0; i < desc.attribute_bindings.size(); ++i) {
-            auto& attrib_bind = desc.attribute_bindings[i];
+        for (auto i = 0; i < info.attribute_bindings.size(); ++i) {
+            auto& attrib_bind = info.attribute_bindings[i];
             auto& attrib = attrib_bind.attribute;
-            auto  buf_layout = desc.buffer_layouts[attrib_bind.buffer_layout_index];
+            auto  buf_layout = info.buffer_layouts[attrib_bind.buffer_layout_index];
             auto  vertex_buf_index = buf_layout.buffer_index;
             auto  gl_format = to_gl_attribute_format(attrib.format);
 
@@ -1291,7 +1291,7 @@ namespace tavros::renderer
         }
 
         // Bind index buffer if present
-        if (desc.has_index_buffer) {
+        if (info.has_index_buffer) {
             if (auto* desc = m_resources.buffers.try_get(index_buffer->id)) {
                 if (desc->info.usage != buffer_usage::index) {
                     ::logger.error("Invalid index buffer usage");
@@ -1307,7 +1307,7 @@ namespace tavros::renderer
 
         glBindVertexArray(0);
 
-        geometry_binding_handle handle = {m_resources.geometry_bindings.insert({desc, vao_owner.release()})};
+        geometry_binding_handle handle = {m_resources.geometry_bindings.insert({info, vao_owner.release()})};
         ::logger.debug("Geometry binding with id %u created", handle.id);
         return handle;
     }

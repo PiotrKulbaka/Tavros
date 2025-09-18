@@ -10,7 +10,7 @@
 #include <tavros/renderer/rhi/pipeline_info.hpp>
 #include <tavros/renderer/rhi/framebuffer_info.hpp>
 #include <tavros/renderer/rhi/buffer_info.hpp>
-#include <tavros/renderer/rhi/geometry_binding_desc.hpp>
+#include <tavros/renderer/rhi/geometry_binding_info.hpp>
 #include <tavros/renderer/rhi/render_pass_info.hpp>
 #include <tavros/renderer/rhi/shader_binding_info.hpp>
 #include <tavros/renderer/rhi/shader_info.hpp>
@@ -67,7 +67,7 @@ namespace tavros::renderer
         virtual void          destroy_buffer(buffer_handle buffer) = 0;
 
         virtual geometry_binding_handle create_geometry(
-            const geometry_binding_desc&          desc,
+            const geometry_binding_info&          info,
             const core::span<const buffer_handle> vertex_buffers,
             core::optional<buffer_handle>         index_buffer = core::nullopt
         ) = 0;

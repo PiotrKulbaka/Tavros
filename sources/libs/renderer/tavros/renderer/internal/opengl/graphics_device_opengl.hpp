@@ -56,7 +56,7 @@ namespace tavros::renderer
         void          destroy_buffer(buffer_handle buffer) override;
 
         geometry_binding_handle create_geometry(
-            const geometry_binding_desc&          desc,
+            const geometry_binding_info&          info,
             const core::span<const buffer_handle> vertex_buffers,
             core::optional<buffer_handle>         index_buffer = core::nullopt
         ) override;

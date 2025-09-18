@@ -644,7 +644,7 @@ namespace tavros::renderer
     void command_list_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
     {
         if (auto* gb = m_device->get_resources()->geometry_bindings.try_get(m_current_geometry_binding.id)) {
-            if (!gb->desc.has_index_buffer) {
+            if (!gb->info.has_index_buffer) {
                 ::logger.error("Can't draw indexsed because current geometry binding doesn't have index buffer");
                 return;
             }
@@ -656,7 +656,7 @@ namespace tavros::renderer
             }
 
 
-            auto        index_format = to_gl_index_format(gb->desc.index_format);
+            auto        index_format = to_gl_index_format(gb->info.index_format);
             auto        topology = to_gl_topology(p->info.topology);
             const void* index_offset = reinterpret_cast<const void*>(first_index * index_format.size);
 

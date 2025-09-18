@@ -26,8 +26,6 @@
 
 #include <tavros/core/scoped_owner.hpp>
 
-#include <tavros/renderer/rhi/geometry_binding_desc.hpp>
-
 #include <stb/stb_image.h>
 
 #include <fstream>
@@ -681,20 +679,20 @@ int main()
     cbuf->copy_buffer(buffer_indices, stage_buffer, indices_size, 0, indices_offset);
 
 
-    tavros::renderer::geometry_binding_desc gbd;
-    gbd.buffer_layouts.push_back({0, xyz_offset, 4 * 3});
-    gbd.buffer_layouts.push_back({0, norm_offset, 4 * 3});
-    gbd.buffer_layouts.push_back({0, uv_offset, 4 * 2});
+    tavros::renderer::geometry_binding_info gbi;
+    gbi.buffer_layouts.push_back({0, xyz_offset, 4 * 3});
+    gbi.buffer_layouts.push_back({0, norm_offset, 4 * 3});
+    gbi.buffer_layouts.push_back({0, uv_offset, 4 * 2});
 
-    gbd.attribute_bindings.push_back({0, 0, 3, tavros::renderer::attribute_format::f32, false, 0});
-    gbd.attribute_bindings.push_back({1, 0, 3, tavros::renderer::attribute_format::f32, false, 1});
-    gbd.attribute_bindings.push_back({2, 0, 2, tavros::renderer::attribute_format::f32, false, 2});
+    gbi.attribute_bindings.push_back({0, 0, 3, tavros::renderer::attribute_format::f32, false, 0});
+    gbi.attribute_bindings.push_back({1, 0, 3, tavros::renderer::attribute_format::f32, false, 1});
+    gbi.attribute_bindings.push_back({2, 0, 2, tavros::renderer::attribute_format::f32, false, 2});
 
-    gbd.has_index_buffer = true;
-    gbd.index_format = tavros::renderer::index_buffer_format::u32;
+    gbi.has_index_buffer = true;
+    gbi.index_format = tavros::renderer::index_buffer_format::u32;
 
     tavros::renderer::buffer_handle buffers_to_binding[] = {buffer_xyz_normal_uv};
-    auto                            geometry1 = gdevice->create_geometry(gbd, buffers_to_binding, buffer_indices);
+    auto                            geometry1 = gdevice->create_geometry(gbi, buffers_to_binding, buffer_indices);
 
 
     composer->submit_command_list(cbuf);

@@ -56,7 +56,7 @@ namespace tavros::renderer
 
     struct gl_geometry_binding
     {
-        geometry_binding_desc desc;
+        geometry_binding_info info;
         GLuint                vao_obj = 0;
     };
 
