@@ -697,65 +697,65 @@ namespace tavros::renderer
     }
 
     texture_handle graphics_device_opengl::create_texture(
-        const texture_desc& desc,
+        const texture_info& info,
         const uint8*        pixels,
         uint32              stride
     )
     {
-        auto gl_internal_format = to_gl_internal_format(desc.format);
-        auto gl_depth_stencil_format = to_depth_stencil_fromat(desc.format);
+        auto gl_internal_format = to_gl_internal_format(info.format);
+        auto gl_depth_stencil_format = to_depth_stencil_fromat(info.format);
 
         // Validate texture width/height
-        if (desc.width == 0 || desc.height == 0) {
+        if (info.width == 0 || info.height == 0) {
             ::logger.error("Texture width and height must be greater than zero");
             return {0};
         }
 
         // Validate texture depth
-        if (desc.depth == 0) {
+        if (info.depth == 0) {
             ::logger.error("Texture depth must be at least 1");
             return {0};
-        } else if (desc.depth != 1) {
+        } else if (info.depth != 1) {
             ::logger.error("Texture depth support is only 2D textures");
             return {0};
         }
 
         // Validate texture array layers
-        if (desc.array_layers == 0) {
+        if (info.array_layers == 0) {
             ::logger.error("Texture array_layers must be at least 1");
             return {0};
-        } else if (desc.array_layers != 1) {
+        } else if (info.array_layers != 1) {
             ::logger.error("Texture array_layers support is only for single layer textures");
             return {0};
         }
 
-        if (desc.mip_levels == 0) {
+        if (info.mip_levels == 0) {
             ::logger.error("Texture mip_levels must be at least 1");
             return {0};
         }
 
         // Validate sample count
-        if (desc.sample_count > 1) {
+        if (info.sample_count > 1) {
             // Resolve destination texture must be a render target with sample_count == 1
-            if (desc.usage.has_flag(texture_usage::resolve_destination)) {
+            if (info.usage.has_flag(texture_usage::resolve_destination)) {
                 ::logger.error("Resolve destination texture must have sample_count == 1");
                 return {0};
             }
 
             // Multisample texture cannot be used as storage
-            if (desc.usage.has_flag(texture_usage::storage)) {
+            if (info.usage.has_flag(texture_usage::storage)) {
                 ::logger.error("Multisample texture cannot be used as storage");
                 return {0};
             }
 
             // Multisample texture cannot be used as sampled
-            if (desc.usage.has_flag(texture_usage::sampled)) {
+            if (info.usage.has_flag(texture_usage::sampled)) {
                 ::logger.error("Multisample texture cannot be used as sampled");
                 return {0};
             }
 
             // Mip levels should be 1 for multisample textures
-            if (desc.mip_levels > 1) {
+            if (info.mip_levels > 1) {
                 ::logger.error("Multisample texture cannot have mip levels");
                 return {0};
             }
@@ -765,9 +765,9 @@ namespace tavros::renderer
                 ::logger.error("Texture pixels can't be provided for multisample textures");
                 return {0};
             }
-        } else if (desc.sample_count == 1) {
+        } else if (info.sample_count == 1) {
             // Resolve source texture must be a render target with sample_count > 1
-            if (desc.usage.has_flag(texture_usage::resolve_source)) {
+            if (info.usage.has_flag(texture_usage::resolve_source)) {
                 ::logger.error("Resolve source texture must have sample_count > 1");
                 return {0};
             }
@@ -776,15 +776,15 @@ namespace tavros::renderer
             return {0};
         }
 
-        if (desc.usage.has_flag(texture_usage::resolve_source)) {
+        if (info.usage.has_flag(texture_usage::resolve_source)) {
             // Resolve source texture must be a render target
-            if (!desc.usage.has_flag(texture_usage::render_target)) {
+            if (!info.usage.has_flag(texture_usage::render_target)) {
                 ::logger.error("Resolve source texture must be a render target");
                 return {0};
             }
         }
 
-        if (desc.usage.has_flag(texture_usage::depth_stencil_target)) {
+        if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
             // Depth stencil target texture must be a depth stencil format
             if (!gl_depth_stencil_format.is_depth_stencil_format) {
                 ::logger.error("Depth stencil target texture must be a depth stencil format");
@@ -792,18 +792,18 @@ namespace tavros::renderer
             }
 
             // Depth stencil target texture cannot be used as sampled
-            if (desc.usage.has_flag(texture_usage::sampled)) {
+            if (info.usage.has_flag(texture_usage::sampled)) {
                 ::logger.error("Depth stencil target texture cannot be used as sampled");
                 return {0};
             }
         }
 
-        if (pixels != nullptr && !desc.usage.has_flag(texture_usage::transfer_destination)) {
+        if (pixels != nullptr && !info.usage.has_flag(texture_usage::transfer_destination)) {
             ::logger.error("Texture pixels can only be provided for transfer_destination textures");
             return {0};
         }
 
-        auto   is_multisample = desc.sample_count > 1;
+        auto   is_multisample = info.sample_count > 1;
         GLenum target = is_multisample ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
         GLuint tex;
@@ -822,10 +822,10 @@ namespace tavros::renderer
         if (is_multisample) {
             glTexImage2DMultisample(
                 target,
-                desc.sample_count,
+                info.sample_count,
                 gl_internal_format.internal_format,
-                desc.width,
-                desc.height,
+                info.width,
+                info.height,
                 GL_TRUE
             );
         } else {
@@ -841,8 +841,8 @@ namespace tavros::renderer
                 target,
                 0, // mip level
                 gl_internal_format.internal_format,
-                desc.width,
-                desc.height,
+                info.width,
+                info.height,
                 0, // border
                 gl_internal_format.format,
                 gl_internal_format.type,
@@ -854,14 +854,14 @@ namespace tavros::renderer
             glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
             // Generate mipmaps
-            if (desc.mip_levels > 1 && pixels != nullptr) {
+            if (info.mip_levels > 1 && pixels != nullptr) {
                 glGenerateMipmap(target);
             }
         }
 
         glBindTexture(target, 0);
 
-        texture_handle handle = {m_resources.textures.insert({desc, texture_owner.release(), target})};
+        texture_handle handle = {m_resources.textures.insert({info, texture_owner.release(), target})};
         ::logger.debug("Texture with id %u created", handle.id);
         return handle;
     }
@@ -972,13 +972,13 @@ namespace tavros::renderer
             const texture_handle& handle = color_attachments[i];
             color_attachments_h.push_back(handle);
             if (auto* tex = m_resources.textures.try_get(handle.id)) {
-                if (tex->desc.width != info.width || tex->desc.height != info.height) {
-                    ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->desc.width, tex->desc.height);
+                if (tex->info.width != info.width || tex->info.height != info.height) {
+                    ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->info.width, tex->info.height);
                     return {0};
                 }
 
                 // Validate formats
-                if (info.color_attachment_formats[i] != tex->desc.format) {
+                if (info.color_attachment_formats[i] != tex->info.format) {
                     ::logger.error("Color attachment format mismatch with texture format");
                     return {0};
                 }
@@ -988,18 +988,18 @@ namespace tavros::renderer
                     return {0};
                 }
 
-                if (!is_color_fromat(tex->desc.format)) {
+                if (!is_color_fromat(tex->info.format)) {
                     ::logger.error("Unsupported texture format for color attachment");
                     return {0};
                 }
 
-                if (info.sample_count != tex->desc.sample_count) {
-                    ::logger.error("Color attachment sample count `%u` mismatch with framebuffer sample count `%u`", tex->desc.sample_count, info.sample_count);
+                if (info.sample_count != tex->info.sample_count) {
+                    ::logger.error("Color attachment sample count `%u` mismatch with framebuffer sample count `%u`", tex->info.sample_count, info.sample_count);
                     return {0};
                 }
 
                 // All the attachments must be used as color attachments
-                if (!tex->desc.usage.has_flag(texture_usage::render_target)) {
+                if (!tex->info.usage.has_flag(texture_usage::render_target)) {
                     ::logger.error("Texture attachment is not a render target");
                     return {0};
                 }
@@ -1059,25 +1059,25 @@ namespace tavros::renderer
                 // Get depth/stencil texture and attach it
                 if (auto* tex = m_resources.textures.try_get(depth_stencil_attachment_value.id)) {
                     // Validate depth/stencil size
-                    if (tex->desc.width != info.width || tex->desc.height != info.height) {
-                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->desc.width, tex->desc.height);
+                    if (tex->info.width != info.width || tex->info.height != info.height) {
+                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->info.width, tex->info.height);
                         return {0};
                     }
 
                     // Validate depth/stencil format
-                    if (tex->desc.format != info.depth_stencil_attachment_format) {
+                    if (tex->info.format != info.depth_stencil_attachment_format) {
                         ::logger.error("Invalid depth/stencil attachment format");
                         return {0};
                     }
 
                     // Validate depth/stencil usage
-                    if (!tex->desc.usage.has_flag(texture_usage::depth_stencil_target)) {
+                    if (!tex->info.usage.has_flag(texture_usage::depth_stencil_target)) {
                         ::logger.error("Depth/stencil attachment is not a depth/stencil target");
                         return {0};
                     }
 
                     // Validate depth/stencil sample count
-                    if (tex->desc.sample_count != info.sample_count) {
+                    if (tex->info.sample_count != info.sample_count) {
                         ::logger.error("Depth/stencil attachment has invalid sample count");
                         return {0};
                     }
@@ -1373,15 +1373,15 @@ namespace tavros::renderer
 
                 auto& resolve_tex_h = resolve_textures[resolve_index];
                 if (auto* resolve_tex = m_resources.textures.try_get(resolve_tex_h.id)) {
-                    if (resolve_tex->desc.format != attachment.format) {
+                    if (resolve_tex->info.format != attachment.format) {
                         ::logger.error("Resolve attachment format mismatch with color attachment format");
                         return {0};
                     }
-                    if (!resolve_tex->desc.usage.has_flag(texture_usage::resolve_destination)) {
+                    if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
                         ::logger.error("Resolve attachment texture must have resolve_destination usage");
                         return {0};
                     }
-                    if (resolve_tex->desc.sample_count != 1) {
+                    if (resolve_tex->info.sample_count != 1) {
                         ::logger.error("Resolve attachment texture must have sample_count == 1");
                         return {0};
                     }

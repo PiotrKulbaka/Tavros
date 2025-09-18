@@ -523,7 +523,7 @@ int main()
 
     auto main_composer_handle = gdevice->create_frame_composer(main_composer_desc, wnd->get_handle());
 
-    tavros::renderer::texture_desc tex_desc;
+    tavros::renderer::texture_info tex_desc;
 
     model_t model;
     if (!load_md3("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.md3", &model)) {
@@ -543,7 +543,7 @@ int main()
     int msaa_level = 16;
 
     // msaa texture
-    tavros::renderer::texture_desc msaa_texture_desc;
+    tavros::renderer::texture_info msaa_texture_desc;
     msaa_texture_desc.width = k_initial_window_width;
     msaa_texture_desc.height = k_initial_window_height;
     msaa_texture_desc.format = tavros::renderer::pixel_format::rgba8un;
@@ -552,7 +552,7 @@ int main()
     auto msaa_texture = gdevice->create_texture(msaa_texture_desc);
 
     // resolve target texture
-    tavros::renderer::texture_desc msaa_resolve_desc;
+    tavros::renderer::texture_info msaa_resolve_desc;
     msaa_resolve_desc.width = k_initial_window_width;
     msaa_resolve_desc.height = k_initial_window_height;
     msaa_resolve_desc.format = tavros::renderer::pixel_format::rgba8un;
@@ -561,7 +561,7 @@ int main()
     auto msaa_resolve_texture = gdevice->create_texture(msaa_resolve_desc);
 
     // depth/stencil texture
-    tavros::renderer::texture_desc msaa_depth_stencil_desc;
+    tavros::renderer::texture_info msaa_depth_stencil_desc;
     msaa_depth_stencil_desc.width = k_initial_window_width;
     msaa_depth_stencil_desc.height = k_initial_window_height;
     msaa_depth_stencil_desc.format = tavros::renderer::pixel_format::depth24_stencil8;

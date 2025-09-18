@@ -282,7 +282,7 @@ namespace tavros::renderer
                 // Bind texture
                 auto tex_id = sb->textures[binding.texture_index].id;
                 if (auto* t = m_device->get_resources()->textures.try_get(tex_id)) {
-                    if (!t->desc.usage.has_flag(texture_usage::sampled)) {
+                    if (!t->info.usage.has_flag(texture_usage::sampled)) {
                         ::logger.error("Can't bind not sampled texture with id `%u`", tex_id);
                         continue;
                     }
@@ -389,7 +389,7 @@ namespace tavros::renderer
                 // Validate that the resolve target attachment texture is single-sampled
                 auto resolve_texture_handle = rp->resolve_attachments[resolve_attachment_index];
                 if (auto* tex = m_device->get_resources()->textures.try_get(resolve_texture_handle.id)) {
-                    if (tex->desc.sample_count != 1) {
+                    if (tex->info.sample_count != 1) {
                         ::logger.error("Resolve target attachment texture must be single-sampled for render pass with id `%u`", render_pass.id);
                         return;
                     }
@@ -400,7 +400,7 @@ namespace tavros::renderer
                 // Validate that the source attachment texture is multi-sampled
                 auto source_texture_handle = fb->color_attachments[i];
                 if (auto* tex = m_device->get_resources()->textures.try_get(source_texture_handle.id)) {
-                    if (tex->desc.sample_count == 1) {
+                    if (tex->info.sample_count == 1) {
                         ::logger.error("Source attachment texture must be multi-sampled for render pass with id `%u`", render_pass.id);
                         return;
                     }
@@ -470,7 +470,7 @@ namespace tavros::renderer
                 auto attachment_handle = fb->color_attachments[i];
                 if (auto* tex = m_device->get_resources()->textures.try_get(attachment_handle.id)) {
                     // If texture has the same sample count with framebuffer, then this texture is attachment texture
-                    if (tex->desc.sample_count == fb->info.sample_count) {
+                    if (tex->info.sample_count == fb->info.sample_count) {
                         auto& rp_color_attachment = rp->info.color_attachments[i];
 
                         // Apply load operation (only clear)

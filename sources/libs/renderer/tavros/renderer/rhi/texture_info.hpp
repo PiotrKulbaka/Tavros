@@ -41,7 +41,7 @@ namespace tavros::renderer
      * This includes pixel format, dimensions, usage, mipmaps, array layers, and multisampling.
      * This struct is passed to the backend texture creation function.
      */
-    struct texture_desc
+    struct texture_info
     {
         /// Pixel format defining color channels, bit depth, and data layout
         pixel_format format = pixel_format::rgba8un;

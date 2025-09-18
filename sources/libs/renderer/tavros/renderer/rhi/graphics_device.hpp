@@ -6,7 +6,7 @@
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/frame_composer_desc.hpp>
 #include <tavros/renderer/rhi/sampler_desc.hpp>
-#include <tavros/renderer/rhi/texture_desc.hpp>
+#include <tavros/renderer/rhi/texture_info.hpp>
 #include <tavros/renderer/rhi/pipeline_info.hpp>
 #include <tavros/renderer/rhi/framebuffer_info.hpp>
 #include <tavros/renderer/rhi/buffer_info.hpp>
@@ -44,7 +44,7 @@ namespace tavros::renderer
         virtual void destroy_sampler(sampler_handle sampler) = 0;
 
         virtual texture_handle create_texture(
-            const texture_desc& desc,
+            const texture_info& info,
             const uint8*        pixels = nullptr,
             uint32              stride = 0
         ) = 0;

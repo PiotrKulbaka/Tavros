@@ -25,7 +25,7 @@ namespace tavros::renderer
 
     struct gl_texture
     {
-        texture_desc desc;
+        texture_info info;
         GLuint       texture_obj = 0;
         GLenum       target = 0;
     };
