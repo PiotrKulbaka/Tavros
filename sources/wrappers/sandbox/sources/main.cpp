@@ -592,12 +592,12 @@ int main()
     auto main_pass = gdevice->create_render_pass(main_render_pass);
 
 
-    tavros::renderer::sampler_desc samler_desc;
-    samler_desc.filter.mipmap_filter = tavros::renderer::mipmap_filter_mode::off;
-    samler_desc.filter.min_filter = tavros::renderer::filter_mode::linear;
-    samler_desc.filter.mag_filter = tavros::renderer::filter_mode::linear;
+    tavros::renderer::sampler_info sampler_info;
+    sampler_info.filter.mipmap_filter = tavros::renderer::mipmap_filter_mode::off;
+    sampler_info.filter.min_filter = tavros::renderer::filter_mode::linear;
+    sampler_info.filter.mag_filter = tavros::renderer::filter_mode::linear;
 
-    auto sampler1 = gdevice->create_sampler(samler_desc);
+    auto sampler1 = gdevice->create_sampler(sampler_info);
 
 
     auto msaa_vertex_shader = gdevice->create_shader({msaa_vertex_shader_source, tavros::renderer::shader_stage::vertex, "main"});

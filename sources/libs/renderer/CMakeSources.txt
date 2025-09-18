@@ -29,7 +29,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pipeline_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pixel_format.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/render_pass_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/sampler_desc.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/sampler_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_binding_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/string_utils.hpp

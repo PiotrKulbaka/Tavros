@@ -19,7 +19,7 @@ namespace tavros::renderer
 
     struct gl_sampler
     {
-        sampler_desc desc;
+        sampler_info info;
         GLuint       sampler_obj = 0;
     };
 

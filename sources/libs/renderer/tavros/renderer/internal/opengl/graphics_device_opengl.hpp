@@ -28,7 +28,7 @@ namespace tavros::renderer
         void destroy_shader(shader_handle shader) override;
 
         sampler_handle create_sampler(
-            const sampler_desc& desc
+            const sampler_info& info
         ) override;
         void destroy_sampler(sampler_handle handle) override;
 

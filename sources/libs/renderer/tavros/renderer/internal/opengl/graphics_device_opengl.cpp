@@ -651,36 +651,36 @@ namespace tavros::renderer
         }
     }
 
-    sampler_handle graphics_device_opengl::create_sampler(const sampler_desc& desc)
+    sampler_handle graphics_device_opengl::create_sampler(const sampler_info& info)
     {
         GLuint sampler;
         glGenSamplers(1, &sampler);
 
-        auto filter = to_gl_filter(desc.filter);
+        auto filter = to_gl_filter(info.filter);
 
         // Filtering
         glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, filter.min_filter);
         glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
 
         // Wrapping
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(desc.wrap_mode.wrap_s));
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(desc.wrap_mode.wrap_t));
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(desc.wrap_mode.wrap_r));
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(info.wrap_mode.wrap_s));
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(info.wrap_mode.wrap_t));
+        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(info.wrap_mode.wrap_r));
 
         // LOD parameters
-        glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, desc.mip_lod_bias);
-        glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, desc.min_lod);
-        glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, desc.max_lod);
+        glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, info.mip_lod_bias);
+        glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, info.min_lod);
+        glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, info.max_lod);
 
         // Depth compare
-        if (desc.depth_compare != compare_op::off) {
+        if (info.depth_compare != compare_op::off) {
             glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(desc.depth_compare));
+            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(info.depth_compare));
         } else {
             glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         }
 
-        sampler_handle handle = {m_resources.samplers.emplace(desc, sampler)};
+        sampler_handle handle = {m_resources.samplers.emplace(info, sampler)};
         ::logger.debug("Sampler with id %u created", handle.id);
         return handle;
     }

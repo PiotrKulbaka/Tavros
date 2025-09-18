@@ -70,7 +70,7 @@ namespace tavros::renderer
      * Describes a full sampler configuration for use in shaders.
      * This structure is passed to the sampler creation function in the rendering backend.
      */
-    struct sampler_desc
+    struct sampler_info
     {
         /// Filtering modes (min, mag, mipmap)
         sampler_filter filter;

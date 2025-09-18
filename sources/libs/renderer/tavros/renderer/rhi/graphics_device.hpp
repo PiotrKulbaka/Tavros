@@ -5,7 +5,7 @@
 
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/frame_composer_desc.hpp>
-#include <tavros/renderer/rhi/sampler_desc.hpp>
+#include <tavros/renderer/rhi/sampler_info.hpp>
 #include <tavros/renderer/rhi/texture_info.hpp>
 #include <tavros/renderer/rhi/pipeline_info.hpp>
 #include <tavros/renderer/rhi/framebuffer_info.hpp>
@@ -39,7 +39,7 @@ namespace tavros::renderer
 
 
         virtual sampler_handle create_sampler(
-            const sampler_desc& desc
+            const sampler_info& info
         ) = 0;
         virtual void destroy_sampler(sampler_handle sampler) = 0;
 
