@@ -35,6 +35,9 @@ namespace tavros::renderer
         /// Format of the attachment. Must be a color format
         pixel_format format = pixel_format::none;
 
+        /// Number of samples per pixel should be 1 (no MSAA), 2, 4, 8, or 16. Must match the framebuffer sample count
+        uint32 sample_count = 1;
+
         /// Load operation performed at the beginning of the render pass
         load_op load = load_op::dont_care;
 
@@ -42,7 +45,7 @@ namespace tavros::renderer
         store_op store = store_op::dont_care;
 
         // Index of the resolve target attachment, used when store_op is set to `resolve`
-        uint32 resolve_target_attachment_index = 0;
+        uint32 resolve_texture_index = 0;
 
         /// Clear color value used when load_op is set to `clear`
         float clear_value[4] = {0.0f, 0.0f, 0.0f, 0.0f};

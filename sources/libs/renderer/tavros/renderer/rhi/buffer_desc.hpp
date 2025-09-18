@@ -31,7 +31,7 @@ namespace tavros::renderer
     struct buffer_desc
     {
         /// Buffer size in bytes
-        uint64 size = 0;
+        size_t size = 0;
 
         /// Buffer usage
         /// Used only if access is gpu_only or gpu_to_cpu

@@ -8,7 +8,6 @@
 
 #include <tavros/system/interfaces/window.hpp>
 #include <tavros/system/interfaces/application.hpp>
-#include <tavros/renderer/interfaces/gl_context.hpp>
 #include <tavros/renderer/camera/camera.hpp>
 
 #include <tavros/renderer/rhi/command_list.hpp>
@@ -32,133 +31,6 @@
 #include <stb/stb_image.h>
 
 #include <fstream>
-
-// clang-format off
-float cube_vertices[] = {
-    // X      Y      Z    pad      U      V    pad    pad
-    // Front face (Z+)
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f, // bottom-left
-     0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f, // bottom-right
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f, // top-right
-
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f, // bottom-left
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f, // top-right
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f, // top-left
-
-    // Back face (Z-)
-    -0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f, // bottom-right
-     0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f, // bottom-left
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f, // top-left
-
-    -0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f, // bottom-right
-     0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f, // top-left
-    -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f, // top-right
-
-    // Left face (X-)
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-
-    // Right face (X+)
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-
-     0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-
-    // Top face (Y+)
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-
-    -0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-    -0.5f,  0.5f, -0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-
-    // Bottom face (Y-)
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f, -0.5f, -0.5f,  0.0f,  1.0f,  0.0f,  0.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-
-    -0.5f, -0.5f, -0.5f,  0.0f,  0.0f,  0.0f,  0.0f,  0.0f,
-     0.5f, -0.5f,  0.5f,  0.0f,  1.0f,  1.0f,  0.0f,  0.0f,
-    -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,  0.0f,  0.0f,
-};
-
-float cube_colors[] =
-{
-    // Front face (red)
-    1.0f, 0.0f, 0.0f, 1.0f,
-    1.0f, 0.0f, 0.0f, 1.0f,
-    1.0f, 0.0f, 0.0f, 1.0f,
-
-    1.0f, 0.0f, 0.0f, 1.0f,
-    1.0f, 0.0f, 0.0f, 1.0f,
-    1.0f, 0.0f, 0.0f, 1.0f,
-
-    // Back face (green)
-    0.0f, 1.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f, 1.0f,
-
-    0.0f, 1.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f, 1.0f,
-    0.0f, 1.0f, 0.0f, 1.0f,
-
-    // Left face (blue)
-    0.0f, 0.0f, 1.0f, 1.0f,
-    0.0f, 0.0f, 1.0f, 1.0f,
-    0.0f, 0.0f, 1.0f, 1.0f,
-
-    0.0f, 0.0f, 1.0f, 1.0f,
-    0.0f, 0.0f, 1.0f, 1.0f,
-    0.0f, 0.0f, 1.0f, 1.0f,
-
-    // Right face (yellow)
-    1.0f, 1.0f, 0.0f, 1.0f,
-    1.0f, 1.0f, 0.0f, 1.0f,
-    1.0f, 1.0f, 0.0f, 1.0f,
-
-    1.0f, 1.0f, 0.0f, 1.0f,
-    1.0f, 1.0f, 0.0f, 1.0f,
-    1.0f, 1.0f, 0.0f, 1.0f,
-
-    // Top face (purple)
-    0.7f, 0.0f, 1.0f, 1.0f,
-    0.7f, 0.0f, 1.0f, 1.0f,
-    0.7f, 0.0f, 1.0f, 1.0f,
-
-    0.7f, 0.0f, 1.0f, 1.0f,
-    0.7f, 0.0f, 1.0f, 1.0f,
-    0.7f, 0.0f, 1.0f, 1.0f,
-
-    // Bottom face (white blue)
-    0.0f, 1.0f, 1.0f, 1.0f,
-    0.0f, 1.0f, 1.0f, 1.0f,
-    0.0f, 1.0f, 1.0f, 1.0f,
-
-    0.0f, 1.0f, 1.0f, 1.0f,
-    0.0f, 1.0f, 1.0f, 1.0f,
-    0.0f, 1.0f, 1.0f, 1.0f,
-};
-
-uint16 cube_indices[] =
-{
-     0,  1,  2,  3,  4,  5, // Front face
-     6,  7,  8,  9, 10, 11, // Back face
-    12, 13, 14, 15, 16, 17, // Left face
-    18, 19, 20, 21, 22, 23, // Right face
-    24, 25, 26, 27, 28, 29, // Top face
-    30, 31, 32, 33, 34, 35, // Bottom face
-};
-
-// clang-format on
 
 const char* msaa_vertex_shader_source = R"(
 #version 420 core
@@ -702,21 +574,20 @@ int main()
     msaa_framebuffer_desc.width = k_initial_window_width;
     msaa_framebuffer_desc.height = k_initial_window_height;
     msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
-    msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
     msaa_framebuffer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
     msaa_framebuffer_desc.sample_count = msaa_level;
-    tavros::renderer::texture_handle msaa_attachments[] = {msaa_texture, msaa_resolve_texture};
+    tavros::renderer::texture_handle msaa_attachments[] = {msaa_texture};
     auto                             msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_desc, msaa_attachments, msaa_depth_stencil_texture);
 
 
     tavros::renderer::render_pass_desc msaa_render_pass;
-    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 1, {0.1f, 0.1f, 0.1f, 1.0f}});
-    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::store, 0, {0.0f, 0.0f, 0.0f, 0.0f}});
+    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, static_cast<uint32>(msaa_level), tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 0, {0.1f, 0.1f, 0.1f, 1.0f}});
     msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0};
-    auto msaa_pass = gdevice->create_render_pass(msaa_render_pass);
+    tavros::renderer::texture_handle msaa_resolve_attachments[] = {msaa_resolve_texture};
+    auto                             msaa_pass = gdevice->create_render_pass(msaa_render_pass, msaa_resolve_attachments);
 
     tavros::renderer::render_pass_desc main_render_pass;
-    main_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0, {0.1f, 0.1f, 0.4f, 1.0f}});
+    main_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, 1, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0, {0.1f, 0.1f, 0.4f, 1.0f}});
     main_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 0};
     auto main_pass = gdevice->create_render_pass(main_render_pass);
 
@@ -745,6 +616,8 @@ int main()
     tavros::renderer::pipeline_desc main_pipeline_desc;
     main_pipeline_desc.shaders.fragment_source = fullscreen_quad_fragment_shader_source;
     main_pipeline_desc.shaders.vertex_source = fullscreen_quad_vertex_shader_source;
+
+
     main_pipeline_desc.depth_stencil.depth_test_enable = false;
     main_pipeline_desc.depth_stencil.depth_write_enable = false;
     main_pipeline_desc.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
@@ -806,9 +679,9 @@ int main()
     gbd.buffer_layouts.push_back({0, norm_offset, 4 * 3});
     gbd.buffer_layouts.push_back({0, uv_offset, 4 * 2});
 
-    gbd.attribute_bindings.push_back({0, 0, 0, 3, tavros::renderer::attribute_format::f32, false});
-    gbd.attribute_bindings.push_back({1, 1, 0, 3, tavros::renderer::attribute_format::f32, false});
-    gbd.attribute_bindings.push_back({2, 2, 0, 3, tavros::renderer::attribute_format::f32, false});
+    gbd.attribute_bindings.push_back({0, 0, 3, tavros::renderer::attribute_format::f32, false, 0});
+    gbd.attribute_bindings.push_back({1, 0, 3, tavros::renderer::attribute_format::f32, false, 1});
+    gbd.attribute_bindings.push_back({2, 0, 2, tavros::renderer::attribute_format::f32, false, 2});
 
     gbd.has_index_buffer = true;
     gbd.index_format = tavros::renderer::index_buffer_format::u32;

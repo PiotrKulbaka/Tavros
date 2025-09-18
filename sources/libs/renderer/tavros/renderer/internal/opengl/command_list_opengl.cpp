@@ -353,6 +353,7 @@ namespace tavros::renderer
         // Validate color attachments size
         if (rp->desc.color_attachments.size() != fb->desc.color_attachment_formats.size()) {
             ::logger.error("Mismatched number of color attachments for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
+            return;
         }
 
         // Validate color attachments format
@@ -363,15 +364,19 @@ namespace tavros::renderer
                 ::logger.error("Mismatched color attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
                 return;
             }
+            if (rp->desc.color_attachments[i].sample_count != fb->desc.sample_count) {
+                ::logger.error("Mismatched color attachment sample count for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
+                return;
+            }
         }
 
         // Validate resolve attachments
         for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
             auto& attachment = rp->desc.color_attachments[i];
             if (attachment.store == store_op::resolve) {
-                auto resolve_attachment_index = attachment.resolve_target_attachment_index;
+                auto resolve_attachment_index = attachment.resolve_texture_index;
                 // Validate resolve target index
-                if (resolve_attachment_index >= rp->desc.color_attachments.size()) {
+                if (resolve_attachment_index >= rp->resolve_attachments.size()) {
                     ::logger.error("Invalid resolve target attachment index for render pass with id `%u`", render_pass.id);
                     return;
                 }
@@ -381,13 +386,8 @@ namespace tavros::renderer
                     ::logger.error("Mismatched resolve target attachment format for render pass with id `%u`", render_pass.id);
                     return;
                 }
-                // Validate that the framebuffer has the resolve target attachment texture
-                auto resolve_texture_handle = fb->color_attachments[resolve_attachment_index];
-                if (resolve_texture_handle.id == 0) {
-                    ::logger.error("Framebuffer with id `%u` does not have the resolve target attachment texture for render pass with id `%u`", framebuffer.id, render_pass.id);
-                    return;
-                }
                 // Validate that the resolve target attachment texture is single-sampled
+                auto resolve_texture_handle = rp->resolve_attachments[resolve_attachment_index];
                 if (auto* tex = m_device->get_resources()->textures.try_get(resolve_texture_handle.id)) {
                     if (tex->desc.sample_count != 1) {
                         ::logger.error("Resolve target attachment texture must be single-sampled for render pass with id `%u`", render_pass.id);
@@ -397,13 +397,8 @@ namespace tavros::renderer
                     ::logger.error("Can't find the texture with id `%u`", resolve_texture_handle.id);
                     return;
                 }
-                // Validate that the framebuffer has the source attachment texture
-                auto source_texture_handle = fb->color_attachments[i];
-                if (source_texture_handle.id == 0) {
-                    ::logger.error("Framebuffer with id `%u` does not have the source attachment texture for render pass with id `%u`", framebuffer.id, render_pass.id);
-                    return;
-                }
                 // Validate that the source attachment texture is multi-sampled
+                auto source_texture_handle = fb->color_attachments[i];
                 if (auto* tex = m_device->get_resources()->textures.try_get(source_texture_handle.id)) {
                     if (tex->desc.sample_count == 1) {
                         ::logger.error("Source attachment texture must be multi-sampled for render pass with id `%u`", render_pass.id);
@@ -544,25 +539,27 @@ namespace tavros::renderer
             GLuint                                                  attachment_index = 0;
             for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
                 auto& rp_color_attachment = rp->desc.color_attachments[i];
-                auto* tex = m_device->get_resources()->textures.try_get(fb->color_attachments[i].id);
-                TAV_ASSERT(tex);
+                auto* source_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[i].id);
+                TAV_ASSERT(source_tex);
 
                 if (rp_color_attachment.store == store_op::resolve) {
                     // Resolve attachments
-                    auto resolve_to_index = rp_color_attachment.resolve_target_attachment_index;
-                    if (fb->color_attachments.size() > resolve_to_index) {
+                    auto resolve_texture_index = rp_color_attachment.resolve_texture_index;
+                    rp->resolve_attachments.size();
+
+                    if (rp->resolve_attachments.size() > resolve_texture_index) {
                         // Find the resolve texture and validate it
-                        auto* resolve_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[resolve_to_index].id);
+                        auto* resolve_tex = m_device->get_resources()->textures.try_get(rp->resolve_attachments[resolve_texture_index].id);
                         if (resolve_tex == nullptr) {
-                            ::logger.error("Invalid resolve attachment index `%u`", resolve_to_index);
+                            ::logger.error("Invalid resolve attachment index `%u`", resolve_texture_index);
                             return;
                         }
 
                         // everything is ok, add to the list
-                        blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, tex, resolve_tex});
+                        blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, source_tex, resolve_tex});
                         attachment_index++;
                     } else {
-                        ::logger.error("Invalid resolve attachment index `%u`", resolve_to_index);
+                        ::logger.error("Invalid resolve attachment index `%u`", resolve_texture_index);
                         return;
                     }
                 }
@@ -587,10 +584,11 @@ namespace tavros::renderer
                 // Check if need to resolve for any attachment
                 if (blit_data.size() > 0) {
                     for (uint32 i = 0; i < blit_data.size(); ++i) {
+                        TAV_ASSERT(blit_data[i].destination->target == GL_TEXTURE_2D);
                         glFramebufferTexture2D(
                             GL_DRAW_FRAMEBUFFER,
                             GL_COLOR_ATTACHMENT0,
-                            GL_TEXTURE_2D,
+                            blit_data[i].destination->target,
                             blit_data[i].destination->texture_obj,
                             0
                         );
@@ -683,7 +681,7 @@ namespace tavros::renderer
         }
     }
 
-    void command_list_opengl::copy_buffer_data(buffer_handle buffer, const void* data, uint64 size, uint64 offset)
+    void command_list_opengl::copy_buffer_data(buffer_handle buffer, const void* data, size_t size, size_t offset)
     {
         TAV_ASSERT(data != nullptr);
 
@@ -722,7 +720,7 @@ namespace tavros::renderer
         }
     }
 
-    void command_list_opengl::copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, uint64 size, uint64 dst_offset, uint64 src_offset)
+    void command_list_opengl::copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, size_t size, size_t dst_offset, size_t src_offset)
     {
         // Get dst and src buffers
         auto* dst = m_device->get_resources()->buffers.try_get(dst_buffer.id);

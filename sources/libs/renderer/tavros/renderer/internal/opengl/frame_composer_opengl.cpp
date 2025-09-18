@@ -45,10 +45,10 @@ namespace tavros::renderer
 
         // Create default backbuffer
         framebuffer_desc backbuffer_desc;
-        backbuffer_desc.color_attachment_formats.push_back(desc.color_attachment_format);
-        backbuffer_desc.depth_stencil_attachment_format = desc.depth_stencil_attachment_format;
         backbuffer_desc.width = desc.width;
         backbuffer_desc.height = desc.height;
+        backbuffer_desc.color_attachment_formats.push_back(desc.color_attachment_format);
+        backbuffer_desc.depth_stencil_attachment_format = desc.depth_stencil_attachment_format;
         backbuffer_desc.sample_count = 1; // For backbuffer, sample count must be 1
 
         m_internal_command_list = core::make_unique<command_list_opengl>(device);

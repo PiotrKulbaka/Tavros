@@ -5,7 +5,7 @@
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/compare_op.hpp>
 #include <tavros/renderer/rhi/pixel_format.hpp>
-#include <tavros/renderer/rhi/vertex_layout.hpp>
+#include <tavros/renderer/rhi/vertex_attribute.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
 namespace tavros::renderer
@@ -22,7 +22,6 @@ namespace tavros::renderer
         /// Source code for the fragment shader stage.
         core::string_view fragment_source;
     };
-
 
     /**
      * Blend operation for blending source and destination colors and alpha values
@@ -113,21 +112,6 @@ namespace tavros::renderer
     };
 
     /**
-     * Describes the properties of a blend state for a multiple render targets.
-     * A blend state specifies how the source and destination colors and alpha values
-     * are combined during rendering operations.
-     */
-    struct blend_attachment
-    {
-        /// Blend states for each render target
-        core::static_vector<blend_state, k_max_color_attachments> blend_states;
-
-        /// Number of blend states
-        uint8 blend_state_count = 0;
-    };
-
-
-    /**
      * Specifies the stencil operation to be performed during rendering
      * This operation is applied to the stencil buffer value at the current pixel location
      */
@@ -169,31 +153,6 @@ namespace tavros::renderer
         /// Stencil operation to perform if the stencil test passes
         stencil_op pass_op = stencil_op::keep;
     };
-
-    /**
-     * Represents the configuration for depth and stencil testing during rendering
-     */
-    struct depth_stencil_state
-    {
-        /// Enables or disables depth testing
-        bool depth_test_enable = false;
-
-        /// Enables or disables writing to the depth buffer
-        bool depth_write_enable = false;
-
-        /// Comparison function used for depth testing
-        compare_op depth_compare = compare_op::off;
-
-        /// Enables or disables stencil testing
-        bool stencil_test_enable = false;
-
-        /// Stencil state for front-facing geometry
-        stencil_state stencil_front;
-
-        /// Stencil state for back-facing geometry
-        stencil_state stencil_back;
-    };
-
 
     /**
      * Specifies which faces of a polygon will be culled during rendering
@@ -270,14 +229,39 @@ namespace tavros::renderer
      */
     struct multisample_state
     {
-        ///  Number of samples per pixel should be 1 (no MSAA), 2, 4, 8, or 16
-        uint8 sample_count = 1;
+        /// Number of samples per pixel should be 1 (no MSAA), 2, 4, 8, or 16
+        uint32 sample_count = 1;
 
         /// Enables or disables sample shading (rendering with a shader for each sample)
         bool sample_shading_enabled = false;
 
         /// Minimum sample shading value for running sample shading. Should be between [0.0..1.0]
         float min_sample_shading = 1.0f;
+    };
+
+
+    /**
+     * Represents the configuration for depth and stencil testing during rendering
+     */
+    struct depth_stencil_state
+    {
+        /// Enables or disables depth testing
+        bool depth_test_enable = false;
+
+        /// Enables or disables writing to the depth buffer
+        bool depth_write_enable = false;
+
+        /// Comparison function used for depth testing
+        compare_op depth_compare = compare_op::off;
+
+        /// Enables or disables stencil testing
+        bool stencil_test_enable = false;
+
+        /// Stencil state for front-facing geometry
+        stencil_state stencil_front;
+
+        /// Stencil state for back-facing geometry
+        stencil_state stencil_back;
     };
 
     /**
@@ -287,9 +271,6 @@ namespace tavros::renderer
     {
         /// Color attachment formats
         core::static_vector<pixel_format, k_max_color_attachments> color_formats;
-
-        /// Number of color attachments
-        uint8 color_target_count = 0;
 
         /// Depth attachment format
         pixel_format depth_stencil_format = pixel_format::depth24_stencil8;
@@ -311,14 +292,26 @@ namespace tavros::renderer
 
     struct pipeline_desc
     {
-        shader_sources      shaders;
-        vertex_layout       layout;
-        blend_attachment    blend;
+        shader_sources shaders;
+
+        /// List of vertex attributes
+        core::static_vector<vertex_attribute, k_max_vertex_attributes> attributes;
+
+        /// Describes the properties of a blend state for a multiple render targets
+        core::static_vector<blend_state, k_max_color_attachments> blend_states;
+
+        /// Describes the properties of depth and stencil testing
         depth_stencil_state depth_stencil;
-        rasterizer_state    rasterizer;
-        multisample_state   multisample;
-        render_targets      targets;
-        primitive_topology  topology = primitive_topology::triangles;
+
+        /// Defines how the GPU interprets and assembles vertex data into geometric primitives
+        primitive_topology topology = primitive_topology::triangles;
+
+        /// Describes how the GPU rasterizes and renders geometric primitives
+        rasterizer_state rasterizer;
+
+
+        multisample_state multisample;
+        render_targets    targets;
     };
 
 } // namespace tavros::renderer

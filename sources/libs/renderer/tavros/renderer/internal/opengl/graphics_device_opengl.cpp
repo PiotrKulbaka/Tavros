@@ -897,7 +897,6 @@ namespace tavros::renderer
 
         // Validate attachments
         core::static_vector<gl_texture*, k_max_color_attachments>    color_attachment_textures;
-        core::static_vector<gl_texture*, k_max_color_attachments>    resolve_textures;
         core::static_vector<texture_handle, k_max_color_attachments> color_attachments_h;
         for (uint32 i = 0; i < color_attachments.size(); ++i) {
             const texture_handle& handle = color_attachments[i];
@@ -909,6 +908,11 @@ namespace tavros::renderer
                 }
 
                 // Validate formats
+                if (desc.color_attachment_formats[i] != tex->desc.format) {
+                    ::logger.error("Color attachment format mismatch with texture format");
+                    return {0};
+                }
+
                 if (!is_color_fromat(desc.color_attachment_formats[i])) {
                     ::logger.error("Unsupported color attachment format");
                     return {0};
@@ -919,61 +923,18 @@ namespace tavros::renderer
                     return {0};
                 }
 
-                if (desc.color_attachment_formats[i] != tex->desc.format) {
-                    ::logger.error("Color attachment format mismatch with texture format");
+                if (desc.sample_count != tex->desc.sample_count) {
+                    ::logger.error("Color attachment sample count `%u` mismatch with framebuffer sample count `%u`", tex->desc.sample_count, desc.sample_count);
                     return {0};
                 }
 
-                // If multisampling is not eanbled for framebuffer, it must be disabled for attachments
-                if (desc.sample_count == 1) {
-                    // All attachments must use the same sample count
-                    if (tex->desc.sample_count != 1) {
-                        ::logger.error("Multisampling is not enabled for framebuffer, but enabled for attachment");
-                        return {0};
-                    }
-
-                    // All the attachments must be used as color attachments
-                    if (!tex->desc.usage.has_flag(texture_usage::render_target)) {
-                        ::logger.error("Texture attachment is not a render target");
-                        return {0};
-                    }
-
-                    // All the attachments must be used as color attachments
-                    color_attachment_textures.push_back(tex);
-                } else {
-                    // Multisampling is enabled for framebuffer
-                    if (tex->desc.sample_count == 1) {
-                        // The attachment will be used as a resolve target because tex->desc.sample_count == 1
-                        // Also the attachmend with sample count 1 should be with usage flag texture_usage::resolve_destination
-                        if (!tex->desc.usage.has_flag(texture_usage::resolve_destination)) {
-                            ::logger.error("Texture attachment is not a resolve destination target");
-                            return {0};
-                        }
-
-                        // The attachment will be used as a resolve target
-                        resolve_textures.push_back(tex);
-                    } else if (tex->desc.sample_count == desc.sample_count) {
-                        // The attachment will be used as a color attachment because tex->desc.sample_count == desc.sample_count
-                        // This texture sould be with usage flag texture_usage::render_target
-                        if (!tex->desc.usage.has_flag(texture_usage::render_target)) {
-                            ::logger.error("Texture attachment is not a render target");
-                            return {0};
-                        }
-
-                        // Texture with sample count more than 1 should be with usage flag texture_usage::resolve_source
-                        if (!tex->desc.usage.has_flag(texture_usage::resolve_source)) {
-                            ::logger.error("Texture attachment is not a resolve source target");
-                            return {0};
-                        }
-
-                        // The attachment will be used as a color attachment
-                        color_attachment_textures.push_back(tex);
-                    } else {
-                        // Not a resolve target and not a color attachment
-                        ::logger.error("Multisampling is enabled for framebuffer, but attachment has invalid sample count");
-                        return {0};
-                    }
+                // All the attachments must be used as color attachments
+                if (!tex->desc.usage.has_flag(texture_usage::render_target)) {
+                    ::logger.error("Texture attachment is not a render target");
+                    return {0};
                 }
+
+                color_attachment_textures.push_back(tex);
             } else {
                 // Texture not found, so the framebuffer can't be created
                 ::logger.error("Can't find texture with id %u", handle.id);
@@ -991,15 +952,6 @@ namespace tavros::renderer
         } else if (!depth_stencil_enabled && depth_stencil_provided) {
             ::logger.error("Depth/stencil attachment is provided, but is not enabled for framebuffer");
             return {0};
-        }
-
-        // Verify only resolve attachments
-        if (desc.sample_count != 1) {
-            // If multisampling is enabled, then for each color attachment there may be only one resolve attachment
-            if (resolve_textures.size() > color_attachment_textures.size()) {
-                ::logger.error("Multisampling is enabled for framebuffer, but the number of resolve attachments is greater than the number of color attachments");
-                return {0};
-            }
         }
 
         GLuint fbo;
@@ -1142,7 +1094,7 @@ namespace tavros::renderer
 
             switch (desc.access) {
             case buffer_access::gpu_only:
-                gl_usage = GL_DYNAMIC_DRAW; // GL_STREAM_COPY - is also possible (for suppress warning)
+                gl_usage = GL_STREAM_COPY; // GL_STREAM_COPY - is also possible (for suppress warning)
                 break;
             case buffer_access::gpu_to_cpu:
                 gl_usage = GL_DYNAMIC_READ;
@@ -1246,10 +1198,11 @@ namespace tavros::renderer
 
         // Setup attribute bindings
         for (auto i = 0; i < desc.attribute_bindings.size(); ++i) {
-            auto attrib = desc.attribute_bindings[i];
-            auto buf_layout = desc.buffer_layouts[attrib.buffer_layout_index];
-            auto vertex_buf_index = buf_layout.buffer_index;
-            auto gl_format = to_gl_attribute_format(attrib.format);
+            auto& attrib_bind = desc.attribute_bindings[i];
+            auto& attrib = attrib_bind.attribute;
+            auto  buf_layout = desc.buffer_layouts[attrib_bind.buffer_layout_index];
+            auto  vertex_buf_index = buf_layout.buffer_index;
+            auto  gl_format = to_gl_attribute_format(attrib.format);
 
             // Get the buffer
             auto* b = m_resources.buffers.try_get(vertex_buffers[buf_layout.buffer_index].id);
@@ -1263,7 +1216,7 @@ namespace tavros::renderer
 
             // Enable attribute and set pointer
             glEnableVertexAttribArray(attrib.location);
-            glVertexAttribFormat(attrib.location, gl_format.size, gl_format.type, attrib.normalize, attrib.offset);
+            glVertexAttribFormat(attrib.location, gl_format.size, gl_format.type, attrib.normalize, attrib_bind.offset);
             glVertexAttribBinding(attrib.location, i);
         }
 
@@ -1301,7 +1254,10 @@ namespace tavros::renderer
         }
     }
 
-    render_pass_handle graphics_device_opengl::create_render_pass(const render_pass_desc& desc)
+    render_pass_handle graphics_device_opengl::create_render_pass(
+        const render_pass_desc&                desc,
+        const core::span<const texture_handle> resolve_textures
+    )
     {
         // Validate attachments
         for (const auto& attachment : desc.color_attachments) {
@@ -1312,8 +1268,8 @@ namespace tavros::renderer
         }
 
         // Validate depth/stencil attachment
-        auto depth_stencil_is_none = desc.depth_stencil_attachment.format != pixel_format::none;
-        if (depth_stencil_is_none) {
+        auto depth_stencil_is_none = desc.depth_stencil_attachment.format == pixel_format::none;
+        if (!depth_stencil_is_none) {
             auto f = to_depth_stencil_fromat(desc.depth_stencil_attachment.format);
             if (!f.is_depth_stencil_format) {
                 ::logger.error("Invalid depth/stencil attachment format");
@@ -1326,7 +1282,60 @@ namespace tavros::renderer
             return {0};
         }
 
-        render_pass_handle handle = {m_resources.render_passes.insert({desc})};
+        // Validate resolve attachments
+        bool   is_used_for_resolve[k_max_color_attachments] = {false};
+        uint32 need_resolve_textures_number = 0;
+        for (auto i = 0; i < desc.color_attachments.size(); ++i) {
+            auto& attachment = desc.color_attachments[i];
+            if (desc.color_attachments[i].store == store_op::resolve) {
+                auto resolve_index = attachment.resolve_texture_index;
+                // First of all, validate that resolve index is valid
+                if (resolve_index >= resolve_textures.size()) {
+                    ::logger.error("Invalid resolve texture index %u", resolve_index);
+                    return {0};
+                }
+                if (is_used_for_resolve[resolve_index]) {
+                    ::logger.error("Resolve attachment index %u is used more than once", resolve_index);
+                    return {0};
+                }
+
+                is_used_for_resolve[resolve_index] = true;
+
+                auto& resolve_tex_h = resolve_textures[resolve_index];
+                if (auto* resolve_tex = m_resources.textures.try_get(resolve_tex_h.id)) {
+                    if (resolve_tex->desc.format != attachment.format) {
+                        ::logger.error("Resolve attachment format mismatch with color attachment format");
+                        return {0};
+                    }
+                    if (!resolve_tex->desc.usage.has_flag(texture_usage::resolve_destination)) {
+                        ::logger.error("Resolve attachment texture must have resolve_destination usage");
+                        return {0};
+                    }
+                    if (resolve_tex->desc.sample_count != 1) {
+                        ::logger.error("Resolve attachment texture must have sample_count == 1");
+                        return {0};
+                    }
+                } else {
+                    ::logger.error("Can't find resolve texture with id %u", resolve_tex_h.id);
+                    return {0};
+                }
+
+                need_resolve_textures_number++;
+            }
+        }
+
+        // Make sure that all resolve textures are used
+        if (resolve_textures.size() != need_resolve_textures_number) {
+            ::logger.error("Not all resolve textures are used");
+            return {0};
+        }
+
+        core::static_vector<texture_handle, k_max_color_attachments> resolve_attachments_handles;
+        for (auto i = 0; i < resolve_textures.size(); ++i) {
+            resolve_attachments_handles.push_back(resolve_textures[i]);
+        }
+
+        render_pass_handle handle = {m_resources.render_passes.insert({desc, resolve_attachments_handles})};
         ::logger.debug("Render pass with id %u created", handle.id);
         return handle;
     }
