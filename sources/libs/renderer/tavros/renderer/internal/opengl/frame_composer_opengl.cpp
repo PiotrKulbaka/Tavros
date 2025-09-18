@@ -44,16 +44,16 @@ namespace tavros::renderer
         TAV_ASSERT(desc.width > 0 && desc.height > 0);
 
         // Create default backbuffer
-        framebuffer_desc backbuffer_desc;
-        backbuffer_desc.width = desc.width;
-        backbuffer_desc.height = desc.height;
-        backbuffer_desc.color_attachment_formats.push_back(desc.color_attachment_format);
-        backbuffer_desc.depth_stencil_attachment_format = desc.depth_stencil_attachment_format;
-        backbuffer_desc.sample_count = 1; // For backbuffer, sample count must be 1
+        framebuffer_info backbuffer_info;
+        backbuffer_info.width = desc.width;
+        backbuffer_info.height = desc.height;
+        backbuffer_info.color_attachment_formats.push_back(desc.color_attachment_format);
+        backbuffer_info.depth_stencil_attachment_format = desc.depth_stencil_attachment_format;
+        backbuffer_info.sample_count = 1; // For backbuffer, sample count must be 1
 
         m_internal_command_list = core::make_unique<command_list_opengl>(device);
 
-        m_backbuffer = {m_device->get_resources()->framebuffers.insert({backbuffer_desc, 0, true})};
+        m_backbuffer = {m_device->get_resources()->framebuffers.insert({backbuffer_info, 0, true})};
         ::logger.debug("Default framebuffer with id %u for frame composer created", m_backbuffer.id);
     }
 
@@ -82,8 +82,8 @@ namespace tavros::renderer
 
         // Update framebuffer size
         if (auto* desc = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
-            desc->desc.width = w;
-            desc->desc.height = h;
+            desc->info.width = w;
+            desc->info.height = h;
         } else {
             ::logger.error("Can't find default framebuffer for frame composer with id %u", m_backbuffer.id);
         }

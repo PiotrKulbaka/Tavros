@@ -570,14 +570,14 @@ int main()
     auto msaa_depth_stencil_texture = gdevice->create_texture(msaa_depth_stencil_desc);
 
     // msaa framebuffer
-    tavros::renderer::framebuffer_desc msaa_framebuffer_desc;
-    msaa_framebuffer_desc.width = k_initial_window_width;
-    msaa_framebuffer_desc.height = k_initial_window_height;
-    msaa_framebuffer_desc.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
-    msaa_framebuffer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
-    msaa_framebuffer_desc.sample_count = msaa_level;
+    tavros::renderer::framebuffer_info msaa_framebuffer_info;
+    msaa_framebuffer_info.width = k_initial_window_width;
+    msaa_framebuffer_info.height = k_initial_window_height;
+    msaa_framebuffer_info.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
+    msaa_framebuffer_info.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
+    msaa_framebuffer_info.sample_count = msaa_level;
     tavros::renderer::texture_handle msaa_attachments[] = {msaa_texture};
-    auto                             msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_desc, msaa_attachments, msaa_depth_stencil_texture);
+    auto                             msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_info, msaa_attachments, msaa_depth_stencil_texture);
 
 
     tavros::renderer::render_pass_desc msaa_render_pass;

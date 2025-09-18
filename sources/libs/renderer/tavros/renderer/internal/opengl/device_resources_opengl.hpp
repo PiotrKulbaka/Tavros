@@ -38,7 +38,7 @@ namespace tavros::renderer
 
     struct gl_framebuffer
     {
-        framebuffer_desc desc;
+        framebuffer_info info;
         GLuint           framebuffer_obj = 0;
         bool             is_default = false;
 

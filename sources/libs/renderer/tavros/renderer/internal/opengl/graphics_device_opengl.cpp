@@ -954,7 +954,7 @@ namespace tavros::renderer
     }
 
     framebuffer_handle graphics_device_opengl::create_framebuffer(
-        const framebuffer_desc&                desc,
+        const framebuffer_info&                desc,
         const core::span<const texture_handle> color_attachments,
         core::optional<texture_handle>         depth_stencil_attachment
     )

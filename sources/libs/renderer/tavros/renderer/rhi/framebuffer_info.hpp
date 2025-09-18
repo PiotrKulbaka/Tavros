@@ -10,7 +10,7 @@ namespace tavros::renderer
     /**
      * Describes a complete framebuffer configuration
      */
-    struct framebuffer_desc
+    struct framebuffer_info
     {
         /// Framebuffer width, in pixels. Must match all attachments
         uint32 width = 0;

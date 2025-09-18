@@ -46,7 +46,7 @@ namespace tavros::renderer
         void destroy_pipeline(pipeline_handle pipeline) override;
 
         framebuffer_handle create_framebuffer(
-            const framebuffer_desc&                desc,
+            const framebuffer_info&                info,
             const core::span<const texture_handle> color_attachments,
             core::optional<texture_handle>         depth_stencil_attachment = core::nullopt
         ) override;

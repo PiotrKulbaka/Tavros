@@ -8,7 +8,7 @@
 #include <tavros/renderer/rhi/sampler_desc.hpp>
 #include <tavros/renderer/rhi/texture_desc.hpp>
 #include <tavros/renderer/rhi/pipeline_desc.hpp>
-#include <tavros/renderer/rhi/framebuffer_desc.hpp>
+#include <tavros/renderer/rhi/framebuffer_info.hpp>
 #include <tavros/renderer/rhi/buffer_info.hpp>
 #include <tavros/renderer/rhi/geometry_binding_desc.hpp>
 #include <tavros/renderer/rhi/render_pass_desc.hpp>
@@ -57,7 +57,7 @@ namespace tavros::renderer
         virtual void destroy_pipeline(pipeline_handle pipeline) = 0;
 
         virtual framebuffer_handle create_framebuffer(
-            const framebuffer_desc&                desc,
+            const framebuffer_info&                info,
             const core::span<const texture_handle> color_attachments,
             core::optional<texture_handle>         depth_stencil_attachment = core::nullopt
         ) = 0;

@@ -351,7 +351,7 @@ namespace tavros::renderer
         }
 
         // Validate color attachments size
-        if (rp->desc.color_attachments.size() != fb->desc.color_attachment_formats.size()) {
+        if (rp->desc.color_attachments.size() != fb->info.color_attachment_formats.size()) {
             ::logger.error("Mismatched number of color attachments for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
             return;
         }
@@ -359,12 +359,12 @@ namespace tavros::renderer
         // Validate color attachments format
         for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
             auto rp_color_format = rp->desc.color_attachments[i].format;
-            auto fb_color_format = fb->desc.color_attachment_formats[i];
+            auto fb_color_format = fb->info.color_attachment_formats[i];
             if (rp_color_format != fb_color_format) {
                 ::logger.error("Mismatched color attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
                 return;
             }
-            if (rp->desc.color_attachments[i].sample_count != fb->desc.sample_count) {
+            if (rp->desc.color_attachments[i].sample_count != fb->info.sample_count) {
                 ::logger.error("Mismatched color attachment sample count for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
                 return;
             }
@@ -412,7 +412,7 @@ namespace tavros::renderer
         }
 
         // Validate depth/stencil attachment format
-        if (rp->desc.depth_stencil_attachment.format != fb->desc.depth_stencil_attachment_format) {
+        if (rp->desc.depth_stencil_attachment.format != fb->info.depth_stencil_attachment_format) {
             ::logger.error("Mismatched depth/stencil attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
             return;
         }
@@ -433,7 +433,7 @@ namespace tavros::renderer
         }
 
         // Set viewport
-        glViewport(0, 0, fb->desc.width, fb->desc.height);
+        glViewport(0, 0, fb->info.width, fb->info.height);
 
         // Allpy load operations to the color attachments and depth/stencil attachment
         // Only clear is supported, any other load operations are ignored
@@ -470,7 +470,7 @@ namespace tavros::renderer
                 auto attachment_handle = fb->color_attachments[i];
                 if (auto* tex = m_device->get_resources()->textures.try_get(attachment_handle.id)) {
                     // If texture has the same sample count with framebuffer, then this texture is attachment texture
-                    if (tex->desc.sample_count == fb->desc.sample_count) {
+                    if (tex->desc.sample_count == fb->info.sample_count) {
                         auto& rp_color_attachment = rp->desc.color_attachments[i];
 
                         // Apply load operation (only clear)
@@ -599,8 +599,8 @@ namespace tavros::renderer
                         glReadBuffer(blit_data[i].attachment);
                         glDrawBuffer(GL_COLOR_ATTACHMENT0);
                         glBlitFramebuffer(
-                            0, 0, fb->desc.width, fb->desc.height,
-                            0, 0, fb->desc.width, fb->desc.height,
+                            0, 0, fb->info.width, fb->info.height,
+                            0, 0, fb->info.width, fb->info.height,
                             GL_COLOR_BUFFER_BIT,
                             GL_NEAREST
                         );
@@ -611,8 +611,8 @@ namespace tavros::renderer
                 if (depth_stencil_blit_mask) {
                     // Resolve depth/stencil attachment
                     glBlitFramebuffer(
-                        0, 0, fb->desc.width, fb->desc.height,
-                        0, 0, fb->desc.width, fb->desc.height,
+                        0, 0, fb->info.width, fb->info.height,
+                        0, 0, fb->info.width, fb->info.height,
                         depth_stencil_blit_mask,
                         GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
                     );
