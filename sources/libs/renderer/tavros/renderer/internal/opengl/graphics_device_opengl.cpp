@@ -1421,15 +1421,15 @@ namespace tavros::renderer
     }
 
     shader_binding_handle graphics_device_opengl::create_shader_binding(
-        const shader_binding_desc&             desc,
+        const shader_binding_info&             info,
         const core::span<const texture_handle> textures,
         const core::span<const sampler_handle> samplers,
         const core::span<const buffer_handle>  buffers
     )
     {
         // Validate texture bindings
-        for (auto i = 0; i < desc.texture_bindings.size(); ++i) {
-            auto binding = desc.texture_bindings[i];
+        for (auto i = 0; i < info.texture_bindings.size(); ++i) {
+            auto binding = info.texture_bindings[i];
             if (binding.texture_index >= textures.size()) {
                 uint32 provided = static_cast<uint32>(textures.size());
                 ::logger.error("Invalid texture binding index: `%u`, max available: `%u`", binding.texture_index, provided);
@@ -1443,8 +1443,8 @@ namespace tavros::renderer
         }
 
         // Validate buffer bindings
-        for (auto i = 0; i < desc.buffer_bindings.size(); ++i) {
-            auto binding = desc.buffer_bindings[i];
+        for (auto i = 0; i < info.buffer_bindings.size(); ++i) {
+            auto binding = info.buffer_bindings[i];
             if (binding.buffer_index >= buffers.size()) {
                 uint32 provided = static_cast<uint32>(buffers.size());
                 ::logger.error("Invalid buffer binding index: `%u`, max available: `%u`", binding.buffer_index, provided);
@@ -1474,7 +1474,7 @@ namespace tavros::renderer
             }
         }
 
-        shader_binding_handle handle = {m_resources.shader_bindings.insert({desc, texture_handles, sampler_handles, buffer_handles})};
+        shader_binding_handle handle = {m_resources.shader_bindings.insert({info, texture_handles, sampler_handles, buffer_handles})};
         ::logger.debug("Shader binding with id %u created", handle.id);
         return handle;
     }

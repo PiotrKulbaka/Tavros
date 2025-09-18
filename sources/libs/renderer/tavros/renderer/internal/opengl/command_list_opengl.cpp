@@ -273,11 +273,11 @@ namespace tavros::renderer
     void command_list_opengl::bind_shader_binding(shader_binding_handle shader_binding)
     {
         if (auto* sb = m_device->get_resources()->shader_bindings.try_get(shader_binding.id)) {
-            auto& desc = sb->desc;
+            auto& info = sb->info;
 
             // Bind textures and samplers
-            for (uint32 i = 0; i < desc.texture_bindings.size(); ++i) {
-                auto& binding = desc.texture_bindings[i];
+            for (uint32 i = 0; i < info.texture_bindings.size(); ++i) {
+                auto& binding = info.texture_bindings[i];
 
                 // Bind texture
                 auto tex_id = sb->textures[binding.texture_index].id;
@@ -302,8 +302,8 @@ namespace tavros::renderer
             }
 
             // Bind buffers (UBO buffers)
-            for (uint32 i = 0; i < desc.buffer_bindings.size(); ++i) {
-                auto& binding = desc.buffer_bindings[i];
+            for (uint32 i = 0; i < info.buffer_bindings.size(); ++i) {
+                auto& binding = info.buffer_bindings[i];
 
                 auto buf_id = sb->buffers[binding.buffer_index].id;
                 if (auto* b = m_device->get_resources()->buffers.try_get(buf_id)) {

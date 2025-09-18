@@ -69,7 +69,7 @@ namespace tavros::renderer
         void destroy_render_pass(render_pass_handle render_pass) override;
 
         shader_binding_handle create_shader_binding(
-            const shader_binding_desc&             desc,
+            const shader_binding_info&             info,
             const core::span<const texture_handle> textures,
             const core::span<const sampler_handle> samplers,
             const core::span<const buffer_handle>  buffers

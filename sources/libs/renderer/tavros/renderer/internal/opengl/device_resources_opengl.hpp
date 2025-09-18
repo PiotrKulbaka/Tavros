@@ -68,7 +68,7 @@ namespace tavros::renderer
 
     struct gl_shader_binding
     {
-        shader_binding_desc                                        desc;
+        shader_binding_info                                        info;
         core::static_vector<texture_handle, k_max_shader_textures> textures;
         core::static_vector<sampler_handle, k_max_shader_textures> samplers;
         core::static_vector<buffer_handle, k_max_shader_buffers>   buffers;

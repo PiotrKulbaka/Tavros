@@ -731,7 +731,7 @@ int main()
     };
 
 
-    tavros::renderer::shader_binding_desc shader_binding_info;
+    tavros::renderer::shader_binding_info shader_binding_info;
     shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(camera_shader_t), 0});
     shader_binding_info.buffer_bindings.push_back({0, 256, sizeof(scene_shader_t), 1});
     shader_binding_info.texture_bindings.push_back({0, 0, 0});
@@ -743,7 +743,7 @@ int main()
     auto shader_binding = gdevice->create_shader_binding(shader_binding_info, textures_to_binding, samplers_to_binding, ubo_buffers_to_binding);
 
 
-    tavros::renderer::shader_binding_desc fullstreen_shader_binding_info;
+    tavros::renderer::shader_binding_info fullstreen_shader_binding_info;
     fullstreen_shader_binding_info.texture_bindings.push_back({0, 0, 0});
 
     tavros::renderer::texture_handle textures_to_binding_main[] = {msaa_resolve_texture};
