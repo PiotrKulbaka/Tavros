@@ -80,17 +80,17 @@ namespace tavros::renderer::rhi
         GLuint      shader_obj = 0;
     };
 
-    struct device_resources_opengl
+
+    class device_resources_opengl
     {
     public:
-        gl_shader* try_get(shader_handle shader)
-        {
-            return shaders.try_get(shader.id);
-        }
+        device_resources_opengl() = default;
+        ~device_resources_opengl() = default;
 
-        void remove(shader_handle handle)
+        // --- Create ---
+        frame_composer_handle create(gl_composer&& data)
         {
-            shaders.remove(handle.id);
+            return {composers.insert(std::move(data))};
         }
 
         shader_handle create(gl_shader&& data)
@@ -98,17 +98,159 @@ namespace tavros::renderer::rhi
             return {shaders.insert(std::move(data))};
         }
 
+        shader_binding_handle create(gl_shader_binding&& data)
+        {
+            return {shader_bindings.insert(std::move(data))};
+        }
+
+        sampler_handle create(gl_sampler&& data)
+        {
+            return {samplers.insert(std::move(data))};
+        }
+
+        texture_handle create(gl_texture&& data)
+        {
+            return {textures.insert(std::move(data))};
+        }
+
+        pipeline_handle create(gl_pipeline&& data)
+        {
+            return {pipelines.insert(std::move(data))};
+        }
+
+        framebuffer_handle create(gl_framebuffer&& data)
+        {
+            return {framebuffers.insert(std::move(data))};
+        }
+
+        buffer_handle create(gl_buffer&& data)
+        {
+            return {buffers.insert(std::move(data))};
+        }
+
+        geometry_binding_handle create(gl_geometry_binding&& data)
+        {
+            return {geometry_bindings.insert(std::move(data))};
+        }
+
+        render_pass_handle create(gl_render_pass&& data)
+        {
+            return {render_passes.insert(std::move(data))};
+        }
+
+        // --- Remove ---
+        void remove(frame_composer_handle handle)
+        {
+            composers.remove(handle.id);
+        }
+
+        void remove(shader_handle handle)
+        {
+            shaders.remove(handle.id);
+        }
+
+        void remove(shader_binding_handle handle)
+        {
+            shader_bindings.remove(handle.id);
+        }
+
+        void remove(sampler_handle handle)
+        {
+            samplers.remove(handle.id);
+        }
+
+        void remove(texture_handle handle)
+        {
+            textures.remove(handle.id);
+        }
+
+        void remove(pipeline_handle handle)
+        {
+            pipelines.remove(handle.id);
+        }
+
+        void remove(framebuffer_handle handle)
+        {
+            framebuffers.remove(handle.id);
+        }
+
+        void remove(buffer_handle handle)
+        {
+            buffers.remove(handle.id);
+        }
+
+        void remove(geometry_binding_handle handle)
+        {
+            geometry_bindings.remove(handle.id);
+        }
+
+        void remove(render_pass_handle handle)
+        {
+            render_passes.remove(handle.id);
+        }
+
+        // --- Try get ---
+        gl_composer* try_get(frame_composer_handle handle)
+        {
+            return composers.try_get(handle.id);
+        }
+
+        gl_shader* try_get(shader_handle handle)
+        {
+            return shaders.try_get(handle.id);
+        }
+
+        gl_shader_binding* try_get(shader_binding_handle handle)
+        {
+            return shader_bindings.try_get(handle.id);
+        }
+
+        gl_sampler* try_get(sampler_handle handle)
+        {
+            return samplers.try_get(handle.id);
+        }
+
+        gl_texture* try_get(texture_handle handle)
+        {
+            return textures.try_get(handle.id);
+        }
+
+        gl_pipeline* try_get(pipeline_handle handle)
+        {
+            return pipelines.try_get(handle.id);
+        }
+
+        gl_framebuffer* try_get(framebuffer_handle handle)
+        {
+            return framebuffers.try_get(handle.id);
+        }
+
+        gl_buffer* try_get(buffer_handle handle)
+        {
+            return buffers.try_get(handle.id);
+        }
+
+        gl_geometry_binding* try_get(geometry_binding_handle handle)
+        {
+            return geometry_bindings.try_get(handle.id);
+        }
+
+        gl_render_pass* try_get(render_pass_handle handle)
+        {
+            return render_passes.try_get(handle.id);
+        }
+
     public:
-        core::resource_pool<gl_composer>         composers;
         core::resource_pool<gl_sampler>          samplers;
+        core::resource_pool<gl_composer>         composers;
+        core::resource_pool<gl_shader_binding>   shader_bindings;
+        core::resource_pool<gl_shader>           shaders;
         core::resource_pool<gl_texture>          textures;
         core::resource_pool<gl_pipeline>         pipelines;
         core::resource_pool<gl_framebuffer>      framebuffers;
         core::resource_pool<gl_buffer>           buffers;
         core::resource_pool<gl_geometry_binding> geometry_bindings;
         core::resource_pool<gl_render_pass>      render_passes;
-        core::resource_pool<gl_shader_binding>   shader_bindings;
-        core::resource_pool<gl_shader>           shaders;
     };
 
 } // namespace tavros::renderer::rhi

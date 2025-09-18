@@ -406,7 +406,7 @@ namespace
         if (!status) {
             char buffer[4096];
             glGetShaderInfoLog(shader, sizeof(buffer), nullptr, buffer);
-            logger.error("glCompileShader() failure:\n%s", buffer);
+            logger.error("glCompileShader() failed:\n%s", buffer);
             glDeleteShader(shader);
             return 0;
         }
@@ -557,7 +557,16 @@ namespace tavros::renderer::rhi
         });
 
         destroy_for(m_resources.framebuffers, [this](framebuffer_handle h) {
-            destroy_framebuffer(h);
+            if (auto* fb = m_resources.try_get(h)) {
+                if (!fb->is_default) {
+                    // We only delete non default framebuffers
+                    // Default ones should be deleted elsewhere, in frame_composer
+                    destroy_framebuffer(h);
+                }
+            } else {
+                // This shouldn't happen, but just in case, we call a method that will throw an error in the log
+                destroy_framebuffer(h);
+            }
         });
 
         destroy_for(m_resources.buffers, [this](buffer_handle h) {
@@ -568,7 +577,7 @@ namespace tavros::renderer::rhi
             destroy_geometry(h);
         });
 
-        // Should be removed in last turn because swapchain owns the OpenGL context
+        //// Should be removed in last turn because swapchain owns the OpenGL context
         destroy_for(m_resources.composers, [this](frame_composer_handle h) {
             destroy_frame_composer(h);
         });
@@ -579,7 +588,7 @@ namespace tavros::renderer::rhi
         // Check if frame composer with native handle already created
         for (auto& sc : m_resources.composers) {
             if (native_handle == sc.second.native_handle) {
-                ::logger.error("Frame composer with native handle %p already created", native_handle);
+                ::logger.error("Frame composer with native handle `%p` already created", native_handle);
                 return {0};
             }
         }
@@ -596,27 +605,27 @@ namespace tavros::renderer::rhi
         // the first call of frame_composer_opengl::create() will create the context
         init_gl_debug();
 
-        frame_composer_handle handle = {m_resources.composers.insert({info, std::move(composer), native_handle})};
-        ::logger.debug("Frame composer with id %u created", handle.id);
+        frame_composer_handle handle = {m_resources.create({info, std::move(composer), native_handle})};
+        ::logger.debug("Frame composer `%u` created", handle.id);
         return handle;
     }
 
     void graphics_device_opengl::destroy_frame_composer(frame_composer_handle composer)
     {
-        if (auto* fc = m_resources.composers.try_get(composer.id)) {
-            m_resources.composers.remove(composer.id);
-            ::logger.debug("Frame composer with id %u destroyed", composer.id);
+        if (auto* fc = m_resources.try_get(composer)) {
+            m_resources.remove(composer);
+            ::logger.debug("Frame composer `%u` destroyed", composer.id);
         } else {
-            ::logger.error("Can't destroy frame composer with id %u because it doesn't exist", composer.id);
+            ::logger.error("Failed to destroy frame composer `%u` because it does not exist", composer.id);
         }
     }
 
     frame_composer* graphics_device_opengl::get_frame_composer_ptr(frame_composer_handle composer)
     {
-        if (auto* fc = m_resources.composers.try_get(composer.id)) {
+        if (auto* fc = m_resources.try_get(composer)) {
             return fc->composer_ptr.get();
         } else {
-            ::logger.error("Can't find frame composer with id %u", composer.id);
+            ::logger.error("Failed to return frame composer `%u` because it does not exist", composer.id);
             return nullptr;
         }
     }
@@ -635,7 +644,7 @@ namespace tavros::renderer::rhi
         }
 
         auto h = m_resources.create({info, shader_obj});
-        ::logger.debug("Shader with id `%u` created", h.id);
+        ::logger.debug("Shader `%u` created", h.id);
         return h;
     }
 
@@ -645,9 +654,9 @@ namespace tavros::renderer::rhi
             glDeleteShader(s->shader_obj);
             s->shader_obj = 0;
             m_resources.remove(shader);
-            ::logger.debug("Shader with id %u destroyed", shader.id);
+            ::logger.debug("Shader `%u` destroyed", shader.id);
         } else {
-            ::logger.error("Can't destroy shader with id %u because it doesn't exist", shader.id);
+            ::logger.error("Failed to destroy shader `%u` because it does not exist", shader.id);
         }
     }
 
@@ -680,19 +689,19 @@ namespace tavros::renderer::rhi
             glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
         }
 
-        sampler_handle handle = {m_resources.samplers.emplace(info, sampler)};
-        ::logger.debug("Sampler with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, sampler});
+        ::logger.debug("Sampler `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_sampler(sampler_handle sampler)
     {
-        if (auto* s = m_resources.samplers.try_get(sampler.id)) {
+        if (auto* s = m_resources.try_get(sampler)) {
             glDeleteSamplers(1, &s->sampler_obj);
-            m_resources.samplers.remove(sampler.id);
-            ::logger.debug("Sampler with id %u destroyed", sampler.id);
+            m_resources.remove(sampler);
+            ::logger.debug("Sampler `%u` destroyed", sampler.id);
         } else {
-            ::logger.error("Can't destroy sampler with id %u because it doesn't exist", sampler.id);
+            ::logger.error("Failed to destroy sampler `%u` because it does not exist", sampler.id);
         }
     }
 
@@ -808,12 +817,10 @@ namespace tavros::renderer::rhi
 
         GLuint tex;
         glGenTextures(1, &tex);
-        ::logger.debug("OpenGL Texture object with id %u created", tex);
 
         auto texture_owner = core::make_scoped_owner(tex, [target](GLuint id) {
             glBindTexture(target, 0);
             glDeleteTextures(1, &id);
-            ::logger.debug("OpenGL Texture object with id %u deleted", id);
         });
 
         // Bind texture
@@ -861,20 +868,19 @@ namespace tavros::renderer::rhi
 
         glBindTexture(target, 0);
 
-        texture_handle handle = {m_resources.textures.insert({info, texture_owner.release(), target})};
-        ::logger.debug("Texture with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, texture_owner.release(), target});
+        ::logger.debug("Texture `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_texture(texture_handle texture)
     {
-        if (auto* tex = m_resources.textures.try_get(texture.id)) {
+        if (auto* tex = m_resources.try_get(texture)) {
             glDeleteTextures(1, &tex->texture_obj);
-            ::logger.debug("OpenGL Texture object with id %u deleted", tex->texture_obj);
-            m_resources.textures.remove(texture.id);
-            ::logger.debug("Texture with id %u destroyed", texture.id);
+            m_resources.remove(texture);
+            ::logger.debug("Texture `%u` destroyed", texture.id);
         } else {
-            ::logger.error("Can't destroy texture with id %u because it doesn't exist", texture.id);
+            ::logger.error("Failed to destroy texture `%u` because it does not exist", texture.id);
         }
     }
 
@@ -918,7 +924,7 @@ namespace tavros::renderer::rhi
                     return {0};
                 }
             } else {
-                ::logger.error("Can't find shader with id `%u`", shaders[i].id);
+                ::logger.error("Failed to find shader `%u` for link program", shaders[i].id);
                 return {0};
             }
         }
@@ -932,24 +938,24 @@ namespace tavros::renderer::rhi
 
         // Validate program
         if (program == 0) {
-            ::logger.error("Can't link program");
+            ::logger.error("Failed to link program");
             return {0};
         }
 
         // create pipeline
-        pipeline_handle handle = {m_resources.pipelines.insert({info, program})};
-        ::logger.debug("Pipeline with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, program});
+        ::logger.debug("Pipeline `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_pipeline(pipeline_handle handle)
     {
-        if (auto* p = m_resources.pipelines.try_get(handle.id)) {
+        if (auto* p = m_resources.try_get(handle)) {
             glDeleteProgram(p->program_obj);
-            m_resources.pipelines.remove(handle.id);
-            ::logger.debug("Pipeline with id %u destroyed", handle.id);
+            m_resources.remove(handle);
+            ::logger.debug("Pipeline `%u` destroyed", handle.id);
         } else {
-            ::logger.error("Can't destroy pipeline with id %u because it doesn't exist", handle.id);
+            ::logger.error("Failed to destroy pipeline `%u` because it does not exist", handle.id);
         }
     }
 
@@ -971,9 +977,9 @@ namespace tavros::renderer::rhi
         for (uint32 i = 0; i < color_attachments.size(); ++i) {
             const texture_handle& handle = color_attachments[i];
             color_attachments_h.push_back(handle);
-            if (auto* tex = m_resources.textures.try_get(handle.id)) {
+            if (auto* tex = m_resources.try_get(handle)) {
                 if (tex->info.width != info.width || tex->info.height != info.height) {
-                    ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->info.width, tex->info.height);
+                    ::logger.error("Invalid attachment size (framebuffer: `%u`x`%u`) != (attachment: `%u`x`%u`)", info.width, info.height, tex->info.width, tex->info.height);
                     return {0};
                 }
 
@@ -989,7 +995,7 @@ namespace tavros::renderer::rhi
                 }
 
                 if (!is_color_fromat(tex->info.format)) {
-                    ::logger.error("Unsupported texture format for color attachment");
+                    ::logger.error("Unsupported texture format as color attachment");
                     return {0};
                 }
 
@@ -1007,7 +1013,7 @@ namespace tavros::renderer::rhi
                 color_attachment_textures.push_back(tex);
             } else {
                 // Texture not found, so the framebuffer can't be created
-                ::logger.error("Can't find texture with id %u", handle.id);
+                ::logger.error("Failed to find texture attachment `%u`", handle.id);
                 return {0};
             }
         }
@@ -1027,13 +1033,10 @@ namespace tavros::renderer::rhi
         GLuint fbo;
         glGenFramebuffers(1, &fbo);
 
-        ::logger.debug("OpenGL Framebuffer object with id %u created", fbo);
-
         // Scope for framebuffer deletion if something goes wrong
         auto fbo_owner = core::make_scoped_owner(fbo, [](GLuint id) {
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
             glDeleteFramebuffers(1, &id);
-            ::logger.debug("OpenGL Framebuffer object with id %u deleted", id);
         });
 
         // Bind framebuffer and attach textures
@@ -1054,13 +1057,13 @@ namespace tavros::renderer::rhi
 
             auto gl_format = to_depth_stencil_fromat(info.depth_stencil_attachment_format);
             if (gl_format.is_depth_stencil_format) {
-                auto depth_stencil_attachment_value = depth_stencil_attachment.value();
+                auto depth_stencil_attachment_h = depth_stencil_attachment.value();
 
                 // Get depth/stencil texture and attach it
-                if (auto* tex = m_resources.textures.try_get(depth_stencil_attachment_value.id)) {
+                if (auto* tex = m_resources.try_get(depth_stencil_attachment_h)) {
                     // Validate depth/stencil size
                     if (tex->info.width != info.width || tex->info.height != info.height) {
-                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->info.width, tex->info.height);
+                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: `%u`x`%u`) != (attachment: `%u`x`%u`)", info.width, info.height, tex->info.width, tex->info.height);
                         return {0};
                     }
 
@@ -1082,12 +1085,10 @@ namespace tavros::renderer::rhi
                         return {0};
                     }
 
-                    depth_stencil_attachmnet_h = {depth_stencil_attachment_value.id};
-
                     // Everything is ok, attach depth/stencil texture
                     glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, tex->target, tex->texture_obj, 0);
                 } else {
-                    ::logger.error("Can't find texture with id %u");
+                    ::logger.error("Failed to find texture `%u`");
                     return {0};
                 }
             } else {
@@ -1122,20 +1123,19 @@ namespace tavros::renderer::rhi
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        framebuffer_handle handle = {m_resources.framebuffers.insert({info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachmnet_h})};
-        ::logger.debug("Framebuffer with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachmnet_h});
+        ::logger.debug("Framebuffer `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_framebuffer(framebuffer_handle framebuffer)
     {
-        if (auto* fb = m_resources.framebuffers.try_get(framebuffer.id)) {
+        if (auto* fb = m_resources.try_get(framebuffer)) {
             glDeleteFramebuffers(1, &fb->framebuffer_obj);
-            ::logger.debug("OpenGL Framebuffer object with id %u deleted", fb->framebuffer_obj);
-            m_resources.framebuffers.remove(framebuffer.id);
-            ::logger.debug("Framebuffer with id %u destroyed", framebuffer.id);
+            m_resources.remove(framebuffer);
+            ::logger.debug("Framebuffer `%u` destroyed", framebuffer.id);
         } else {
-            ::logger.error("Can't destroy framebuffer with id %u because it doesn't exist", framebuffer.id);
+            ::logger.error("Failed to destroy framebuffer `%u` because it does not exist", framebuffer.id);
         }
     }
 
@@ -1176,12 +1176,10 @@ namespace tavros::renderer::rhi
 
         GLuint bo;
         glGenBuffers(1, &bo);
-        ::logger.debug("OpenGL Buffer object with id %u created", bo);
 
         auto bo_owner = core::make_scoped_owner(bo, [gl_target](GLuint id) {
             glBindBuffer(gl_target, 0);
             glDeleteBuffers(1, &id);
-            ::logger.debug("OpenGL Buffer object with id %u deleted", id);
         });
 
         glBindBuffer(gl_target, bo);
@@ -1191,19 +1189,19 @@ namespace tavros::renderer::rhi
 
         glBindBuffer(gl_target, 0); // Unbind for safety
 
-        buffer_handle handle = {m_resources.buffers.insert({info, bo_owner.release(), gl_target, gl_usage})};
-        ::logger.debug("Buffer with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, bo_owner.release(), gl_target, gl_usage});
+        ::logger.debug("Buffer `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_buffer(buffer_handle buffer)
     {
-        if (auto* b = m_resources.buffers.try_get(buffer.id)) {
+        if (auto* b = m_resources.try_get(buffer)) {
             glDeleteBuffers(1, &b->buffer_obj);
-            ::logger.debug("OpenGL Buffer object with id %u deleted", b->buffer_obj);
-            m_resources.buffers.remove(buffer.id);
+            m_resources.remove(buffer);
+            ::logger.debug("Buffer `%u` destroyed", buffer.id);
         } else {
-            ::logger.error("Can't destroy buffer with id %u because it doesn't exist", buffer.id);
+            ::logger.error("Failed to destroy buffer `%u` because it does not exist", buffer.id);
         }
     }
 
@@ -1254,13 +1252,10 @@ namespace tavros::renderer::rhi
         GLuint vao;
         glGenVertexArrays(1, &vao);
 
-        ::logger.debug("OpenGL Vertex Array object with id %u created", vao);
-
         // Scope for vertex array deletion if something goes wrong
         auto vao_owner = core::make_scoped_owner(vao, [](GLuint id) {
             glBindVertexArray(0);
             glDeleteVertexArrays(1, &id);
-            ::logger.debug("OpenGL Vertex Array object with id %u deleted", id);
         });
 
         glBindVertexArray(vao);
@@ -1275,9 +1270,10 @@ namespace tavros::renderer::rhi
             auto  gl_format = to_gl_attribute_format(attrib.format);
 
             // Get the buffer
-            auto* b = m_resources.buffers.try_get(vertex_buffers[buf_layout.buffer_index].id);
+            auto  vertex_buffer_h = vertex_buffers[buf_layout.buffer_index];
+            auto* b = m_resources.try_get(vertex_buffer_h);
             if (!b) {
-                ::logger.error("Can't find vertex buffer with id %u", vertex_buffers[buf_layout.buffer_index].id);
+                ::logger.error("Failed to find vertex buffer `%u`", vertex_buffer_h.id);
                 return {0};
             }
 
@@ -1291,8 +1287,9 @@ namespace tavros::renderer::rhi
         }
 
         // Bind index buffer if present
+        auto index_buffer_h = index_buffer.value();
         if (info.has_index_buffer) {
-            if (auto* b = m_resources.buffers.try_get(index_buffer->id)) {
+            if (auto* b = m_resources.try_get(index_buffer_h)) {
                 if (b->info.usage != buffer_usage::index) {
                     ::logger.error("Invalid index buffer usage");
                     return {0};
@@ -1300,27 +1297,26 @@ namespace tavros::renderer::rhi
 
                 glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj);
             } else {
-                ::logger.error("Can't find index buffer with id %u", index_buffer->id);
+                ::logger.error("Failed to find index buffer `%u`", index_buffer_h.id);
                 return {0};
             }
         }
 
         glBindVertexArray(0);
 
-        geometry_binding_handle handle = {m_resources.geometry_bindings.insert({info, vao_owner.release()})};
-        ::logger.debug("Geometry binding with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, vao_owner.release()});
+        ::logger.debug("Geometry binding `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_geometry(geometry_binding_handle geometry_binding)
     {
-        if (auto* gb = m_resources.geometry_bindings.try_get(geometry_binding.id)) {
+        if (auto* gb = m_resources.try_get(geometry_binding)) {
             glDeleteVertexArrays(1, &gb->vao_obj);
-            ::logger.debug("OpenGL Vertex Array object with id %u deleted", gb->vao_obj);
-            m_resources.geometry_bindings.remove(geometry_binding.id);
-            ::logger.debug("Geometry binding with id %u destroyed", geometry_binding.id);
+            m_resources.remove(geometry_binding);
+            ::logger.debug("Geometry binding `%u` destroyed", geometry_binding.id);
         } else {
-            ::logger.error("Can't destroy geometry binding with id %u because it doesn't exist", geometry_binding.id);
+            ::logger.error("Failed to destroy geometry binding `%u` because it does not exist", geometry_binding.id);
         }
     }
 
@@ -1361,24 +1357,24 @@ namespace tavros::renderer::rhi
                 auto resolve_index = attachment.resolve_texture_index;
                 // First of all, validate that resolve index is valid
                 if (resolve_index >= resolve_textures.size()) {
-                    ::logger.error("Invalid resolve texture index %u", resolve_index);
+                    ::logger.error("Invalid resolve texture index `%u`", resolve_index);
                     return {0};
                 }
                 if (is_used_for_resolve[resolve_index]) {
-                    ::logger.error("Resolve attachment index %u is used more than once", resolve_index);
+                    ::logger.error("Resolve attachment index `%u` is used more than once", resolve_index);
                     return {0};
                 }
 
                 is_used_for_resolve[resolve_index] = true;
 
                 auto& resolve_tex_h = resolve_textures[resolve_index];
-                if (auto* resolve_tex = m_resources.textures.try_get(resolve_tex_h.id)) {
+                if (auto* resolve_tex = m_resources.try_get(resolve_tex_h)) {
                     if (resolve_tex->info.format != attachment.format) {
                         ::logger.error("Resolve attachment format mismatch with color attachment format");
                         return {0};
                     }
                     if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
-                        ::logger.error("Resolve attachment texture must have resolve_destination usage");
+                        ::logger.error("Resolve attachment texture must have resolve_destination usage flag");
                         return {0};
                     }
                     if (resolve_tex->info.sample_count != 1) {
@@ -1386,7 +1382,7 @@ namespace tavros::renderer::rhi
                         return {0};
                     }
                 } else {
-                    ::logger.error("Can't find resolve texture with id %u", resolve_tex_h.id);
+                    ::logger.error("Failed to find resolve texture `%u`", resolve_tex_h.id);
                     return {0};
                 }
 
@@ -1405,18 +1401,18 @@ namespace tavros::renderer::rhi
             resolve_attachments_handles.push_back(resolve_textures[i]);
         }
 
-        render_pass_handle handle = {m_resources.render_passes.insert({info, resolve_attachments_handles})};
-        ::logger.debug("Render pass with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, resolve_attachments_handles});
+        ::logger.debug("Render pass `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_render_pass(render_pass_handle render_pass)
     {
-        if (auto* rp = m_resources.render_passes.try_get(render_pass.id)) {
-            m_resources.render_passes.remove(render_pass.id);
-            ::logger.debug("Render pass with id %u destroyed", render_pass.id);
+        if (auto* rp = m_resources.try_get(render_pass)) {
+            m_resources.remove(render_pass);
+            ::logger.debug("Render pass `%u` destroyed", render_pass.id);
         } else {
-            ::logger.error("Can't destroy render pass with id %u because it doesn't exist", render_pass.id);
+            ::logger.error("Failed to destroy render pass `%u` because it does not exist", render_pass.id);
         }
     }
 
@@ -1452,7 +1448,6 @@ namespace tavros::renderer::rhi
             }
         }
 
-
         core::static_vector<texture_handle, k_max_shader_textures> texture_handles;
         core::static_vector<sampler_handle, k_max_shader_textures> sampler_handles;
         core::static_vector<buffer_handle, k_max_shader_buffers>   buffer_handles;
@@ -1466,26 +1461,27 @@ namespace tavros::renderer::rhi
         }
 
         for (auto i = 0; i < buffers.size(); ++i) {
-            buffer_handles.push_back(buffers[i]);
-            auto* b = m_resources.buffers.try_get(buffers[i].id);
+            auto buffer_h = buffers[i];
+            buffer_handles.push_back(buffer_h);
+            auto* b = m_resources.try_get(buffer_h);
             if (b->info.usage != buffer_usage::uniform) {
-                ::logger.error("Buffer with id %u is not a uniform buffer", buffers[i].id);
+                ::logger.error("Buffer `%u` is not a uniform buffer", buffers[i].id);
                 return {0};
             }
         }
 
-        shader_binding_handle handle = {m_resources.shader_bindings.insert({info, texture_handles, sampler_handles, buffer_handles})};
-        ::logger.debug("Shader binding with id %u created", handle.id);
-        return handle;
+        auto h = m_resources.create({info, texture_handles, sampler_handles, buffer_handles});
+        ::logger.debug("Shader binding `%u` created", h.id);
+        return h;
     }
 
     void graphics_device_opengl::destroy_shader_binding(shader_binding_handle shader_binding)
     {
-        if (auto* sb = m_resources.shader_bindings.try_get(shader_binding.id)) {
-            m_resources.shader_bindings.remove(shader_binding.id);
-            ::logger.debug("Shader binding with id %u destroyed", shader_binding.id);
+        if (auto* sb = m_resources.try_get(shader_binding)) {
+            m_resources.remove(shader_binding);
+            ::logger.debug("Shader binding `%u` destroyed", shader_binding.id);
         } else {
-            ::logger.error("Can't destroy shader binding with id %u because it doesn't exist", shader_binding.id);
+            ::logger.error("Failed to destroy shader binding `%u` because it does not exist", shader_binding.id);
         }
     }
 

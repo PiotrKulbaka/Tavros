@@ -26,7 +26,7 @@ namespace tavros::renderer::rhi
         // Try to create the context first
         auto context = context_opengl::create(info, native_handle);
         if (!context) {
-            ::logger.error("Context creation failed");
+            ::logger.error("OpenGL context creation failed");
             return nullptr;
         }
 
@@ -53,18 +53,19 @@ namespace tavros::renderer::rhi
 
         m_internal_command_list = core::make_unique<command_list_opengl>(device);
 
-        m_backbuffer = {m_device->get_resources()->framebuffers.insert({backbuffer_info, 0, true})};
-        ::logger.debug("Default framebuffer with id %u for frame composer created", m_backbuffer.id);
+        m_backbuffer = m_device->get_resources()->create({backbuffer_info, 0, true});
+        ::logger.debug("Frame composer framebuffer `%u` created", m_backbuffer.id);
     }
 
     frame_composer_opengl::~frame_composer_opengl()
     {
         // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
         if (m_device->get_resources()->framebuffers.size() != 0) {
-            if (auto* fb = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
-                m_device->get_resources()->framebuffers.remove(m_backbuffer.id);
+            if (auto* fb = m_device->get_resources()->try_get(m_backbuffer)) {
+                m_device->get_resources()->remove(m_backbuffer);
+                ::logger.debug("Frame composer framebuffer `%u` destroyed", m_backbuffer.id);
             } else {
-                ::logger.error("Can't destroy default framebuffer for frame composer with id %u because it doesn't exist", m_backbuffer.id);
+                ::logger.error("Cannot destroy frame composer framebuffer `%u` because it does not exist", m_backbuffer.id);
             }
         }
 
@@ -81,11 +82,11 @@ namespace tavros::renderer::rhi
         m_info.height = h;
 
         // Update framebuffer size
-        if (auto* fb = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
+        if (auto* fb = m_device->get_resources()->try_get(m_backbuffer)) {
             fb->info.width = w;
             fb->info.height = h;
         } else {
-            ::logger.error("Can't find default framebuffer for frame composer with id %u", m_backbuffer.id);
+            ::logger.error("Cannot find frame composer framebuffer `%u`", m_backbuffer.id);
         }
     }
 
@@ -107,7 +108,7 @@ namespace tavros::renderer::rhi
     void frame_composer_opengl::present()
     {
         if (m_frame_started) {
-            ::logger.error("Frame is not completed yet, but trying to present it");
+            ::logger.warning("Frame is not completed yet, but trying to present it");
         }
         m_context->swap_buffers();
     }

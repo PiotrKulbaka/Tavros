@@ -150,121 +150,123 @@ namespace tavros::renderer::rhi
 
     void command_list_opengl::bind_pipeline(pipeline_handle pipeline)
     {
-        m_current_pipeline = pipeline;
-        if (auto* p = m_device->get_resources()->pipelines.try_get(pipeline.id)) {
-            auto& info = p->info;
-
-            glUseProgram(p->program_obj);
-
-            // depth test
-            if (info.depth_stencil.depth_test_enable) {
-                glEnable(GL_DEPTH_TEST);
-
-                // depth write
-                glDepthMask(info.depth_stencil.depth_write_enable ? GL_TRUE : GL_FALSE);
-
-                // depth compare func
-                glDepthFunc(to_gl_compare_func(info.depth_stencil.depth_compare));
-            } else {
-                glDisable(GL_DEPTH_TEST);
-            }
-
-            // stencil test
-            if (info.depth_stencil.stencil_test_enable) {
-                glEnable(GL_STENCIL_TEST);
-
-                // stencil front
-                glStencilFuncSeparate(
-                    GL_FRONT,
-                    to_gl_compare_func(info.depth_stencil.stencil_front.compare),
-                    info.depth_stencil.stencil_front.reference_value,
-                    info.depth_stencil.stencil_front.read_mask
-                );
-                glStencilOpSeparate(
-                    GL_FRONT,
-                    to_gl_stencil_op(info.depth_stencil.stencil_front.stencil_fail_op),
-                    to_gl_stencil_op(info.depth_stencil.stencil_front.depth_fail_op),
-                    to_gl_stencil_op(info.depth_stencil.stencil_front.pass_op)
-                );
-                glStencilMaskSeparate(GL_FRONT, info.depth_stencil.stencil_front.write_mask);
-
-                // stencil back
-                glStencilFuncSeparate(
-                    GL_BACK,
-                    to_gl_compare_func(info.depth_stencil.stencil_back.compare),
-                    info.depth_stencil.stencil_back.reference_value,
-                    info.depth_stencil.stencil_back.read_mask
-                );
-                glStencilOpSeparate(
-                    GL_BACK,
-                    to_gl_stencil_op(info.depth_stencil.stencil_back.stencil_fail_op),
-                    to_gl_stencil_op(info.depth_stencil.stencil_back.depth_fail_op),
-                    to_gl_stencil_op(info.depth_stencil.stencil_back.pass_op)
-                );
-                glStencilMaskSeparate(GL_BACK, info.depth_stencil.stencil_back.write_mask);
-            } else {
-                glDisable(GL_STENCIL_TEST);
-            }
-
-            // rasterizer state
-            // cull face
-            if (info.rasterizer.cull == cull_face::off) {
-                glDisable(GL_CULL_FACE);
-            } else {
-                glEnable(GL_CULL_FACE);
-                glCullFace(info.rasterizer.cull == cull_face::front ? GL_FRONT : GL_BACK);
-            }
-
-            // front face
-            glFrontFace(info.rasterizer.face == front_face::clockwise ? GL_CW : GL_CCW);
-
-            // polygon mode
-            if (info.rasterizer.polygon == polygon_mode::lines) {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            } else if (info.rasterizer.polygon == polygon_mode::points) {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-            } else if (info.rasterizer.polygon == polygon_mode::fill) {
-                glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-            } else {
-                TAV_UNREACHABLE();
-            }
-
-            // depth clamp
-            if (info.rasterizer.depth_clamp_enable) {
-                glEnable(GL_DEPTH_CLAMP);
-            } else {
-                glDisable(GL_DEPTH_CLAMP);
-            }
-
-            // depth bias
-            if (info.rasterizer.depth_bias_enable) {
-                glEnable(GL_POLYGON_OFFSET_FILL);
-                glPolygonOffset(info.rasterizer.depth_bias_slope, info.rasterizer.depth_bias);
-            } else {
-                glDisable(GL_POLYGON_OFFSET_FILL);
-            }
-
-            // multisample state
-            // uint8 sample_count = 1; cant be initialized here
-            if (info.multisample.sample_shading_enabled) {
-                glEnable(GL_SAMPLE_SHADING);
-                glMinSampleShading(info.multisample.min_sample_shading);
-            } else {
-                glDisable(GL_SAMPLE_SHADING);
-            }
-        } else {
-            ::logger.error("Can't bind the pipeline with id `%u`", pipeline.id);
+        auto* p = m_device->get_resources()->try_get(pipeline);
+        if (!p) {
+            ::logger.error("Failed to bind pipeline `%u`: not found", pipeline.id);
             glUseProgram(0);
+            return;
+        }
+
+        m_current_pipeline = pipeline;
+        auto& info = p->info;
+
+        glUseProgram(p->program_obj);
+
+        // depth test
+        if (info.depth_stencil.depth_test_enable) {
+            glEnable(GL_DEPTH_TEST);
+
+            // depth write
+            glDepthMask(info.depth_stencil.depth_write_enable ? GL_TRUE : GL_FALSE);
+
+            // depth compare func
+            glDepthFunc(to_gl_compare_func(info.depth_stencil.depth_compare));
+        } else {
+            glDisable(GL_DEPTH_TEST);
+        }
+
+        // stencil test
+        if (info.depth_stencil.stencil_test_enable) {
+            glEnable(GL_STENCIL_TEST);
+
+            // stencil front
+            glStencilFuncSeparate(
+                GL_FRONT,
+                to_gl_compare_func(info.depth_stencil.stencil_front.compare),
+                info.depth_stencil.stencil_front.reference_value,
+                info.depth_stencil.stencil_front.read_mask
+            );
+            glStencilOpSeparate(
+                GL_FRONT,
+                to_gl_stencil_op(info.depth_stencil.stencil_front.stencil_fail_op),
+                to_gl_stencil_op(info.depth_stencil.stencil_front.depth_fail_op),
+                to_gl_stencil_op(info.depth_stencil.stencil_front.pass_op)
+            );
+            glStencilMaskSeparate(GL_FRONT, info.depth_stencil.stencil_front.write_mask);
+
+            // stencil back
+            glStencilFuncSeparate(
+                GL_BACK,
+                to_gl_compare_func(info.depth_stencil.stencil_back.compare),
+                info.depth_stencil.stencil_back.reference_value,
+                info.depth_stencil.stencil_back.read_mask
+            );
+            glStencilOpSeparate(
+                GL_BACK,
+                to_gl_stencil_op(info.depth_stencil.stencil_back.stencil_fail_op),
+                to_gl_stencil_op(info.depth_stencil.stencil_back.depth_fail_op),
+                to_gl_stencil_op(info.depth_stencil.stencil_back.pass_op)
+            );
+            glStencilMaskSeparate(GL_BACK, info.depth_stencil.stencil_back.write_mask);
+        } else {
+            glDisable(GL_STENCIL_TEST);
+        }
+
+        // rasterizer state
+        // cull face
+        if (info.rasterizer.cull == cull_face::off) {
+            glDisable(GL_CULL_FACE);
+        } else {
+            glEnable(GL_CULL_FACE);
+            glCullFace(info.rasterizer.cull == cull_face::front ? GL_FRONT : GL_BACK);
+        }
+
+        // front face
+        glFrontFace(info.rasterizer.face == front_face::clockwise ? GL_CW : GL_CCW);
+
+        // polygon mode
+        if (info.rasterizer.polygon == polygon_mode::lines) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+        } else if (info.rasterizer.polygon == polygon_mode::points) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+        } else if (info.rasterizer.polygon == polygon_mode::fill) {
+            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+        } else {
+            TAV_UNREACHABLE();
+        }
+
+        // depth clamp
+        if (info.rasterizer.depth_clamp_enable) {
+            glEnable(GL_DEPTH_CLAMP);
+        } else {
+            glDisable(GL_DEPTH_CLAMP);
+        }
+
+        // depth bias
+        if (info.rasterizer.depth_bias_enable) {
+            glEnable(GL_POLYGON_OFFSET_FILL);
+            glPolygonOffset(info.rasterizer.depth_bias_slope, info.rasterizer.depth_bias);
+        } else {
+            glDisable(GL_POLYGON_OFFSET_FILL);
+        }
+
+        // multisample state
+        // uint8 sample_count = 1; cant be initialized here
+        if (info.multisample.sample_shading_enabled) {
+            glEnable(GL_SAMPLE_SHADING);
+            glMinSampleShading(info.multisample.min_sample_shading);
+        } else {
+            glDisable(GL_SAMPLE_SHADING);
         }
     }
 
     void command_list_opengl::bind_geometry(geometry_binding_handle geometry_binding)
     {
-        if (auto* gb = m_device->get_resources()->geometry_bindings.try_get(geometry_binding.id)) {
+        if (auto* gb = m_device->get_resources()->try_get(geometry_binding)) {
             glBindVertexArray(gb->vao_obj);
             m_current_geometry_binding = geometry_binding;
         } else {
-            ::logger.error("Can't bind the geometry binding with id `%u`", geometry_binding.id);
+            ::logger.error("Failed to bind geometry binding `%u`: not found", geometry_binding.id);
             glBindVertexArray(0);
             m_current_geometry_binding = {0};
         }
@@ -272,87 +274,92 @@ namespace tavros::renderer::rhi
 
     void command_list_opengl::bind_shader_binding(shader_binding_handle shader_binding)
     {
-        if (auto* sb = m_device->get_resources()->shader_bindings.try_get(shader_binding.id)) {
-            auto& info = sb->info;
+        auto* sb = m_device->get_resources()->try_get(shader_binding);
+        if (!sb) {
+            ::logger.error("Failed to bind shader binding `%u`: shader binding not found", shader_binding.id);
+            return;
+        }
 
-            // Bind textures and samplers
-            for (uint32 i = 0; i < info.texture_bindings.size(); ++i) {
-                auto& binding = info.texture_bindings[i];
+        auto& info = sb->info;
 
-                // Bind texture
-                auto tex_id = sb->textures[binding.texture_index].id;
-                if (auto* t = m_device->get_resources()->textures.try_get(tex_id)) {
-                    if (!t->info.usage.has_flag(texture_usage::sampled)) {
-                        ::logger.error("Can't bind not sampled texture with id `%u`", tex_id);
-                        continue;
-                    }
-                    glActiveTexture(GL_TEXTURE0 + binding.binding);
-                    glBindTexture(t->target, t->texture_obj);
-                } else {
-                    ::logger.error("Can't bind the texture with id `%u`", tex_id);
+        // Bind textures and samplers
+        for (uint32 i = 0; i < info.texture_bindings.size(); ++i) {
+            auto& binding = info.texture_bindings[i];
+
+            // Bind texture
+            auto tex_h = sb->textures[binding.texture_index];
+            if (auto* t = m_device->get_resources()->try_get(tex_h)) {
+                if (!t->info.usage.has_flag(texture_usage::sampled)) {
+                    ::logger.error("Failed to bind shader binding `%u`: texture `%u` is not sampled", shader_binding.id, tex_h.id);
+                    return;
                 }
-
-                // Bind sampler
-                auto sampler_id = sb->samplers[binding.sampler_index].id;
-                if (auto* s = m_device->get_resources()->samplers.try_get(sampler_id)) {
-                    glBindSampler(binding.binding, s->sampler_obj);
-                } else {
-                    ::logger.error("Can't bind the sampler with id `%u`", sampler_id);
-                }
+                glActiveTexture(GL_TEXTURE0 + binding.binding);
+                glBindTexture(t->target, t->texture_obj);
+            } else {
+                ::logger.error("Failed to bind shader binding `%u`: texture `%u` not found", shader_binding.id, tex_h.id);
+                return;
             }
 
-            // Bind buffers (UBO buffers)
-            for (uint32 i = 0; i < info.buffer_bindings.size(); ++i) {
-                auto& binding = info.buffer_bindings[i];
-
-                auto buf_id = sb->buffers[binding.buffer_index].id;
-                if (auto* b = m_device->get_resources()->buffers.try_get(buf_id)) {
-                    TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER);
-
-                    if (binding.size == 0) {
-                        // Bind the entire buffer
-                        glBindBufferBase(b->gl_target, binding.binding, b->buffer_obj);
-                    } else {
-                        // Bind a range of the buffer (subbuffer)
-                        glBindBufferRange(
-                            b->gl_target,
-                            binding.binding,
-                            b->buffer_obj,
-                            static_cast<GLintptr>(binding.offset),
-                            static_cast<GLsizeiptr>(binding.size)
-                        );
-                    }
-                } else {
-                    ::logger.error("Can't bind the buffer with id `%u`", buf_id);
-                }
+            // Bind sampler
+            auto sampler_h = sb->samplers[binding.sampler_index];
+            if (auto* s = m_device->get_resources()->try_get(sampler_h)) {
+                glBindSampler(binding.binding, s->sampler_obj);
+            } else {
+                ::logger.error("Failed to bind shader binding `%u`: sampler `%u` not found", shader_binding.id, sampler_h.id);
+                return;
             }
-        } else {
-            ::logger.error("Can't bind the shader binding with id `%u` because shader binding is not found", shader_binding.id);
+        }
+
+        // Bind buffers (UBO buffers)
+        for (uint32 i = 0; i < info.buffer_bindings.size(); ++i) {
+            auto& binding = info.buffer_bindings[i];
+
+            auto buf_h = sb->buffers[binding.buffer_index];
+            if (auto* b = m_device->get_resources()->try_get(buf_h)) {
+                TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER);
+
+                if (binding.size == 0) {
+                    // Bind the entire buffer
+                    glBindBufferBase(b->gl_target, binding.binding, b->buffer_obj);
+                } else {
+                    // Bind a range of the buffer (subbuffer)
+                    glBindBufferRange(
+                        b->gl_target,
+                        binding.binding,
+                        b->buffer_obj,
+                        static_cast<GLintptr>(binding.offset),
+                        static_cast<GLsizeiptr>(binding.size)
+                    );
+                }
+            } else {
+                ::logger.error("Failed to bind shader binding `%u`: buffer `%u` not found", shader_binding.id, buf_h.id);
+                return;
+            }
         }
     }
 
     void command_list_opengl::begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer)
     {
         if (m_current_render_pass.id != 0 || m_current_framebuffer.id != 0) {
-            ::logger.error("Can't begin the render pass because previous render_pass is not ended");
+            ::logger.error("Failed to begin render pass `%u`: previous render pass `%u` not ended", render_pass.id, m_current_render_pass.id);
             return;
         }
 
-        gl_render_pass* rp = m_device->get_resources()->render_passes.try_get(render_pass.id);
-        if (rp == nullptr) {
-            ::logger.error("Can't begin the render pass because render pass with id `%u` does not exist", render_pass.id);
+        gl_render_pass* rp = m_device->get_resources()->try_get(render_pass);
+        if (!rp) {
+            ::logger.error("Failed to begin render pass `%u`: render pass not found", render_pass.id);
             return;
         }
 
-        gl_framebuffer* fb = m_device->get_resources()->framebuffers.try_get(framebuffer.id);
+        gl_framebuffer* fb = m_device->get_resources()->try_get(framebuffer);
         if (fb == nullptr) {
-            ::logger.error("Can't begin the render pass because framebuffer with id `%u` does not exist", framebuffer.id);
+            ::logger.error("Failed to begin render pass `%u`: framebuffer `%u` not found", render_pass.id, framebuffer.id);
             return;
         }
 
         // Validate color attachments size
         if (rp->info.color_attachments.size() != fb->info.color_attachment_formats.size()) {
-            ::logger.error("Mismatched number of color attachments for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
+            ::logger.error("Failed to begin render pass `%u`: number of color attachments does not match framebuffer `%u`", render_pass.id, framebuffer.id);
             return;
         }
 
@@ -361,11 +368,11 @@ namespace tavros::renderer::rhi
             auto rp_color_format = rp->info.color_attachments[i].format;
             auto fb_color_format = fb->info.color_attachment_formats[i];
             if (rp_color_format != fb_color_format) {
-                ::logger.error("Mismatched color attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
+                ::logger.error("Failed to begin render pass `%u`: color attachment format mismatch with framebuffer `%u`", render_pass.id, framebuffer.id);
                 return;
             }
             if (rp->info.color_attachments[i].sample_count != fb->info.sample_count) {
-                ::logger.error("Mismatched color attachment sample count for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
+                ::logger.error("Failed to begin render pass `%u`: color attachment sample count mismatch with framebuffer `%u`", render_pass.id, framebuffer.id);
                 return;
             }
         }
@@ -377,35 +384,35 @@ namespace tavros::renderer::rhi
                 auto resolve_attachment_index = attachment.resolve_texture_index;
                 // Validate resolve target index
                 if (resolve_attachment_index >= rp->resolve_attachments.size()) {
-                    ::logger.error("Invalid resolve target attachment index for render pass with id `%u`", render_pass.id);
+                    ::logger.error("Failed to begin render pass `%u`: invalid resolve target attachment index", render_pass.id);
                     return;
                 }
                 // Validate that the resolve target attachment format matches
                 auto resolve_target_format = rp->info.color_attachments[resolve_attachment_index].format;
                 if (attachment.format != resolve_target_format) {
-                    ::logger.error("Mismatched resolve target attachment format for render pass with id `%u`", render_pass.id);
+                    ::logger.error("Failed to begin render pass `%u`: mismatched resolve target attachment format", render_pass.id);
                     return;
                 }
                 // Validate that the resolve target attachment texture is single-sampled
-                auto resolve_texture_handle = rp->resolve_attachments[resolve_attachment_index];
-                if (auto* tex = m_device->get_resources()->textures.try_get(resolve_texture_handle.id)) {
+                auto resolve_texture_h = rp->resolve_attachments[resolve_attachment_index];
+                if (auto* tex = m_device->get_resources()->try_get(resolve_texture_h)) {
                     if (tex->info.sample_count != 1) {
-                        ::logger.error("Resolve target attachment texture must be single-sampled for render pass with id `%u`", render_pass.id);
+                        ::logger.error("Failed to begin render pass `%u`: resolve target attachment texture '%u' must be single-sampled", render_pass.id, resolve_texture_h.id);
                         return;
                     }
                 } else {
-                    ::logger.error("Can't find the texture with id `%u`", resolve_texture_handle.id);
+                    ::logger.error("Failed to begin render pass `%u`: resolve texture `%u` not found", render_pass.id, resolve_texture_h.id);
                     return;
                 }
                 // Validate that the source attachment texture is multi-sampled
-                auto source_texture_handle = fb->color_attachments[i];
-                if (auto* tex = m_device->get_resources()->textures.try_get(source_texture_handle.id)) {
+                auto source_texture_h = fb->color_attachments[i];
+                if (auto* tex = m_device->get_resources()->try_get(source_texture_h)) {
                     if (tex->info.sample_count == 1) {
-                        ::logger.error("Source attachment texture must be multi-sampled for render pass with id `%u`", render_pass.id);
+                        ::logger.error("Failed to begin render pass `%u`: source attachment texture `%u` must be multi-sampled", render_pass.id, source_texture_h.id);
                         return;
                     }
                 } else {
-                    ::logger.error("Can't find the texture with id `%u`", source_texture_handle.id);
+                    ::logger.error("Failed to begin render pass `%u`: source attachment texture `%u` not found", render_pass.id, source_texture_h.id);
                     return;
                 }
             }
@@ -413,7 +420,7 @@ namespace tavros::renderer::rhi
 
         // Validate depth/stencil attachment format
         if (rp->info.depth_stencil_attachment.format != fb->info.depth_stencil_attachment_format) {
-            ::logger.error("Mismatched depth/stencil attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
+            ::logger.error("Failed to begin render pass `%u`: mismatched depth/stencil attachment format with framebuffer `%u`", render_pass.id, framebuffer.id);
             return;
         }
 
@@ -427,7 +434,7 @@ namespace tavros::renderer::rhi
             glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
 
             if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-                ::logger.error("Framebuffer is not complete");
+                ::logger.error("Failed to begin render pass `%u`: framebuffer `%u` is not complete", render_pass.id, framebuffer.id);
                 return;
             }
         }
@@ -467,8 +474,8 @@ namespace tavros::renderer::rhi
             // Apply load operations (only clear)
             uint32 attachment_index = 0;
             for (uint32 i = 0; i < fb->color_attachments.size(); ++i) {
-                auto attachment_handle = fb->color_attachments[i];
-                if (auto* tex = m_device->get_resources()->textures.try_get(attachment_handle.id)) {
+                auto attachment_h = fb->color_attachments[i];
+                if (auto* tex = m_device->get_resources()->try_get(attachment_h)) {
                     // If texture has the same sample count with framebuffer, then this texture is attachment texture
                     if (tex->info.sample_count == fb->info.sample_count) {
                         auto& rp_color_attachment = rp->info.color_attachments[i];
@@ -482,7 +489,8 @@ namespace tavros::renderer::rhi
                         attachment_index++;
                     }
                 } else {
-                    ::logger.error("Can't find the texture with id `%u`", attachment_handle.id);
+                    ::logger.error("Failed to begin render pass `%u`: attachment texture `%u` not found", render_pass.id, attachment_h.id);
+                    return;
                 }
             }
 
@@ -509,119 +517,124 @@ namespace tavros::renderer::rhi
     void command_list_opengl::end_render_pass()
     {
         if (m_current_render_pass.id == 0 || m_current_framebuffer.id == 0) {
-            ::logger.error("Can't end the render pass because render_pass is not started");
+            ::logger.error("Failed to end render pass: render pass not started");
             return;
         }
 
-        gl_render_pass* rp = m_device->get_resources()->render_passes.try_get(m_current_render_pass.id);
-        if (rp == nullptr) {
-            ::logger.error("Can't end the render pass correctly because render pass with id `%u` does not exist", m_current_render_pass.id);
+        auto* rp = m_device->get_resources()->try_get(m_current_render_pass);
+        if (!rp) {
+            ::logger.error("Failed to end render pass `%u`: render pass not found", m_current_render_pass.id);
             return;
         }
 
-        gl_framebuffer* fb = m_device->get_resources()->framebuffers.try_get(m_current_framebuffer.id);
+        auto* fb = m_device->get_resources()->try_get(m_current_framebuffer);
         if (fb == nullptr) {
-            ::logger.error("Can't end the render pass correctly because framebuffer with id `%u` does not exist", m_current_framebuffer.id);
+            ::logger.error("Failed to end render pass `%u`: framebuffer `%u` not found", m_current_render_pass.id, m_current_framebuffer.id);
             return;
         }
 
         if (fb->is_default) {
             TAV_ASSERT(rp->info.color_attachments[0].store != store_op::resolve);
-        } else {
-            // Collect resolve attachments
-            struct blit_info
-            {
-                GLuint      attachment = 0;
-                gl_texture* source = nullptr;
-                gl_texture* destination = nullptr;
-            };
-            core::static_vector<blit_info, k_max_color_attachments> blit_data;
-            GLuint                                                  attachment_index = 0;
-            for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
-                auto& rp_color_attachment = rp->info.color_attachments[i];
-                auto* source_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[i].id);
-                TAV_ASSERT(source_tex);
 
-                if (rp_color_attachment.store == store_op::resolve) {
-                    // Resolve attachments
-                    auto resolve_texture_index = rp_color_attachment.resolve_texture_index;
-                    rp->resolve_attachments.size();
+            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            m_current_framebuffer = {0};
+            m_current_render_pass = {0};
+            return;
+        }
 
-                    if (rp->resolve_attachments.size() > resolve_texture_index) {
-                        // Find the resolve texture and validate it
-                        auto* resolve_tex = m_device->get_resources()->textures.try_get(rp->resolve_attachments[resolve_texture_index].id);
-                        if (resolve_tex == nullptr) {
-                            ::logger.error("Invalid resolve attachment index `%u`", resolve_texture_index);
-                            return;
-                        }
+        // Collect resolve attachments
+        struct blit_info
+        {
+            GLuint      attachment = 0;
+            gl_texture* source = nullptr;
+            gl_texture* destination = nullptr;
+        };
+        core::static_vector<blit_info, k_max_color_attachments> blit_data;
+        GLuint                                                  attachment_index = 0;
+        for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
+            auto& rp_color_attachment = rp->info.color_attachments[i];
+            auto* source_tex = m_device->get_resources()->try_get(fb->color_attachments[i]);
+            TAV_ASSERT(source_tex);
 
-                        // everything is ok, add to the list
-                        blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, source_tex, resolve_tex});
-                        attachment_index++;
-                    } else {
-                        ::logger.error("Invalid resolve attachment index `%u`", resolve_texture_index);
+            if (rp_color_attachment.store == store_op::resolve) {
+                // Resolve attachments
+                auto resolve_texture_index = rp_color_attachment.resolve_texture_index;
+                rp->resolve_attachments.size();
+
+                if (rp->resolve_attachments.size() > resolve_texture_index) {
+                    // Find the resolve texture and validate it
+                    auto  resolve_attachment_h = rp->resolve_attachments[resolve_texture_index];
+                    auto* resolve_tex = m_device->get_resources()->try_get(resolve_attachment_h);
+                    if (resolve_tex == nullptr) {
+                        ::logger.error("Failed to end render pass `%u`: resolve attachment texture `%u` not found", m_current_render_pass.id, resolve_texture_index);
                         return;
                     }
+
+                    // everything is ok, add to the list
+                    blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, source_tex, resolve_tex});
+                    attachment_index++;
+                } else {
+                    ::logger.error("Failed to end render pass `%u`: invalid resolve attachment index `%u`", m_current_render_pass.id, resolve_texture_index);
+                    return;
                 }
             }
+        }
 
-            // Blit mask for depth/stencil attachment
-            GLbitfield depth_stencil_blit_mask = 0;
-            if (rp->info.depth_stencil_attachment.depth_store == store_op::resolve) {
-                depth_stencil_blit_mask |= GL_DEPTH_BUFFER_BIT;
-            }
-            if (rp->info.depth_stencil_attachment.stencil_store == store_op::resolve) {
-                depth_stencil_blit_mask |= GL_STENCIL_BUFFER_BIT;
-            }
+        // Blit mask for depth/stencil attachment
+        GLbitfield depth_stencil_blit_mask = 0;
+        if (rp->info.depth_stencil_attachment.depth_store == store_op::resolve) {
+            depth_stencil_blit_mask |= GL_DEPTH_BUFFER_BIT;
+        }
+        if (rp->info.depth_stencil_attachment.stencil_store == store_op::resolve) {
+            depth_stencil_blit_mask |= GL_STENCIL_BUFFER_BIT;
+        }
 
-            auto need_resolve = depth_stencil_blit_mask != 0 || blit_data.size() > 0;
+        auto need_resolve = depth_stencil_blit_mask != 0 || blit_data.size() > 0;
+        if (need_resolve) {
+            // Bind for resolve and attach textures
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj);
 
-            if (need_resolve) {
-                // Bind for resolve and attach textures
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo);
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj);
-
-                // Check if need to resolve for any attachment
-                if (blit_data.size() > 0) {
-                    for (uint32 i = 0; i < blit_data.size(); ++i) {
-                        TAV_ASSERT(blit_data[i].destination->target == GL_TEXTURE_2D);
-                        glFramebufferTexture2D(
-                            GL_DRAW_FRAMEBUFFER,
-                            GL_COLOR_ATTACHMENT0,
-                            blit_data[i].destination->target,
-                            blit_data[i].destination->texture_obj,
-                            0
-                        );
-                    }
-
-                    // Resolve color attachments
-                    for (uint32 i = 0; i < blit_data.size(); ++i) {
-                        glReadBuffer(blit_data[i].attachment);
-                        glDrawBuffer(GL_COLOR_ATTACHMENT0);
-                        glBlitFramebuffer(
-                            0, 0, fb->info.width, fb->info.height,
-                            0, 0, fb->info.width, fb->info.height,
-                            GL_COLOR_BUFFER_BIT,
-                            GL_NEAREST
-                        );
-                    }
-                }
-
-                // Check if need to resolve depth/stencil attachment
-                if (depth_stencil_blit_mask) {
-                    // Resolve depth/stencil attachment
-                    glBlitFramebuffer(
-                        0, 0, fb->info.width, fb->info.height,
-                        0, 0, fb->info.width, fb->info.height,
-                        depth_stencil_blit_mask,
-                        GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
+            // Check if need to resolve for any attachment
+            if (blit_data.size() > 0) {
+                for (uint32 i = 0; i < blit_data.size(); ++i) {
+                    TAV_ASSERT(blit_data[i].destination->target == GL_TEXTURE_2D);
+                    glFramebufferTexture2D(
+                        GL_DRAW_FRAMEBUFFER,
+                        GL_COLOR_ATTACHMENT0,
+                        blit_data[i].destination->target,
+                        blit_data[i].destination->texture_obj,
+                        0
                     );
                 }
 
-
-                glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-                glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+                // Resolve color attachments
+                for (uint32 i = 0; i < blit_data.size(); ++i) {
+                    glReadBuffer(blit_data[i].attachment);
+                    glDrawBuffer(GL_COLOR_ATTACHMENT0);
+                    glBlitFramebuffer(
+                        0, 0, fb->info.width, fb->info.height,
+                        0, 0, fb->info.width, fb->info.height,
+                        GL_COLOR_BUFFER_BIT,
+                        GL_NEAREST
+                    );
+                }
             }
+
+            // Check if need to resolve depth/stencil attachment
+            if (depth_stencil_blit_mask) {
+                // Resolve depth/stencil attachment
+                glBlitFramebuffer(
+                    0, 0, fb->info.width, fb->info.height,
+                    0, 0, fb->info.width, fb->info.height,
+                    depth_stencil_blit_mask,
+                    GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
+                );
+            }
+
+
+            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
+            glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
@@ -631,53 +644,70 @@ namespace tavros::renderer::rhi
 
     void command_list_opengl::draw(uint32 count, uint32 first_vertex)
     {
-        auto* p = m_device->get_resources()->pipelines.try_get(m_current_pipeline.id);
+        auto* p = m_device->get_resources()->try_get(m_current_pipeline);
         if (!p) {
-            ::logger.error("Can't draw indexsed because no pipeline is bound");
+            if (m_current_pipeline.id == 0) {
+                ::logger.error("Failed to draw: no pipeline is bound");
+            } else {
+                ::logger.error("Failed to draw: pipeline `%u` not found", m_current_pipeline.id);
+            }
             return;
         }
 
-        auto topology = to_gl_topology(p->info.topology);
-        glDrawArrays(topology, static_cast<GLint>(first_vertex), static_cast<GLsizei>(count));
+        auto gl_topology = to_gl_topology(p->info.topology);
+        glDrawArrays(
+            gl_topology,
+            static_cast<GLint>(first_vertex),
+            static_cast<GLsizei>(count)
+        );
     }
 
     void command_list_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
     {
-        if (auto* gb = m_device->get_resources()->geometry_bindings.try_get(m_current_geometry_binding.id)) {
-            if (!gb->info.has_index_buffer) {
-                ::logger.error("Can't draw indexsed because current geometry binding doesn't have index buffer");
-                return;
-            }
-
-            auto* p = m_device->get_resources()->pipelines.try_get(m_current_pipeline.id);
-            if (!p) {
-                ::logger.error("Can't draw indexsed because no pipeline is bound");
-                return;
-            }
-
-
-            auto        index_format = to_gl_index_format(gb->info.index_format);
-            auto        topology = to_gl_topology(p->info.topology);
-            const void* index_offset = reinterpret_cast<const void*>(first_index * index_format.size);
-
-            if (instance_count > 1) {
-                glDrawElementsInstanced(
-                    topology,
-                    index_count,
-                    index_format.type,
-                    index_offset,
-                    instance_count
-                );
+        auto* p = m_device->get_resources()->try_get(m_current_pipeline);
+        if (!p) {
+            if (m_current_pipeline.id == 0) {
+                ::logger.error("Failed to draw indexed: no pipeline is bound");
             } else {
-                glDrawElements(
-                    topology,
-                    index_count,
-                    index_format.type,
-                    index_offset
-                );
+                ::logger.error("Failed to draw indexed: pipeline `%u` not found", m_current_pipeline.id);
             }
+            return;
+        }
+
+        auto* gb = m_device->get_resources()->try_get(m_current_geometry_binding);
+        if (!gb) {
+            if (m_current_geometry_binding.id == 0) {
+                ::logger.error("Failed to draw indexed: no geometry binding is bound");
+            } else {
+                ::logger.error("Failed to draw indexed: geometry binding `%u` not found", m_current_geometry_binding.id);
+            }
+            return;
+        }
+
+        if (!gb->info.has_index_buffer) {
+            ::logger.error("Failed to draw indexed: current geometry binding `%u` has no index buffer", m_current_geometry_binding.id);
+            return;
+        }
+
+        auto  gl_index_format = to_gl_index_format(gb->info.index_format);
+        auto  gl_topology = to_gl_topology(p->info.topology);
+        auto* index_offset = reinterpret_cast<const void*>(first_index * gl_index_format.size);
+
+        if (instance_count > 1) {
+            glDrawElementsInstanced(
+                gl_topology,
+                index_count,
+                gl_index_format.type,
+                index_offset,
+                instance_count
+            );
         } else {
-            ::logger.error("Can't find the geometry binding with id `%u`", m_current_geometry_binding.id);
+            glDrawElements(
+                gl_topology,
+                index_count,
+                gl_index_format.type,
+                index_offset
+            );
         }
     }
 
@@ -685,60 +715,63 @@ namespace tavros::renderer::rhi
     {
         TAV_ASSERT(data != nullptr);
 
-        if (auto* b = m_device->get_resources()->buffers.try_get(buffer.id)) {
-            if (offset + size > b->info.size) {
-                ::logger.error("Can't copy data to buffer with id `%u` because the size is out of range", buffer.id);
-                return;
-            }
-            if (b->info.access != buffer_access::cpu_to_gpu) {
-                ::logger.error("Can't copy data to buffer with id `%u` because the buffer is not cpu_to_gpu", buffer.id);
-                return;
-            }
-
-            TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER);
-
-            auto target = b->gl_target;
-
-            // Get buffer range
-            glBindBuffer(target, b->buffer_obj);
-
-            void* ptr = glMapBufferRange(
-                target,
-                static_cast<GLintptr>(offset),
-                static_cast<GLsizeiptr>(size),
-                GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT
-            );
-
-            // Write data
-            memcpy(ptr, data, size);
-
-            glUnmapBuffer(target);
-
-            glBindBuffer(target, 0);
-        } else {
-            ::logger.error("Can't copy buffer data because buffer with id `%u` not found", buffer.id);
+        auto* b = m_device->get_resources()->try_get(buffer);
+        if (!b) {
+            ::logger.error("Failed to copy data to buffer `%u`: buffer not found", buffer.id);
+            return;
         }
+
+        if (offset + size > b->info.size) {
+            ::logger.error("Failed to copy data to buffer `%u`: offset %llu + size %llu exceeds buffer size %llu", buffer.id, offset, size, b->info.size);
+            return;
+        }
+
+        if (b->info.access != buffer_access::cpu_to_gpu) {
+            ::logger.error("Failed to copy data to buffer `%u`: buffer is not CPU-to-GPU", buffer.id);
+            return;
+        }
+
+        TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER);
+
+        auto target = b->gl_target;
+
+        // Get buffer range
+        glBindBuffer(target, b->buffer_obj);
+
+        void* ptr = glMapBufferRange(
+            target,
+            static_cast<GLintptr>(offset),
+            static_cast<GLsizeiptr>(size),
+            GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT
+        );
+
+        // Write data
+        memcpy(ptr, data, size);
+
+        glUnmapBuffer(target);
+
+        glBindBuffer(target, 0);
     }
 
     void command_list_opengl::copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, size_t size, size_t dst_offset, size_t src_offset)
     {
         // Get dst and src buffers
-        auto* dst = m_device->get_resources()->buffers.try_get(dst_buffer.id);
+        auto* dst = m_device->get_resources()->try_get(dst_buffer);
         if (!dst) {
-            ::logger.error("Cannot copy buffer: destination buffer with id `%u` not found", dst_buffer.id);
+            ::logger.error("Failed to copy buffer `%u`: destination buffer not found", dst_buffer.id);
             return;
         }
 
-        auto* src = m_device->get_resources()->buffers.try_get(src_buffer.id);
+        auto* src = m_device->get_resources()->try_get(src_buffer);
         if (!src) {
-            ::logger.error("Cannot copy buffer: source buffer with id `%u` not found", src_buffer.id);
+            ::logger.error("Failed to copy buffer `%u`: source buffer not found", src_buffer.id);
             return;
         }
 
         // Check memory region
         if (dst_offset + size > dst->info.size) {
             ::logger.error(
-                "Cannot copy buffer: destination buffer with id `%u` overflow (offset %llu + size %llu > buffer size %llu)",
+                "Failed to copy buffer `%u`: destination buffer overflowed, offset %llu + size %llu exceeds buffer size %llu",
                 dst_buffer.id, dst_offset, size, dst->info.size
             );
             return;
@@ -746,7 +779,7 @@ namespace tavros::renderer::rhi
 
         if (src_offset + size > src->info.size) {
             ::logger.error(
-                "Cannot copy buffer: source buffer with id `%u` overflow (offset %llu + size %llu > buffer size %llu)",
+                "Failed to copy buffer `%u`: source buffer overflowed, offset %llu + size %llu exceeds buffer size %llu",
                 src_buffer.id, src_offset, size, src->info.size
             );
             return;
@@ -760,7 +793,7 @@ namespace tavros::renderer::rhi
 
         if (dst_access != buffer_access::gpu_only) {
             ::logger.error(
-                "Cannot copy buffer: destination buffer with id `%u` has invalid access `%s`",
+                "Failed to copy buffer `%u`: destination buffer has invalid access `%s`",
                 dst_buffer.id, to_string(dst_access).data()
             );
             return;
@@ -768,7 +801,7 @@ namespace tavros::renderer::rhi
 
         if (src_access != buffer_access::cpu_to_gpu && src_access != buffer_access::gpu_only) {
             ::logger.error(
-                "Cannot copy buffer: source buffer with id `%u` has invalid access `%s`",
+                "Failed to copy buffer `%u`: source buffer has invalid access `%s`",
                 src_buffer.id, to_string(src_access).data()
             );
             return;
