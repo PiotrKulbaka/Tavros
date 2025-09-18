@@ -9,7 +9,7 @@
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/shader_info.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -318,4 +318,4 @@ namespace tavros::renderer
         render_targets targets;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

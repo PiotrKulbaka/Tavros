@@ -17,7 +17,7 @@
 
 #include <tavros/renderer/rhi/frame_composer.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     class graphics_device
@@ -88,5 +88,5 @@ namespace tavros::renderer
         virtual void destroy_shader_binding(shader_binding_handle shader_binding) = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi
 

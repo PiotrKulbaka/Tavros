@@ -10,7 +10,7 @@ namespace
 } // namespace
 
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     core::unique_ptr<frame_composer> frame_composer_opengl::create(graphics_device_opengl* device, const frame_composer_info& info, void* native_handle)
@@ -147,4 +147,4 @@ namespace tavros::renderer
         // Do nothing for now
     }
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

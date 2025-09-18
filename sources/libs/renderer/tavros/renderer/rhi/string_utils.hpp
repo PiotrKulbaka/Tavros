@@ -6,7 +6,7 @@
 
 #include <tavros/renderer/rhi/buffer_info.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     constexpr core::string_view to_string(buffer_usage usage)
@@ -37,4 +37,4 @@ namespace tavros::renderer
         }
     }
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

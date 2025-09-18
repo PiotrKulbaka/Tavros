@@ -3,7 +3,7 @@
 #include <tavros/core/types.hpp>
 #include <tavros/renderer/rhi/pixel_format.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -30,4 +30,4 @@ namespace tavros::renderer
         uint32 buffer_count = 3;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

@@ -4,7 +4,7 @@
 #include <tavros/core/containers/sapn.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -53,4 +53,4 @@ namespace tavros::renderer
         core::static_vector<buffer_binding, k_max_shader_buffers> buffer_bindings;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

@@ -3,7 +3,7 @@
 #include <tavros/renderer/rhi/command_list.hpp>
 #include <tavros/renderer/internal/opengl/graphics_device_opengl.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     class command_list_opengl final : public command_list
@@ -40,4 +40,4 @@ namespace tavros::renderer
         GLuint m_resolve_fbo = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

@@ -4,7 +4,7 @@
 #include <tavros/renderer/rhi/pixel_format.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -29,4 +29,4 @@ namespace tavros::renderer
         uint32 sample_count = 1;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

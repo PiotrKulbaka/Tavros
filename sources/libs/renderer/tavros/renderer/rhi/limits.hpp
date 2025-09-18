@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     constexpr uint32 k_max_color_attachments = 8;
@@ -12,4 +12,4 @@ namespace tavros::renderer
     constexpr uint32 k_max_shader_textures = 16;
     constexpr uint32 k_max_shader_buffers = 16;
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

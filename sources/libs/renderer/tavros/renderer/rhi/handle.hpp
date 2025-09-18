@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     template<typename ResourceTag>
@@ -53,4 +53,4 @@ namespace tavros::renderer
     using shader_binding_handle = handle_base<shader_binding_tag>;
     using shader_handle = handle_base<shader_tag>;
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

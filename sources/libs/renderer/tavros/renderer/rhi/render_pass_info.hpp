@@ -4,7 +4,7 @@
 #include <tavros/renderer/rhi/pixel_format.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -91,4 +91,4 @@ namespace tavros::renderer
         depth_stencil_attachment_info depth_stencil_attachment;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

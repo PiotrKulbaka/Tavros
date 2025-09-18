@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -41,4 +41,4 @@ namespace tavros::renderer
         buffer_access access = buffer_access::gpu_only;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

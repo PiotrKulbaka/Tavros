@@ -4,7 +4,7 @@
 #include <tavros/renderer/rhi/command_list.hpp>
 
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -135,4 +135,4 @@ namespace tavros::renderer
         virtual void wait_for_frame_complete() = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

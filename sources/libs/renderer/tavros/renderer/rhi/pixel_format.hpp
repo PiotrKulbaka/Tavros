@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -94,4 +94,4 @@ namespace tavros::renderer
         depth32f_stencil8, /// Packed 32-bit float depth + 8-bit stencil
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

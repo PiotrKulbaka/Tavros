@@ -2,7 +2,7 @@
 
 #include <tavros/renderer/rhi/handle.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     struct texture_copy_region
@@ -54,4 +54,4 @@ namespace tavros::renderer
         virtual void copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, size_t size, size_t dst_offset = 0, size_t src_offset = 0) = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

@@ -4,7 +4,7 @@
 #include <tavros/core/containers/vector.hpp>
 #include <tavros/core/string_view.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -31,4 +31,4 @@ namespace tavros::renderer
         core::string_view entry_point = "main";
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

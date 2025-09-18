@@ -3,7 +3,7 @@
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/renderer/rhi/frame_composer_info.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     class context_opengl
@@ -23,4 +23,4 @@ namespace tavros::renderer
         virtual bool is_current() = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

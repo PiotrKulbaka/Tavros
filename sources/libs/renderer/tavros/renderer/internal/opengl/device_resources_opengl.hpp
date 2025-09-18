@@ -7,7 +7,7 @@
 
 #include <glad/glad.h>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     struct gl_composer
@@ -111,4 +111,4 @@ namespace tavros::renderer
         core::resource_pool<gl_shader>           shaders;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

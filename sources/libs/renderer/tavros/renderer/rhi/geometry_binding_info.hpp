@@ -4,7 +4,7 @@
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -65,4 +65,4 @@ namespace tavros::renderer
         index_buffer_format index_format = index_buffer_format::u16;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

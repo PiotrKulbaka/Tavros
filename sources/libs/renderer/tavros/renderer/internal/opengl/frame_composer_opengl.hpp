@@ -6,7 +6,7 @@
 
 #include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
     class graphics_device_opengl;
 
@@ -54,4 +54,4 @@ namespace tavros::renderer
         core::unique_ptr<command_list_opengl> m_internal_command_list; // Temporary object, will be deleted soon
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

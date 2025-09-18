@@ -3,7 +3,7 @@
 #include <tavros/core/types.hpp>
 #include <tavros/renderer/rhi/compare_op.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -91,4 +91,4 @@ namespace tavros::renderer
         compare_op depth_compare = compare_op::off;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

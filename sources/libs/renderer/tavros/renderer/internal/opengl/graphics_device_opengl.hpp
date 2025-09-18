@@ -3,7 +3,7 @@
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/internal/opengl/device_resources_opengl.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
     class gl_command_list;
 
@@ -83,4 +83,4 @@ namespace tavros::renderer
         device_resources_opengl m_resources;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

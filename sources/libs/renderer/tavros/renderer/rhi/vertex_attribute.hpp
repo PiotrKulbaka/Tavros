@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -40,4 +40,4 @@ namespace tavros::renderer
         uint32 location = 0;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

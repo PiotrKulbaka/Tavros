@@ -6,7 +6,7 @@
 
 #include <Windows.h>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     class context_opengl_win32 : public context_opengl, core::noncopyable, core::nonmovable
@@ -30,4 +30,4 @@ namespace tavros::renderer
         HGLRC m_hGLRC = nullptr; // Handle to the OpenGL context
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

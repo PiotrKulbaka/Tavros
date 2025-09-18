@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -21,4 +21,4 @@ namespace tavros::renderer
         always,        /// Always passes the comparison test
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

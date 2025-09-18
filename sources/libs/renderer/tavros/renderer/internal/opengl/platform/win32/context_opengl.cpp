@@ -9,7 +9,7 @@
 
 #include <glad/glad.h>
 
-using namespace tavros::renderer;
+using namespace tavros::renderer::rhi;
 
 namespace
 {
@@ -48,7 +48,7 @@ namespace
     }
 } // namespace
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     core::unique_ptr<context_opengl> context_opengl::create(const frame_composer_info& info, void* native_handle)
@@ -201,4 +201,4 @@ namespace tavros::renderer
         return _wglGetCurrentContext() == m_hGLRC;
     }
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

@@ -5,7 +5,7 @@
 #include <tavros/core/prelude.hpp>
 
 
-using namespace tavros::renderer;
+using namespace tavros::renderer::rhi;
 
 namespace
 {
@@ -528,7 +528,7 @@ namespace
 
 } // namespace
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     graphics_device_opengl::graphics_device_opengl()
@@ -1494,4 +1494,4 @@ namespace tavros::renderer
         return &m_resources;
     }
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

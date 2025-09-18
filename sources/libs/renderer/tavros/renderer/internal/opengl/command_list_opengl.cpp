@@ -5,7 +5,7 @@
 
 #include <glad/glad.h>
 
-using namespace tavros::renderer;
+using namespace tavros::renderer::rhi;
 
 namespace
 {
@@ -111,17 +111,17 @@ namespace
     GLenum to_gl_topology(primitive_topology topology)
     {
         switch (topology) {
-        case tavros::renderer::primitive_topology::points:
+        case tavros::renderer::rhi::primitive_topology::points:
             return GL_POINTS;
-        case tavros::renderer::primitive_topology::lines:
+        case tavros::renderer::rhi::primitive_topology::lines:
             return GL_LINES;
-        case tavros::renderer::primitive_topology::line_strip:
+        case tavros::renderer::rhi::primitive_topology::line_strip:
             return GL_LINE_STRIP;
-        case tavros::renderer::primitive_topology::triangles:
+        case tavros::renderer::rhi::primitive_topology::triangles:
             return GL_TRIANGLES;
-        case tavros::renderer::primitive_topology::triangle_strip:
+        case tavros::renderer::rhi::primitive_topology::triangle_strip:
             return GL_TRIANGLE_STRIP;
-        case tavros::renderer::primitive_topology::triangle_fan:
+        case tavros::renderer::rhi::primitive_topology::triangle_fan:
             return GL_TRIANGLE_FAN;
         default:
             TAV_UNREACHABLE();
@@ -130,7 +130,7 @@ namespace
 
 } // namespace
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     command_list_opengl::command_list_opengl(graphics_device_opengl* device)
@@ -790,4 +790,4 @@ namespace tavros::renderer
         glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
     }
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

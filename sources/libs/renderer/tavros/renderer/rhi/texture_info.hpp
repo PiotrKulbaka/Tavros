@@ -4,7 +4,7 @@
 #include <tavros/core/flags.hpp>
 #include <tavros/renderer/rhi/pixel_format.hpp>
 
-namespace tavros::renderer
+namespace tavros::renderer::rhi
 {
 
     /**
@@ -69,4 +69,4 @@ namespace tavros::renderer
         uint32 sample_count = 1;
     };
 
-} // namespace tavros::renderer
+} // namespace tavros::renderer::rhi

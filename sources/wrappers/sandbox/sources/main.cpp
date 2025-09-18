@@ -30,6 +30,8 @@
 
 #include <fstream>
 
+namespace rhi = tavros::renderer::rhi;
+
 const char* msaa_vertex_shader_source = R"(
 #version 420 core
 layout (location = 0) in vec3 a_pos;
@@ -509,19 +511,19 @@ int main()
     app->run();
 
 
-    auto gdevice = tavros::core::make_shared<tavros::renderer::graphics_device_opengl>();
+    auto gdevice = tavros::core::make_shared<rhi::graphics_device_opengl>();
 
-    tavros::renderer::frame_composer_info main_composer_info;
+    rhi::frame_composer_info main_composer_info;
     main_composer_info.width = k_initial_window_width;
     main_composer_info.height = k_initial_window_height;
     main_composer_info.buffer_count = 3;
     main_composer_info.vsync = true;
-    main_composer_info.color_attachment_format = tavros::renderer::pixel_format::rgba8un;
-    main_composer_info.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
+    main_composer_info.color_attachment_format = rhi::pixel_format::rgba8un;
+    main_composer_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
 
     auto main_composer_handle = gdevice->create_frame_composer(main_composer_info, wnd->get_handle());
 
-    tavros::renderer::texture_info tex_desc;
+    rhi::texture_info tex_desc;
 
     model_t model;
     if (!load_md3("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.md3", &model)) {
@@ -541,100 +543,100 @@ int main()
     int msaa_level = 16;
 
     // msaa texture
-    tavros::renderer::texture_info msaa_texture_desc;
+    rhi::texture_info msaa_texture_desc;
     msaa_texture_desc.width = k_initial_window_width;
     msaa_texture_desc.height = k_initial_window_height;
-    msaa_texture_desc.format = tavros::renderer::pixel_format::rgba8un;
-    msaa_texture_desc.usage = tavros::renderer::texture_usage::render_target | tavros::renderer::texture_usage::resolve_source;
+    msaa_texture_desc.format = rhi::pixel_format::rgba8un;
+    msaa_texture_desc.usage = rhi::texture_usage::render_target | rhi::texture_usage::resolve_source;
     msaa_texture_desc.sample_count = msaa_level;
     auto msaa_texture = gdevice->create_texture(msaa_texture_desc);
 
     // resolve target texture
-    tavros::renderer::texture_info msaa_resolve_desc;
+    rhi::texture_info msaa_resolve_desc;
     msaa_resolve_desc.width = k_initial_window_width;
     msaa_resolve_desc.height = k_initial_window_height;
-    msaa_resolve_desc.format = tavros::renderer::pixel_format::rgba8un;
-    msaa_resolve_desc.usage = tavros::renderer::texture_usage::sampled | tavros::renderer::texture_usage::resolve_destination;
+    msaa_resolve_desc.format = rhi::pixel_format::rgba8un;
+    msaa_resolve_desc.usage = rhi::texture_usage::sampled | rhi::texture_usage::resolve_destination;
     msaa_resolve_desc.sample_count = 1;
     auto msaa_resolve_texture = gdevice->create_texture(msaa_resolve_desc);
 
     // depth/stencil texture
-    tavros::renderer::texture_info msaa_depth_stencil_desc;
+    rhi::texture_info msaa_depth_stencil_desc;
     msaa_depth_stencil_desc.width = k_initial_window_width;
     msaa_depth_stencil_desc.height = k_initial_window_height;
-    msaa_depth_stencil_desc.format = tavros::renderer::pixel_format::depth24_stencil8;
-    msaa_depth_stencil_desc.usage = tavros::renderer::texture_usage::depth_stencil_target;
+    msaa_depth_stencil_desc.format = rhi::pixel_format::depth24_stencil8;
+    msaa_depth_stencil_desc.usage = rhi::texture_usage::depth_stencil_target;
     msaa_depth_stencil_desc.sample_count = msaa_level;
     auto msaa_depth_stencil_texture = gdevice->create_texture(msaa_depth_stencil_desc);
 
     // msaa framebuffer
-    tavros::renderer::framebuffer_info msaa_framebuffer_info;
+    rhi::framebuffer_info msaa_framebuffer_info;
     msaa_framebuffer_info.width = k_initial_window_width;
     msaa_framebuffer_info.height = k_initial_window_height;
-    msaa_framebuffer_info.color_attachment_formats.push_back(tavros::renderer::pixel_format::rgba8un);
-    msaa_framebuffer_info.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
+    msaa_framebuffer_info.color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
+    msaa_framebuffer_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
     msaa_framebuffer_info.sample_count = msaa_level;
-    tavros::renderer::texture_handle msaa_attachments[] = {msaa_texture};
-    auto                             msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_info, msaa_attachments, msaa_depth_stencil_texture);
+    rhi::texture_handle msaa_attachments[] = {msaa_texture};
+    auto                msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_info, msaa_attachments, msaa_depth_stencil_texture);
 
 
-    tavros::renderer::render_pass_info msaa_render_pass;
-    msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, static_cast<uint32>(msaa_level), tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 0, {0.1f, 0.1f, 0.1f, 1.0f}});
-    msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0};
-    tavros::renderer::texture_handle msaa_resolve_attachments[] = {msaa_resolve_texture};
-    auto                             msaa_pass = gdevice->create_render_pass(msaa_render_pass, msaa_resolve_attachments);
+    rhi::render_pass_info msaa_render_pass;
+    msaa_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, static_cast<uint32>(msaa_level), rhi::load_op::clear, rhi::store_op::resolve, 0, {0.1f, 0.1f, 0.1f, 1.0f}});
+    msaa_render_pass.depth_stencil_attachment = {rhi::pixel_format::depth24_stencil8, rhi::load_op::clear, rhi::store_op::dont_care, 1.0f, rhi::load_op::clear, rhi::store_op::dont_care, 0};
+    rhi::texture_handle msaa_resolve_attachments[] = {msaa_resolve_texture};
+    auto                msaa_pass = gdevice->create_render_pass(msaa_render_pass, msaa_resolve_attachments);
 
-    tavros::renderer::render_pass_info main_render_pass;
-    main_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, 1, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0, {0.1f, 0.1f, 0.4f, 1.0f}});
-    main_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 0};
+    rhi::render_pass_info main_render_pass;
+    main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, 1, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.1f, 0.1f, 0.4f, 1.0f}});
+    main_render_pass.depth_stencil_attachment = {rhi::pixel_format::depth24_stencil8, rhi::load_op::dont_care, rhi::store_op::dont_care, 1.0f, rhi::load_op::dont_care, rhi::store_op::dont_care, 0};
     auto main_pass = gdevice->create_render_pass(main_render_pass);
 
 
-    tavros::renderer::sampler_info sampler_info;
-    sampler_info.filter.mipmap_filter = tavros::renderer::mipmap_filter_mode::off;
-    sampler_info.filter.min_filter = tavros::renderer::filter_mode::linear;
-    sampler_info.filter.mag_filter = tavros::renderer::filter_mode::linear;
+    rhi::sampler_info sampler_info;
+    sampler_info.filter.mipmap_filter = rhi::mipmap_filter_mode::off;
+    sampler_info.filter.min_filter = rhi::filter_mode::linear;
+    sampler_info.filter.mag_filter = rhi::filter_mode::linear;
 
     auto sampler1 = gdevice->create_sampler(sampler_info);
 
 
-    auto msaa_vertex_shader = gdevice->create_shader({msaa_vertex_shader_source, tavros::renderer::shader_stage::vertex, "main"});
-    auto msaa_fragment_shader = gdevice->create_shader({msaa_fragment_shader_source, tavros::renderer::shader_stage::fragment, "main"});
+    auto msaa_vertex_shader = gdevice->create_shader({msaa_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+    auto msaa_fragment_shader = gdevice->create_shader({msaa_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
 
-    tavros::renderer::pipeline_info msaa_pipeline_info;
-    msaa_pipeline_info.shaders.push_back({tavros::renderer::shader_stage::vertex, "main"});
-    msaa_pipeline_info.shaders.push_back({tavros::renderer::shader_stage::fragment, "main"});
+    rhi::pipeline_info msaa_pipeline_info;
+    msaa_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
+    msaa_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
     msaa_pipeline_info.depth_stencil.depth_test_enable = true;
     msaa_pipeline_info.depth_stencil.depth_write_enable = true;
-    msaa_pipeline_info.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
-    msaa_pipeline_info.rasterizer.cull = tavros::renderer::cull_face::off;
-    msaa_pipeline_info.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
-    msaa_pipeline_info.topology = tavros::renderer::primitive_topology::triangles;
+    msaa_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
+    msaa_pipeline_info.rasterizer.cull = rhi::cull_face::off;
+    msaa_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
+    msaa_pipeline_info.topology = rhi::primitive_topology::triangles;
 
-    tavros::renderer::shader_handle msaa_shaders[] = {msaa_vertex_shader, msaa_fragment_shader};
-    auto                            msaa_pipeline = gdevice->create_pipeline(msaa_pipeline_info, msaa_shaders);
+    rhi::shader_handle msaa_shaders[] = {msaa_vertex_shader, msaa_fragment_shader};
+    auto               msaa_pipeline = gdevice->create_pipeline(msaa_pipeline_info, msaa_shaders);
 
 
-    auto fullscreen_quad_vertex_shader = gdevice->create_shader({fullscreen_quad_vertex_shader_source, tavros::renderer::shader_stage::vertex, "main"});
-    auto fullscreen_quad_fragment_shader = gdevice->create_shader({fullscreen_quad_fragment_shader_source, tavros::renderer::shader_stage::fragment, "main"});
+    auto fullscreen_quad_vertex_shader = gdevice->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+    auto fullscreen_quad_fragment_shader = gdevice->create_shader({fullscreen_quad_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
-    tavros::renderer::pipeline_info main_pipeline_info;
-    main_pipeline_info.shaders.push_back({tavros::renderer::shader_stage::vertex, "main"});
-    main_pipeline_info.shaders.push_back({tavros::renderer::shader_stage::fragment, "main"});
+    rhi::pipeline_info main_pipeline_info;
+    main_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
+    main_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
     main_pipeline_info.depth_stencil.depth_test_enable = false;
     main_pipeline_info.depth_stencil.depth_write_enable = false;
-    main_pipeline_info.depth_stencil.depth_compare = tavros::renderer::compare_op::less;
-    main_pipeline_info.rasterizer.cull = tavros::renderer::cull_face::off;
-    main_pipeline_info.rasterizer.polygon = tavros::renderer::polygon_mode::fill;
-    main_pipeline_info.topology = tavros::renderer::primitive_topology::triangle_strip;
+    main_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
+    main_pipeline_info.rasterizer.cull = rhi::cull_face::off;
+    main_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
+    main_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
 
-    tavros::renderer::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
-    auto                            main_pipeline = gdevice->create_pipeline(main_pipeline_info, fullscreen_quad_shaders);
+    rhi::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
+    auto               main_pipeline = gdevice->create_pipeline(main_pipeline_info, fullscreen_quad_shaders);
 
-    tavros::renderer::buffer_info stage_buffer_info;
+    rhi::buffer_info stage_buffer_info;
     stage_buffer_info.size = 1024 * 1024; // 1 Mb
-    stage_buffer_info.access = tavros::renderer::buffer_access::cpu_to_gpu;
+    stage_buffer_info.access = rhi::buffer_access::cpu_to_gpu;
     auto stage_buffer = gdevice->create_buffer(stage_buffer_info);
 
     auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
@@ -662,37 +664,37 @@ int main()
 
 
     // Make vertices buffer
-    tavros::renderer::buffer_info xyz_normal_uv_info;
+    rhi::buffer_info xyz_normal_uv_info;
     xyz_normal_uv_info.size = 1024 * 1024; // 1 Mb
-    xyz_normal_uv_info.usage = tavros::renderer::buffer_usage::vertex;
-    xyz_normal_uv_info.access = tavros::renderer::buffer_access::gpu_only;
+    xyz_normal_uv_info.usage = rhi::buffer_usage::vertex;
+    xyz_normal_uv_info.access = rhi::buffer_access::gpu_only;
     auto buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
 
     cbuf->copy_buffer(buffer_xyz_normal_uv, stage_buffer, xyz_size + norm_size + uv_size, 0, 0);
 
 
-    tavros::renderer::buffer_info indices_desc;
+    rhi::buffer_info indices_desc;
     indices_desc.size = 1024 * 128; // 128 Kb
-    indices_desc.usage = tavros::renderer::buffer_usage::index;
+    indices_desc.usage = rhi::buffer_usage::index;
     auto buffer_indices = gdevice->create_buffer(indices_desc);
 
     cbuf->copy_buffer(buffer_indices, stage_buffer, indices_size, 0, indices_offset);
 
 
-    tavros::renderer::geometry_binding_info gbi;
+    rhi::geometry_binding_info gbi;
     gbi.buffer_layouts.push_back({0, xyz_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, norm_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, uv_offset, 4 * 2});
 
-    gbi.attribute_bindings.push_back({0, 0, 3, tavros::renderer::attribute_format::f32, false, 0});
-    gbi.attribute_bindings.push_back({1, 0, 3, tavros::renderer::attribute_format::f32, false, 1});
-    gbi.attribute_bindings.push_back({2, 0, 2, tavros::renderer::attribute_format::f32, false, 2});
+    gbi.attribute_bindings.push_back({0, 0, 3, rhi::attribute_format::f32, false, 0});
+    gbi.attribute_bindings.push_back({1, 0, 3, rhi::attribute_format::f32, false, 1});
+    gbi.attribute_bindings.push_back({2, 0, 2, rhi::attribute_format::f32, false, 2});
 
     gbi.has_index_buffer = true;
-    gbi.index_format = tavros::renderer::index_buffer_format::u32;
+    gbi.index_format = rhi::index_buffer_format::u32;
 
-    tavros::renderer::buffer_handle buffers_to_binding[] = {buffer_xyz_normal_uv};
-    auto                            geometry1 = gdevice->create_geometry(gbi, buffers_to_binding, buffer_indices);
+    rhi::buffer_handle buffers_to_binding[] = {buffer_xyz_normal_uv};
+    auto               geometry1 = gdevice->create_geometry(gbi, buffers_to_binding, buffer_indices);
 
 
     composer->submit_command_list(cbuf);
@@ -705,8 +707,8 @@ int main()
     float sun_angle = 0.0f;
 
 
-    tavros::renderer::buffer_info uniform_buffer_desc{1024, tavros::renderer::buffer_usage::uniform, tavros::renderer::buffer_access::gpu_only};
-    auto                          uniform_buffer = gdevice->create_buffer(uniform_buffer_desc);
+    rhi::buffer_info uniform_buffer_desc{1024, rhi::buffer_usage::uniform, rhi::buffer_access::gpu_only};
+    auto             uniform_buffer = gdevice->create_buffer(uniform_buffer_desc);
 
 
     struct camera_shader_t
@@ -729,23 +731,23 @@ int main()
     };
 
 
-    tavros::renderer::shader_binding_info shader_binding_info;
+    rhi::shader_binding_info shader_binding_info;
     shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(camera_shader_t), 0});
     shader_binding_info.buffer_bindings.push_back({0, 256, sizeof(scene_shader_t), 1});
     shader_binding_info.texture_bindings.push_back({0, 0, 0});
 
-    tavros::renderer::texture_handle textures_to_binding[] = {tex1};
-    tavros::renderer::sampler_handle samplers_to_binding[] = {sampler1};
-    tavros::renderer::buffer_handle  ubo_buffers_to_binding[] = {uniform_buffer};
+    rhi::texture_handle textures_to_binding[] = {tex1};
+    rhi::sampler_handle samplers_to_binding[] = {sampler1};
+    rhi::buffer_handle  ubo_buffers_to_binding[] = {uniform_buffer};
 
     auto shader_binding = gdevice->create_shader_binding(shader_binding_info, textures_to_binding, samplers_to_binding, ubo_buffers_to_binding);
 
 
-    tavros::renderer::shader_binding_info fullstreen_shader_binding_info;
+    rhi::shader_binding_info fullstreen_shader_binding_info;
     fullstreen_shader_binding_info.texture_bindings.push_back({0, 0, 0});
 
-    tavros::renderer::texture_handle textures_to_binding_main[] = {msaa_resolve_texture};
-    tavros::renderer::sampler_handle samplers_to_binding_main[] = {sampler1};
+    rhi::texture_handle textures_to_binding_main[] = {msaa_resolve_texture};
+    rhi::sampler_handle samplers_to_binding_main[] = {sampler1};
 
     auto fullstreen_shader_binding = gdevice->create_shader_binding(fullstreen_shader_binding_info, textures_to_binding_main, samplers_to_binding_main, {});
 
