@@ -51,34 +51,34 @@ namespace
 namespace tavros::renderer
 {
 
-    core::unique_ptr<context_opengl> context_opengl::create(const frame_composer_desc& desc, void* native_handle)
+    core::unique_ptr<context_opengl> context_opengl::create(const frame_composer_info& info, void* native_handle)
     {
         // Validate the swapchain desc
         // Validate width and height
-        if (desc.width == 0 || desc.height == 0) {
+        if (info.width == 0 || info.height == 0) {
             ::logger.error("Swapchain width and height must be greater than zero.");
             return nullptr;
         }
 
         // Validate buffer count
-        if (desc.buffer_count == 0) {
+        if (info.buffer_count == 0) {
             ::logger.error("Swapchain buffer count must be greater than zero.");
             return nullptr;
         }
 
-        if (desc.buffer_count != 2 && desc.buffer_count != 3) {
+        if (info.buffer_count != 2 && info.buffer_count != 3) {
             ::logger.error("Swapchain buffer count must be 2 or 3.");
             return nullptr;
         }
 
         // Validate color attachment
-        if (desc.color_attachment_format != pixel_format::rgba8un) {
+        if (info.color_attachment_format != pixel_format::rgba8un) {
             ::logger.error("Swapchain color attachment format must be rgba8un.");
             return nullptr;
         }
 
         // Validate depth/stencil attachment
-        if (desc.depth_stencil_attachment_format != pixel_format::depth24_stencil8 && desc.depth_stencil_attachment_format != pixel_format::none) {
+        if (info.depth_stencil_attachment_format != pixel_format::depth24_stencil8 && info.depth_stencil_attachment_format != pixel_format::none) {
             ::logger.error("Swapchain depth/stencil attachment format must be depth24stencil8 or none.");
             return nullptr;
         }
@@ -103,8 +103,8 @@ namespace tavros::renderer
         pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
         pfd.iPixelType = PFD_TYPE_RGBA;
         pfd.cColorBits = 32;
-        pfd.cDepthBits = desc.depth_stencil_attachment_format == pixel_format::depth24_stencil8 ? 24 : 0;
-        pfd.cStencilBits = desc.depth_stencil_attachment_format == pixel_format::depth24_stencil8 ? 8 : 0;
+        pfd.cDepthBits = info.depth_stencil_attachment_format == pixel_format::depth24_stencil8 ? 24 : 0;
+        pfd.cStencilBits = info.depth_stencil_attachment_format == pixel_format::depth24_stencil8 ? 8 : 0;
         pfd.iLayerType = PFD_MAIN_PLANE;
 
         int32 pixel_format = ChoosePixelFormat(hDC, &pfd);

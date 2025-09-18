@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/memory/memory.hpp>
-#include <tavros/renderer/rhi/frame_composer_desc.hpp>
+#include <tavros/renderer/rhi/frame_composer_info.hpp>
 
 namespace tavros::renderer
 {
@@ -9,7 +9,7 @@ namespace tavros::renderer
     class context_opengl
     {
     public:
-        static core::unique_ptr<context_opengl> create(const frame_composer_desc& desc, void* native_handle);
+        static core::unique_ptr<context_opengl> create(const frame_composer_info& info, void* native_handle);
 
     public:
         virtual ~context_opengl() = default;

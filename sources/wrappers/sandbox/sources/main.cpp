@@ -511,15 +511,15 @@ int main()
 
     auto gdevice = tavros::core::make_shared<tavros::renderer::graphics_device_opengl>();
 
-    tavros::renderer::frame_composer_desc main_composer_desc;
-    main_composer_desc.width = k_initial_window_width;
-    main_composer_desc.height = k_initial_window_height;
-    main_composer_desc.buffer_count = 3;
-    main_composer_desc.vsync = true;
-    main_composer_desc.color_attachment_format = tavros::renderer::pixel_format::rgba8un;
-    main_composer_desc.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
+    tavros::renderer::frame_composer_info main_composer_info;
+    main_composer_info.width = k_initial_window_width;
+    main_composer_info.height = k_initial_window_height;
+    main_composer_info.buffer_count = 3;
+    main_composer_info.vsync = true;
+    main_composer_info.color_attachment_format = tavros::renderer::pixel_format::rgba8un;
+    main_composer_info.depth_stencil_attachment_format = tavros::renderer::pixel_format::depth24_stencil8;
 
-    auto main_composer_handle = gdevice->create_frame_composer(main_composer_desc, wnd->get_handle());
+    auto main_composer_handle = gdevice->create_frame_composer(main_composer_info, wnd->get_handle());
 
     tavros::renderer::texture_info tex_desc;
 

@@ -4,7 +4,7 @@
 #include <tavros/core/optional.hpp>
 
 #include <tavros/renderer/rhi/handle.hpp>
-#include <tavros/renderer/rhi/frame_composer_desc.hpp>
+#include <tavros/renderer/rhi/frame_composer_info.hpp>
 #include <tavros/renderer/rhi/sampler_info.hpp>
 #include <tavros/renderer/rhi/texture_info.hpp>
 #include <tavros/renderer/rhi/pipeline_info.hpp>
@@ -26,7 +26,7 @@ namespace tavros::renderer
         virtual ~graphics_device() = default;
 
         virtual frame_composer_handle create_frame_composer(
-            const frame_composer_desc& desc,
+            const frame_composer_info& info,
             void*                      native_handle
         ) = 0;
         virtual void destroy_frame_composer(frame_composer_handle composer) = 0;

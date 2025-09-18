@@ -12,7 +12,7 @@ namespace tavros::renderer
 
     struct gl_composer
     {
-        frame_composer_desc              desc;
+        frame_composer_info              info;
         core::unique_ptr<frame_composer> composer_ptr;
         void*                            native_handle = nullptr;
     };

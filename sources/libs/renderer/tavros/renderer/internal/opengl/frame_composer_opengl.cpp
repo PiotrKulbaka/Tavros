@@ -13,42 +13,42 @@ namespace
 namespace tavros::renderer
 {
 
-    core::unique_ptr<frame_composer> frame_composer_opengl::create(graphics_device_opengl* device, const frame_composer_desc& desc, void* native_handle)
+    core::unique_ptr<frame_composer> frame_composer_opengl::create(graphics_device_opengl* device, const frame_composer_info& info, void* native_handle)
     {
         TAV_ASSERT(device);
 
+        // Validate the frame composer size
+        if (info.width == 0 || info.height == 0) {
+            ::logger.error("Frame composer width and height must be greater than zero.");
+            return nullptr;
+        }
+
         // Try to create the context first
-        auto context = context_opengl::create(desc, native_handle);
+        auto context = context_opengl::create(info, native_handle);
         if (!context) {
             ::logger.error("Context creation failed");
             return nullptr;
         }
 
-        // Validate the frame composer size
-        if (desc.width == 0 || desc.height == 0) {
-            ::logger.error("Frame composer width and height must be greater than zero.");
-            return nullptr;
-        }
-
         // Everything is ok, so create the frame composer
-        return core::make_unique<frame_composer_opengl>(device, std::move(context), desc);
+        return core::make_unique<frame_composer_opengl>(device, std::move(context), info);
     }
 
-    frame_composer_opengl::frame_composer_opengl(graphics_device_opengl* device, core::unique_ptr<context_opengl> context, const frame_composer_desc& desc)
+    frame_composer_opengl::frame_composer_opengl(graphics_device_opengl* device, core::unique_ptr<context_opengl> context, const frame_composer_info& info)
         : m_device(device)
         , m_context(std::move(context))
-        , m_desc(desc)
+        , m_info(info)
     {
         TAV_ASSERT(m_context);
         TAV_ASSERT(m_device);
-        TAV_ASSERT(desc.width > 0 && desc.height > 0);
+        TAV_ASSERT(info.width > 0 && info.height > 0);
 
         // Create default backbuffer
         framebuffer_info backbuffer_info;
-        backbuffer_info.width = desc.width;
-        backbuffer_info.height = desc.height;
-        backbuffer_info.color_attachment_formats.push_back(desc.color_attachment_format);
-        backbuffer_info.depth_stencil_attachment_format = desc.depth_stencil_attachment_format;
+        backbuffer_info.width = info.width;
+        backbuffer_info.height = info.height;
+        backbuffer_info.color_attachment_formats.push_back(info.color_attachment_format);
+        backbuffer_info.depth_stencil_attachment_format = info.depth_stencil_attachment_format;
         backbuffer_info.sample_count = 1; // For backbuffer, sample count must be 1
 
         m_internal_command_list = core::make_unique<command_list_opengl>(device);
@@ -77,8 +77,8 @@ namespace tavros::renderer
         auto h = height > 0 ? height : 1;
 
         // Update frame composer size
-        m_desc.width = w;
-        m_desc.height = h;
+        m_info.width = w;
+        m_info.height = h;
 
         // Update framebuffer size
         if (auto* desc = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
@@ -91,12 +91,12 @@ namespace tavros::renderer
 
     uint32 frame_composer_opengl::width() const noexcept
     {
-        return m_desc.width;
+        return m_info.width;
     }
 
     uint32 frame_composer_opengl::height() const noexcept
     {
-        return m_desc.height;
+        return m_info.height;
     }
 
     framebuffer_handle frame_composer_opengl::backbuffer() const noexcept

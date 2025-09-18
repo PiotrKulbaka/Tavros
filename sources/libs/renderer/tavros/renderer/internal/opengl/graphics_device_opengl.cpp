@@ -574,7 +574,7 @@ namespace tavros::renderer
         });
     }
 
-    frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_desc& desc, void* native_handle)
+    frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_info& info, void* native_handle)
     {
         // Check if frame composer with native handle already created
         for (auto& sc : m_resources.composers) {
@@ -585,7 +585,7 @@ namespace tavros::renderer
         }
 
         // Create a new frame composer
-        auto composer = frame_composer_opengl::create(this, desc, native_handle);
+        auto composer = frame_composer_opengl::create(this, info, native_handle);
 
         if (!composer) {
             ::logger.error("Frame composer creation failed");
@@ -596,7 +596,7 @@ namespace tavros::renderer
         // the first call of frame_composer_opengl::create() will create the context
         init_gl_debug();
 
-        frame_composer_handle handle = {m_resources.composers.insert({desc, std::move(composer), native_handle})};
+        frame_composer_handle handle = {m_resources.composers.insert({info, std::move(composer), native_handle})};
         ::logger.debug("Frame composer with id %u created", handle.id);
         return handle;
     }

@@ -14,10 +14,10 @@ namespace tavros::renderer
     class frame_composer_opengl : public frame_composer
     {
     public:
-        static core::unique_ptr<frame_composer> create(graphics_device_opengl* device, const frame_composer_desc& desc, void* native_handle);
+        static core::unique_ptr<frame_composer> create(graphics_device_opengl* device, const frame_composer_info& info, void* native_handle);
 
     public:
-        frame_composer_opengl(graphics_device_opengl* device, core::unique_ptr<context_opengl> context, const frame_composer_desc& desc);
+        frame_composer_opengl(graphics_device_opengl* device, core::unique_ptr<context_opengl> context, const frame_composer_info& info);
 
         ~frame_composer_opengl() override;
 
@@ -46,7 +46,7 @@ namespace tavros::renderer
     private:
         graphics_device_opengl*          m_device;
         core::unique_ptr<context_opengl> m_context;
-        frame_composer_desc              m_desc;
+        frame_composer_info              m_info;
         framebuffer_handle               m_backbuffer;
 
         bool m_frame_started = false;
