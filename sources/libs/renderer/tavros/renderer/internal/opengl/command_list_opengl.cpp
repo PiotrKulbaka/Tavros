@@ -351,28 +351,28 @@ namespace tavros::renderer
         }
 
         // Validate color attachments size
-        if (rp->desc.color_attachments.size() != fb->info.color_attachment_formats.size()) {
+        if (rp->info.color_attachments.size() != fb->info.color_attachment_formats.size()) {
             ::logger.error("Mismatched number of color attachments for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
             return;
         }
 
         // Validate color attachments format
-        for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
-            auto rp_color_format = rp->desc.color_attachments[i].format;
+        for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
+            auto rp_color_format = rp->info.color_attachments[i].format;
             auto fb_color_format = fb->info.color_attachment_formats[i];
             if (rp_color_format != fb_color_format) {
                 ::logger.error("Mismatched color attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
                 return;
             }
-            if (rp->desc.color_attachments[i].sample_count != fb->info.sample_count) {
+            if (rp->info.color_attachments[i].sample_count != fb->info.sample_count) {
                 ::logger.error("Mismatched color attachment sample count for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
                 return;
             }
         }
 
         // Validate resolve attachments
-        for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
-            auto& attachment = rp->desc.color_attachments[i];
+        for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
+            auto& attachment = rp->info.color_attachments[i];
             if (attachment.store == store_op::resolve) {
                 auto resolve_attachment_index = attachment.resolve_texture_index;
                 // Validate resolve target index
@@ -381,7 +381,7 @@ namespace tavros::renderer
                     return;
                 }
                 // Validate that the resolve target attachment format matches
-                auto resolve_target_format = rp->desc.color_attachments[resolve_attachment_index].format;
+                auto resolve_target_format = rp->info.color_attachments[resolve_attachment_index].format;
                 if (attachment.format != resolve_target_format) {
                     ::logger.error("Mismatched resolve target attachment format for render pass with id `%u`", render_pass.id);
                     return;
@@ -412,7 +412,7 @@ namespace tavros::renderer
         }
 
         // Validate depth/stencil attachment format
-        if (rp->desc.depth_stencil_attachment.format != fb->info.depth_stencil_attachment_format) {
+        if (rp->info.depth_stencil_attachment.format != fb->info.depth_stencil_attachment_format) {
             ::logger.error("Mismatched depth/stencil attachment format for render pass with id `%u` and framebuffer with id `%u`", render_pass.id, framebuffer.id);
             return;
         }
@@ -420,7 +420,7 @@ namespace tavros::renderer
         // bind framebuffer
         if (fb->is_default) {
             TAV_ASSERT(fb->framebuffer_obj == 0);
-            TAV_ASSERT(rp->desc.color_attachments.size() == 1);
+            TAV_ASSERT(rp->info.color_attachments.size() == 1);
 
             glBindFramebuffer(GL_FRAMEBUFFER, 0);
         } else {
@@ -440,22 +440,22 @@ namespace tavros::renderer
         if (fb->is_default) {
             GLbitfield clear_mask = 0;
             // Clear for color buffer
-            if (rp->desc.color_attachments[0].load == load_op::clear) {
+            if (rp->info.color_attachments[0].load == load_op::clear) {
                 clear_mask |= GL_COLOR_BUFFER_BIT;
-                auto color = rp->desc.color_attachments[0].clear_value;
+                auto color = rp->info.color_attachments[0].clear_value;
                 glClearColor(color[0], color[1], color[2], color[3]);
             }
 
-            if (rp->desc.depth_stencil_attachment.format != pixel_format::none) {
+            if (rp->info.depth_stencil_attachment.format != pixel_format::none) {
                 // Clear for depth buffer
-                if (rp->desc.depth_stencil_attachment.depth_load == load_op::clear) {
+                if (rp->info.depth_stencil_attachment.depth_load == load_op::clear) {
                     clear_mask |= GL_DEPTH_BUFFER_BIT;
-                    glClearDepth(rp->desc.depth_stencil_attachment.depth_clear_value);
+                    glClearDepth(rp->info.depth_stencil_attachment.depth_clear_value);
                 }
                 // Clear for stencil buffer
-                if (rp->desc.depth_stencil_attachment.stencil_load == load_op::clear) {
+                if (rp->info.depth_stencil_attachment.stencil_load == load_op::clear) {
                     clear_mask |= GL_STENCIL_BUFFER_BIT;
-                    glClearStencil(rp->desc.depth_stencil_attachment.stencil_clear_value);
+                    glClearStencil(rp->info.depth_stencil_attachment.stencil_clear_value);
                 }
             }
 
@@ -471,7 +471,7 @@ namespace tavros::renderer
                 if (auto* tex = m_device->get_resources()->textures.try_get(attachment_handle.id)) {
                     // If texture has the same sample count with framebuffer, then this texture is attachment texture
                     if (tex->desc.sample_count == fb->info.sample_count) {
-                        auto& rp_color_attachment = rp->desc.color_attachments[i];
+                        auto& rp_color_attachment = rp->info.color_attachments[i];
 
                         // Apply load operation (only clear)
                         // Any other load operation doesn't need to be applied
@@ -487,8 +487,8 @@ namespace tavros::renderer
             }
 
             // Apply load operations to depth/stencil attachment
-            if (rp->desc.depth_stencil_attachment.format != pixel_format::none) {
-                auto& rp_depth_stencil_attachment = rp->desc.depth_stencil_attachment;
+            if (rp->info.depth_stencil_attachment.format != pixel_format::none) {
+                auto& rp_depth_stencil_attachment = rp->info.depth_stencil_attachment;
 
                 // Apply load operation to depth component
                 if (rp_depth_stencil_attachment.depth_load == load_op::clear) {
@@ -526,7 +526,7 @@ namespace tavros::renderer
         }
 
         if (fb->is_default) {
-            TAV_ASSERT(rp->desc.color_attachments[0].store != store_op::resolve);
+            TAV_ASSERT(rp->info.color_attachments[0].store != store_op::resolve);
         } else {
             // Collect resolve attachments
             struct blit_info
@@ -537,8 +537,8 @@ namespace tavros::renderer
             };
             core::static_vector<blit_info, k_max_color_attachments> blit_data;
             GLuint                                                  attachment_index = 0;
-            for (uint32 i = 0; i < rp->desc.color_attachments.size(); ++i) {
-                auto& rp_color_attachment = rp->desc.color_attachments[i];
+            for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
+                auto& rp_color_attachment = rp->info.color_attachments[i];
                 auto* source_tex = m_device->get_resources()->textures.try_get(fb->color_attachments[i].id);
                 TAV_ASSERT(source_tex);
 
@@ -567,10 +567,10 @@ namespace tavros::renderer
 
             // Blit mask for depth/stencil attachment
             GLbitfield depth_stencil_blit_mask = 0;
-            if (rp->desc.depth_stencil_attachment.depth_store == store_op::resolve) {
+            if (rp->info.depth_stencil_attachment.depth_store == store_op::resolve) {
                 depth_stencil_blit_mask |= GL_DEPTH_BUFFER_BIT;
             }
-            if (rp->desc.depth_stencil_attachment.stencil_store == store_op::resolve) {
+            if (rp->info.depth_stencil_attachment.stencil_store == store_op::resolve) {
                 depth_stencil_blit_mask |= GL_STENCIL_BUFFER_BIT;
             }
 

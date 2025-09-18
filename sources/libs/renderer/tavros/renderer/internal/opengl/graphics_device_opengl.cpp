@@ -1325,12 +1325,12 @@ namespace tavros::renderer
     }
 
     render_pass_handle graphics_device_opengl::create_render_pass(
-        const render_pass_desc&                desc,
+        const render_pass_info&                info,
         const core::span<const texture_handle> resolve_textures
     )
     {
         // Validate attachments
-        for (const auto& attachment : desc.color_attachments) {
+        for (const auto& attachment : info.color_attachments) {
             if (!is_color_fromat(attachment.format)) {
                 ::logger.error("Invalid color attachment format");
                 return {0};
@@ -1338,16 +1338,16 @@ namespace tavros::renderer
         }
 
         // Validate depth/stencil attachment
-        auto depth_stencil_is_none = desc.depth_stencil_attachment.format == pixel_format::none;
+        auto depth_stencil_is_none = info.depth_stencil_attachment.format == pixel_format::none;
         if (!depth_stencil_is_none) {
-            auto f = to_depth_stencil_fromat(desc.depth_stencil_attachment.format);
+            auto f = to_depth_stencil_fromat(info.depth_stencil_attachment.format);
             if (!f.is_depth_stencil_format) {
                 ::logger.error("Invalid depth/stencil attachment format");
                 return {0};
             }
         }
 
-        if (desc.color_attachments.size() == 0 && depth_stencil_is_none) {
+        if (info.color_attachments.size() == 0 && depth_stencil_is_none) {
             ::logger.error("Render pass has no attachments");
             return {0};
         }
@@ -1355,9 +1355,9 @@ namespace tavros::renderer
         // Validate resolve attachments
         bool   is_used_for_resolve[k_max_color_attachments] = {false};
         uint32 need_resolve_textures_number = 0;
-        for (auto i = 0; i < desc.color_attachments.size(); ++i) {
-            auto& attachment = desc.color_attachments[i];
-            if (desc.color_attachments[i].store == store_op::resolve) {
+        for (auto i = 0; i < info.color_attachments.size(); ++i) {
+            auto& attachment = info.color_attachments[i];
+            if (info.color_attachments[i].store == store_op::resolve) {
                 auto resolve_index = attachment.resolve_texture_index;
                 // First of all, validate that resolve index is valid
                 if (resolve_index >= resolve_textures.size()) {
@@ -1405,7 +1405,7 @@ namespace tavros::renderer
             resolve_attachments_handles.push_back(resolve_textures[i]);
         }
 
-        render_pass_handle handle = {m_resources.render_passes.insert({desc, resolve_attachments_handles})};
+        render_pass_handle handle = {m_resources.render_passes.insert({info, resolve_attachments_handles})};
         ::logger.debug("Render pass with id %u created", handle.id);
         return handle;
     }

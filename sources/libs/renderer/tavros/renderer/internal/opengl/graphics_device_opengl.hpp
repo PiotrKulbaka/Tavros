@@ -63,7 +63,7 @@ namespace tavros::renderer
         void destroy_geometry(geometry_binding_handle geometry_binding) override;
 
         render_pass_handle create_render_pass(
-            const render_pass_desc&                desc,
+            const render_pass_info&                info,
             const core::span<const texture_handle> resolve_textures = core::span<const texture_handle>()
         ) override;
         void destroy_render_pass(render_pass_handle render_pass) override;

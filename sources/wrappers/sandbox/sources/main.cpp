@@ -580,13 +580,13 @@ int main()
     auto                             msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_info, msaa_attachments, msaa_depth_stencil_texture);
 
 
-    tavros::renderer::render_pass_desc msaa_render_pass;
+    tavros::renderer::render_pass_info msaa_render_pass;
     msaa_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, static_cast<uint32>(msaa_level), tavros::renderer::load_op::clear, tavros::renderer::store_op::resolve, 0, {0.1f, 0.1f, 0.1f, 1.0f}});
     msaa_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0};
     tavros::renderer::texture_handle msaa_resolve_attachments[] = {msaa_resolve_texture};
     auto                             msaa_pass = gdevice->create_render_pass(msaa_render_pass, msaa_resolve_attachments);
 
-    tavros::renderer::render_pass_desc main_render_pass;
+    tavros::renderer::render_pass_info main_render_pass;
     main_render_pass.color_attachments.push_back({tavros::renderer::pixel_format::rgba8un, 1, tavros::renderer::load_op::clear, tavros::renderer::store_op::dont_care, 0, {0.1f, 0.1f, 0.4f, 1.0f}});
     main_render_pass.depth_stencil_attachment = {tavros::renderer::pixel_format::depth24_stencil8, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 1.0f, tavros::renderer::load_op::dont_care, tavros::renderer::store_op::dont_care, 0};
     auto main_pass = gdevice->create_render_pass(main_render_pass);

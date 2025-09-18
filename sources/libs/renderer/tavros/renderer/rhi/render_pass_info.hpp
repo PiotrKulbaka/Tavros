@@ -82,7 +82,7 @@ namespace tavros::renderer
     /**
      * Describes a complete render pass configuration
      */
-    struct render_pass_desc
+    struct render_pass_info
     {
         /// List of color attachments. The order matches the layout in the framebuffer
         core::static_vector<color_attachment_info, k_max_color_attachments> color_attachments;

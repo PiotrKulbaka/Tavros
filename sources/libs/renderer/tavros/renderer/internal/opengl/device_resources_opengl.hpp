@@ -62,7 +62,7 @@ namespace tavros::renderer
 
     struct gl_render_pass
     {
-        render_pass_desc                                             desc;
+        render_pass_info                                             info;
         core::static_vector<texture_handle, k_max_color_attachments> resolve_attachments;
     };
 
