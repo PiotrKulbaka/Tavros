@@ -1139,16 +1139,16 @@ namespace tavros::renderer
         }
     }
 
-    buffer_handle graphics_device_opengl::create_buffer(const buffer_desc& desc)
+    buffer_handle graphics_device_opengl::create_buffer(const buffer_info& info)
     {
         GLenum gl_target = 0;
         GLenum gl_usage = 0;
 
-        if (desc.access == buffer_access::cpu_to_gpu) {
+        if (info.access == buffer_access::cpu_to_gpu) {
             gl_target = GL_COPY_WRITE_BUFFER;
             gl_usage = GL_STREAM_DRAW;
         } else {
-            switch (desc.usage) {
+            switch (info.usage) {
             case buffer_usage::vertex:
                 gl_target = GL_ARRAY_BUFFER;
                 break;
@@ -1162,7 +1162,7 @@ namespace tavros::renderer
                 TAV_UNREACHABLE();
             }
 
-            switch (desc.access) {
+            switch (info.access) {
             case buffer_access::gpu_only:
                 gl_usage = GL_STREAM_COPY; // GL_STREAM_COPY - is also possible (for suppress warning)
                 break;
@@ -1187,11 +1187,11 @@ namespace tavros::renderer
         glBindBuffer(gl_target, bo);
 
         // Allocate buffer
-        glBufferData(gl_target, static_cast<GLsizeiptr>(desc.size), nullptr, gl_usage);
+        glBufferData(gl_target, static_cast<GLsizeiptr>(info.size), nullptr, gl_usage);
 
         glBindBuffer(gl_target, 0); // Unbind for safety
 
-        buffer_handle handle = {m_resources.buffers.insert({desc, bo_owner.release(), gl_target, gl_usage})};
+        buffer_handle handle = {m_resources.buffers.insert({info, bo_owner.release(), gl_target, gl_usage})};
         ::logger.debug("Buffer with id %u created", handle.id);
         return handle;
     }
@@ -1293,7 +1293,7 @@ namespace tavros::renderer
         // Bind index buffer if present
         if (desc.has_index_buffer) {
             if (auto* desc = m_resources.buffers.try_get(index_buffer->id)) {
-                if (desc->desc.usage != buffer_usage::index) {
+                if (desc->info.usage != buffer_usage::index) {
                     ::logger.error("Invalid index buffer usage");
                     return {0};
                 }
@@ -1468,7 +1468,7 @@ namespace tavros::renderer
         for (auto i = 0; i < buffers.size(); ++i) {
             buffer_handles.push_back(buffers[i]);
             auto* b = m_resources.buffers.try_get(buffers[i].id);
-            if (b->desc.usage != buffer_usage::uniform) {
+            if (b->info.usage != buffer_usage::uniform) {
                 ::logger.error("Buffer with id %u is not a uniform buffer", buffers[i].id);
                 return {0};
             }

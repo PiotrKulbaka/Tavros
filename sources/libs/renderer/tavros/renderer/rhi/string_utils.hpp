@@ -4,7 +4,7 @@
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 
-#include <tavros/renderer/rhi/buffer_desc.hpp>
+#include <tavros/renderer/rhi/buffer_info.hpp>
 
 namespace tavros::renderer
 {

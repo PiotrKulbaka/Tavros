@@ -686,11 +686,11 @@ namespace tavros::renderer
         TAV_ASSERT(data != nullptr);
 
         if (auto* b = m_device->get_resources()->buffers.try_get(buffer.id)) {
-            if (offset + size > b->desc.size) {
+            if (offset + size > b->info.size) {
                 ::logger.error("Can't copy data to buffer with id `%u` because the size is out of range", buffer.id);
                 return;
             }
-            if (b->desc.access != buffer_access::cpu_to_gpu) {
+            if (b->info.access != buffer_access::cpu_to_gpu) {
                 ::logger.error("Can't copy data to buffer with id `%u` because the buffer is not cpu_to_gpu", buffer.id);
                 return;
             }
@@ -736,18 +736,18 @@ namespace tavros::renderer
         }
 
         // Check memory region
-        if (dst_offset + size > dst->desc.size) {
+        if (dst_offset + size > dst->info.size) {
             ::logger.error(
                 "Cannot copy buffer: destination buffer with id `%u` overflow (offset %llu + size %llu > buffer size %llu)",
-                dst_buffer.id, dst_offset, size, dst->desc.size
+                dst_buffer.id, dst_offset, size, dst->info.size
             );
             return;
         }
 
-        if (src_offset + size > src->desc.size) {
+        if (src_offset + size > src->info.size) {
             ::logger.error(
                 "Cannot copy buffer: source buffer with id `%u` overflow (offset %llu + size %llu > buffer size %llu)",
-                src_buffer.id, src_offset, size, src->desc.size
+                src_buffer.id, src_offset, size, src->info.size
             );
             return;
         }
@@ -755,8 +755,8 @@ namespace tavros::renderer
         // Check access
         // Allowed: cpu_to_gpu -> gpu_only
         // Allowed: gpu_only   -> gpu_only
-        auto dst_access = dst->desc.access;
-        auto src_access = src->desc.access;
+        auto dst_access = dst->info.access;
+        auto src_access = src->info.access;
 
         if (dst_access != buffer_access::gpu_only) {
             ::logger.error(

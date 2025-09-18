@@ -48,7 +48,7 @@ namespace tavros::renderer
 
     struct gl_buffer
     {
-        buffer_desc desc;
+        buffer_info info;
         GLuint      buffer_obj = 0;
         GLenum      gl_target = 0;
         GLenum      gl_usage = 0;

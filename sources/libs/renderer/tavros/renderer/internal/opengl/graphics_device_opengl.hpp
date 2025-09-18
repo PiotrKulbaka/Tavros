@@ -52,7 +52,7 @@ namespace tavros::renderer
         ) override;
         void destroy_framebuffer(framebuffer_handle framebuffer) override;
 
-        buffer_handle create_buffer(const buffer_desc& desc) override;
+        buffer_handle create_buffer(const buffer_info& info) override;
         void          destroy_buffer(buffer_handle buffer) override;
 
         geometry_binding_handle create_geometry(

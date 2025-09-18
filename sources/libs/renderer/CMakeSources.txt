@@ -16,7 +16,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/graphics_device_opengl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/graphics_device_opengl.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_desc.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/command_list.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/compare_op.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/frame_composer.hpp

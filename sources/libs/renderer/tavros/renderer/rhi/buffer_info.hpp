@@ -28,7 +28,7 @@ namespace tavros::renderer
     /**
      * Describes the properties of a buffer
      */
-    struct buffer_desc
+    struct buffer_info
     {
         /// Buffer size in bytes
         size_t size = 0;

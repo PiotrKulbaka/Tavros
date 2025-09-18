@@ -634,10 +634,10 @@ int main()
     tavros::renderer::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
     auto                            main_pipeline = gdevice->create_pipeline(main_pipeline_desc, fullscreen_quad_shaders);
 
-    tavros::renderer::buffer_desc stage_buffer_desc;
-    stage_buffer_desc.size = 1024 * 1024; // 1 Mb
-    stage_buffer_desc.access = tavros::renderer::buffer_access::cpu_to_gpu;
-    auto stage_buffer = gdevice->create_buffer(stage_buffer_desc);
+    tavros::renderer::buffer_info stage_buffer_info;
+    stage_buffer_info.size = 1024 * 1024; // 1 Mb
+    stage_buffer_info.access = tavros::renderer::buffer_access::cpu_to_gpu;
+    auto stage_buffer = gdevice->create_buffer(stage_buffer_info);
 
     auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
     auto* cbuf = composer->create_command_list();
@@ -664,16 +664,16 @@ int main()
 
 
     // Make vertices buffer
-    tavros::renderer::buffer_desc xyz_normal_uv_desc;
-    xyz_normal_uv_desc.size = 1024 * 1024; // 1 Mb
-    xyz_normal_uv_desc.usage = tavros::renderer::buffer_usage::vertex;
-    xyz_normal_uv_desc.access = tavros::renderer::buffer_access::gpu_only;
-    auto buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_desc);
+    tavros::renderer::buffer_info xyz_normal_uv_info;
+    xyz_normal_uv_info.size = 1024 * 1024; // 1 Mb
+    xyz_normal_uv_info.usage = tavros::renderer::buffer_usage::vertex;
+    xyz_normal_uv_info.access = tavros::renderer::buffer_access::gpu_only;
+    auto buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
 
     cbuf->copy_buffer(buffer_xyz_normal_uv, stage_buffer, xyz_size + norm_size + uv_size, 0, 0);
 
 
-    tavros::renderer::buffer_desc indices_desc;
+    tavros::renderer::buffer_info indices_desc;
     indices_desc.size = 1024 * 128; // 128 Kb
     indices_desc.usage = tavros::renderer::buffer_usage::index;
     auto buffer_indices = gdevice->create_buffer(indices_desc);
@@ -707,7 +707,7 @@ int main()
     float sun_angle = 0.0f;
 
 
-    tavros::renderer::buffer_desc uniform_buffer_desc{1024, tavros::renderer::buffer_usage::uniform, tavros::renderer::buffer_access::gpu_only};
+    tavros::renderer::buffer_info uniform_buffer_desc{1024, tavros::renderer::buffer_usage::uniform, tavros::renderer::buffer_access::gpu_only};
     auto                          uniform_buffer = gdevice->create_buffer(uniform_buffer_desc);
 
 
