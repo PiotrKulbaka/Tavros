@@ -32,7 +32,7 @@ namespace tavros::renderer
 
     struct gl_pipeline
     {
-        pipeline_desc desc;
+        pipeline_info info;
         GLuint        program_obj = 0;
     };
 

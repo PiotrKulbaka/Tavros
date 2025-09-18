@@ -152,7 +152,7 @@ namespace tavros::renderer
     {
         m_current_pipeline = pipeline;
         if (auto* p = m_device->get_resources()->pipelines.try_get(pipeline.id)) {
-            auto& desc = p->desc;
+            auto& desc = p->info;
 
             glUseProgram(p->program_obj);
 
@@ -637,7 +637,7 @@ namespace tavros::renderer
             return;
         }
 
-        auto topology = to_gl_topology(p->desc.topology);
+        auto topology = to_gl_topology(p->info.topology);
         glDrawArrays(topology, static_cast<GLint>(first_vertex), static_cast<GLsizei>(count));
     }
 
@@ -657,7 +657,7 @@ namespace tavros::renderer
 
 
             auto        index_format = to_gl_index_format(gb->desc.index_format);
-            auto        topology = to_gl_topology(p->desc.topology);
+            auto        topology = to_gl_topology(p->info.topology);
             const void* index_offset = reinterpret_cast<const void*>(first_index * index_format.size);
 
             if (instance_count > 1) {

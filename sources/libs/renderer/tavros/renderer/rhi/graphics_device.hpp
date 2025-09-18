@@ -7,7 +7,7 @@
 #include <tavros/renderer/rhi/frame_composer_desc.hpp>
 #include <tavros/renderer/rhi/sampler_desc.hpp>
 #include <tavros/renderer/rhi/texture_desc.hpp>
-#include <tavros/renderer/rhi/pipeline_desc.hpp>
+#include <tavros/renderer/rhi/pipeline_info.hpp>
 #include <tavros/renderer/rhi/framebuffer_info.hpp>
 #include <tavros/renderer/rhi/buffer_info.hpp>
 #include <tavros/renderer/rhi/geometry_binding_desc.hpp>
@@ -51,7 +51,7 @@ namespace tavros::renderer
         virtual void destroy_texture(texture_handle texture) = 0;
 
         virtual pipeline_handle create_pipeline(
-            const pipeline_desc&                  desc,
+            const pipeline_info&                  info,
             const core::span<const shader_handle> shaders
         ) = 0;
         virtual void destroy_pipeline(pipeline_handle pipeline) = 0;

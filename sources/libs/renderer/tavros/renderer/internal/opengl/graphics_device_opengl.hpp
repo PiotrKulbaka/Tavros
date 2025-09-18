@@ -40,7 +40,7 @@ namespace tavros::renderer
         void destroy_texture(texture_handle handle) override;
 
         pipeline_handle create_pipeline(
-            const pipeline_desc&                  desc,
+            const pipeline_info&                  info,
             const core::span<const shader_handle> shaders
         ) override;
         void destroy_pipeline(pipeline_handle pipeline) override;

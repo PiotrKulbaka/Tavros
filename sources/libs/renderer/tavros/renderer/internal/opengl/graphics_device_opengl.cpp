@@ -879,25 +879,25 @@ namespace tavros::renderer
     }
 
     pipeline_handle graphics_device_opengl::create_pipeline(
-        const pipeline_desc&                  desc,
+        const pipeline_info&                  info,
         const core::span<const shader_handle> shaders
     )
     {
-        if (desc.shaders.size() != 2) {
+        if (info.shaders.size() != 2) {
             ::logger.error("Pipeline must have exactly 2 shaders (vertex and fragment)");
             return {0};
         }
 
-        if (desc.shaders.size() != shaders.size()) {
+        if (info.shaders.size() != shaders.size()) {
             ::logger.error("Pipeline shaders size mismatch");
             return {0};
         }
 
         GLuint vs = 0;
         GLuint fs = 0;
-        for (auto i = 0; i < desc.shaders.size(); ++i) {
+        for (auto i = 0; i < info.shaders.size(); ++i) {
             if (auto* s = m_resources.try_get(shaders[i])) {
-                if (s->info.stage != desc.shaders[i].stage) {
+                if (s->info.stage != info.shaders[i].stage) {
                     ::logger.error("Shader stage mismatch");
                     return {0};
                 }
@@ -937,7 +937,7 @@ namespace tavros::renderer
         }
 
         // create pipeline
-        pipeline_handle handle = {m_resources.pipelines.insert({desc, program})};
+        pipeline_handle handle = {m_resources.pipelines.insert({info, program})};
         ::logger.debug("Pipeline with id %u created", handle.id);
         return handle;
     }
@@ -954,13 +954,13 @@ namespace tavros::renderer
     }
 
     framebuffer_handle graphics_device_opengl::create_framebuffer(
-        const framebuffer_info&                desc,
+        const framebuffer_info&                info,
         const core::span<const texture_handle> color_attachments,
         core::optional<texture_handle>         depth_stencil_attachment
     )
     {
         // Validate attachments size
-        if (color_attachments.size() != desc.color_attachment_formats.size()) {
+        if (color_attachments.size() != info.color_attachment_formats.size()) {
             ::logger.error("Incorrect number of attachments");
             return {0};
         }
@@ -972,18 +972,18 @@ namespace tavros::renderer
             const texture_handle& handle = color_attachments[i];
             color_attachments_h.push_back(handle);
             if (auto* tex = m_resources.textures.try_get(handle.id)) {
-                if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
-                    ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", desc.width, desc.height, tex->desc.width, tex->desc.height);
+                if (tex->desc.width != info.width || tex->desc.height != info.height) {
+                    ::logger.error("Invalid attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->desc.width, tex->desc.height);
                     return {0};
                 }
 
                 // Validate formats
-                if (desc.color_attachment_formats[i] != tex->desc.format) {
+                if (info.color_attachment_formats[i] != tex->desc.format) {
                     ::logger.error("Color attachment format mismatch with texture format");
                     return {0};
                 }
 
-                if (!is_color_fromat(desc.color_attachment_formats[i])) {
+                if (!is_color_fromat(info.color_attachment_formats[i])) {
                     ::logger.error("Unsupported color attachment format");
                     return {0};
                 }
@@ -993,8 +993,8 @@ namespace tavros::renderer
                     return {0};
                 }
 
-                if (desc.sample_count != tex->desc.sample_count) {
-                    ::logger.error("Color attachment sample count `%u` mismatch with framebuffer sample count `%u`", tex->desc.sample_count, desc.sample_count);
+                if (info.sample_count != tex->desc.sample_count) {
+                    ::logger.error("Color attachment sample count `%u` mismatch with framebuffer sample count `%u`", tex->desc.sample_count, info.sample_count);
                     return {0};
                 }
 
@@ -1013,7 +1013,7 @@ namespace tavros::renderer
         }
 
         // Validate depth/stencil texture
-        bool           depth_stencil_enabled = desc.depth_stencil_attachment_format != pixel_format::none;
+        bool           depth_stencil_enabled = info.depth_stencil_attachment_format != pixel_format::none;
         bool           depth_stencil_provided = depth_stencil_attachment.has_value();
         texture_handle depth_stencil_attachmnet_h = {0};
         if (depth_stencil_enabled && !depth_stencil_provided) {
@@ -1052,20 +1052,20 @@ namespace tavros::renderer
         if (depth_stencil_enabled) {
             TAV_ASSERT(depth_stencil_provided);
 
-            auto gl_format = to_depth_stencil_fromat(desc.depth_stencil_attachment_format);
+            auto gl_format = to_depth_stencil_fromat(info.depth_stencil_attachment_format);
             if (gl_format.is_depth_stencil_format) {
                 auto depth_stencil_attachment_value = depth_stencil_attachment.value();
 
                 // Get depth/stencil texture and attach it
                 if (auto* tex = m_resources.textures.try_get(depth_stencil_attachment_value.id)) {
                     // Validate depth/stencil size
-                    if (tex->desc.width != desc.width || tex->desc.height != desc.height) {
-                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", desc.width, desc.height, tex->desc.width, tex->desc.height);
+                    if (tex->desc.width != info.width || tex->desc.height != info.height) {
+                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: %ux%u) != (attachment: %ux%u)", info.width, info.height, tex->desc.width, tex->desc.height);
                         return {0};
                     }
 
                     // Validate depth/stencil format
-                    if (tex->desc.format != desc.depth_stencil_attachment_format) {
+                    if (tex->desc.format != info.depth_stencil_attachment_format) {
                         ::logger.error("Invalid depth/stencil attachment format");
                         return {0};
                     }
@@ -1077,7 +1077,7 @@ namespace tavros::renderer
                     }
 
                     // Validate depth/stencil sample count
-                    if (tex->desc.sample_count != desc.sample_count) {
+                    if (tex->desc.sample_count != info.sample_count) {
                         ::logger.error("Depth/stencil attachment has invalid sample count");
                         return {0};
                     }
@@ -1098,7 +1098,7 @@ namespace tavros::renderer
 
         // Framebuffer will be incomplete if the depth/stencil texture is not attached and
         // there are no color attachments
-        if (draw_buffers.size() == 0 && desc.depth_stencil_attachment_format == pixel_format::none) {
+        if (draw_buffers.size() == 0 && info.depth_stencil_attachment_format == pixel_format::none) {
             ::logger.error("There are no attachments for framebuffer");
             return {0};
         }
@@ -1122,7 +1122,7 @@ namespace tavros::renderer
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        framebuffer_handle handle = {m_resources.framebuffers.insert({desc, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachmnet_h})};
+        framebuffer_handle handle = {m_resources.framebuffers.insert({info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachmnet_h})};
         ::logger.debug("Framebuffer with id %u created", handle.id);
         return handle;
     }

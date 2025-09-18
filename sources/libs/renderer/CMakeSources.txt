@@ -26,7 +26,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/graphics_device.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/handle.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/limits.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pipeline_desc.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pipeline_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pixel_format.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/render_pass_desc.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/sampler_desc.hpp

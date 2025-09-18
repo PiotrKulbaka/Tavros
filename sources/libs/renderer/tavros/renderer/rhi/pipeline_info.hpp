@@ -291,7 +291,7 @@ namespace tavros::renderer
     };
 
 
-    struct pipeline_desc
+    struct pipeline_info
     {
         /// List with descriptions of shaders to be used in the pipeline
         core::static_vector<pipeline_shader, k_max_pipeline_shaders> shaders;
