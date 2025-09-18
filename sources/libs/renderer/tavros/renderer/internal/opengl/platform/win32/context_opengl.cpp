@@ -53,7 +53,7 @@ namespace tavros::renderer::rhi
 
     core::unique_ptr<context_opengl> context_opengl::create(const frame_composer_info& info, void* native_handle)
     {
-        // Validate the swapchain desc
+        // Validate the swapchain info
         // Validate width and height
         if (info.width == 0 || info.height == 0) {
             ::logger.error("Swapchain width and height must be greater than zero.");

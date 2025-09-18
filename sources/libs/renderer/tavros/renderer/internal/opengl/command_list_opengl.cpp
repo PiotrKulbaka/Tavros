@@ -152,103 +152,103 @@ namespace tavros::renderer::rhi
     {
         m_current_pipeline = pipeline;
         if (auto* p = m_device->get_resources()->pipelines.try_get(pipeline.id)) {
-            auto& desc = p->info;
+            auto& info = p->info;
 
             glUseProgram(p->program_obj);
 
             // depth test
-            if (desc.depth_stencil.depth_test_enable) {
+            if (info.depth_stencil.depth_test_enable) {
                 glEnable(GL_DEPTH_TEST);
 
                 // depth write
-                glDepthMask(desc.depth_stencil.depth_write_enable ? GL_TRUE : GL_FALSE);
+                glDepthMask(info.depth_stencil.depth_write_enable ? GL_TRUE : GL_FALSE);
 
                 // depth compare func
-                glDepthFunc(to_gl_compare_func(desc.depth_stencil.depth_compare));
+                glDepthFunc(to_gl_compare_func(info.depth_stencil.depth_compare));
             } else {
                 glDisable(GL_DEPTH_TEST);
             }
 
             // stencil test
-            if (desc.depth_stencil.stencil_test_enable) {
+            if (info.depth_stencil.stencil_test_enable) {
                 glEnable(GL_STENCIL_TEST);
 
                 // stencil front
                 glStencilFuncSeparate(
                     GL_FRONT,
-                    to_gl_compare_func(desc.depth_stencil.stencil_front.compare),
-                    desc.depth_stencil.stencil_front.reference_value,
-                    desc.depth_stencil.stencil_front.read_mask
+                    to_gl_compare_func(info.depth_stencil.stencil_front.compare),
+                    info.depth_stencil.stencil_front.reference_value,
+                    info.depth_stencil.stencil_front.read_mask
                 );
                 glStencilOpSeparate(
                     GL_FRONT,
-                    to_gl_stencil_op(desc.depth_stencil.stencil_front.stencil_fail_op),
-                    to_gl_stencil_op(desc.depth_stencil.stencil_front.depth_fail_op),
-                    to_gl_stencil_op(desc.depth_stencil.stencil_front.pass_op)
+                    to_gl_stencil_op(info.depth_stencil.stencil_front.stencil_fail_op),
+                    to_gl_stencil_op(info.depth_stencil.stencil_front.depth_fail_op),
+                    to_gl_stencil_op(info.depth_stencil.stencil_front.pass_op)
                 );
-                glStencilMaskSeparate(GL_FRONT, desc.depth_stencil.stencil_front.write_mask);
+                glStencilMaskSeparate(GL_FRONT, info.depth_stencil.stencil_front.write_mask);
 
                 // stencil back
                 glStencilFuncSeparate(
                     GL_BACK,
-                    to_gl_compare_func(desc.depth_stencil.stencil_back.compare),
-                    desc.depth_stencil.stencil_back.reference_value,
-                    desc.depth_stencil.stencil_back.read_mask
+                    to_gl_compare_func(info.depth_stencil.stencil_back.compare),
+                    info.depth_stencil.stencil_back.reference_value,
+                    info.depth_stencil.stencil_back.read_mask
                 );
                 glStencilOpSeparate(
                     GL_BACK,
-                    to_gl_stencil_op(desc.depth_stencil.stencil_back.stencil_fail_op),
-                    to_gl_stencil_op(desc.depth_stencil.stencil_back.depth_fail_op),
-                    to_gl_stencil_op(desc.depth_stencil.stencil_back.pass_op)
+                    to_gl_stencil_op(info.depth_stencil.stencil_back.stencil_fail_op),
+                    to_gl_stencil_op(info.depth_stencil.stencil_back.depth_fail_op),
+                    to_gl_stencil_op(info.depth_stencil.stencil_back.pass_op)
                 );
-                glStencilMaskSeparate(GL_BACK, desc.depth_stencil.stencil_back.write_mask);
+                glStencilMaskSeparate(GL_BACK, info.depth_stencil.stencil_back.write_mask);
             } else {
                 glDisable(GL_STENCIL_TEST);
             }
 
             // rasterizer state
             // cull face
-            if (desc.rasterizer.cull == cull_face::off) {
+            if (info.rasterizer.cull == cull_face::off) {
                 glDisable(GL_CULL_FACE);
             } else {
                 glEnable(GL_CULL_FACE);
-                glCullFace(desc.rasterizer.cull == cull_face::front ? GL_FRONT : GL_BACK);
+                glCullFace(info.rasterizer.cull == cull_face::front ? GL_FRONT : GL_BACK);
             }
 
             // front face
-            glFrontFace(desc.rasterizer.face == front_face::clockwise ? GL_CW : GL_CCW);
+            glFrontFace(info.rasterizer.face == front_face::clockwise ? GL_CW : GL_CCW);
 
             // polygon mode
-            if (desc.rasterizer.polygon == polygon_mode::lines) {
+            if (info.rasterizer.polygon == polygon_mode::lines) {
                 glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-            } else if (desc.rasterizer.polygon == polygon_mode::points) {
+            } else if (info.rasterizer.polygon == polygon_mode::points) {
                 glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-            } else if (desc.rasterizer.polygon == polygon_mode::fill) {
+            } else if (info.rasterizer.polygon == polygon_mode::fill) {
                 glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
             } else {
                 TAV_UNREACHABLE();
             }
 
             // depth clamp
-            if (desc.rasterizer.depth_clamp_enable) {
+            if (info.rasterizer.depth_clamp_enable) {
                 glEnable(GL_DEPTH_CLAMP);
             } else {
                 glDisable(GL_DEPTH_CLAMP);
             }
 
             // depth bias
-            if (desc.rasterizer.depth_bias_enable) {
+            if (info.rasterizer.depth_bias_enable) {
                 glEnable(GL_POLYGON_OFFSET_FILL);
-                glPolygonOffset(desc.rasterizer.depth_bias_slope, desc.rasterizer.depth_bias);
+                glPolygonOffset(info.rasterizer.depth_bias_slope, info.rasterizer.depth_bias);
             } else {
                 glDisable(GL_POLYGON_OFFSET_FILL);
             }
 
             // multisample state
             // uint8 sample_count = 1; cant be initialized here
-            if (desc.multisample.sample_shading_enabled) {
+            if (info.multisample.sample_shading_enabled) {
                 glEnable(GL_SAMPLE_SHADING);
-                glMinSampleShading(desc.multisample.min_sample_shading);
+                glMinSampleShading(info.multisample.min_sample_shading);
             } else {
                 glDisable(GL_SAMPLE_SHADING);
             }

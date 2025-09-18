@@ -72,10 +72,10 @@ namespace tavros::core
             return try_get(handle);
         }
 
-        [[nodiscard]] handle_t insert(T&& desc)
+        [[nodiscard]] handle_t insert(T&& res)
         {
             auto handle = m_counter.fetch_add(1);
-            m_storage[handle] = std::move(desc);
+            m_storage[handle] = std::move(res);
             reset_last_cache();
             return handle;
         }

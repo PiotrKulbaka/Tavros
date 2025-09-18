@@ -603,7 +603,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_frame_composer(frame_composer_handle composer)
     {
-        if (auto* desc = m_resources.composers.try_get(composer.id)) {
+        if (auto* fc = m_resources.composers.try_get(composer.id)) {
             m_resources.composers.remove(composer.id);
             ::logger.debug("Frame composer with id %u destroyed", composer.id);
         } else {
@@ -613,8 +613,8 @@ namespace tavros::renderer::rhi
 
     frame_composer* graphics_device_opengl::get_frame_composer_ptr(frame_composer_handle composer)
     {
-        if (auto* desc = m_resources.composers.try_get(composer.id)) {
-            return desc->composer_ptr.get();
+        if (auto* fc = m_resources.composers.try_get(composer.id)) {
+            return fc->composer_ptr.get();
         } else {
             ::logger.error("Can't find frame composer with id %u", composer.id);
             return nullptr;
@@ -687,8 +687,8 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_sampler(sampler_handle sampler)
     {
-        if (auto* desc = m_resources.samplers.try_get(sampler.id)) {
-            glDeleteSamplers(1, &desc->sampler_obj);
+        if (auto* s = m_resources.samplers.try_get(sampler.id)) {
+            glDeleteSamplers(1, &s->sampler_obj);
             m_resources.samplers.remove(sampler.id);
             ::logger.debug("Sampler with id %u destroyed", sampler.id);
         } else {
@@ -868,9 +868,9 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_texture(texture_handle texture)
     {
-        if (auto* desc = m_resources.textures.try_get(texture.id)) {
-            glDeleteTextures(1, &desc->texture_obj);
-            ::logger.debug("OpenGL Texture object with id %u deleted", desc->texture_obj);
+        if (auto* tex = m_resources.textures.try_get(texture.id)) {
+            glDeleteTextures(1, &tex->texture_obj);
+            ::logger.debug("OpenGL Texture object with id %u deleted", tex->texture_obj);
             m_resources.textures.remove(texture.id);
             ::logger.debug("Texture with id %u destroyed", texture.id);
         } else {
@@ -944,8 +944,8 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_pipeline(pipeline_handle handle)
     {
-        if (auto* desc = m_resources.pipelines.try_get(handle.id)) {
-            glDeleteProgram(desc->program_obj);
+        if (auto* p = m_resources.pipelines.try_get(handle.id)) {
+            glDeleteProgram(p->program_obj);
             m_resources.pipelines.remove(handle.id);
             ::logger.debug("Pipeline with id %u destroyed", handle.id);
         } else {
@@ -1129,9 +1129,9 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_framebuffer(framebuffer_handle framebuffer)
     {
-        if (auto* desc = m_resources.framebuffers.try_get(framebuffer.id)) {
-            glDeleteFramebuffers(1, &desc->framebuffer_obj);
-            ::logger.debug("OpenGL Framebuffer object with id %u deleted", desc->framebuffer_obj);
+        if (auto* fb = m_resources.framebuffers.try_get(framebuffer.id)) {
+            glDeleteFramebuffers(1, &fb->framebuffer_obj);
+            ::logger.debug("OpenGL Framebuffer object with id %u deleted", fb->framebuffer_obj);
             m_resources.framebuffers.remove(framebuffer.id);
             ::logger.debug("Framebuffer with id %u destroyed", framebuffer.id);
         } else {
@@ -1198,9 +1198,9 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_buffer(buffer_handle buffer)
     {
-        if (auto* desc = m_resources.buffers.try_get(buffer.id)) {
-            glDeleteBuffers(1, &desc->buffer_obj);
-            ::logger.debug("OpenGL Buffer object with id %u deleted", desc->buffer_obj);
+        if (auto* b = m_resources.buffers.try_get(buffer.id)) {
+            glDeleteBuffers(1, &b->buffer_obj);
+            ::logger.debug("OpenGL Buffer object with id %u deleted", b->buffer_obj);
             m_resources.buffers.remove(buffer.id);
         } else {
             ::logger.error("Can't destroy buffer with id %u because it doesn't exist", buffer.id);
@@ -1292,13 +1292,13 @@ namespace tavros::renderer::rhi
 
         // Bind index buffer if present
         if (info.has_index_buffer) {
-            if (auto* desc = m_resources.buffers.try_get(index_buffer->id)) {
-                if (desc->info.usage != buffer_usage::index) {
+            if (auto* b = m_resources.buffers.try_get(index_buffer->id)) {
+                if (b->info.usage != buffer_usage::index) {
                     ::logger.error("Invalid index buffer usage");
                     return {0};
                 }
 
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, desc->buffer_obj);
+                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj);
             } else {
                 ::logger.error("Can't find index buffer with id %u", index_buffer->id);
                 return {0};
@@ -1314,9 +1314,9 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_geometry(geometry_binding_handle geometry_binding)
     {
-        if (auto* desc = m_resources.geometry_bindings.try_get(geometry_binding.id)) {
-            glDeleteVertexArrays(1, &desc->vao_obj);
-            ::logger.debug("OpenGL Vertex Array object with id %u deleted", desc->vao_obj);
+        if (auto* gb = m_resources.geometry_bindings.try_get(geometry_binding.id)) {
+            glDeleteVertexArrays(1, &gb->vao_obj);
+            ::logger.debug("OpenGL Vertex Array object with id %u deleted", gb->vao_obj);
             m_resources.geometry_bindings.remove(geometry_binding.id);
             ::logger.debug("Geometry binding with id %u destroyed", geometry_binding.id);
         } else {
@@ -1412,7 +1412,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_render_pass(render_pass_handle render_pass)
     {
-        if (auto* desc = m_resources.render_passes.try_get(render_pass.id)) {
+        if (auto* rp = m_resources.render_passes.try_get(render_pass.id)) {
             m_resources.render_passes.remove(render_pass.id);
             ::logger.debug("Render pass with id %u destroyed", render_pass.id);
         } else {
@@ -1481,7 +1481,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_shader_binding(shader_binding_handle shader_binding)
     {
-        if (auto* desc = m_resources.shader_bindings.try_get(shader_binding.id)) {
+        if (auto* sb = m_resources.shader_bindings.try_get(shader_binding.id)) {
             m_resources.shader_bindings.remove(shader_binding.id);
             ::logger.debug("Shader binding with id %u destroyed", shader_binding.id);
         } else {

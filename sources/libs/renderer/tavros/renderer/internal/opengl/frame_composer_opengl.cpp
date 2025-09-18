@@ -61,7 +61,7 @@ namespace tavros::renderer::rhi
     {
         // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
         if (m_device->get_resources()->framebuffers.size() != 0) {
-            if (auto* desc = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
+            if (auto* fb = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
                 m_device->get_resources()->framebuffers.remove(m_backbuffer.id);
             } else {
                 ::logger.error("Can't destroy default framebuffer for frame composer with id %u because it doesn't exist", m_backbuffer.id);
@@ -81,9 +81,9 @@ namespace tavros::renderer::rhi
         m_info.height = h;
 
         // Update framebuffer size
-        if (auto* desc = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
-            desc->info.width = w;
-            desc->info.height = h;
+        if (auto* fb = m_device->get_resources()->framebuffers.try_get(m_backbuffer.id)) {
+            fb->info.width = w;
+            fb->info.height = h;
         } else {
             ::logger.error("Can't find default framebuffer for frame composer with id %u", m_backbuffer.id);
         }
