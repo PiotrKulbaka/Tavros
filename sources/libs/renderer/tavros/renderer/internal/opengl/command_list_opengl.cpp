@@ -260,15 +260,15 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_list_opengl::bind_geometry(geometry_binding_handle geometry_binding)
+    void command_list_opengl::bind_geometry(geometry_handle geometry)
     {
-        if (auto* gb = m_device->get_resources()->try_get(geometry_binding)) {
-            glBindVertexArray(gb->vao_obj);
-            m_current_geometry_binding = geometry_binding;
+        if (auto* g = m_device->get_resources()->try_get(geometry)) {
+            glBindVertexArray(g->vao_obj);
+            m_current_geometry = geometry;
         } else {
-            ::logger.error("Failed to bind geometry binding `%u`: not found", geometry_binding.id);
+            ::logger.error("Failed to bind geometry binding `%u`: not found", geometry.id);
             glBindVertexArray(0);
-            m_current_geometry_binding = {0};
+            m_current_geometry = {0};
         }
     }
 
@@ -674,22 +674,22 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        auto* gb = m_device->get_resources()->try_get(m_current_geometry_binding);
-        if (!gb) {
-            if (m_current_geometry_binding.id == 0) {
+        auto* g = m_device->get_resources()->try_get(m_current_geometry);
+        if (!g) {
+            if (m_current_geometry.id == 0) {
                 ::logger.error("Failed to draw indexed: no geometry binding is bound");
             } else {
-                ::logger.error("Failed to draw indexed: geometry binding `%u` not found", m_current_geometry_binding.id);
+                ::logger.error("Failed to draw indexed: geometry binding `%u` not found", m_current_geometry.id);
             }
             return;
         }
 
-        if (!gb->info.has_index_buffer) {
-            ::logger.error("Failed to draw indexed: current geometry binding `%u` has no index buffer", m_current_geometry_binding.id);
+        if (!g->info.has_index_buffer) {
+            ::logger.error("Failed to draw indexed: current geometry binding `%u` has no index buffer", m_current_geometry.id);
             return;
         }
 
-        auto  gl_index_format = to_gl_index_format(gb->info.index_format);
+        auto  gl_index_format = to_gl_index_format(g->info.index_format);
         auto  gl_topology = to_gl_topology(p->info.topology);
         auto* index_offset = reinterpret_cast<const void*>(first_index * gl_index_format.size);
 

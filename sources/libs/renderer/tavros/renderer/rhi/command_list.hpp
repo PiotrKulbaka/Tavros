@@ -37,7 +37,7 @@ namespace tavros::renderer::rhi
 
         virtual void bind_pipeline(pipeline_handle pipeline) = 0;
 
-        virtual void bind_geometry(geometry_binding_handle geometry_binding) = 0;
+        virtual void bind_geometry(geometry_handle geometry) = 0;
 
         virtual void bind_shader_binding(shader_binding_handle shader_binding) = 0;
 

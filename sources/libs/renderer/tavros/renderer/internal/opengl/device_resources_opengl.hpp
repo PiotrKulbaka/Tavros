@@ -54,10 +54,10 @@ namespace tavros::renderer::rhi
         GLenum      gl_usage = 0;
     };
 
-    struct gl_geometry_binding
+    struct gl_geometry
     {
-        geometry_binding_info info;
-        GLuint                vao_obj = 0;
+        geometry_info info;
+        GLuint        vao_obj = 0;
     };
 
     struct gl_render_pass
@@ -128,9 +128,9 @@ namespace tavros::renderer::rhi
             return {buffers.insert(std::move(data))};
         }
 
-        geometry_binding_handle create(gl_geometry_binding&& data)
+        geometry_handle create(gl_geometry&& data)
         {
-            return {geometry_bindings.insert(std::move(data))};
+            return {geometries.insert(std::move(data))};
         }
 
         render_pass_handle create(gl_render_pass&& data)
@@ -179,9 +179,9 @@ namespace tavros::renderer::rhi
             buffers.remove(handle.id);
         }
 
-        void remove(geometry_binding_handle handle)
+        void remove(geometry_handle handle)
         {
-            geometry_bindings.remove(handle.id);
+            geometries.remove(handle.id);
         }
 
         void remove(render_pass_handle handle)
@@ -230,9 +230,9 @@ namespace tavros::renderer::rhi
             return buffers.try_get(handle.id);
         }
 
-        gl_geometry_binding* try_get(geometry_binding_handle handle)
+        gl_geometry* try_get(geometry_handle handle)
         {
-            return geometry_bindings.try_get(handle.id);
+            return geometries.try_get(handle.id);
         }
 
         gl_render_pass* try_get(render_pass_handle handle)
@@ -241,16 +241,16 @@ namespace tavros::renderer::rhi
         }
 
     public:
-        core::resource_pool<gl_sampler>          samplers;
-        core::resource_pool<gl_composer>         composers;
-        core::resource_pool<gl_shader_binding>   shader_bindings;
-        core::resource_pool<gl_shader>           shaders;
-        core::resource_pool<gl_texture>          textures;
-        core::resource_pool<gl_pipeline>         pipelines;
-        core::resource_pool<gl_framebuffer>      framebuffers;
-        core::resource_pool<gl_buffer>           buffers;
-        core::resource_pool<gl_geometry_binding> geometry_bindings;
-        core::resource_pool<gl_render_pass>      render_passes;
+        core::resource_pool<gl_sampler>        samplers;
+        core::resource_pool<gl_composer>       composers;
+        core::resource_pool<gl_shader_binding> shader_bindings;
+        core::resource_pool<gl_shader>         shaders;
+        core::resource_pool<gl_texture>        textures;
+        core::resource_pool<gl_pipeline>       pipelines;
+        core::resource_pool<gl_framebuffer>    framebuffers;
+        core::resource_pool<gl_buffer>         buffers;
+        core::resource_pool<gl_geometry>       geometries;
+        core::resource_pool<gl_render_pass>    render_passes;
     };
 
 } // namespace tavros::renderer::rhi

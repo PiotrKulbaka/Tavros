@@ -29,7 +29,7 @@ namespace tavros::renderer::rhi
     struct buffer_tag
     {
     };
-    struct geometry_binding_tag
+    struct geometry_tag
     {
     };
     struct render_pass_tag
@@ -48,7 +48,7 @@ namespace tavros::renderer::rhi
     using pipeline_handle = handle_base<pipeline_tag>;
     using framebuffer_handle = handle_base<framebuffer_tag>;
     using buffer_handle = handle_base<buffer_tag>;
-    using geometry_binding_handle = handle_base<geometry_binding_tag>;
+    using geometry_handle = handle_base<geometry_tag>;
     using render_pass_handle = handle_base<render_pass_tag>;
     using shader_binding_handle = handle_base<shader_binding_tag>;
     using shader_handle = handle_base<shader_tag>;

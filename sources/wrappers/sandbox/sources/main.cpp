@@ -681,7 +681,7 @@ int main()
     cbuf->copy_buffer(buffer_indices, stage_buffer, indices_size, 0, indices_offset);
 
 
-    rhi::geometry_binding_info gbi;
+    rhi::geometry_info gbi;
     gbi.buffer_layouts.push_back({0, xyz_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, norm_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, uv_offset, 4 * 2});

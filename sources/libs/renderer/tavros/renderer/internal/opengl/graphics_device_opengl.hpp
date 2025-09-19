@@ -55,12 +55,12 @@ namespace tavros::renderer::rhi
         buffer_handle create_buffer(const buffer_info& info) override;
         void          destroy_buffer(buffer_handle buffer) override;
 
-        geometry_binding_handle create_geometry(
-            const geometry_binding_info&          info,
+        geometry_handle create_geometry(
+            const geometry_info&                  info,
             const core::span<const buffer_handle> vertex_buffers,
             core::optional<buffer_handle>         index_buffer = core::nullopt
         ) override;
-        void destroy_geometry(geometry_binding_handle geometry_binding) override;
+        void destroy_geometry(geometry_handle geometry) override;
 
         render_pass_handle create_render_pass(
             const render_pass_info&                info,

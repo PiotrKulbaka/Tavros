@@ -36,7 +36,7 @@ namespace tavros::renderer::rhi
      */
     struct attribute_binding
     {
-        /// Index of the buffer binding that contains this attribute (refers to geometry_binding_info::buffer_layouts)
+        /// Index of the buffer binding that contains this attribute (refers to geometry_info::buffer_layouts)
         uint32 buffer_layout_index = 0;
 
         /// Offset in bytes from the start of the vertex to this attribute
@@ -50,7 +50,7 @@ namespace tavros::renderer::rhi
      * Describes the layout of vertex attributes and their source buffers
      * This structure is used by the GPU to correctly interpret vertex data from one or more buffers
      */
-    struct geometry_binding_info
+    struct geometry_info
     {
         /// /// Array of buffer bindings describing physical vertex buffers
         core::static_vector<buffer_layout, k_max_vertex_buffers> buffer_layouts;

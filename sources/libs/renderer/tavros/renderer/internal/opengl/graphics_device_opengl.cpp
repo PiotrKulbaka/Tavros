@@ -147,7 +147,7 @@ namespace
         }
     }
 
-    bool is_color_fromat(pixel_format format)
+    bool is_color_format(pixel_format format)
     {
         switch (format) {
         case pixel_format::r8un:
@@ -573,7 +573,7 @@ namespace tavros::renderer::rhi
             destroy_buffer(h);
         });
 
-        destroy_for(m_resources.geometry_bindings, [this](geometry_binding_handle h) {
+        destroy_for(m_resources.geometries, [this](geometry_handle h) {
             destroy_geometry(h);
         });
 
@@ -588,7 +588,7 @@ namespace tavros::renderer::rhi
         // Check if frame composer with native handle already created
         for (auto& sc : m_resources.composers) {
             if (native_handle == sc.second.native_handle) {
-                ::logger.error("Frame composer with native handle `%p` already created", native_handle);
+                ::logger.error("Failed to create frame composer: native handle `%p` already exists", native_handle);
                 return {0};
             }
         }
@@ -597,7 +597,8 @@ namespace tavros::renderer::rhi
         auto composer = frame_composer_opengl::create(this, info, native_handle);
 
         if (!composer) {
-            ::logger.error("Frame composer creation failed");
+            // Detailed info sould be written at frame_composer_opengl
+            ::logger.error("Failed to create frame composer");
             return {0};
         }
 
@@ -616,7 +617,7 @@ namespace tavros::renderer::rhi
             m_resources.remove(composer);
             ::logger.debug("Frame composer `%u` destroyed", composer.id);
         } else {
-            ::logger.error("Failed to destroy frame composer `%u` because it does not exist", composer.id);
+            ::logger.error("Failed to destroy frame composer `%u`: not found", composer.id);
         }
     }
 
@@ -625,7 +626,7 @@ namespace tavros::renderer::rhi
         if (auto* fc = m_resources.try_get(composer)) {
             return fc->composer_ptr.get();
         } else {
-            ::logger.error("Failed to return frame composer `%u` because it does not exist", composer.id);
+            ::logger.error("Failed to get frame composer `%u`: not found", composer.id);
             return nullptr;
         }
     }
@@ -633,13 +634,13 @@ namespace tavros::renderer::rhi
     shader_handle graphics_device_opengl::create_shader(const shader_info& info)
     {
         if (info.entry_point != "main") {
-            ::logger.error("Only 'main' entry point is supported in OpenGL shaders");
+            ::logger.error("Failed to create shader: only 'main' entry point is supported");
             return {0};
         }
 
         auto shader_obj = compile_shader(info.source_code, to_gl_shader_stage(info.stage));
         if (shader_obj == 0) {
-            ::logger.error("Shader compilation failed");
+            ::logger.error("Failed to create shader: compilation failed");
             return {0};
         }
 
@@ -656,7 +657,7 @@ namespace tavros::renderer::rhi
             m_resources.remove(shader);
             ::logger.debug("Shader `%u` destroyed", shader.id);
         } else {
-            ::logger.error("Failed to destroy shader `%u` because it does not exist", shader.id);
+            ::logger.error("Failed to destroy shader `%u`: not found", shader.id);
         }
     }
 
@@ -701,7 +702,7 @@ namespace tavros::renderer::rhi
             m_resources.remove(sampler);
             ::logger.debug("Sampler `%u` destroyed", sampler.id);
         } else {
-            ::logger.error("Failed to destroy sampler `%u` because it does not exist", sampler.id);
+            ::logger.error("Failed to destroy sampler `%u`: not found", sampler.id);
         }
     }
 
@@ -716,56 +717,65 @@ namespace tavros::renderer::rhi
 
         // Validate texture width/height
         if (info.width == 0 || info.height == 0) {
-            ::logger.error("Texture width and height must be greater than zero");
+            ::logger.error("Failed to create texture: width and height must be greater than zero");
             return {0};
         }
 
         // Validate texture depth
         if (info.depth == 0) {
-            ::logger.error("Texture depth must be at least 1");
+            ::logger.error("Failed to create texture: depth must be at least 1");
             return {0};
         } else if (info.depth != 1) {
-            ::logger.error("Texture depth support is only 2D textures");
+            ::logger.error("Failed to create texture: only 2D textures are supported");
             return {0};
         }
 
         // Validate texture array layers
         if (info.array_layers == 0) {
-            ::logger.error("Texture array_layers must be at least 1");
+            ::logger.error("Failed to create texture: array_layers must be at least 1");
             return {0};
         } else if (info.array_layers != 1) {
-            ::logger.error("Texture array_layers support is only for single layer textures");
+            ::logger.error("Failed to create texture: only single layer textures are supported");
             return {0};
         }
 
         if (info.mip_levels == 0) {
-            ::logger.error("Texture mip_levels must be at least 1");
+            ::logger.error("Failed to create texture: mip_levels must be at least 1");
             return {0};
         }
 
         // Validate sample count
-        if (info.sample_count > 1) {
+        if (info.sample_count == 0) {
+            ::logger.error("Failed to create texture: sample count must be at least 1");
+            return {0};
+        } else if (info.sample_count == 1) {
+            // Resolve source texture must be a render target with sample_count > 1
+            if (info.usage.has_flag(texture_usage::resolve_source)) {
+                ::logger.error("Failed to create texture: resolve source textures must have sample_count > 1");
+                return {0};
+            }
+        } else if (info.sample_count > 1) {
             // Resolve destination texture must be a render target with sample_count == 1
             if (info.usage.has_flag(texture_usage::resolve_destination)) {
-                ::logger.error("Resolve destination texture must have sample_count == 1");
+                ::logger.error("Failed to create texture: resolve destination textures must have sample_count == 1");
                 return {0};
             }
 
             // Multisample texture cannot be used as storage
             if (info.usage.has_flag(texture_usage::storage)) {
-                ::logger.error("Multisample texture cannot be used as storage");
+                ::logger.error("Failed to create texture: multisample textures cannot be used as storage");
                 return {0};
             }
 
             // Multisample texture cannot be used as sampled
             if (info.usage.has_flag(texture_usage::sampled)) {
-                ::logger.error("Multisample texture cannot be used as sampled");
+                ::logger.error("Failed to create texture: multisample textures cannot be used as sampled");
                 return {0};
             }
 
             // Mip levels should be 1 for multisample textures
             if (info.mip_levels > 1) {
-                ::logger.error("Multisample texture cannot have mip levels");
+                ::logger.error("Failed to create texture: multisample textures cannot have mip levels");
                 return {0};
             }
 
@@ -774,41 +784,30 @@ namespace tavros::renderer::rhi
                 ::logger.error("Texture pixels can't be provided for multisample textures");
                 return {0};
             }
-        } else if (info.sample_count == 1) {
-            // Resolve source texture must be a render target with sample_count > 1
-            if (info.usage.has_flag(texture_usage::resolve_source)) {
-                ::logger.error("Resolve source texture must have sample_count > 1");
-                return {0};
-            }
-        } else {
-            ::logger.error("Sample count must be 1 or greater");
-            return {0};
         }
 
-        if (info.usage.has_flag(texture_usage::resolve_source)) {
-            // Resolve source texture must be a render target
-            if (!info.usage.has_flag(texture_usage::render_target)) {
-                ::logger.error("Resolve source texture must be a render target");
-                return {0};
-            }
+        // Resolve source texture must be a render target
+        if (info.usage.has_flag(texture_usage::resolve_source) && !info.usage.has_flag(texture_usage::render_target)) {
+            ::logger.error("Failed to create texture: resolve source textures must be render targets");
+            return {0};
         }
 
         if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
             // Depth stencil target texture must be a depth stencil format
             if (!gl_depth_stencil_format.is_depth_stencil_format) {
-                ::logger.error("Depth stencil target texture must be a depth stencil format");
+                ::logger.error("Failed to create texture: depth/stencil target must have depth/stencil format");
                 return {0};
             }
 
             // Depth stencil target texture cannot be used as sampled
             if (info.usage.has_flag(texture_usage::sampled)) {
-                ::logger.error("Depth stencil target texture cannot be used as sampled");
+                ::logger.error("Failed to create texture: depth/stencil target textures cannot be used as sampled");
                 return {0};
             }
         }
 
         if (pixels != nullptr && !info.usage.has_flag(texture_usage::transfer_destination)) {
-            ::logger.error("Texture pixels can only be provided for transfer_destination textures");
+            ::logger.error("Failed to create texture: pixels can only be provided for transfer_destination textures");
             return {0};
         }
 
@@ -880,7 +879,7 @@ namespace tavros::renderer::rhi
             m_resources.remove(texture);
             ::logger.debug("Texture `%u` destroyed", texture.id);
         } else {
-            ::logger.error("Failed to destroy texture `%u` because it does not exist", texture.id);
+            ::logger.error("Failed to destroy texture `%u`: not found", texture.id);
         }
     }
 
@@ -890,47 +889,53 @@ namespace tavros::renderer::rhi
     )
     {
         if (info.shaders.size() != 2) {
-            ::logger.error("Pipeline must have exactly 2 shaders (vertex and fragment)");
+            ::logger.error("Failed to create pipeline: exactly 2 shaders required (vertex and fragment)");
             return {0};
         }
 
         if (info.shaders.size() != shaders.size()) {
-            ::logger.error("Pipeline shaders size mismatch");
+            ::logger.error("Failed to create pipeline: shaders size mismatch");
             return {0};
         }
 
         GLuint vs = 0;
         GLuint fs = 0;
         for (auto i = 0; i < info.shaders.size(); ++i) {
-            if (auto* s = m_resources.try_get(shaders[i])) {
-                if (s->info.stage != info.shaders[i].stage) {
-                    ::logger.error("Shader stage mismatch");
+            auto* s = m_resources.try_get(shaders[i]);
+            if (!s) {
+                ::logger.error("Failed to create pipeline: shader `%u` not found", shaders[i].id);
+                return {0};
+            }
+
+            if (s->info.stage != info.shaders[i].stage) {
+                ::logger.error("Failed to create pipeline: shader stage mismatch");
+                return {0};
+            }
+
+            if (s->info.stage == shader_stage::vertex) {
+                if (vs != 0) {
+                    ::logger.error("Failed to create pipeline: multiple vertex shaders provided");
                     return {0};
                 }
-                if (s->info.stage == shader_stage::vertex) {
-                    if (vs != 0) {
-                        ::logger.error("Multiple vertex shaders provided");
-                        return {0};
-                    }
-                    vs = s->shader_obj;
-                } else if (s->info.stage == shader_stage::fragment) {
-                    if (fs != 0) {
-                        ::logger.error("Multiple fragment shaders provided");
-                        return {0};
-                    }
-                    fs = s->shader_obj;
-                } else {
-                    ::logger.error("Unsupported shader stage");
+                vs = s->shader_obj;
+            } else if (s->info.stage == shader_stage::fragment) {
+                if (fs != 0) {
+                    ::logger.error("Failed to create pipeline: multiple fragment shaders provided");
                     return {0};
                 }
+                fs = s->shader_obj;
             } else {
-                ::logger.error("Failed to find shader `%u` for link program", shaders[i].id);
+                ::logger.error("Failed to create pipeline: unsupported shader stage");
                 return {0};
             }
         }
 
-        if (vs == 0 || fs == 0) {
-            ::logger.error("Pipeline must have both vertex and fragment shaders");
+        if (vs == 0) {
+            ::logger.error("Failed to create pipeline: missing vertex shader");
+            return {0};
+        }
+        if (fs == 0) {
+            ::logger.error("Failed to create pipeline: missing fragment shader");
             return {0};
         }
 
@@ -938,7 +943,7 @@ namespace tavros::renderer::rhi
 
         // Validate program
         if (program == 0) {
-            ::logger.error("Failed to link program");
+            ::logger.error("Failed to create pipeline: failed to link program");
             return {0};
         }
 
@@ -955,7 +960,7 @@ namespace tavros::renderer::rhi
             m_resources.remove(handle);
             ::logger.debug("Pipeline `%u` destroyed", handle.id);
         } else {
-            ::logger.error("Failed to destroy pipeline `%u` because it does not exist", handle.id);
+            ::logger.error("Failed to destroy pipeline `%u`: not found", handle.id);
         }
     }
 
@@ -967,7 +972,7 @@ namespace tavros::renderer::rhi
     {
         // Validate attachments size
         if (color_attachments.size() != info.color_attachment_formats.size()) {
-            ::logger.error("Incorrect number of attachments");
+            ::logger.error("Failed to create framebuffer: number of color attachments does not match the framebuffer info");
             return {0};
         }
 
@@ -975,58 +980,64 @@ namespace tavros::renderer::rhi
         core::static_vector<gl_texture*, k_max_color_attachments>    color_attachment_textures;
         core::static_vector<texture_handle, k_max_color_attachments> color_attachments_h;
         for (uint32 i = 0; i < color_attachments.size(); ++i) {
-            const texture_handle& handle = color_attachments[i];
-            color_attachments_h.push_back(handle);
-            if (auto* tex = m_resources.try_get(handle)) {
-                if (tex->info.width != info.width || tex->info.height != info.height) {
-                    ::logger.error("Invalid attachment size (framebuffer: `%u`x`%u`) != (attachment: `%u`x`%u`)", info.width, info.height, tex->info.width, tex->info.height);
-                    return {0};
-                }
+            const texture_handle tex_h = color_attachments[i];
+            color_attachments_h.push_back(tex_h);
 
-                // Validate formats
-                if (info.color_attachment_formats[i] != tex->info.format) {
-                    ::logger.error("Color attachment format mismatch with texture format");
-                    return {0};
-                }
-
-                if (!is_color_fromat(info.color_attachment_formats[i])) {
-                    ::logger.error("Unsupported color attachment format");
-                    return {0};
-                }
-
-                if (!is_color_fromat(tex->info.format)) {
-                    ::logger.error("Unsupported texture format as color attachment");
-                    return {0};
-                }
-
-                if (info.sample_count != tex->info.sample_count) {
-                    ::logger.error("Color attachment sample count `%u` mismatch with framebuffer sample count `%u`", tex->info.sample_count, info.sample_count);
-                    return {0};
-                }
-
-                // All the attachments must be used as color attachments
-                if (!tex->info.usage.has_flag(texture_usage::render_target)) {
-                    ::logger.error("Texture attachment is not a render target");
-                    return {0};
-                }
-
-                color_attachment_textures.push_back(tex);
-            } else {
+            auto* tex = m_resources.try_get(tex_h);
+            if (!tex) {
                 // Texture not found, so the framebuffer can't be created
-                ::logger.error("Failed to find texture attachment `%u`", handle.id);
+                ::logger.error("Failed to create framebuffer: color attachment texture `%u` not found", tex_h.id);
                 return {0};
             }
+
+            // Validate size
+            if (tex->info.width != info.width || tex->info.height != info.height) {
+                ::logger.error("Failed to create framebuffer: color attachment `%u` size `%u`x`%u` does not match framebuffer size `%u`x`%u`", tex_h.id, tex->info.width, tex->info.height, info.width, info.height);
+                return {0};
+            }
+
+            // Validate formats
+            if (!is_color_format(info.color_attachment_formats[i])) {
+                ::logger.error("Failed to create framebuffer: unsupported color attachment format for attachment `%u`", i);
+                return {0};
+            }
+
+            if (!is_color_format(tex->info.format)) {
+                ::logger.error("Failed to create framebuffer: unsupported color attachment format for texture `%u`", tex_h.id);
+                return {0};
+            }
+
+            if (info.color_attachment_formats[i] != tex->info.format) {
+                ::logger.error("Failed to create framebuffer: color attachment texture `%u` format mismatch with framebuffer info", tex_h.id);
+                return {0};
+            }
+
+            // Validate MSAA
+            if (info.sample_count != tex->info.sample_count) {
+                ::logger.error("Failed to create framebuffer: color attachment texture `%u` sample count `%u` mismatch with framebuffer sample count `%u`", tex_h.id, tex->info.sample_count, info.sample_count);
+                return {0};
+            }
+
+            // All the attachments must be used as color attachments
+            if (!tex->info.usage.has_flag(texture_usage::render_target)) {
+                ::logger.error("Failed to create framebuffer: color attachment texture `%u` is not a render target", tex_h.id);
+                return {0};
+            }
+
+            color_attachment_textures.push_back(tex);
         }
 
         // Validate depth/stencil texture
         bool           depth_stencil_enabled = info.depth_stencil_attachment_format != pixel_format::none;
         bool           depth_stencil_provided = depth_stencil_attachment.has_value();
-        texture_handle depth_stencil_attachmnet_h = {0};
+        texture_handle depth_stencil_attachment_h = {0};
+
         if (depth_stencil_enabled && !depth_stencil_provided) {
-            ::logger.error("Depth/stencil attachment is not provided, but is enabled for framebuffer");
+            ::logger.error("Failed to create framebuffer: depth/stencil attachment is enabled but not provided");
             return {0};
-        } else if (!depth_stencil_enabled && depth_stencil_provided) {
-            ::logger.error("Depth/stencil attachment is provided, but is not enabled for framebuffer");
+        }
+        if (!depth_stencil_enabled && depth_stencil_provided) {
+            ::logger.error("Failed to create framebuffer: depth/stencil attachment is provided but not enabled");
             return {0};
         }
 
@@ -1056,45 +1067,45 @@ namespace tavros::renderer::rhi
             TAV_ASSERT(depth_stencil_provided);
 
             auto gl_format = to_depth_stencil_fromat(info.depth_stencil_attachment_format);
-            if (gl_format.is_depth_stencil_format) {
-                auto depth_stencil_attachment_h = depth_stencil_attachment.value();
-
-                // Get depth/stencil texture and attach it
-                if (auto* tex = m_resources.try_get(depth_stencil_attachment_h)) {
-                    // Validate depth/stencil size
-                    if (tex->info.width != info.width || tex->info.height != info.height) {
-                        ::logger.error("Invalid depth/stencil attachment size (framebuffer: `%u`x`%u`) != (attachment: `%u`x`%u`)", info.width, info.height, tex->info.width, tex->info.height);
-                        return {0};
-                    }
-
-                    // Validate depth/stencil format
-                    if (tex->info.format != info.depth_stencil_attachment_format) {
-                        ::logger.error("Invalid depth/stencil attachment format");
-                        return {0};
-                    }
-
-                    // Validate depth/stencil usage
-                    if (!tex->info.usage.has_flag(texture_usage::depth_stencil_target)) {
-                        ::logger.error("Depth/stencil attachment is not a depth/stencil target");
-                        return {0};
-                    }
-
-                    // Validate depth/stencil sample count
-                    if (tex->info.sample_count != info.sample_count) {
-                        ::logger.error("Depth/stencil attachment has invalid sample count");
-                        return {0};
-                    }
-
-                    // Everything is ok, attach depth/stencil texture
-                    glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, tex->target, tex->texture_obj, 0);
-                } else {
-                    ::logger.error("Failed to find texture `%u`");
-                    return {0};
-                }
-            } else {
-                ::logger.error("Is not a depth/stencil format");
+            if (!gl_format.is_depth_stencil_format) {
+                ::logger.error("Failed to create framebuffer: depth/stencil attachment format is invalid");
                 return {0};
             }
+
+            // Get depth/stencil texture and attach it
+            depth_stencil_attachment_h = depth_stencil_attachment.value();
+            auto* tex = m_resources.try_get(depth_stencil_attachment_h);
+            if (!tex) {
+                ::logger.error("Failed to create framebuffer: depth/stencil texture `%u` not found", depth_stencil_attachment_h.id);
+                return {0};
+            }
+
+            // Validate depth/stencil size
+            if (tex->info.width != info.width || tex->info.height != info.height) {
+                ::logger.error("Failed to create framebuffer: depth/stencil attachment texture `%u` size `%u`x`%u` does not match framebuffer size `%u`x`%u`", depth_stencil_attachment_h.id, tex->info.width, tex->info.height, info.width, info.height);
+                return {0};
+            }
+
+            // Validate depth/stencil format
+            if (tex->info.format != info.depth_stencil_attachment_format) {
+                ::logger.error("Failed to create framebuffer: depth/stencil attachment texture `%u` format mismatch", depth_stencil_attachment_h.id);
+                return {0};
+            }
+
+            // Validate depth/stencil usage
+            if (!tex->info.usage.has_flag(texture_usage::depth_stencil_target)) {
+                ::logger.error("Failed to create framebuffer: depth/stencil attachment texture `%u` is not a depth/stencil target", depth_stencil_attachment_h.id);
+                return {0};
+            }
+
+            // Validate depth/stencil sample count
+            if (tex->info.sample_count != info.sample_count) {
+                ::logger.error("Failed to create framebuffer: depth/stencil attachment texture `%u` sample count mismatch", depth_stencil_attachment_h.id);
+                return {0};
+            }
+
+            // Everything is ok, attach depth/stencil texture
+            glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, tex->target, tex->texture_obj, 0);
         }
 
         // Framebuffer will be incomplete if the depth/stencil texture is not attached and
@@ -1105,7 +1116,7 @@ namespace tavros::renderer::rhi
         }
 
         // Enable color attachments
-        if (draw_buffers.size() == 0) {
+        if (draw_buffers.empty()) {
             // Drawing only onto depth/stencil buffer
             // Framebuffer will be incomplete if the depth/stencil texture is not attached
             glDrawBuffer(GL_NONE);
@@ -1117,13 +1128,13 @@ namespace tavros::renderer::rhi
 
         // Validate framebuffer
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            ::logger.error("Framebuffer is not complete");
+            ::logger.error("Failed to create framebuffer: framebuffer is not complete");
             return {0};
         }
 
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
-        auto h = m_resources.create({info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachmnet_h});
+        auto h = m_resources.create({info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachment_h});
         ::logger.debug("Framebuffer `%u` created", h.id);
         return h;
     }
@@ -1135,12 +1146,16 @@ namespace tavros::renderer::rhi
             m_resources.remove(framebuffer);
             ::logger.debug("Framebuffer `%u` destroyed", framebuffer.id);
         } else {
-            ::logger.error("Failed to destroy framebuffer `%u` because it does not exist", framebuffer.id);
+            ::logger.error("Failed to destroy framebuffer `%u`: not found", framebuffer.id);
         }
     }
 
     buffer_handle graphics_device_opengl::create_buffer(const buffer_info& info)
     {
+        if (info.size == 0) {
+            ::logger.warning("Creating buffer with size 0: OpenGL will allocate an empty buffer");
+        }
+
         GLenum gl_target = 0;
         GLenum gl_usage = 0;
 
@@ -1201,19 +1216,19 @@ namespace tavros::renderer::rhi
             m_resources.remove(buffer);
             ::logger.debug("Buffer `%u` destroyed", buffer.id);
         } else {
-            ::logger.error("Failed to destroy buffer `%u` because it does not exist", buffer.id);
+            ::logger.error("Failed to destroy buffer `%u`: not found", buffer.id);
         }
     }
 
-    geometry_binding_handle graphics_device_opengl::create_geometry(
-        const geometry_binding_info&          info,
+    geometry_handle graphics_device_opengl::create_geometry(
+        const geometry_info&                  info,
         const core::span<const buffer_handle> vertex_buffers,
         core::optional<buffer_handle>         index_buffer
     )
     {
         // Check vertex buffers
         if (vertex_buffers.size() == 0) {
-            ::logger.error("No vertex buffers");
+            ::logger.error("Failed to create geometry: no vertex buffers specified");
             return {0};
         }
 
@@ -1221,8 +1236,8 @@ namespace tavros::renderer::rhi
         for (auto i = 0; i < info.buffer_layouts.size(); ++i) {
             auto buffer_index = info.buffer_layouts[i].buffer_index;
             if (buffer_index >= vertex_buffers.size()) {
-                uint32 provided = static_cast<uint32>(vertex_buffers.size());
-                ::logger.error("Invalid vertex buffer binding index: `%u`, max available: `%u`", buffer_index, provided);
+                uint32 max_index = static_cast<uint32>(vertex_buffers.size() - 1);
+                ::logger.error("Failed to create geometry: invalid vertex buffer binding index `%u`, maximum allowed is `%u`", buffer_index, max_index);
                 return {0};
             }
         }
@@ -1231,20 +1246,20 @@ namespace tavros::renderer::rhi
         for (auto i = 0; i < info.attribute_bindings.size(); ++i) {
             auto buffer_binding_index = info.attribute_bindings[i].buffer_layout_index;
             if (buffer_binding_index >= info.buffer_layouts.size()) {
-                uint32 provided = static_cast<uint32>(info.buffer_layouts.size());
-                ::logger.error("Invalid vertex attribute binding index: `%u`, max available: `%u`", buffer_binding_index, provided);
+                uint32 max_index = static_cast<uint32>(info.buffer_layouts.size() - 1);
+                ::logger.error("Failed to create geometry: invalid vertex attribute binding index `%u`, maximum allowed is `%u`", buffer_binding_index, max_index);
                 return {0};
             }
         }
 
         // Check index buffer
         if (info.has_index_buffer && index_buffer == core::nullopt) {
-            ::logger.error("Index buffer is missing");
+            ::logger.error("Failed to create geometry: index buffer is missing but required");
             return {0};
         }
 
         if (!info.has_index_buffer && index_buffer != core::nullopt) {
-            ::logger.error("Index buffer is not enabled");
+            ::logger.error("Failed to create geometry: index buffer was provided but not enabled");
             return {0};
         }
 
@@ -1273,7 +1288,7 @@ namespace tavros::renderer::rhi
             auto  vertex_buffer_h = vertex_buffers[buf_layout.buffer_index];
             auto* b = m_resources.try_get(vertex_buffer_h);
             if (!b) {
-                ::logger.error("Failed to find vertex buffer `%u`", vertex_buffer_h.id);
+                ::logger.error("Failed to create geometry: vertex buffer `%u` not found", vertex_buffer_h.id);
                 return {0};
             }
 
@@ -1289,34 +1304,35 @@ namespace tavros::renderer::rhi
         // Bind index buffer if present
         auto index_buffer_h = index_buffer.value();
         if (info.has_index_buffer) {
-            if (auto* b = m_resources.try_get(index_buffer_h)) {
-                if (b->info.usage != buffer_usage::index) {
-                    ::logger.error("Invalid index buffer usage");
-                    return {0};
-                }
-
-                glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj);
-            } else {
-                ::logger.error("Failed to find index buffer `%u`", index_buffer_h.id);
+            auto* b = m_resources.try_get(index_buffer_h);
+            if (!b) {
+                ::logger.error("Failed to create geometry: index buffer `%u` not found", index_buffer_h.id);
                 return {0};
             }
+            if (b->info.usage != buffer_usage::index) {
+                ::logger.error("Failed to create geometry: buffer `%u` is not an index buffer", index_buffer_h.id);
+                return {0};
+            }
+
+            // Everything is ok, so bind index buffer
+            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj);
         }
 
         glBindVertexArray(0);
 
         auto h = m_resources.create({info, vao_owner.release()});
-        ::logger.debug("Geometry binding `%u` created", h.id);
+        ::logger.debug("Geometry `%u` created", h.id);
         return h;
     }
 
-    void graphics_device_opengl::destroy_geometry(geometry_binding_handle geometry_binding)
+    void graphics_device_opengl::destroy_geometry(geometry_handle geometry)
     {
-        if (auto* gb = m_resources.try_get(geometry_binding)) {
-            glDeleteVertexArrays(1, &gb->vao_obj);
-            m_resources.remove(geometry_binding);
-            ::logger.debug("Geometry binding `%u` destroyed", geometry_binding.id);
+        if (auto* g = m_resources.try_get(geometry)) {
+            glDeleteVertexArrays(1, &g->vao_obj);
+            m_resources.remove(geometry);
+            ::logger.debug("Geometry `%u` destroyed", geometry.id);
         } else {
-            ::logger.error("Failed to destroy geometry binding `%u` because it does not exist", geometry_binding.id);
+            ::logger.error("Failed to destroy geometry `%u`: not found", geometry.id);
         }
     }
 
@@ -1327,8 +1343,8 @@ namespace tavros::renderer::rhi
     {
         // Validate attachments
         for (const auto& attachment : info.color_attachments) {
-            if (!is_color_fromat(attachment.format)) {
-                ::logger.error("Invalid color attachment format");
+            if (!is_color_format(attachment.format)) {
+                ::logger.error("Failed to create render pass: invalid color attachment format");
                 return {0};
             }
         }
@@ -1338,13 +1354,13 @@ namespace tavros::renderer::rhi
         if (!depth_stencil_is_none) {
             auto f = to_depth_stencil_fromat(info.depth_stencil_attachment.format);
             if (!f.is_depth_stencil_format) {
-                ::logger.error("Invalid depth/stencil attachment format");
+                ::logger.error("Failed to create render pass: invalid depth/stencil attachment format");
                 return {0};
             }
         }
 
         if (info.color_attachments.size() == 0 && depth_stencil_is_none) {
-            ::logger.error("Render pass has no attachments");
+            ::logger.error("Failed to create render pass: no attachments specified");
             return {0};
         }
 
@@ -1353,36 +1369,46 @@ namespace tavros::renderer::rhi
         uint32 need_resolve_textures_number = 0;
         for (auto i = 0; i < info.color_attachments.size(); ++i) {
             auto& attachment = info.color_attachments[i];
-            if (info.color_attachments[i].store == store_op::resolve) {
+            if (attachment.store == store_op::resolve) {
                 auto resolve_index = attachment.resolve_texture_index;
+
                 // First of all, validate that resolve index is valid
-                if (resolve_index >= resolve_textures.size()) {
-                    ::logger.error("Invalid resolve texture index `%u`", resolve_index);
+                if (resolve_textures.empty()) {
+                    ::logger.error("Failed to create render pass: no resolve textures available, but index `%u` was requested", resolve_index);
                     return {0};
                 }
+                if (resolve_index >= resolve_textures.size()) {
+                    uint32 max_index = static_cast<uint32>(resolve_textures.size() - 1);
+                    ::logger.error("Failed to create render pass: invalid resolve texture index `%u`, maximum allowed is `%u`", resolve_index, max_index);
+                    return {0};
+                }
+
+                // Check for already used resolve index
                 if (is_used_for_resolve[resolve_index]) {
-                    ::logger.error("Resolve attachment index `%u` is used more than once", resolve_index);
+                    ::logger.error("Failed to create render pass: resolve texture index `%u` is used more than once", resolve_index);
                     return {0};
                 }
 
                 is_used_for_resolve[resolve_index] = true;
 
                 auto& resolve_tex_h = resolve_textures[resolve_index];
-                if (auto* resolve_tex = m_resources.try_get(resolve_tex_h)) {
-                    if (resolve_tex->info.format != attachment.format) {
-                        ::logger.error("Resolve attachment format mismatch with color attachment format");
-                        return {0};
-                    }
-                    if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
-                        ::logger.error("Resolve attachment texture must have resolve_destination usage flag");
-                        return {0};
-                    }
-                    if (resolve_tex->info.sample_count != 1) {
-                        ::logger.error("Resolve attachment texture must have sample_count == 1");
-                        return {0};
-                    }
-                } else {
-                    ::logger.error("Failed to find resolve texture `%u`", resolve_tex_h.id);
+                auto* resolve_tex = m_resources.try_get(resolve_tex_h);
+                if (!resolve_tex) {
+                    ::logger.error("Failed to create render pass: resolve texture `%u` not found", resolve_tex_h.id);
+                    return {0};
+                }
+
+
+                if (resolve_tex->info.format != attachment.format) {
+                    ::logger.error("Failed to create render pass: mismatched resolve texture format with color attachment `%u`", resolve_index);
+                    return {0};
+                }
+                if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
+                    ::logger.error("Failed to create render pass: resolve texture `%u` must have resolve_destination usage flag", resolve_tex_h.id);
+                    return {0};
+                }
+                if (resolve_tex->info.sample_count != 1) {
+                    ::logger.error("Failed to create render pass: resolve texture `%u` must be single-sampled", resolve_tex_h.id);
                     return {0};
                 }
 
@@ -1392,7 +1418,7 @@ namespace tavros::renderer::rhi
 
         // Make sure that all resolve textures are used
         if (resolve_textures.size() != need_resolve_textures_number) {
-            ::logger.error("Not all resolve textures are used");
+            ::logger.error("Failed to create render pass: not all resolve textures are used");
             return {0};
         }
 
@@ -1412,7 +1438,7 @@ namespace tavros::renderer::rhi
             m_resources.remove(render_pass);
             ::logger.debug("Render pass `%u` destroyed", render_pass.id);
         } else {
-            ::logger.error("Failed to destroy render pass `%u` because it does not exist", render_pass.id);
+            ::logger.error("Failed to destroy render pass `%u`: not found", render_pass.id);
         }
     }
 
@@ -1425,25 +1451,41 @@ namespace tavros::renderer::rhi
     {
         // Validate texture bindings
         for (auto i = 0; i < info.texture_bindings.size(); ++i) {
-            auto binding = info.texture_bindings[i];
+            auto& binding = info.texture_bindings[i];
+
+            // Textures
+            if (textures.empty()) {
+                ::logger.error("Failed to create shader binding: no textures available, but index `%u` was requested", binding.texture_index);
+                return {0};
+            }
             if (binding.texture_index >= textures.size()) {
-                uint32 provided = static_cast<uint32>(textures.size());
-                ::logger.error("Invalid texture binding index: `%u`, max available: `%u`", binding.texture_index, provided);
+                uint32 max_index = static_cast<uint32>(textures.size() - 1);
+                ::logger.error("Failed to create shader binding: invalid texture binding index `%u`, maximum allowed is `%u`", binding.texture_index, max_index);
+                return {0};
+            }
+
+            // Samplers
+            if (samplers.empty()) {
+                ::logger.error("Failed to create shader binding: no samplers available, but index `%u` was requested", binding.sampler_index);
                 return {0};
             }
             if (binding.sampler_index >= samplers.size()) {
-                uint32 provided = static_cast<uint32>(samplers.size());
-                ::logger.error("Invalid sampler binding index: `%u`, max available: `%u`", binding.sampler_index, provided);
+                uint32 max_index = static_cast<uint32>(samplers.size() - 1);
+                ::logger.error("Failed to create shader binding: invalid sampler binding index `%u`, maximum allowed is `%u`", binding.sampler_index, max_index);
                 return {0};
             }
         }
 
         // Validate buffer bindings
         for (auto i = 0; i < info.buffer_bindings.size(); ++i) {
-            auto binding = info.buffer_bindings[i];
+            auto& binding = info.buffer_bindings[i];
+            if (buffers.empty()) {
+                ::logger.error("Failed to create shader binding: no buffers available, but index `%u` was requested", binding.buffer_index);
+                return {0};
+            }
             if (binding.buffer_index >= buffers.size()) {
-                uint32 provided = static_cast<uint32>(buffers.size());
-                ::logger.error("Invalid buffer binding index: `%u`, max available: `%u`", binding.buffer_index, provided);
+                auto max_index = static_cast<uint32>(buffers.size()) - 1;
+                ::logger.error("Failed to create shader binding: invalid buffer binding index `%u`, maximum allowed is `%u`", binding.buffer_index, max_index);
                 return {0};
             }
         }
@@ -1465,7 +1507,7 @@ namespace tavros::renderer::rhi
             buffer_handles.push_back(buffer_h);
             auto* b = m_resources.try_get(buffer_h);
             if (b->info.usage != buffer_usage::uniform) {
-                ::logger.error("Buffer `%u` is not a uniform buffer", buffers[i].id);
+                ::logger.error("Failed to create shader binding: buffer `%u` is not uniform buffer", buffers[i].id);
                 return {0};
             }
         }
@@ -1481,7 +1523,7 @@ namespace tavros::renderer::rhi
             m_resources.remove(shader_binding);
             ::logger.debug("Shader binding `%u` destroyed", shader_binding.id);
         } else {
-            ::logger.error("Failed to destroy shader binding `%u` because it does not exist", shader_binding.id);
+            ::logger.error("Failed to destroy shader binding `%u`: not found", shader_binding.id);
         }
     }
 

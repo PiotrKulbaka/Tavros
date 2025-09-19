@@ -14,7 +14,7 @@ namespace tavros::renderer::rhi
 
         void bind_pipeline(pipeline_handle pipeline) override;
 
-        void bind_geometry(geometry_binding_handle geometry_binding) override;
+        void bind_geometry(geometry_handle geometry) override;
 
         void bind_shader_binding(shader_binding_handle shader_binding) override;
 
@@ -35,7 +35,7 @@ namespace tavros::renderer::rhi
         pipeline_handle         m_current_pipeline = {0};
         render_pass_handle      m_current_render_pass = {0};
         framebuffer_handle      m_current_framebuffer = {0};
-        geometry_binding_handle m_current_geometry_binding = {0};
+        geometry_handle         m_current_geometry = {0};
 
         GLuint m_resolve_fbo = 0;
     };
