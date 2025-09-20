@@ -42,6 +42,12 @@ namespace tavros::renderer::rhi
         /// Offset in bytes from the start of the vertex to this attribute
         uint32 offset = 0;
 
+        /// Specifies how often this attribute advances per instance when rendering with instancing
+        /// - 0: attribute is a per-vertex value (changes every vertex)
+        /// - 1: attribute is a per-instance value (changes once per instance)
+        /// - N (>1): attribute is reused for N consecutive instances before advancing
+        uint32 instance_divisor = 0;
+
         /// Description of the vertex attribute (format, components, etc.)
         vertex_attribute attribute;
     };

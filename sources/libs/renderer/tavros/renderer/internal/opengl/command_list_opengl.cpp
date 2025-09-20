@@ -642,7 +642,7 @@ namespace tavros::renderer::rhi
         m_current_render_pass = {0};
     }
 
-    void command_list_opengl::draw(uint32 count, uint32 first_vertex)
+    void command_list_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)
     {
         auto* p = m_device->get_resources()->try_get(m_current_pipeline);
         if (!p) {
@@ -655,11 +655,28 @@ namespace tavros::renderer::rhi
         }
 
         auto gl_topology = to_gl_topology(p->info.topology);
-        glDrawArrays(
-            gl_topology,
-            static_cast<GLint>(first_vertex),
-            static_cast<GLsizei>(count)
-        );
+        auto gl_first_vertex = static_cast<GLint>(first_vertex);
+        auto gl_vertex_count = static_cast<GLsizei>(vertex_count);
+        auto gl_instance_count = static_cast<GLsizei>(instance_count);
+        auto gl_first_instance = static_cast<GLuint>(first_instance);
+
+        if (instance_count > 1 || first_instance > 0) {
+            glDrawArraysInstancedBaseInstance(
+                gl_topology,
+                gl_first_vertex,
+                gl_vertex_count,
+                gl_instance_count,
+                gl_first_instance
+            );
+        } else if (instance_count == 1) {
+            glDrawArrays(
+                gl_topology,
+                gl_first_vertex,
+                gl_vertex_count
+            );
+        } else {
+            ::logger.warning("Failed to draw: instance count `%u` must be at least 1", instance_count);
+        }
     }
 
     void command_list_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
@@ -691,23 +708,29 @@ namespace tavros::renderer::rhi
 
         auto  gl_index_format = to_gl_index_format(g->info.index_format);
         auto  gl_topology = to_gl_topology(p->info.topology);
-        auto* index_offset = reinterpret_cast<const void*>(first_index * gl_index_format.size);
+        auto* gl_index_offset = reinterpret_cast<const void*>(first_index * gl_index_format.size);
+        auto  gl_index_count = static_cast<GLsizei>(index_count);
+        auto  gl_instance_count = static_cast<GLsizei>(instance_count);
+        auto  gl_first_instance = static_cast<GLuint>(first_instance);
 
-        if (instance_count > 1) {
-            glDrawElementsInstanced(
+        if (instance_count > 1 || first_instance > 0) {
+            glDrawElementsInstancedBaseInstance(
                 gl_topology,
-                index_count,
+                gl_index_count,
                 gl_index_format.type,
-                index_offset,
-                instance_count
+                gl_index_offset,
+                gl_instance_count,
+                gl_first_instance
             );
-        } else {
+        } else if (instance_count == 1) {
             glDrawElements(
                 gl_topology,
-                index_count,
+                gl_index_count,
                 gl_index_format.type,
-                index_offset
+                gl_index_offset
             );
+        } else {
+            ::logger.warning("Failed to draw indexed: instance count `%u` must be at least 1", instance_count);
         }
     }
 

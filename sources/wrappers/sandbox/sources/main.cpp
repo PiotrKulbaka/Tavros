@@ -37,6 +37,7 @@ const char* msaa_vertex_shader_source = R"(
 layout (location = 0) in vec3 a_pos;
 layout (location = 1) in vec3 a_normal;
 layout (location = 2) in vec2 a_uv;
+layout (location = 3) in mat4 a_instance_model;
 
 out vec2 v_uv;
 out vec3 v_world_pos;
@@ -62,10 +63,11 @@ layout (binding = 1) uniform Scene
 void main()
 {
     v_uv = a_uv;
-    v_world_pos = a_pos;
+    vec3 pos = vec3(a_instance_model * vec4(a_pos, 1.0f)).xyz;
+    v_world_pos = pos;
     v_normal = normalize(a_normal);
 
-    gl_Position = u_camera * vec4(a_pos, 1.0);
+    gl_Position = u_camera * vec4(pos, 1.0);
 }
 )";
 
@@ -665,7 +667,7 @@ int main()
 
     // Make vertices buffer
     rhi::buffer_info xyz_normal_uv_info;
-    xyz_normal_uv_info.size = 1024 * 1024; // 1 Mb
+    xyz_normal_uv_info.size = 1024 * 1024 * 16; // 1 Mb
     xyz_normal_uv_info.usage = rhi::buffer_usage::vertex;
     xyz_normal_uv_info.access = rhi::buffer_access::gpu_only;
     auto buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
@@ -681,19 +683,46 @@ int main()
     cbuf->copy_buffer(buffer_indices, stage_buffer, indices_size, 0, indices_offset);
 
 
+    auto                                     instance_number = 10000;
+    tavros::core::vector<tavros::math::mat4> instance_data;
+    instance_data.reserve(instance_number);
+    for (auto i = 0; i < instance_number; i++) {
+        tavros::math::mat4 m(1.0f);
+        m[3][0] = rand() % 30 - 15.0f;
+        m[3][1] = rand() % 30 - 15.0f;
+        m[3][2] = rand() % 30 - 15.0f;
+        auto q = tavros::math::quat::from_axis_angle({(float) ((rand() % 100) - 50), (float) ((rand() % 100) - 50), (float) ((rand() % 100) - 50)}, ((rand() % 1000) - 500) / 250.0f);
+        auto m2 = tavros::math::make_mat4(q);
+
+        instance_data.push_back(m * m2);
+    }
+    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(instance_data.data()), instance_data.size() * sizeof(tavros::math::mat4));
+
+
+    rhi::buffer_info instance_buffer_desc;
+    instance_buffer_desc.size = sizeof(tavros::math::mat4) * instance_number;
+    instance_buffer_desc.usage = rhi::buffer_usage::vertex;
+    instance_buffer_desc.access = rhi::buffer_access::gpu_only;
+    auto instance_buffer = gdevice->create_buffer(instance_buffer_desc);
+
+    cbuf->copy_buffer(instance_buffer, stage_buffer, sizeof(tavros::math::mat4) * instance_number, 0, 0);
+
+
     rhi::geometry_info gbi;
     gbi.buffer_layouts.push_back({0, xyz_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, norm_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, uv_offset, 4 * 2});
+    gbi.buffer_layouts.push_back({1, 0, sizeof(tavros::math::mat4)});
 
-    gbi.attribute_bindings.push_back({0, 0, 3, rhi::attribute_format::f32, false, 0});
-    gbi.attribute_bindings.push_back({1, 0, 3, rhi::attribute_format::f32, false, 1});
-    gbi.attribute_bindings.push_back({2, 0, 2, rhi::attribute_format::f32, false, 2});
+    gbi.attribute_bindings.push_back({0, 0, 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
+    gbi.attribute_bindings.push_back({1, 0, 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
+    gbi.attribute_bindings.push_back({2, 0, 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
+    gbi.attribute_bindings.push_back({3, 0, 1, rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 3});
 
     gbi.has_index_buffer = true;
     gbi.index_format = rhi::index_buffer_format::u32;
 
-    rhi::buffer_handle buffers_to_binding[] = {buffer_xyz_normal_uv};
+    rhi::buffer_handle buffers_to_binding[] = {buffer_xyz_normal_uv, instance_buffer};
     auto               geometry1 = gdevice->create_geometry(gbi, buffers_to_binding, buffer_indices);
 
 
@@ -811,7 +840,7 @@ int main()
 
         cbuf->bind_shader_binding(shader_binding);
 
-        cbuf->draw_indexed(model.surfaces[0].indices.size());
+        cbuf->draw_indexed(model.surfaces[0].indices.size(), 0, 0, instance_number);
 
         cbuf->end_render_pass();
 

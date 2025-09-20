@@ -22,13 +22,37 @@ namespace tavros::renderer::rhi
     };
 
     /**
+     * Describes the semantic type of a vertex attribute
+     * Defines how many components form the attribute and whether it represents a vector or a matrix
+     */
+    enum class attribute_type : uint8
+    {
+        scalar, /// Single component (float, int, uint, etc.)
+        vec2,   /// 2-component vector
+        vec3,   /// 3-component vector
+        vec4,   /// 4-component vector
+
+        mat2,   /// 2x2 matrix (2 vectors of 2 components)
+        mat2x3, /// 2x3 matrix (2 vectors of 3 components)
+        mat2x4, /// 2x4 matrix (2 vectors of 4 components)
+
+        mat3x2, /// 3x2 matrix (3 vectors of 2 components)
+        mat3,   /// 3x3 matrix (3 vectors of 3 components)
+        mat3x4, /// 3x4 matrix (3 vectors of 4 components)
+
+        mat4x2, /// 4x2 matrix (4 vectors of 2 components)
+        mat4x3, /// 4x3 matrix (4 vectors of 3 components)
+        mat4,   /// 4x4 matrix (4 vectors of 4 components)
+    };
+
+    /**
      * Defines a single vertex attribute within a vertex buffer layout
      * Specifies how one attribute (e.g., position, color, normal) is stored and interpreted
      */
     struct vertex_attribute
     {
-        /// Number of components per vertex (1 = scalar, 2 = vec2, 3 = vec3, 4 = vec4)
-        uint8 number_components = 1;
+        /// Type of attribute
+        attribute_type type = attribute_type::scalar;
 
         /// Format of each component
         attribute_format format = attribute_format::f32;

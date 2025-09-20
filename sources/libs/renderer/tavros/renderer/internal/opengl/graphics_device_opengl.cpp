@@ -458,34 +458,117 @@ namespace
         return program;
     }
 
-    struct format_info
+    struct gl_attribute_info
     {
-        GLenum type;
-        uint32 size;
+        GLenum type; // GL base type (e.g., GL_FLOAT, GL_INT)
+        GLint  size; // Size of one component in bytes
+        GLint  rows; // Number of scalars per column (vector size)
+        GLint  cols; // Number of columns (for matrices)
     };
 
-    format_info to_gl_attribute_format(attribute_format format)
+    gl_attribute_info to_gl_attribute_info(attribute_type type, attribute_format format)
     {
+        gl_attribute_info info;
+
+        // Map format -> GL type + component size
         switch (format) {
         case attribute_format::u8:
-            return {GL_UNSIGNED_BYTE, 1};
+            info.type = GL_UNSIGNED_BYTE;
+            info.size = 1;
+            break;
         case attribute_format::i8:
-            return {GL_BYTE, 1};
+            info.type = GL_BYTE;
+            info.size = 1;
+            break;
         case attribute_format::u16:
-            return {GL_UNSIGNED_SHORT, 2};
+            info.type = GL_UNSIGNED_SHORT;
+            info.size = 2;
+            break;
         case attribute_format::i16:
-            return {GL_SHORT, 2};
+            info.type = GL_SHORT;
+            info.size = 2;
+            break;
         case attribute_format::u32:
-            return {GL_UNSIGNED_INT, 4};
+            info.type = GL_UNSIGNED_INT;
+            info.size = 4;
+            break;
         case attribute_format::i32:
-            return {GL_INT, 4};
+            info.type = GL_INT;
+            info.size = 4;
+            break;
         case attribute_format::f16:
-            return {GL_HALF_FLOAT, 2};
+            info.type = GL_HALF_FLOAT;
+            info.size = 2;
+            break;
         case attribute_format::f32:
-            return {GL_FLOAT, 4};
+            info.type = GL_FLOAT;
+            info.size = 4;
+            break;
         default:
             TAV_UNREACHABLE();
         }
+
+        // Map type -> rows/cols
+        switch (type) {
+        case attribute_type::scalar:
+            info.rows = 1;
+            info.cols = 1;
+            break;
+        case attribute_type::vec2:
+            info.rows = 2;
+            info.cols = 1;
+            break;
+        case attribute_type::vec3:
+            info.rows = 3;
+            info.cols = 1;
+            break;
+        case attribute_type::vec4:
+            info.rows = 4;
+            info.cols = 1;
+            break;
+
+        case attribute_type::mat2:
+            info.rows = 2;
+            info.cols = 2;
+            break; // 2x2
+        case attribute_type::mat2x3:
+            info.rows = 3;
+            info.cols = 2;
+            break; // 3 rows, 2 cols
+        case attribute_type::mat2x4:
+            info.rows = 4;
+            info.cols = 2;
+            break; // 4 rows, 2 cols
+        case attribute_type::mat3x2:
+            info.rows = 2;
+            info.cols = 3;
+            break; // 2 rows, 3 cols
+        case attribute_type::mat3:
+            info.rows = 3;
+            info.cols = 3;
+            break; // 3x3
+        case attribute_type::mat3x4:
+            info.rows = 4;
+            info.cols = 3;
+            break; // 4 rows, 3 cols
+        case attribute_type::mat4x2:
+            info.rows = 2;
+            info.cols = 4;
+            break; // 2 rows, 4 cols
+        case attribute_type::mat4x3:
+            info.rows = 3;
+            info.cols = 4;
+            break; // 3 rows, 4 cols
+        case attribute_type::mat4:
+            info.rows = 4;
+            info.cols = 4;
+            break; // 4x4
+
+        default:
+            TAV_UNREACHABLE();
+        }
+
+        return info;
     }
 
     void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* user_param)
@@ -1277,12 +1360,10 @@ namespace tavros::renderer::rhi
 
 
         // Setup attribute bindings
-        for (auto i = 0; i < info.attribute_bindings.size(); ++i) {
-            auto& attrib_bind = info.attribute_bindings[i];
+        for (auto attrib_i = 0; attrib_i < info.attribute_bindings.size(); ++attrib_i) {
+            auto& attrib_bind = info.attribute_bindings[attrib_i];
             auto& attrib = attrib_bind.attribute;
             auto  buf_layout = info.buffer_layouts[attrib_bind.buffer_layout_index];
-            auto  vertex_buf_index = buf_layout.buffer_index;
-            auto  gl_format = to_gl_attribute_format(attrib.format);
 
             // Get the buffer
             auto  vertex_buffer_h = vertex_buffers[buf_layout.buffer_index];
@@ -1293,12 +1374,19 @@ namespace tavros::renderer::rhi
             }
 
             // Enable the vertex buffer
-            glBindVertexBuffer(i, b->buffer_obj, buf_layout.base_offset, buf_layout.stride);
+            glBindVertexBuffer(attrib_i, b->buffer_obj, buf_layout.base_offset, buf_layout.stride);
 
-            // Enable attribute and set pointer
-            glEnableVertexAttribArray(attrib.location);
-            glVertexAttribFormat(attrib.location, gl_format.size, gl_format.type, attrib.normalize, attrib_bind.offset);
-            glVertexAttribBinding(attrib.location, i);
+            auto gl_attrib_info = to_gl_attribute_info(attrib.type, attrib.format);
+            for (uint32 col = 0; col < gl_attrib_info.cols; ++col) {
+                GLuint location = attrib.location + col;
+                GLuint offset = attrib_bind.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
+
+                // Enable attribute and set pointer
+                glEnableVertexAttribArray(location);
+                glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, attrib.normalize, offset);
+                glVertexAttribBinding(location, attrib_i);
+            }
+            glVertexBindingDivisor(attrib_i, attrib_bind.instance_divisor);
         }
 
         // Bind index buffer if present
