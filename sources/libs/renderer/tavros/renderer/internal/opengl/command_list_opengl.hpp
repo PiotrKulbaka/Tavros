@@ -28,7 +28,9 @@ namespace tavros::renderer::rhi
 
         void copy_buffer_data(buffer_handle buffer, const void* data, size_t size, size_t offset = 0) override;
 
-        void copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, size_t size, size_t dst_offset = 0, size_t src_offset = 0) override;
+        void copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset = 0, size_t dst_offset = 0) override;
+
+        void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, size_t size, size_t src_offset = 0, uint32 stride = 0) override;
 
     private:
         graphics_device_opengl* m_device = nullptr;

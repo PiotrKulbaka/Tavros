@@ -10,6 +10,7 @@ namespace tavros::renderer::rhi
      */
     enum class buffer_usage : uint8
     {
+        stage,   /// Buffer used for data transfer CPU to GPU
         index,   /// Buffer used for index data (element array)
         vertex,  /// Buffer used for vertex attributes
         uniform, /// Buffer used for uniform / constant data
@@ -20,8 +21,8 @@ namespace tavros::renderer::rhi
      */
     enum class buffer_access : uint8
     {
-        gpu_only,   /// Buffer accessible only by the GPU (immutable or GPU-local)
         cpu_to_gpu, /// CPU writes to the buffer, GPU reads from it (dynamic upload)
+        gpu_only,   /// Buffer accessible only by the GPU (immutable or GPU-local)
         gpu_to_cpu, /// GPU writes to the buffer, CPU reads from it (readback)
     };
 
@@ -34,11 +35,10 @@ namespace tavros::renderer::rhi
         size_t size = 0;
 
         /// Buffer usage
-        /// Used only if access is gpu_only or gpu_to_cpu
-        buffer_usage usage = buffer_usage::index;
+        buffer_usage usage = buffer_usage::stage;
 
         /// Access pattern indicating who reads/writes this buffer
-        buffer_access access = buffer_access::gpu_only;
+        buffer_access access = buffer_access::cpu_to_gpu;
     };
 
 } // namespace tavros::renderer::rhi

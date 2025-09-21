@@ -33,9 +33,7 @@ namespace tavros::renderer::rhi
         void destroy_sampler(sampler_handle handle) override;
 
         texture_handle create_texture(
-            const texture_info& info,
-            const uint8*        pixels = nullptr,
-            uint32              stride = 0
+            const texture_info& info
         ) override;
         void destroy_texture(texture_handle handle) override;
 

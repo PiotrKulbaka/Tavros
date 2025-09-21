@@ -525,7 +525,15 @@ int main()
 
     auto main_composer_handle = gdevice->create_frame_composer(main_composer_info, wnd->get_handle());
 
-    rhi::texture_info tex_desc;
+    auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
+    auto* cbuf = composer->create_command_list();
+
+    rhi::buffer_info stage_buffer_info;
+    stage_buffer_info.size = 1024 * 1024 * 16; // 16 Mb
+    stage_buffer_info.access = rhi::buffer_access::cpu_to_gpu;
+    stage_buffer_info.usage = rhi::buffer_usage::stage;
+    auto stage_buffer = gdevice->create_buffer(stage_buffer_info);
+
 
     model_t model;
     if (!load_md3("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.md3", &model)) {
@@ -535,12 +543,17 @@ int main()
 
     int32 w, h, c;
     auto* pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.jpg", w, h, c);
+    cbuf->copy_buffer_data(stage_buffer, pixels, w * h * 4);
+    free_pixels(pixels);
+
+    rhi::texture_info tex_desc;
     tex_desc.width = w;
     tex_desc.height = h;
     tex_desc.mip_levels = 1;
+    tex_desc.format = rhi::pixel_format::rgba8un;
+    auto tex1 = gdevice->create_texture(tex_desc);
+    cbuf->copy_buffer_to_texture(stage_buffer, tex1, w * h * c);
 
-    auto tex1 = gdevice->create_texture(tex_desc, pixels);
-    free_pixels(pixels);
 
     int msaa_level = 16;
 
@@ -636,14 +649,6 @@ int main()
     rhi::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
     auto               main_pipeline = gdevice->create_pipeline(main_pipeline_info, fullscreen_quad_shaders);
 
-    rhi::buffer_info stage_buffer_info;
-    stage_buffer_info.size = 1024 * 1024; // 1 Mb
-    stage_buffer_info.access = rhi::buffer_access::cpu_to_gpu;
-    auto stage_buffer = gdevice->create_buffer(stage_buffer_info);
-
-    auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
-    auto* cbuf = composer->create_command_list();
-
     // Copy XYZ
     uint32 xyz_offset = 0;
     uint32 xyz_size = model.xyz.size() * sizeof(tavros::math::vec3);
@@ -672,21 +677,23 @@ int main()
     xyz_normal_uv_info.access = rhi::buffer_access::gpu_only;
     auto buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
 
-    cbuf->copy_buffer(buffer_xyz_normal_uv, stage_buffer, xyz_size + norm_size + uv_size, 0, 0);
+    cbuf->copy_buffer(stage_buffer, buffer_xyz_normal_uv, xyz_size + norm_size + uv_size, 0, 0);
 
 
     rhi::buffer_info indices_desc;
     indices_desc.size = 1024 * 128; // 128 Kb
     indices_desc.usage = rhi::buffer_usage::index;
+    indices_desc.access = rhi::buffer_access::gpu_only;
     auto buffer_indices = gdevice->create_buffer(indices_desc);
 
-    cbuf->copy_buffer(buffer_indices, stage_buffer, indices_size, 0, indices_offset);
+    cbuf->copy_buffer(stage_buffer, buffer_indices, indices_size, indices_offset, 0);
 
 
-    auto                                     instance_number = 10000;
+    auto                                     instance_number = 100;
     tavros::core::vector<tavros::math::mat4> instance_data;
     instance_data.reserve(instance_number);
-    for (auto i = 0; i < instance_number; i++) {
+    instance_data.push_back(tavros::math::mat4(1.0f));
+    for (auto i = 1; i < instance_number; i++) {
         tavros::math::mat4 m(1.0f);
         m[3][0] = rand() % 30 - 15.0f;
         m[3][1] = rand() % 30 - 15.0f;
@@ -705,7 +712,7 @@ int main()
     instance_buffer_desc.access = rhi::buffer_access::gpu_only;
     auto instance_buffer = gdevice->create_buffer(instance_buffer_desc);
 
-    cbuf->copy_buffer(instance_buffer, stage_buffer, sizeof(tavros::math::mat4) * instance_number, 0, 0);
+    cbuf->copy_buffer(stage_buffer, instance_buffer, sizeof(tavros::math::mat4) * instance_number, 0, 0);
 
 
     rhi::geometry_info gbi;
@@ -829,7 +836,7 @@ int main()
 
         cbuf->copy_buffer_data(stage_buffer, &camera_shader_data, sizeof(camera_shader_t), 0);
         cbuf->copy_buffer_data(stage_buffer, &scene_shader_data, sizeof(scene_shader_t), align_in_ubo);
-        cbuf->copy_buffer(uniform_buffer, stage_buffer, 512, 0, 0);
+        cbuf->copy_buffer(stage_buffer, uniform_buffer, 512, 0, 0);
 
 
         cbuf->begin_render_pass(msaa_pass, msaa_framebuffer);

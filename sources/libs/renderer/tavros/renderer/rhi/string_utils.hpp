@@ -9,9 +9,11 @@
 namespace tavros::renderer::rhi
 {
 
-    constexpr core::string_view to_string(buffer_usage usage)
+    constexpr inline core::string_view to_string(buffer_usage usage)
     {
         switch (usage) {
+        case buffer_usage::stage:
+            return "stage";
         case buffer_usage::index:
             return "index";
         case buffer_usage::vertex:
@@ -23,7 +25,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    constexpr core::string_view to_string(buffer_access access)
+    constexpr inline core::string_view to_string(buffer_access access)
     {
         switch (access) {
         case buffer_access::gpu_only:

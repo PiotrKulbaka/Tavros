@@ -5,27 +5,6 @@
 namespace tavros::renderer::rhi
 {
 
-    struct texture_copy_region
-    {
-        // offset x
-        uint32 offset_x = 0;
-
-        // for 2D textures offset
-        uint32 offset_y = 0;
-
-        // for 3D textures
-        uint32 offset_z = 0;
-
-        // Width of the region
-        uint32 width = 0;
-
-        // Height of the region
-        uint32 height = 0;
-
-        // for 3D textures depth of the region
-        uint32 depth = 1;
-    };
-
     class command_list
     {
     public:
@@ -51,7 +30,9 @@ namespace tavros::renderer::rhi
 
         virtual void copy_buffer_data(buffer_handle buffer, const void* data, size_t size, size_t offset = 0) = 0;
 
-        virtual void copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, size_t size, size_t dst_offset = 0, size_t src_offset = 0) = 0;
+        virtual void copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset = 0, size_t dst_offset = 0) = 0;
+
+        virtual void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, size_t size, size_t src_offset = 0, uint32 stride = 0) = 0;
     };
 
 } // namespace tavros::renderer::rhi

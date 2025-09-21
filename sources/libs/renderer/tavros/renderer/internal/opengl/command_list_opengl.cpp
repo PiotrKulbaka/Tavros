@@ -1,5 +1,6 @@
 #include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
 
+#include <tavros/renderer/internal/opengl/type_conversions.hpp>
 #include <tavros/core/prelude.hpp>
 #include <tavros/renderer/rhi/string_utils.hpp>
 
@@ -10,124 +11,6 @@ using namespace tavros::renderer::rhi;
 namespace
 {
     tavros::core::logger logger("command_list_opengl");
-
-    GLenum to_gl_compare_func(compare_op op)
-    {
-        switch (op) {
-        case compare_op::less:
-            return GL_LESS;
-        case compare_op::equal:
-            return GL_EQUAL;
-        case compare_op::less_equal:
-            return GL_LEQUAL;
-        case compare_op::greater:
-            return GL_GREATER;
-        case compare_op::greater_equal:
-            return GL_GEQUAL;
-        case compare_op::not_equal:
-            return GL_NOTEQUAL;
-        case compare_op::always:
-            return GL_ALWAYS;
-        case compare_op::off:
-            return GL_NONE;
-        default:
-            TAV_UNREACHABLE();
-        }
-    }
-
-
-    GLenum to_gl_stencil_op(stencil_op op)
-    {
-        switch (op) {
-        case stencil_op::keep:
-            return GL_KEEP;
-        case stencil_op::zero:
-            return GL_ZERO;
-        case stencil_op::replace:
-            return GL_REPLACE;
-        case stencil_op::increment_clamp:
-            return GL_INCR;
-        case stencil_op::decrement_clamp:
-            return GL_DECR;
-        case stencil_op::invert:
-            return GL_INVERT;
-        case stencil_op::increment_wrap:
-            return GL_INCR_WRAP;
-        case stencil_op::decrement_wrap:
-            return GL_DECR_WRAP;
-        default:
-            TAV_UNREACHABLE();
-        }
-    }
-
-    struct gl_vertex_format
-    {
-        GLenum type;
-        uint32 size;
-    };
-
-    gl_vertex_format to_gl_vertex_format(attribute_format format)
-    {
-        switch (format) {
-        case attribute_format::u8:
-            return {GL_UNSIGNED_BYTE, 1};
-        case attribute_format::i8:
-            return {GL_BYTE, 1};
-        case attribute_format::u16:
-            return {GL_UNSIGNED_SHORT, 2};
-        case attribute_format::i16:
-            return {GL_SHORT, 2};
-        case attribute_format::u32:
-            return {GL_UNSIGNED_INT, 4};
-        case attribute_format::i32:
-            return {GL_INT, 4};
-        case attribute_format::f16:
-            return {GL_HALF_FLOAT, 2};
-        case attribute_format::f32:
-            return {GL_FLOAT, 4};
-        default:
-            TAV_UNREACHABLE();
-        }
-    }
-
-    struct gl_index_format
-    {
-        GLenum type;
-        uint32 size;
-    };
-
-    gl_index_format to_gl_index_format(index_buffer_format format)
-    {
-        switch (format) {
-        case index_buffer_format::u16:
-            return {GL_UNSIGNED_SHORT, 2};
-        case index_buffer_format::u32:
-            return {GL_UNSIGNED_INT, 4};
-        default:
-            TAV_UNREACHABLE();
-        }
-    }
-
-    GLenum to_gl_topology(primitive_topology topology)
-    {
-        switch (topology) {
-        case tavros::renderer::rhi::primitive_topology::points:
-            return GL_POINTS;
-        case tavros::renderer::rhi::primitive_topology::lines:
-            return GL_LINES;
-        case tavros::renderer::rhi::primitive_topology::line_strip:
-            return GL_LINE_STRIP;
-        case tavros::renderer::rhi::primitive_topology::triangles:
-            return GL_TRIANGLES;
-        case tavros::renderer::rhi::primitive_topology::triangle_strip:
-            return GL_TRIANGLE_STRIP;
-        case tavros::renderer::rhi::primitive_topology::triangle_fan:
-            return GL_TRIANGLE_FAN;
-        default:
-            TAV_UNREACHABLE();
-        }
-    }
-
 } // namespace
 
 namespace tavros::renderer::rhi
@@ -776,18 +659,18 @@ namespace tavros::renderer::rhi
         glBindBuffer(target, 0);
     }
 
-    void command_list_opengl::copy_buffer(buffer_handle dst_buffer, buffer_handle src_buffer, size_t size, size_t dst_offset, size_t src_offset)
+    void command_list_opengl::copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset, size_t dst_offset)
     {
         // Get dst and src buffers
-        auto* dst = m_device->get_resources()->try_get(dst_buffer);
-        if (!dst) {
-            ::logger.error("Failed to copy buffer `%u`: destination buffer not found", dst_buffer.id);
-            return;
-        }
-
         auto* src = m_device->get_resources()->try_get(src_buffer);
         if (!src) {
             ::logger.error("Failed to copy buffer `%u`: source buffer not found", src_buffer.id);
+            return;
+        }
+
+        auto* dst = m_device->get_resources()->try_get(dst_buffer);
+        if (!dst) {
+            ::logger.error("Failed to copy buffer `%u`: destination buffer not found", dst_buffer.id);
             return;
         }
 
@@ -844,6 +727,87 @@ namespace tavros::renderer::rhi
 
         glBindBuffer(GL_COPY_READ_BUFFER, 0);
         glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+    }
+
+    void command_list_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, size_t size, size_t src_offset, uint32 stride)
+    {
+        auto* b = m_device->get_resources()->try_get(src_buffer);
+        if (!b) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: source buffer not found", src_buffer.id, dst_texture.id);
+            return;
+        }
+
+        auto* tex = m_device->get_resources()->try_get(dst_texture);
+        if (!tex) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination buffer not found", src_buffer.id, dst_texture.id);
+            return;
+        }
+
+        if (b->info.usage != buffer_usage::stage) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: invalid source buffer usage type, expected `stage` got `%s`", src_buffer.id, dst_texture.id, to_string(b->info.usage).data());
+            return;
+        }
+
+        if (b->info.access != buffer_access::cpu_to_gpu) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: invalid source buffer access type, expected `cpu_to_gpu` got `%s`", src_buffer.id, dst_texture.id, to_string(b->info.access).data());
+            return;
+        }
+
+        if (tex->info.sample_count != 1) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture has invalid sample count `%u`, only 1 is supported", src_buffer.id, dst_texture.id, tex->info.sample_count);
+            return;
+        }
+
+        if (tex->info.usage != 1) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture has invalid sample count `%u`, only 1 is supported", src_buffer.id, dst_texture.id, tex->info.sample_count);
+            return;
+        }
+
+        if (!tex->info.usage.has_flag(texture_usage::transfer_destination)) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture does not have `transfer_destination` usage flag", src_buffer.id, dst_texture.id);
+            return;
+        }
+
+        if (!is_color_format(tex->info.format)) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture format is not a color format", src_buffer.id, dst_texture.id);
+            return;
+        }
+
+        auto gl_pixel_format = to_gl_pixel_format(tex->info.format);
+        auto need_copy_size = static_cast<size_t>(stride > 0 ? stride * tex->info.height : tex->info.width * tex->info.height * gl_pixel_format.bytes);
+
+        if (src_offset + need_copy_size > b->info.size) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: buffer is too small. Required %llu bytes, available %llu bytes", src_buffer.id, dst_texture.id, src_offset + need_copy_size, b->info.size);
+        }
+
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, b->buffer_obj);
+        glBindTexture(tex->target, tex->texture_obj);
+
+        auto row_length_in_pixels = static_cast<GLint>(stride / gl_pixel_format.bytes);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_in_pixels);
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+
+        auto* gl_offset = reinterpret_cast<const void*>(src_offset);
+
+        glTexSubImage2D(
+            tex->target,
+            0,    // Mip level
+            0, 0, // xoffset, yoffset
+            tex->info.width, tex->info.height,
+            gl_pixel_format.format,
+            gl_pixel_format.type,
+            gl_offset
+        );
+
+        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
+        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+
+        if (tex->info.mip_levels > 1) {
+            glGenerateMipmap(tex->target);
+        }
+
+        glBindTexture(tex->target, 0);
+        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
     }
 
 } // namespace tavros::renderer::rhi
