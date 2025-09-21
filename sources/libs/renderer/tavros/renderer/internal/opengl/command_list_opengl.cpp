@@ -743,6 +743,8 @@ namespace tavros::renderer::rhi
             return;
         }
 
+        auto& tinfo = tex->info;
+
         if (b->info.usage != buffer_usage::stage) {
             ::logger.error("Failed to copy buffer `%u` to texture `%u`: invalid source buffer usage type, expected `stage` got `%s`", src_buffer.id, dst_texture.id, to_string(b->info.usage).data());
             return;
@@ -753,31 +755,39 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        if (tex->info.sample_count != 1) {
+        if (tinfo.sample_count != 1) {
             ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture has invalid sample count `%u`, only 1 is supported", src_buffer.id, dst_texture.id, tex->info.sample_count);
             return;
         }
 
-        if (tex->info.usage != 1) {
+        if (tinfo.usage != 1) {
             ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture has invalid sample count `%u`, only 1 is supported", src_buffer.id, dst_texture.id, tex->info.sample_count);
             return;
         }
 
-        if (!tex->info.usage.has_flag(texture_usage::transfer_destination)) {
+        if (!tinfo.usage.has_flag(texture_usage::transfer_destination)) {
             ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture does not have `transfer_destination` usage flag", src_buffer.id, dst_texture.id);
             return;
         }
 
-        if (!is_color_format(tex->info.format)) {
+        if (!is_color_format(tinfo.format)) {
             ::logger.error("Failed to copy buffer `%u` to texture `%u`: destination texture format is not a color format", src_buffer.id, dst_texture.id);
             return;
         }
 
-        auto gl_pixel_format = to_gl_pixel_format(tex->info.format);
-        auto need_copy_size = static_cast<size_t>(stride > 0 ? stride * tex->info.height : tex->info.width * tex->info.height * gl_pixel_format.bytes);
+        auto   gl_pixel_format = to_gl_pixel_format(tinfo.format);
+        size_t need_bytes = 0;
+        if (tinfo.type == texture_type::texture_2d) {
+            need_bytes = static_cast<size_t>((stride > 0 ? stride : tinfo.width * gl_pixel_format.bytes) * tinfo.height);
+        } else if (tinfo.type == texture_type::texture_3d) {
+            need_bytes = static_cast<size_t>((stride > 0 ? stride : tinfo.width * gl_pixel_format.bytes) * tinfo.height * tinfo.depth);
+        } else {
+            TAV_UNREACHABLE();
+        }
 
-        if (src_offset + need_copy_size > b->info.size) {
-            ::logger.error("Failed to copy buffer `%u` to texture `%u`: buffer is too small. Required %llu bytes, available %llu bytes", src_buffer.id, dst_texture.id, src_offset + need_copy_size, b->info.size);
+        if (src_offset + need_bytes > b->info.size) {
+            ::logger.error("Failed to copy buffer `%u` to texture `%u`: buffer is too small. Required %llu bytes, available %llu bytes", src_buffer.id, dst_texture.id, src_offset + need_bytes, b->info.size);
+            return;
         }
 
         glBindBuffer(GL_PIXEL_UNPACK_BUFFER, b->buffer_obj);
@@ -787,22 +797,36 @@ namespace tavros::renderer::rhi
         glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_in_pixels);
         glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 
-        auto* gl_offset = reinterpret_cast<const void*>(src_offset);
+        auto* gl_buffer_offset = reinterpret_cast<const void*>(src_offset);
 
-        glTexSubImage2D(
-            tex->target,
-            0,    // Mip level
-            0, 0, // xoffset, yoffset
-            tex->info.width, tex->info.height,
-            gl_pixel_format.format,
-            gl_pixel_format.type,
-            gl_offset
-        );
+        if (tinfo.type == texture_type::texture_2d) {
+            glTexSubImage2D(
+                GL_TEXTURE_2D,
+                0,    // Mip level
+                0, 0, // xoffset, yoffset
+                tinfo.width, tinfo.height,
+                gl_pixel_format.format,
+                gl_pixel_format.type,
+                gl_buffer_offset
+            );
+        } else if (tinfo.type == texture_type::texture_3d) {
+            glTexSubImage3D(
+                GL_TEXTURE_3D,
+                0,       // mip level
+                0, 0, 0, // xoffset, yoffset, zoffset
+                tinfo.width, tinfo.height, tinfo.depth,
+                gl_pixel_format.format,
+                gl_pixel_format.type,
+                gl_buffer_offset
+            );
+        } else {
+            TAV_UNREACHABLE();
+        }
 
         glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
         glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
 
-        if (tex->info.mip_levels > 1) {
+        if (tinfo.mip_levels > 1) {
             glGenerateMipmap(tex->target);
         }
 

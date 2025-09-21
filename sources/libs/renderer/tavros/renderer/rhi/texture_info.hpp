@@ -8,6 +8,17 @@ namespace tavros::renderer::rhi
 {
 
     /**
+     * Specifies the fundamental type of a texture.
+     * Determines dimensionality, interpretation, and certain restrictions (e.g., square size for cubemaps)
+     */
+    enum class texture_type : uint8
+    {
+        texture_2d,   /// 2D texture
+        texture_3d,   /// 3D texture
+        texture_cube, /// Cubemap texture
+    };
+
+    /**
      * Specifies how a texture will be used within the rendering pipeline.
      * These flags allow the renderer and GPU driver to optimize memory and access patterns accordingly.
      * Multiple flags can be combined using bitwise OR to express compound usage.
@@ -43,6 +54,9 @@ namespace tavros::renderer::rhi
      */
     struct texture_info
     {
+        /// Type of the texture
+        texture_type type = texture_type::texture_2d;
+
         /// Pixel format defining color channels, bit depth, and data layout
         pixel_format format = pixel_format::rgba8un;
 
@@ -52,8 +66,8 @@ namespace tavros::renderer::rhi
         /// Texture height in pixels. Must be > 0
         uint32 height = 0;
 
-        /// Texture depth (for 3D textures). Must be > 1 for 3D, else 1
-        uint32 depth = 1;
+        /// Texture depth (for 3D textures). Must be > 0
+        uint32 depth = 0;
 
         /// Bit flags describing allowed usage patterns of this texture (e.g., sampled, render target)
         /// Used by renderer to optimize memory and access

@@ -177,10 +177,13 @@ in vec2 texCoord;
 out vec4 FragColor;
 
 layout(binding = 0) uniform sampler2D uTex;
+layout(binding = 1) uniform sampler3D uLut;
 
 void main()
 {
-    FragColor = texture(uTex, texCoord);
+    vec3 color = texture(uTex, texCoord).rgb;
+    FragColor = texture(uLut, color);
+    //FragColor = vec4(color, 1.0f);
 }
 )";
 
@@ -528,11 +531,8 @@ int main()
     auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
     auto* cbuf = composer->create_command_list();
 
-    rhi::buffer_info stage_buffer_info;
-    stage_buffer_info.size = 1024 * 1024 * 16; // 16 Mb
-    stage_buffer_info.access = rhi::buffer_access::cpu_to_gpu;
-    stage_buffer_info.usage = rhi::buffer_usage::stage;
-    auto stage_buffer = gdevice->create_buffer(stage_buffer_info);
+    rhi::buffer_info stage_buffer_info{1024 * 1024 * 16 /* 16 Mb */, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu};
+    auto             stage_buffer = gdevice->create_buffer(stage_buffer_info);
 
 
     model_t model;
@@ -546,13 +546,58 @@ int main()
     cbuf->copy_buffer_data(stage_buffer, pixels, w * h * 4);
     free_pixels(pixels);
 
-    rhi::texture_info tex_desc;
-    tex_desc.width = w;
-    tex_desc.height = h;
-    tex_desc.mip_levels = 1;
-    tex_desc.format = rhi::pixel_format::rgba8un;
-    auto tex1 = gdevice->create_texture(tex_desc);
-    cbuf->copy_buffer_to_texture(stage_buffer, tex1, w * h * c);
+    rhi::texture_info tex_desc{rhi::texture_type::texture_2d, rhi::pixel_format::rgba8un, static_cast<uint32>(w), static_cast<uint32>(h), 0, rhi::k_default_texture_usage, 1, 1, 1};
+    auto              tex1 = gdevice->create_texture(tex_desc);
+    cbuf->copy_buffer_to_texture(stage_buffer, tex1, w * h * 4);
+
+
+    uint8* lut_pixels = load_pixels_from_file("C:\\Work\\img\\null_lut.png", w, h, c);
+    uint8* lut_data = reinterpret_cast<uint8*>(malloc(w * h * 4));
+
+    uint8* dst = lut_data;
+    uint8* src = lut_pixels;
+
+    constexpr int slice_size = 64;                           // размер стороны одного квадрата
+    constexpr int blocks_per_row = 8;                        // 8x8 блоков
+    constexpr int size = 64;                                 // сторона 3D LUT
+    constexpr int channels = 4;                              // RGBA
+    constexpr int total_width = slice_size * blocks_per_row; // 512
+    constexpr int total_height = total_width;                // 512
+
+    uint8* dst_p = lut_data;
+    uint8* src_p = lut_pixels;
+
+    for (int z = 0; z < size; ++z) {
+        int block_x = z % blocks_per_row;
+        int block_y = z / blocks_per_row;
+
+        for (int y = 0; y < slice_size; ++y) {
+            for (int x = 0; x < slice_size; ++x) {
+                // координаты в 2D текстуре
+                int src_x = block_x * slice_size + x;
+                int src_y = block_y * slice_size + y;
+
+                // индексы
+                int src_index = (src_y * total_width + src_x) * channels;
+                int dst_index = (z * size * size + y * size + x) * channels;
+
+                // копируем пиксель
+                dst_p[dst_index + 0] = src_p[src_index + 0];
+                dst_p[dst_index + 1] = src_p[src_index + 1];
+                dst_p[dst_index + 2] = src_p[src_index + 2];
+                dst_p[dst_index + 3] = src_p[src_index + 3];
+            }
+        }
+    }
+
+
+    cbuf->copy_buffer_data(stage_buffer, lut_data, w * h * 4);
+    free(lut_data);
+    free_pixels(lut_pixels);
+
+    rhi::texture_info lut_tex_info{rhi::texture_type::texture_3d, rhi::pixel_format::rgba8un, 64, 64, 64, rhi::k_default_texture_usage, 16, 1, 1};
+    auto              lut_tex = gdevice->create_texture(lut_tex_info);
+    cbuf->copy_buffer_to_texture(stage_buffer, lut_tex, w * h * 4);
 
 
     int msaa_level = 16;
@@ -614,6 +659,16 @@ int main()
 
     auto sampler1 = gdevice->create_sampler(sampler_info);
 
+    rhi::sampler_info sampler_lut_info;
+    sampler_lut_info.filter.mipmap_filter = rhi::mipmap_filter_mode::linear;
+    sampler_lut_info.filter.min_filter = rhi::filter_mode::linear;
+    sampler_lut_info.filter.mag_filter = rhi::filter_mode::linear;
+    sampler_lut_info.wrap_mode.wrap_r = rhi::wrap_mode::clamp_to_edge;
+    sampler_lut_info.wrap_mode.wrap_s = rhi::wrap_mode::clamp_to_edge;
+    sampler_lut_info.wrap_mode.wrap_t = rhi::wrap_mode::clamp_to_edge;
+
+    auto sampler_lut = gdevice->create_sampler(sampler_lut_info);
+
 
     auto msaa_vertex_shader = gdevice->create_shader({msaa_vertex_shader_source, rhi::shader_stage::vertex, "main"});
     auto msaa_fragment_shader = gdevice->create_shader({msaa_fragment_shader_source, rhi::shader_stage::fragment, "main"});
@@ -671,20 +726,14 @@ int main()
 
 
     // Make vertices buffer
-    rhi::buffer_info xyz_normal_uv_info;
-    xyz_normal_uv_info.size = 1024 * 1024 * 16; // 1 Mb
-    xyz_normal_uv_info.usage = rhi::buffer_usage::vertex;
-    xyz_normal_uv_info.access = rhi::buffer_access::gpu_only;
-    auto buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
+    rhi::buffer_info xyz_normal_uv_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
+    auto             buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
 
     cbuf->copy_buffer(stage_buffer, buffer_xyz_normal_uv, xyz_size + norm_size + uv_size, 0, 0);
 
 
-    rhi::buffer_info indices_desc;
-    indices_desc.size = 1024 * 128; // 128 Kb
-    indices_desc.usage = rhi::buffer_usage::index;
-    indices_desc.access = rhi::buffer_access::gpu_only;
-    auto buffer_indices = gdevice->create_buffer(indices_desc);
+    rhi::buffer_info indices_desc{1024 * 128, rhi::buffer_usage::index, rhi::buffer_access::gpu_only};
+    auto             buffer_indices = gdevice->create_buffer(indices_desc);
 
     cbuf->copy_buffer(stage_buffer, buffer_indices, indices_size, indices_offset, 0);
 
@@ -706,11 +755,8 @@ int main()
     cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(instance_data.data()), instance_data.size() * sizeof(tavros::math::mat4));
 
 
-    rhi::buffer_info instance_buffer_desc;
-    instance_buffer_desc.size = sizeof(tavros::math::mat4) * instance_number;
-    instance_buffer_desc.usage = rhi::buffer_usage::vertex;
-    instance_buffer_desc.access = rhi::buffer_access::gpu_only;
-    auto instance_buffer = gdevice->create_buffer(instance_buffer_desc);
+    rhi::buffer_info instance_buffer_desc{sizeof(tavros::math::mat4) * instance_number, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
+    auto             instance_buffer = gdevice->create_buffer(instance_buffer_desc);
 
     cbuf->copy_buffer(stage_buffer, instance_buffer, sizeof(tavros::math::mat4) * instance_number, 0, 0);
 
@@ -781,9 +827,10 @@ int main()
 
     rhi::shader_binding_info fullstreen_shader_binding_info;
     fullstreen_shader_binding_info.texture_bindings.push_back({0, 0, 0});
+    fullstreen_shader_binding_info.texture_bindings.push_back({1, 1, 1});
 
-    rhi::texture_handle textures_to_binding_main[] = {msaa_resolve_texture};
-    rhi::sampler_handle samplers_to_binding_main[] = {sampler1};
+    rhi::texture_handle textures_to_binding_main[] = {msaa_resolve_texture, lut_tex};
+    rhi::sampler_handle samplers_to_binding_main[] = {sampler1, sampler_lut};
 
     auto fullstreen_shader_binding = gdevice->create_shader_binding(fullstreen_shader_binding_info, textures_to_binding_main, samplers_to_binding_main, {});
 

@@ -5,6 +5,8 @@
 #include <tavros/core/scoped_owner.hpp>
 #include <tavros/core/prelude.hpp>
 
+#include <tavros/renderer/rhi/string_utils.hpp>
+
 using namespace tavros::renderer::rhi;
 
 namespace
@@ -119,6 +121,11 @@ namespace
         for (auto handle : handles) {
             deleter({handle});
         }
+    }
+
+    constexpr bool is_power_of_two(uint32 value)
+    {
+        return value != 0 && (value & (value - 1)) == 0;
     }
 
 } // namespace
@@ -308,131 +315,179 @@ namespace tavros::renderer::rhi
         auto gl_pixel_format = to_gl_pixel_format(info.format);
         auto gl_depth_stencil_format = to_depth_stencil_fromat(info.format);
 
-        // Validate texture width/height
-        if (info.width == 0 || info.height == 0) {
-            ::logger.error("Failed to create texture: width and height must be greater than zero");
-            return {0};
-        }
+        if (info.type == texture_type::texture_2d) {
+            if (info.width == 0 || info.height == 0 || info.depth != 0) {
+                ::logger.error("Failed to create `texture_2d`: width and height must be greater than 0, and depth must be 0");
+                return {0};
+            }
 
-        // Validate texture depth
-        if (info.depth == 0) {
-            ::logger.error("Failed to create texture: depth must be at least 1");
-            return {0};
-        } else if (info.depth != 1) {
-            ::logger.error("Failed to create texture: only 2D textures are supported");
-            return {0};
-        }
+            if (info.array_layers != 1) {
+                ::logger.error("Failed to create `texture_2d`: array layers must be 1");
+                return {0};
+            }
 
-        // Validate texture array layers
-        if (info.array_layers == 0) {
-            ::logger.error("Failed to create texture: array_layers must be at least 1");
-            return {0};
-        } else if (info.array_layers != 1) {
-            ::logger.error("Failed to create texture: only single layer textures are supported");
-            return {0};
-        }
+            if (info.sample_count == 0 || !is_power_of_two(info.sample_count)) {
+                ::logger.error("Failed to create `texture_2d`: sample count must be power of two, and at least 1");
+                return {0};
+            }
 
-        if (info.mip_levels == 0) {
-            ::logger.error("Failed to create texture: mip_levels must be at least 1");
-            return {0};
-        }
+            if (info.sample_count == 1 && info.usage.has_flag(texture_usage::resolve_source)) {
+                ::logger.error("Failed to create `texture_2d`: resolve source textures must have sample count > 1");
+                return {0};
+            }
 
-        // Validate sample count
-        if (info.sample_count == 0) {
-            ::logger.error("Failed to create texture: sample count must be at least 1");
-            return {0};
-        } else if (info.sample_count == 1) {
-            // Resolve source texture must be a render target with sample_count > 1
+            if (info.sample_count > 1 && info.usage.has_flag(texture_usage::resolve_destination)) {
+                ::logger.error("Failed to create `texture_2d`: resolve destination textures must have sample_count == 1");
+                return {0};
+            }
+
+            if (info.sample_count > 1 && info.usage.has_flag(texture_usage::storage)) {
+                ::logger.error("Failed to create `texture_2d`: multisample textures cannot be used as storage");
+                return {0};
+            }
+
+            if (info.sample_count > 1 && info.usage.has_flag(texture_usage::sampled)) {
+                ::logger.error("Failed to create `texture_2d`: multisample textures cannot be used as sampled");
+                return {0};
+            }
+
+            if (info.sample_count > 1 && info.mip_levels > 1) {
+                ::logger.error("Failed to create `texture_2d`: multisample textures cannot have mip levels");
+                return {0};
+            }
+
+            if (info.mip_levels == 0) {
+                ::logger.error("Failed to create `texture_2d`: mip levels must be at least 1");
+                return {0};
+            }
+
+            // Resolve source texture must be a render target
+            if (info.usage.has_flag(texture_usage::resolve_source) && !info.usage.has_flag(texture_usage::render_target)) {
+                ::logger.error("Failed to create texture: resolve source textures must be render targets");
+                return {0};
+            }
+
+            if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
+                // Depth stencil target texture must be a depth stencil format
+                if (!gl_depth_stencil_format.is_depth_stencil_format) {
+                    ::logger.error("Failed to create texture: depth/stencil target must have depth/stencil format");
+                    return {0};
+                }
+
+                // Depth stencil target texture cannot be used as sampled
+                if (info.usage.has_flag(texture_usage::sampled)) {
+                    ::logger.error("Failed to create texture: depth/stencil target textures cannot be used as sampled");
+                    return {0};
+                }
+            }
+
+        } else if (info.type == texture_type::texture_3d) {
+            if (info.width == 0 || info.height == 0 || info.depth == 0) {
+                ::logger.error("Failed to create `texture_3d`: width, height and depth must be greater than 0");
+                return {0};
+            }
+
+            if (info.array_layers != 1) {
+                ::logger.error("Failed to create `texture_3d`: array layers must be 1");
+                return {0};
+            }
+
+            if (info.sample_count != 1) {
+                ::logger.error("Failed to create `texture_3d`: sample count must be 1");
+                return {0};
+            }
+
+            if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
+                ::logger.error("Failed to create `texture_3d`: usage flags `depth_stencil_target` is not allowed");
+                return {0};
+            }
+
             if (info.usage.has_flag(texture_usage::resolve_source)) {
-                ::logger.error("Failed to create texture: resolve source textures must have sample_count > 1");
+                ::logger.error("Failed to create `texture_3d`: usage flags `resolve_source` is not allowed");
                 return {0};
             }
-        } else if (info.sample_count > 1) {
-            // Resolve destination texture must be a render target with sample_count == 1
+
             if (info.usage.has_flag(texture_usage::resolve_destination)) {
-                ::logger.error("Failed to create texture: resolve destination textures must have sample_count == 1");
+                ::logger.error("Failed to create `texture_3d`: usage flag `resolve_destination` is not allowed");
                 return {0};
             }
 
-            // Multisample texture cannot be used as storage
-            if (info.usage.has_flag(texture_usage::storage)) {
-                ::logger.error("Failed to create texture: multisample textures cannot be used as storage");
+            if (info.usage.has_flag(texture_usage::resolve_destination)) {
+                ::logger.error("Failed to create `texture_3d`: usage flag `resolve_destination` is not allowed");
                 return {0};
             }
 
-            // Multisample texture cannot be used as sampled
-            if (info.usage.has_flag(texture_usage::sampled)) {
-                ::logger.error("Failed to create texture: multisample textures cannot be used as sampled");
-                return {0};
-            }
-
-            // Mip levels should be 1 for multisample textures
-            if (info.mip_levels > 1) {
-                ::logger.error("Failed to create texture: multisample textures cannot have mip levels");
-                return {0};
-            }
-        }
-
-        // Resolve source texture must be a render target
-        if (info.usage.has_flag(texture_usage::resolve_source) && !info.usage.has_flag(texture_usage::render_target)) {
-            ::logger.error("Failed to create texture: resolve source textures must be render targets");
+        } else {
+            ::logger.error("Failed to create texture: unknown texture type");
             return {0};
         }
 
-        if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
-            // Depth stencil target texture must be a depth stencil format
-            if (!gl_depth_stencil_format.is_depth_stencil_format) {
-                ::logger.error("Failed to create texture: depth/stencil target must have depth/stencil format");
-                return {0};
-            }
 
-            // Depth stencil target texture cannot be used as sampled
-            if (info.usage.has_flag(texture_usage::sampled)) {
-                ::logger.error("Failed to create texture: depth/stencil target textures cannot be used as sampled");
-                return {0};
+        GLenum gl_target = 0;
+        if (info.type == texture_type::texture_2d) {
+            if (info.sample_count > 1) {
+                gl_target = GL_TEXTURE_2D_MULTISAMPLE;
+            } else {
+                gl_target = GL_TEXTURE_2D;
             }
+        } else if (info.type == texture_type::texture_3d) {
+            gl_target = GL_TEXTURE_3D;
+        } else {
+            TAV_UNREACHABLE();
         }
-
-        auto   is_multisample = info.sample_count > 1;
-        GLenum target = is_multisample ? GL_TEXTURE_2D_MULTISAMPLE : GL_TEXTURE_2D;
 
         GLuint tex;
         glGenTextures(1, &tex);
 
-        auto texture_owner = core::make_scoped_owner(tex, [target](GLuint id) {
-            glBindTexture(target, 0);
+        auto texture_owner = core::make_scoped_owner(tex, [gl_target](GLuint id) {
+            glBindTexture(gl_target, 0);
             glDeleteTextures(1, &id);
         });
 
         // Bind texture
-        glBindTexture(target, tex);
+        glBindTexture(gl_target, tex);
 
-        if (is_multisample) {
+        if (gl_target == GL_TEXTURE_2D_MULTISAMPLE) {
             glTexImage2DMultisample(
-                target,
+                gl_target,
                 info.sample_count,
                 gl_pixel_format.internal_format,
                 info.width,
                 info.height,
                 GL_TRUE
             );
-        } else {
+        } else if (gl_target == GL_TEXTURE_2D) {
             glTexImage2D(
-                target,
+                gl_target,
                 0, // mip level
                 gl_pixel_format.internal_format,
                 info.width,
                 info.height,
-                0, // border
+                0, // border, always 0
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 nullptr
             );
+        } else if (gl_target == GL_TEXTURE_3D) {
+            glTexImage3D(
+                gl_target,
+                0, // mip level
+                gl_pixel_format.internal_format,
+                info.width,
+                info.height,
+                info.depth,
+                0, // border, always 0
+                gl_pixel_format.format,
+                gl_pixel_format.type,
+                nullptr
+            );
+        } else {
+            TAV_UNREACHABLE();
         }
 
-        glBindTexture(target, 0);
+        glBindTexture(gl_target, 0);
 
-        auto h = m_resources.create({info, texture_owner.release(), target});
+        auto h = m_resources.create({info, texture_owner.release(), gl_target});
         ::logger.debug("Texture `%u` created", h.id);
         return h;
     }
