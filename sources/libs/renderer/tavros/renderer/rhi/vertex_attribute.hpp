@@ -19,6 +19,7 @@ namespace tavros::renderer::rhi
         i32, /// Signed 32-bit integer
         f16, /// 16-bit half-precision float
         f32, /// 32-bit single-precision float (IEEE 754)
+        f64, /// 64-bit double-precision float
     };
 
     /**

@@ -51,6 +51,14 @@ namespace tavros::renderer::rhi
         GLint  cols; // Number of columns (for matrices)
     };
 
+    struct gl_rhi_type_info
+    {
+        bool                      valid = false;
+        tavros::core::string_view gl_typename;
+        attribute_type            type;
+        attribute_format          format;
+    };
+
 
     gl_pixel_format to_gl_pixel_format(pixel_format format);
 
@@ -75,5 +83,7 @@ namespace tavros::renderer::rhi
     GLenum to_gl_topology(primitive_topology topology);
 
     gl_attribute_info to_gl_attribute_info(attribute_type type, attribute_format format);
+
+    gl_rhi_type_info gl_type_to_rhi_type(GLenum type);
 
 } // namespace tavros::renderer::rhi

@@ -709,6 +709,12 @@ int main()
     rhi::pipeline_info msaa_pipeline_info;
     msaa_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
     msaa_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
+
+    msaa_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
+    msaa_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
+    msaa_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
+    msaa_pipeline_info.attributes.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 3});
+
     msaa_pipeline_info.depth_stencil.depth_test_enable = true;
     msaa_pipeline_info.depth_stencil.depth_write_enable = true;
     msaa_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;

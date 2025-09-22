@@ -179,6 +179,18 @@ namespace tavros::renderer::rhi
             destroy_geometry(h);
         });
 
+        destroy_for(m_resources.shader_bindings, [this](shader_binding_handle h) {
+            destroy_shader_binding(h);
+        });
+
+        destroy_for(m_resources.shaders, [this](shader_handle h) {
+            destroy_shader(h);
+        });
+
+        destroy_for(m_resources.render_passes, [this](render_pass_handle h) {
+            destroy_render_pass(h);
+        });
+
         //// Should be removed in last turn because swapchain owns the OpenGL context
         destroy_for(m_resources.composers, [this](frame_composer_handle h) {
             destroy_frame_composer(h);
@@ -607,16 +619,86 @@ namespace tavros::renderer::rhi
             return {0};
         }
 
-        auto program = link_program(vs, fs);
+        GLuint gl_program = link_program(vs, fs);
 
         // Validate program
-        if (program == 0) {
+        if (gl_program == 0) {
             ::logger.error("Failed to create pipeline: failed to link program");
             return {0};
         }
 
+        auto program_owner = core::make_scoped_owner(gl_program, [](GLuint id) {
+            glDeleteProgram(id);
+        });
+
+
+        // Validate attributes
+
+        // Map attributes to location index, for fast search
+        tavros::core::unordered_map<uint32, vertex_attribute> mapped_attributes;
+        for (const auto& attr : info.attributes) {
+            auto it = mapped_attributes.find(attr.location);
+            if (it != mapped_attributes.end()) {
+                ::logger.error("Failed to create pipeline: attribute location `%u` is used multiple times", attr.location);
+                return {0};
+            }
+            mapped_attributes[attr.location] = attr;
+        }
+
+        // Get number of attributes in compiled shader
+        GLint gl_prog_attrib_count;
+        glGetProgramiv(gl_program, GL_ACTIVE_ATTRIBUTES, &gl_prog_attrib_count);
+
+        // And validate each attribute
+        size_t total_gl_attributes = 0;
+        for (GLint i = 0; i < gl_prog_attrib_count; ++i) {
+            GLchar attrib_name[256] = {0};
+            GLint  size;
+            GLenum type;
+            glGetActiveAttrib(gl_program, i, sizeof(attrib_name), nullptr, &size, &type, attrib_name);
+
+            GLint gl_attrib_location = glGetAttribLocation(gl_program, attrib_name);
+            if (gl_attrib_location < 0) {
+                // builtin attribute, just ignore it
+                continue;
+            }
+
+            auto shader_type = gl_type_to_rhi_type(type);
+            if (!shader_type.valid) {
+                ::logger.error("Failed to create pipeline: unsupported attribute type by RHI, for attribute name `%s`", attrib_name);
+                return {0};
+            }
+
+            // Check attribute location
+            auto it = mapped_attributes.find(static_cast<uint32>(gl_attrib_location));
+            if (it == mapped_attributes.end()) {
+                ::logger.error("Failed to create pipeline: attribute location `%i` not found in provided attributes", gl_attrib_location);
+                return {0};
+            }
+
+            // Check attribute type and format
+            if (it->second.type != shader_type.type || it->second.format != shader_type.format) {
+                ::logger.error(
+                    "Failed to create pipeline: attribute `%s` at location `%i` has mismatched type/format. "
+                    "Shader type/format = `%s`/`%s`, expected type/format = `%s`/`%s`",
+                    attrib_name, gl_attrib_location,
+                    to_string(shader_type.type).data(), to_string(shader_type.format).data(),
+                    to_string(it->second.type).data(), to_string(it->second.format).data()
+                );
+                return {0};
+            }
+
+            total_gl_attributes++;
+        }
+
+        if (total_gl_attributes != info.attributes.size()) {
+            ::logger.error("Failed to create pipeline: mismach attributes size. Provided `%u`, expected `%u`", static_cast<uint32>(info.attributes.size()), static_cast<uint32>(total_gl_attributes));
+            return {0};
+        }
+
+
         // create pipeline
-        auto h = m_resources.create({info, program});
+        auto h = m_resources.create({info, program_owner.release()});
         ::logger.debug("Pipeline `%u` created", h.id);
         return h;
     }

@@ -403,6 +403,8 @@ namespace tavros::renderer::rhi
             return {GL_HALF_FLOAT, 2};
         case attribute_format::f32:
             return {GL_FLOAT, 4};
+        case attribute_format::f64:
+            return {GL_DOUBLE, 8};
         default:
             TAV_UNREACHABLE();
         }
@@ -543,6 +545,90 @@ namespace tavros::renderer::rhi
         }
 
         return info;
+    }
+
+    gl_rhi_type_info gl_type_to_rhi_type(GLenum type)
+    {
+        switch (type) {
+            // float
+        case GL_FLOAT:
+            return {true, "float", attribute_type::scalar, attribute_format::f32};
+        case GL_FLOAT_VEC2:
+            return {true, "vec2", attribute_type::vec2, attribute_format::f32};
+        case GL_FLOAT_VEC3:
+            return {true, "vec3", attribute_type::vec3, attribute_format::f32};
+        case GL_FLOAT_VEC4:
+            return {true, "vec4", attribute_type::vec4, attribute_format::f32};
+        case GL_FLOAT_MAT2:
+            return {true, "mat2", attribute_type::mat2, attribute_format::f32};
+        case GL_FLOAT_MAT3:
+            return {true, "mat3", attribute_type::mat3, attribute_format::f32};
+        case GL_FLOAT_MAT4:
+            return {true, "mat4", attribute_type::mat4, attribute_format::f32};
+        case GL_FLOAT_MAT2x3:
+            return {true, "mat2x3", attribute_type::mat2x3, attribute_format::f32};
+        case GL_FLOAT_MAT2x4:
+            return {true, "mat2x4", attribute_type::mat2x4, attribute_format::f32};
+        case GL_FLOAT_MAT3x2:
+            return {true, "mat3x2", attribute_type::mat3x2, attribute_format::f32};
+        case GL_FLOAT_MAT3x4:
+            return {true, "mat3x4", attribute_type::mat3x4, attribute_format::f32};
+        case GL_FLOAT_MAT4x2:
+            return {true, "mat4x2", attribute_type::mat4x2, attribute_format::f32};
+        case GL_FLOAT_MAT4x3:
+            return {true, "mat4x3", attribute_type::mat4x3, attribute_format::f32};
+
+            // double
+        case GL_DOUBLE:
+            return {true, "double", attribute_type::scalar, attribute_format::f64};
+        case GL_DOUBLE_VEC2:
+            return {true, "dvec2", attribute_type::vec2, attribute_format::f64};
+        case GL_DOUBLE_VEC3:
+            return {true, "dvec3", attribute_type::vec3, attribute_format::f64};
+        case GL_DOUBLE_VEC4:
+            return {true, "dvec4", attribute_type::vec4, attribute_format::f64};
+        case GL_DOUBLE_MAT2:
+            return {true, "dmat2", attribute_type::mat2, attribute_format::f64};
+        case GL_DOUBLE_MAT3:
+            return {true, "dmat3", attribute_type::mat3, attribute_format::f64};
+        case GL_DOUBLE_MAT4:
+            return {true, "dmat4", attribute_type::mat4, attribute_format::f64};
+        case GL_DOUBLE_MAT2x3:
+            return {true, "dmat2x3", attribute_type::mat2x3, attribute_format::f64};
+        case GL_DOUBLE_MAT2x4:
+            return {true, "dmat2x4", attribute_type::mat2x4, attribute_format::f64};
+        case GL_DOUBLE_MAT3x2:
+            return {true, "dmat3x2", attribute_type::mat3x2, attribute_format::f64};
+        case GL_DOUBLE_MAT3x4:
+            return {true, "dmat3x4", attribute_type::mat3x4, attribute_format::f64};
+        case GL_DOUBLE_MAT4x2:
+            return {true, "dmat4x2", attribute_type::mat4x2, attribute_format::f64};
+        case GL_DOUBLE_MAT4x3:
+            return {true, "dmat4x3", attribute_type::mat4x3, attribute_format::f64};
+
+            // int
+        case GL_INT:
+            return {true, "int", attribute_type::scalar, attribute_format::i32};
+        case GL_INT_VEC2:
+            return {true, "ivec2", attribute_type::vec2, attribute_format::i32};
+        case GL_INT_VEC3:
+            return {true, "ivec3", attribute_type::vec3, attribute_format::i32};
+        case GL_INT_VEC4:
+            return {true, "ivec4", attribute_type::vec4, attribute_format::i32};
+
+            // unsigned int
+        case GL_UNSIGNED_INT:
+            return {true, "uint", attribute_type::scalar, attribute_format::u32};
+        case GL_UNSIGNED_INT_VEC2:
+            return {true, "uvec2", attribute_type::vec2, attribute_format::u32};
+        case GL_UNSIGNED_INT_VEC3:
+            return {true, "uvec3", attribute_type::vec3, attribute_format::u32};
+        case GL_UNSIGNED_INT_VEC4:
+            return {true, "uvec4", attribute_type::vec4, attribute_format::u32};
+
+        default:
+            return {false, "unknown", attribute_type::scalar, attribute_format::f32};
+        }
     }
 
 } // namespace tavros::renderer::rhi
