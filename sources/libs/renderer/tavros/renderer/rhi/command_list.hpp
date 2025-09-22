@@ -32,7 +32,7 @@ namespace tavros::renderer::rhi
 
         virtual void copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset = 0, size_t dst_offset = 0) = 0;
 
-        virtual void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, size_t size, size_t src_offset = 0, uint32 stride = 0) = 0;
+        virtual void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset = 0, uint32 row_stride = 0) = 0;
     };
 
 } // namespace tavros::renderer::rhi

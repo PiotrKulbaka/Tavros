@@ -66,8 +66,8 @@ namespace tavros::renderer::rhi
         /// Texture height in pixels. Must be > 0
         uint32 height = 0;
 
-        /// Texture depth (for 3D textures). Must be > 0
-        uint32 depth = 0;
+        /// Texture depth (for 3D textures) Must be > 0, for texture_2d and texture_cube must be 1
+        uint32 depth = 1;
 
         /// Bit flags describing allowed usage patterns of this texture (e.g., sampled, render target)
         /// Used by renderer to optimize memory and access

@@ -316,8 +316,8 @@ namespace tavros::renderer::rhi
         auto gl_depth_stencil_format = to_depth_stencil_fromat(info.format);
 
         if (info.type == texture_type::texture_2d) {
-            if (info.width == 0 || info.height == 0 || info.depth != 0) {
-                ::logger.error("Failed to create `texture_2d`: width and height must be greater than 0, and depth must be 0");
+            if (info.width == 0 || info.height == 0 || info.depth != 1) {
+                ::logger.error("Failed to create `texture_2d`: width and height must be greater than 0, and depth must be 1");
                 return {0};
             }
 
@@ -397,6 +397,11 @@ namespace tavros::renderer::rhi
                 return {0};
             }
 
+            if (info.usage.has_flag(texture_usage::render_target)) {
+                ::logger.error("Failed to create `texture_3d`: usage flag `render_target` is not allowed");
+                return {0};
+            }
+
             if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
                 ::logger.error("Failed to create `texture_3d`: usage flags `depth_stencil_target` is not allowed");
                 return {0};
@@ -412,8 +417,34 @@ namespace tavros::renderer::rhi
                 return {0};
             }
 
+        } else if (info.type == texture_type::texture_cube) {
+            if (info.width == 0 || info.height == 0 || info.width != info.height || info.depth != 1) {
+                ::logger.error("Failed to create `texture_cube`: width and height must be equal and greater than 0, depth must be 1");
+                return {0};
+            }
+
+            if (info.array_layers % 6 != 0 || info.array_layers != 6) {
+                ::logger.error("Failed to create `texture_cube`: array layers must be a multiple of 6 and at least 6");
+                return {0};
+            }
+
+            if (info.sample_count != 1) {
+                ::logger.error("Failed to create `texture_cube`: sample count must be 1");
+                return {0};
+            }
+
+            if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
+                ::logger.error("Failed to create `texture_cube`: usage flags `depth_stencil_target` is not allowed");
+                return {0};
+            }
+
+            if (info.usage.has_flag(texture_usage::resolve_source)) {
+                ::logger.error("Failed to create `texture_cube`: usage flags `resolve_source` is not allowed");
+                return {0};
+            }
+
             if (info.usage.has_flag(texture_usage::resolve_destination)) {
-                ::logger.error("Failed to create `texture_3d`: usage flag `resolve_destination` is not allowed");
+                ::logger.error("Failed to create `texture_cube`: usage flag `resolve_destination` is not allowed");
                 return {0};
             }
 
@@ -432,6 +463,8 @@ namespace tavros::renderer::rhi
             }
         } else if (info.type == texture_type::texture_3d) {
             gl_target = GL_TEXTURE_3D;
+        } else if (info.type == texture_type::texture_cube) {
+            gl_target = GL_TEXTURE_CUBE_MAP;
         } else {
             TAV_UNREACHABLE();
         }
@@ -481,6 +514,21 @@ namespace tavros::renderer::rhi
                 gl_pixel_format.type,
                 nullptr
             );
+        } else if (gl_target == GL_TEXTURE_CUBE_MAP) {
+            // Cubemap, allocate memory for all 6 faces
+            for (int32 i = 0; i < 6; ++i) {
+                glTexImage2D(
+                    GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                    0, // mip level
+                    gl_pixel_format.internal_format,
+                    info.width,
+                    info.height,
+                    0, // border, always 0
+                    gl_pixel_format.format,
+                    gl_pixel_format.type,
+                    nullptr
+                );
+            }
         } else {
             TAV_UNREACHABLE();
         }

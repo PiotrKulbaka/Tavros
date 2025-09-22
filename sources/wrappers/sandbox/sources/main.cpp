@@ -75,6 +75,7 @@ const char* msaa_fragment_shader_source = R"(
 #version 420 core
 
 layout(binding = 0) uniform sampler2D u_tex1;
+layout(binding = 8) uniform samplerCube  u_skyCube;
 
 layout (binding = 1) uniform Scene
 {
@@ -112,6 +113,10 @@ void main()
     vec3 V = normalize(u_camera_pos - v_world_pos); // view direction (toward camera)
     vec3 H = normalize(L + V);
 
+    // Sample skybox cubemap
+    vec3 sky_dir = -normalize(V);
+    vec3 sky_color = texture(u_skyCube, sky_dir).rgb;
+
     // Lambertian diffuse
     float NdotL = max(dot(N, L), 0.0);
     vec3 diffuse = albedo * NdotL;
@@ -147,6 +152,8 @@ void main()
     // gamma to sRGB
     color = pow(color, vec3(1.0/2.2));
 
+    float sky_factor = 0.0;
+    color = mix(color, sky_color, sky_factor);
     frag_color = vec4(color, 1.0);
 }
 )";
@@ -546,9 +553,9 @@ int main()
     cbuf->copy_buffer_data(stage_buffer, pixels, w * h * 4);
     free_pixels(pixels);
 
-    rhi::texture_info tex_desc{rhi::texture_type::texture_2d, rhi::pixel_format::rgba8un, static_cast<uint32>(w), static_cast<uint32>(h), 0, rhi::k_default_texture_usage, 1, 1, 1};
+    rhi::texture_info tex_desc{rhi::texture_type::texture_2d, rhi::pixel_format::rgba8un, static_cast<uint32>(w), static_cast<uint32>(h), 1, rhi::k_default_texture_usage, 1, 1, 1};
     auto              tex1 = gdevice->create_texture(tex_desc);
-    cbuf->copy_buffer_to_texture(stage_buffer, tex1, w * h * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, tex1, 0, w * h * 4);
 
 
     uint8* lut_pixels = load_pixels_from_file("C:\\Work\\img\\null_lut.png", w, h, c);
@@ -597,8 +604,23 @@ int main()
 
     rhi::texture_info lut_tex_info{rhi::texture_type::texture_3d, rhi::pixel_format::rgba8un, 64, 64, 64, rhi::k_default_texture_usage, 16, 1, 1};
     auto              lut_tex = gdevice->create_texture(lut_tex_info);
-    cbuf->copy_buffer_to_texture(stage_buffer, lut_tex, w * h * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, lut_tex, 0, w * h * 4);
 
+
+    rhi::texture_info cube_tex_info{rhi::texture_type::texture_cube, rhi::pixel_format::rgba8un, 512, 512, 1, rhi::k_default_texture_usage, 16, 6, 1};
+    auto              skycube_tex = gdevice->create_texture(cube_tex_info);
+
+
+    uint8* sky_pixels = load_pixels_from_file("C:\\Work\\img\\sky2.png", w, h, c);
+    cbuf->copy_buffer_data(stage_buffer, sky_pixels, w * h * 4);
+    free_pixels(sky_pixels);
+
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 2, 512 * 512 * 4, 512 * 4, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 1, 512 * 512 * 4, 512 * 512 * 4 * 4, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 4, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 0, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4 * 2, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 5, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4 * 3, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 3, 512 * 512 * 4, 512 * 512 * 4 * 4 * 2 + 512 * 4, 512 * 4 * 4);
 
     int msaa_level = 16;
 
@@ -669,6 +691,16 @@ int main()
 
     auto sampler_lut = gdevice->create_sampler(sampler_lut_info);
 
+    rhi::sampler_info sampler_sky_info;
+    sampler_sky_info.filter.mipmap_filter = rhi::mipmap_filter_mode::linear;
+    sampler_sky_info.filter.min_filter = rhi::filter_mode::linear;
+    sampler_sky_info.filter.mag_filter = rhi::filter_mode::linear;
+    sampler_sky_info.wrap_mode.wrap_r = rhi::wrap_mode::clamp_to_edge;
+    sampler_sky_info.wrap_mode.wrap_s = rhi::wrap_mode::clamp_to_edge;
+    sampler_sky_info.wrap_mode.wrap_t = rhi::wrap_mode::clamp_to_edge;
+
+    auto sampler_sky = gdevice->create_sampler(sampler_sky_info);
+
 
     auto msaa_vertex_shader = gdevice->create_shader({msaa_vertex_shader_source, rhi::shader_stage::vertex, "main"});
     auto msaa_fragment_shader = gdevice->create_shader({msaa_fragment_shader_source, rhi::shader_stage::fragment, "main"});
@@ -736,7 +768,6 @@ int main()
     auto             buffer_indices = gdevice->create_buffer(indices_desc);
 
     cbuf->copy_buffer(stage_buffer, buffer_indices, indices_size, indices_offset, 0);
-
 
     auto                                     instance_number = 100;
     tavros::core::vector<tavros::math::mat4> instance_data;
@@ -817,9 +848,10 @@ int main()
     shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(camera_shader_t), 0});
     shader_binding_info.buffer_bindings.push_back({0, 256, sizeof(scene_shader_t), 1});
     shader_binding_info.texture_bindings.push_back({0, 0, 0});
+    shader_binding_info.texture_bindings.push_back({1, 1, 8});
 
-    rhi::texture_handle textures_to_binding[] = {tex1};
-    rhi::sampler_handle samplers_to_binding[] = {sampler1};
+    rhi::texture_handle textures_to_binding[] = {tex1, skycube_tex};
+    rhi::sampler_handle samplers_to_binding[] = {sampler1, sampler_sky};
     rhi::buffer_handle  ubo_buffers_to_binding[] = {uniform_buffer};
 
     auto shader_binding = gdevice->create_shader_binding(shader_binding_info, textures_to_binding, samplers_to_binding, ubo_buffers_to_binding);
