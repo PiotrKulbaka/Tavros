@@ -631,4 +631,102 @@ namespace tavros::renderer::rhi
         }
     }
 
+    GLenum to_gl_blend_factor(blend_factor factor)
+    {
+        switch (factor) {
+        case blend_factor::zero:
+            return GL_ZERO;
+        case blend_factor::one:
+            return GL_ONE;
+        case blend_factor::src_color:
+            return GL_SRC_COLOR;
+        case blend_factor::one_minus_src_color:
+            return GL_ONE_MINUS_SRC_COLOR;
+        case blend_factor::dst_color:
+            return GL_DST_COLOR;
+        case blend_factor::one_minus_dst_color:
+            return GL_ONE_MINUS_DST_COLOR;
+        case blend_factor::src_alpha:
+            return GL_SRC_ALPHA;
+        case blend_factor::one_minus_src_alpha:
+            return GL_ONE_MINUS_SRC_ALPHA;
+        case blend_factor::dst_alpha:
+            return GL_DST_ALPHA;
+        case blend_factor::one_minus_dst_alpha:
+            return GL_ONE_MINUS_DST_ALPHA;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    GLenum to_gl_blend_op(blend_op op)
+    {
+        switch (op) {
+        case blend_op::add:
+            return GL_FUNC_ADD;
+        case blend_op::subtract:
+            return GL_FUNC_SUBTRACT;
+        case blend_op::reverse_subtract:
+            return GL_FUNC_REVERSE_SUBTRACT;
+        case blend_op::min:
+            return GL_MIN;
+        case blend_op::max:
+            return GL_MAX;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    GLenum to_gl_cull_face(cull_face cull)
+    {
+        switch (cull) {
+        case cull_face::front:
+            return GL_FRONT;
+        case cull_face::back:
+            return GL_BACK;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    GLenum to_gl_face(front_face face)
+    {
+        switch (face) {
+        case front_face::clockwise:
+            return GL_CW;
+        case front_face::counter_clockwise:
+            return GL_CCW;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    GLenum to_gl_polygon_mode(polygon_mode mode)
+    {
+        switch (mode) {
+        case polygon_mode::fill:
+            return GL_FILL;
+        case polygon_mode::lines:
+            return GL_LINE;
+        case polygon_mode::points:
+            return GL_POINT;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    GLenum to_gl_polygon_offset(polygon_mode mode)
+    {
+        switch (mode) {
+        case polygon_mode::fill:
+            return GL_POLYGON_OFFSET_FILL;
+        case polygon_mode::lines:
+            return GL_POLYGON_OFFSET_LINE;
+        case polygon_mode::points:
+            return GL_POLYGON_OFFSET_POINT;
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
 } // namespace tavros::renderer::rhi

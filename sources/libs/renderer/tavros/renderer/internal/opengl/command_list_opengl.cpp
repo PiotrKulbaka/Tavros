@@ -43,7 +43,67 @@ namespace tavros::renderer::rhi
         m_current_pipeline = pipeline;
         auto& info = p->info;
 
-        glUseProgram(p->program_obj);
+        auto* pass = m_device->get_resources()->try_get(m_current_render_pass);
+        if (!pass) {
+            ::logger.error("Failed to bind pipeline `%u`: render pass `%u` not found", pipeline.id, m_current_render_pass.id);
+            glUseProgram(0);
+            return;
+        }
+
+        auto& pass_info = pass->info;
+        if (pass_info.color_attachments.size() != info.blend_states.size()) {
+            ::logger.error("Failed to bind pipeline `%u`: mismatch between color attachments in current render pass (%llu) and blend states in pipeline (%llu)", pipeline.id, pass_info.color_attachments.size(), info.blend_states.size());
+            return;
+        }
+
+        // Enable/disable blending and color maks
+        bool need_enable_blending = false;
+        for (size_t i = 0; i < info.blend_states.size(); ++i) {
+            auto& blend_state = info.blend_states[i];
+            auto  gl_attachment_index = static_cast<GLuint>(i);
+            if (blend_state.blend_enabled) {
+                // Convert to gl format
+                auto src_color_factor = to_gl_blend_factor(blend_state.src_color_factor);
+                auto dst_color_factor = to_gl_blend_factor(blend_state.dst_color_factor);
+                auto color_blend_op = to_gl_blend_op(blend_state.color_blend_op);
+                auto src_alpha_factor = to_gl_blend_factor(blend_state.src_alpha_factor);
+                auto dst_alpha_factor = to_gl_blend_factor(blend_state.dst_alpha_factor);
+                auto alpha_blend_op = to_gl_blend_op(blend_state.alpha_blend_op);
+
+                // Set params
+                if (gl_attachment_index == 0) {
+                    // Also enable blending for default framebuffer
+                    glBlendFuncSeparate(src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor);
+                    glBlendEquationSeparate(color_blend_op, alpha_blend_op);
+                }
+                // Enable blending for i attachment
+                glBlendFuncSeparatei(gl_attachment_index, src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor);
+                glBlendEquationSeparatei(gl_attachment_index, color_blend_op, alpha_blend_op);
+
+                need_enable_blending = true;
+            } else {
+                // Disable blending for i attachment
+                glBlendFunci(gl_attachment_index, GL_ONE, GL_ZERO);
+                glBlendEquationi(gl_attachment_index, GL_FUNC_ADD);
+            }
+
+            // Enable color mask
+            auto r_color_enabled = blend_state.mask.has_flag(color_mask::red) ? GL_TRUE : GL_FALSE;
+            auto g_color_enabled = blend_state.mask.has_flag(color_mask::green) ? GL_TRUE : GL_FALSE;
+            auto b_color_enabled = blend_state.mask.has_flag(color_mask::blue) ? GL_TRUE : GL_FALSE;
+            auto a_color_enabled = blend_state.mask.has_flag(color_mask::alpha) ? GL_TRUE : GL_FALSE;
+            if (gl_attachment_index == 0) {
+                // Also enable for default framebuffer
+                glColorMask(r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled);
+            }
+            glColorMaski(gl_attachment_index, r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled);
+        }
+
+        if (need_enable_blending) {
+            glEnable(GL_BLEND);
+        } else {
+            glDisable(GL_BLEND);
+        }
 
         // depth test
         if (info.depth_stencil.depth_test_enable) {
@@ -101,46 +161,40 @@ namespace tavros::renderer::rhi
             glDisable(GL_CULL_FACE);
         } else {
             glEnable(GL_CULL_FACE);
-            glCullFace(info.rasterizer.cull == cull_face::front ? GL_FRONT : GL_BACK);
+            glCullFace(to_gl_cull_face(info.rasterizer.cull));
         }
 
         // front face
-        glFrontFace(info.rasterizer.face == front_face::clockwise ? GL_CW : GL_CCW);
+        glFrontFace(to_gl_face(info.rasterizer.face));
 
         // polygon mode
-        if (info.rasterizer.polygon == polygon_mode::lines) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-        } else if (info.rasterizer.polygon == polygon_mode::points) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-        } else if (info.rasterizer.polygon == polygon_mode::fill) {
-            glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-        } else {
-            TAV_UNREACHABLE();
-        }
+        glPolygonMode(GL_FRONT_AND_BACK, to_gl_polygon_mode(info.rasterizer.polygon));
 
         // depth clamp
         if (info.rasterizer.depth_clamp_enable) {
             glEnable(GL_DEPTH_CLAMP);
+            glDepthRange(info.rasterizer.depth_clamp_near, info.rasterizer.depth_clamp_far);
         } else {
             glDisable(GL_DEPTH_CLAMP);
         }
 
         // depth bias
         if (info.rasterizer.depth_bias_enable) {
-            glEnable(GL_POLYGON_OFFSET_FILL);
-            glPolygonOffset(info.rasterizer.depth_bias_slope, info.rasterizer.depth_bias);
+            glEnable(to_gl_polygon_offset(info.rasterizer.polygon));
+            glPolygonOffset(info.rasterizer.depth_bias_factor, info.rasterizer.depth_bias);
         } else {
-            glDisable(GL_POLYGON_OFFSET_FILL);
+            glDisable(to_gl_polygon_offset(info.rasterizer.polygon));
         }
 
         // multisample state
-        // uint8 sample_count = 1; cant be initialized here
         if (info.multisample.sample_shading_enabled) {
             glEnable(GL_SAMPLE_SHADING);
             glMinSampleShading(info.multisample.min_sample_shading);
         } else {
             glDisable(GL_SAMPLE_SHADING);
         }
+
+        glUseProgram(p->program_obj);
     }
 
     void command_list_opengl::bind_geometry(geometry_handle geometry)
@@ -355,21 +409,15 @@ namespace tavros::renderer::rhi
             }
         } else {
             // Apply load operations (only clear)
-            uint32 attachment_index = 0;
-            for (uint32 i = 0; i < fb->color_attachments.size(); ++i) {
-                auto attachment_h = fb->color_attachments[i];
+            for (uint32 attachment_index = 0; attachment_index < fb->color_attachments.size(); ++attachment_index) {
+                auto attachment_h = fb->color_attachments[attachment_index];
                 if (auto* tex = m_device->get_resources()->try_get(attachment_h)) {
-                    // If texture has the same sample count with framebuffer, then this texture is attachment texture
-                    if (tex->info.sample_count == fb->info.sample_count) {
-                        auto& rp_color_attachment = rp->info.color_attachments[i];
+                    auto& rp_color_attachment = rp->info.color_attachments[attachment_index];
 
-                        // Apply load operation (only clear)
-                        // Any other load operation doesn't need to be applied
-                        if (load_op::clear == rp_color_attachment.load) {
-                            glClearBufferfv(GL_COLOR, attachment_index, rp_color_attachment.clear_value);
-                        }
-
-                        attachment_index++;
+                    // Apply load operation (only clear)
+                    // Any other load operation doesn't need to be applied
+                    if (load_op::clear == rp_color_attachment.load) {
+                        glClearBufferfv(GL_COLOR, attachment_index, rp_color_attachment.clear_value);
                     }
                 } else {
                     ::logger.error("Failed to begin render pass `%u`: attachment texture `%u` not found", render_pass.id, attachment_h.id);
@@ -523,6 +571,8 @@ namespace tavros::renderer::rhi
         glBindFramebuffer(GL_FRAMEBUFFER, 0);
         m_current_framebuffer = {0};
         m_current_render_pass = {0};
+        glBindVertexArray(0);
+        m_current_geometry = {0};
     }
 
     void command_list_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)

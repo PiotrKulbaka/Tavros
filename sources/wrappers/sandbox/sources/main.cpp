@@ -105,7 +105,9 @@ out vec4 frag_color;
 void main()
 {
     // fetch albedo
-    vec3 albedo = texture(u_tex1, v_uv).rgb;
+    vec4 full_color = texture(u_tex1, v_uv);
+    vec3 albedo = full_color.rgb;
+    float alpha_tex = full_color.a;
 
     // normalize inputs
     vec3 N = normalize(v_normal);
@@ -154,7 +156,7 @@ void main()
 
     float sky_factor = 0.0;
     color = mix(color, sky_color, sky_factor);
-    frag_color = vec4(color, 1.0);
+    frag_color = vec4(color, alpha_tex);
 }
 )";
 
@@ -714,13 +716,16 @@ int main()
     msaa_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
     msaa_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
     msaa_pipeline_info.attributes.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 3});
-
+    msaa_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
     msaa_pipeline_info.depth_stencil.depth_test_enable = true;
     msaa_pipeline_info.depth_stencil.depth_write_enable = true;
     msaa_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
-    msaa_pipeline_info.rasterizer.cull = rhi::cull_face::off;
+    msaa_pipeline_info.rasterizer.cull = rhi::cull_face::back;
     msaa_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
     msaa_pipeline_info.topology = rhi::primitive_topology::triangles;
+    msaa_pipeline_info.multisample.sample_shading_enabled = true;
+    msaa_pipeline_info.multisample.sample_count = msaa_level;
+    msaa_pipeline_info.multisample.min_sample_shading = 0.0;
 
     rhi::shader_handle msaa_shaders[] = {msaa_vertex_shader, msaa_fragment_shader};
     auto               msaa_pipeline = gdevice->create_pipeline(msaa_pipeline_info, msaa_shaders);
@@ -738,6 +743,8 @@ int main()
     main_pipeline_info.rasterizer.cull = rhi::cull_face::off;
     main_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
     main_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
+    main_pipeline_info.blend_states.push_back({false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
+
 
     rhi::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
     auto               main_pipeline = gdevice->create_pipeline(main_pipeline_info, fullscreen_quad_shaders);
@@ -882,11 +889,6 @@ int main()
 
         update_camera(keys, mouse_delta, elapsed, aspect_ratio, cam);
         mouse_delta = tavros::math::vec2();
-
-
-        /*glEnable(GL_BLEND);
-        glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);*/
-
 
         auto cam_mat = cam.get_view_projection_matrix();
         cam_mat = tavros::math::transpose(cam_mat);

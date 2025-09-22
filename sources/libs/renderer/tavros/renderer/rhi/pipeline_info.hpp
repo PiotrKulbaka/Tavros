@@ -77,7 +77,7 @@ namespace tavros::renderer::rhi
         return core::flags<color_mask>(lhs) | core::flags<color_mask>(rhs);
     }
 
-    constexpr core::flags<color_mask> k_default_color_mask = /// Default color mask
+    constexpr core::flags<color_mask> k_rgba_color_mask = /// Default color mask
         color_mask::red | color_mask::green | color_mask::blue | color_mask::alpha;
 
     /**
@@ -91,25 +91,25 @@ namespace tavros::renderer::rhi
         bool blend_enabled = false;
 
         /// Source blend factor for color channels
-        blend_factor src_color_factor = blend_factor::one;
+        blend_factor src_color_factor = blend_factor::src_alpha;
 
         /// Destination blend factor for color channels
-        blend_factor src_alpha_factor = blend_factor::one;
+        blend_factor dst_color_factor = blend_factor::one_minus_src_alpha;
 
         /// Blend operation for color channels
         blend_op color_blend_op = blend_op::add;
 
         /// Source blend factor for alpha channel
-        blend_factor dst_color_factor = blend_factor::zero;
+        blend_factor src_alpha_factor = blend_factor::one;
 
         /// Destination blend factor for alpha channel
-        blend_factor dst_alpha_factor = blend_factor::zero;
+        blend_factor dst_alpha_factor = blend_factor::one_minus_src_alpha;
 
         /// Blend operation for alpha channel
         blend_op alpha_blend_op = blend_op::add;
 
         /// Mask specifying which color channels are written
-        core::flags<color_mask> mask = k_default_color_mask;
+        core::flags<color_mask> mask = k_rgba_color_mask;
     };
 
     /**
@@ -214,11 +214,11 @@ namespace tavros::renderer::rhi
         /// Enable depth biasing, which will offset the depth value by the specified amount
         bool depth_bias_enable = false;
 
-        /// Amount of depth bias to apply (D + depth_bias + depth_bias_slope * M)
+        /// Amount of depth bias to apply (D + depth_bias + depth_bias_factor * M)
         float depth_bias = 0.0f;
 
-        /// Slope factor for depth biasing (D + depth_bias + depth_bias_slope * M)
-        float depth_bias_slope = 0.0f;
+        /// Slope factor for depth biasing (D + depth_bias + depth_bias_factor * M)
+        float depth_bias_factor = 0.0f;
 
         /// Clamp value for depth biasing
         float depth_bias_clamp = 0.0f;

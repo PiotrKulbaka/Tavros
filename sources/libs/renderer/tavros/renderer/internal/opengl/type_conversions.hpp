@@ -86,4 +86,16 @@ namespace tavros::renderer::rhi
 
     gl_rhi_type_info gl_type_to_rhi_type(GLenum type);
 
+    GLenum to_gl_blend_factor(blend_factor factor);
+
+    GLenum to_gl_blend_op(blend_op op);
+
+    GLenum to_gl_cull_face(cull_face cull);
+
+    GLenum to_gl_face(front_face face);
+
+    GLenum to_gl_polygon_mode(polygon_mode mode);
+
+    GLenum to_gl_polygon_offset(polygon_mode mode);
+
 } // namespace tavros::renderer::rhi
