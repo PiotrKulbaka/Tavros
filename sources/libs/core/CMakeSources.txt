@@ -112,9 +112,12 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/utils/make_string.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/allocator.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/chunk_allocator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/mallocator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/mallocator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/memory.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/pool_allocator.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/ref_ptr.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/zone_allocator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/zone_allocator.hpp
 

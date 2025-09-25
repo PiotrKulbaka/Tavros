@@ -25,6 +25,13 @@ namespace tavros::math
         return *this;
     }
 
+    inline constexpr ivec2& ivec2::operator*=(const ivec2& other) noexcept
+    {
+        x *= other.x;
+        y *= other.y;
+        return *this;
+    }
+
     inline constexpr ivec2& ivec2::operator*=(int32 s) noexcept
     {
         x *= s;
