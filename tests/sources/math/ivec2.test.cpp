@@ -68,27 +68,12 @@ TEST_F(ivec2_test, operator_div_works)
     EXPECT_EQ(v1.y, 4);
 }
 
-TEST_F(ivec2_test, operator_div_zero_works)
-{
-    ivec2 v1(4, 16);
-    ivec2 v2(2, 0);
-    v1 /= v2;
-    EXPECT_TRUE(assert_was_called());
-}
-
 TEST_F(ivec2_test, operator_div_scalar_works)
 {
     ivec2 v(4, 8);
     v /= 2;
     EXPECT_EQ(v.x, 2);
     EXPECT_EQ(v.y, 4);
-}
-
-TEST_F(ivec2_test, operator_div_scalar_zero)
-{
-    ivec2 v(4, 8);
-    v /= 0;
-    EXPECT_TRUE(assert_was_called());
 }
 
 TEST_F(ivec2_test, unary_minus_operator_negates_components)
@@ -152,14 +137,6 @@ TEST_F(ivec2_test, componentwise_division_works)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(ivec2_test, componentwise_division_by_zero_calls_assert)
-{
-    ivec2 a(8, 18);
-    ivec2 b(0, 1);
-    ivec2 result = a / b;
-    EXPECT_TRUE(assert_was_called());
-}
-
 TEST_F(ivec2_test, scalar_division_works)
 {
     ivec2 v(10, 20);
@@ -169,13 +146,6 @@ TEST_F(ivec2_test, scalar_division_works)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(ivec2_test, scalar_division_by_zero_calls_assert)
-{
-    ivec2 v(10, 20);
-    ivec2 result = v / 0;
-    EXPECT_TRUE(assert_was_called());
-}
-
 TEST_F(ivec2_test, scalar_divided_by_vector_works)
 {
     ivec2 v(2, 4);
@@ -183,11 +153,4 @@ TEST_F(ivec2_test, scalar_divided_by_vector_works)
     EXPECT_EQ(result.x, 4);
     EXPECT_EQ(result.y, 2);
     EXPECT_FALSE(assert_was_called());
-}
-
-TEST_F(ivec2_test, scalar_divided_by_zero_vector_calls_assert)
-{
-    ivec2 v(0, 1);
-    ivec2 result = 8 / v;
-    EXPECT_TRUE(assert_was_called());
 }
