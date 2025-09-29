@@ -7,6 +7,8 @@
 #include <tavros/core/math/vec4.hpp>
 #include <tavros/core/math/ivec2.hpp>
 
+#include <tavros/core/math/bitops.hpp>
+
 #include <tavros/core/math/functions/almost_equal.hpp>
 #include <tavros/core/math/functions/angle.hpp>
 #include <tavros/core/math/functions/basic_math.hpp>
