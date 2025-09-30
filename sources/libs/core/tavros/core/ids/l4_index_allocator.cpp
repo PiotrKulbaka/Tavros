@@ -1,9 +1,13 @@
 #include <tavros/core/ids/l4_index_allocator.hpp>
 
+#include <tavros/core/debug/assert.hpp>
+#include <tavros/core/noncopyable.hpp>
+#include <tavros/core/math/bitops.hpp>
+
 namespace tavros::core
 {
 
-    uint32 l4_index_allocator::allocate() noexcept
+    index_allocator_base::index_t l4_index_allocator::allocate() noexcept
     {
         const size_t l1_base_index = 0; // Always 0
         const uint64 l1_word = m_l1_map[l1_base_index];
@@ -25,6 +29,8 @@ namespace tavros::core
                     if (l4_word != UINT64_MAX) {
                         const size_t l4_free_bit = math::first_zero_bit(l4_word);
                         const size_t index = l4_base_index * k_bits_per_word + l4_free_bit;
+
+                        TAV_ASSERT(index < k_total_indices);
 
                         --m_remaining_indices;
 
@@ -49,7 +55,7 @@ namespace tavros::core
                             }
                         }
 
-                        return index;
+                        return static_cast<index_t>(index);
                     }
                 }
             }
@@ -58,7 +64,7 @@ namespace tavros::core
         return invalid_index;
     }
 
-    void l4_index_allocator::deallocate(uint32 index) noexcept
+    void l4_index_allocator::deallocate(index_t index) noexcept
     {
         TAV_ASSERT(index < k_total_indices);
 

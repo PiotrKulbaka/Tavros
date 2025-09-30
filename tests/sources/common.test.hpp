@@ -4,6 +4,7 @@
 
 extern bool g_tav_enable_utnittest_asserts;
 extern bool g_tav_assert_was_called;
+extern bool g_stress_skip;
 
 bool assert_was_called();
 

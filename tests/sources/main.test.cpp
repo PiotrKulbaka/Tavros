@@ -7,6 +7,8 @@ bool assert_was_called()
     return ret;
 }
 
+bool g_stress_skip = true;
+
 int main(int argc, char** argv)
 {
     ::testing::InitGoogleTest(&argc, argv);
