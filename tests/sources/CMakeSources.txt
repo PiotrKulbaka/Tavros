@@ -14,6 +14,8 @@ set(TAV_SOURCES_TEST_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/geometry/ray3.test.cpp
     ${CMAKE_CURRENT_LIST_DIR}/geometry/sphere.test.cpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/ids/l4_index_allocator.test.cpp
+
     ${CMAKE_CURRENT_LIST_DIR}/math/bitops.test.cpp
     ${CMAKE_CURRENT_LIST_DIR}/math/euler3.test.cpp
     ${CMAKE_CURRENT_LIST_DIR}/math/ivec2.test.cpp

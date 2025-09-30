@@ -129,7 +129,7 @@ namespace tavros::core
             for (size_t wi = 0; wi < m_last_block; ++wi) {
                 uint64 word = m_map[wi];
                 if (word != std::numeric_limits<uint64>::max()) {
-                    uint32 free_bit_index = first_zero_bit(word);
+                    size_t free_bit_index = first_zero_bit(word);
                     m_map[wi] |= (1ull << free_bit_index);
                     TAV_ASSERT(m_available_blocks > 0);
                     m_available_blocks--;
@@ -138,7 +138,7 @@ namespace tavros::core
             }
             if (m_last_bit != 0) {
                 uint64 word = m_map[m_last_block];
-                uint32 free_bit_index = first_zero_bit(word);
+                size_t free_bit_index = first_zero_bit(word);
                 if (free_bit_index < m_last_bit) {
                     m_map[m_last_block] |= (1ull << free_bit_index);
                     TAV_ASSERT(m_available_blocks > 0);
@@ -188,12 +188,12 @@ namespace tavros::core
             }
         }
 
-        static uint32 first_zero_bit(uint64 x)
+        static size_t first_zero_bit(uint64 x)
         {
 #if defined(_MSC_VER)
             unsigned long idx;
             if (_BitScanForward64(&idx, ~x)) {
-                return idx;
+                return static_cast<size_t>(idx);
             }
             return 64;
 #else
@@ -210,6 +210,5 @@ namespace tavros::core
         size_t m_last_block = 0;
         size_t m_last_bit = 0;
     };
-
 
 } // namespace tavros::core
