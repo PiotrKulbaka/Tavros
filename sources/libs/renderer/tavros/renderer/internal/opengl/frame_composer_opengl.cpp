@@ -1,6 +1,7 @@
 #include <tavros/renderer/internal/opengl/frame_composer_opengl.hpp>
 
 #include <tavros/renderer/internal/opengl/graphics_device_opengl.hpp>
+#include <tavros/renderer/internal/opengl/type_conversions.hpp>
 
 #include <tavros/core/prelude.hpp>
 
@@ -54,7 +55,7 @@ namespace tavros::renderer::rhi
         m_internal_command_list = core::make_unique<command_list_opengl>(device);
 
         m_backbuffer = m_device->get_resources()->create({backbuffer_info, 0, true});
-        ::logger.debug("Frame composer framebuffer `%u` created", m_backbuffer.id);
+        ::logger.debug("Frame composer framebuffer `%s` created", htos(m_backbuffer));
     }
 
     frame_composer_opengl::~frame_composer_opengl()
@@ -63,9 +64,9 @@ namespace tavros::renderer::rhi
         if (m_device->get_resources()->framebuffers.size() != 0) {
             if (auto* fb = m_device->get_resources()->try_get(m_backbuffer)) {
                 m_device->get_resources()->remove(m_backbuffer);
-                ::logger.debug("Frame composer framebuffer `%u` destroyed", m_backbuffer.id);
+                ::logger.debug("Frame composer framebuffer `%s` destroyed", htos(m_backbuffer));
             } else {
-                ::logger.error("Cannot destroy frame composer framebuffer `%u` because it does not exist", m_backbuffer.id);
+                ::logger.error("Cannot destroy frame composer framebuffer `%u` because it does not exist", htos(m_backbuffer));
             }
         }
 
@@ -86,7 +87,7 @@ namespace tavros::renderer::rhi
             fb->info.width = w;
             fb->info.height = h;
         } else {
-            ::logger.error("Cannot find frame composer framebuffer `%u`", m_backbuffer.id);
+            ::logger.error("Cannot find frame composer framebuffer `%s`", htos(m_backbuffer));
         }
     }
 
