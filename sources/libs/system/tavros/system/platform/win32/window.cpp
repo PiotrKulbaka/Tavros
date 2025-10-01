@@ -442,9 +442,9 @@ void window::on_key_press(key_event_args& e)
     }
 }
 
-handle window::get_handle() const
+void* window::get_handle() const
 {
-    return reinterpret_cast<handle>(m_hWnd);
+    return reinterpret_cast<void*>(m_hWnd);
 }
 
 long window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)

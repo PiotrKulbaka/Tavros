@@ -17,6 +17,6 @@ namespace tavros::system
         auto get_symbol(const char* symbol_name) -> void*;
 
     private:
-        handle m_handle;
+        void* m_handle;
     };
 } // namespace tavros::system

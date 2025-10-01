@@ -41,7 +41,7 @@ namespace tavros::system
             ::logger.error("Failed to load library '%s': %s", lib_name.data(), last_win_error_str());
             return false;
         }
-        m_handle = static_cast<handle>(lib);
+        m_handle = static_cast<void*>(lib);
 
         return true;
     }

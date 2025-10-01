@@ -12,7 +12,6 @@ using int32 = int32_t;
 using uint64 = uint64_t;
 using int64 = int64_t;
 using size_t = std::size_t;
-using handle = void*;
 
 using atomic_uint8 = std::atomic_uint8_t;
 using atomic_int8 = std::atomic_int8_t;

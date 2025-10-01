@@ -59,7 +59,7 @@ namespace tavros::system
         virtual void on_key_up(key_event_args& e) override;
         virtual void on_key_press(key_event_args& e) override;
 
-        virtual auto get_handle() const -> handle override;
+        virtual void* get_handle() const override;
 
     public:
         long process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
