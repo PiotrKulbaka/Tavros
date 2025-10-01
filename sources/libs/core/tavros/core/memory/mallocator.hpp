@@ -40,7 +40,7 @@ namespace tavros::core
          * @param tag Optional string tag to identify or categorize the allocation (ignored in this implementation).
          * @return Pointer to the allocated memory block, or nullptr if allocation fails.
          */
-        void* allocate(size_t size, const char* tag = nullptr) override;
+        void* allocate(size_t size, size_t align, const char* tag = nullptr) override;
 
         /**
          * @brief Frees a previously allocated block of memory.

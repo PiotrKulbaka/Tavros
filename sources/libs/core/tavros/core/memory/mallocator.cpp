@@ -6,6 +6,7 @@
 
 #include <cstdlib>
 #include <cstring>
+#include <malloc.h>
 
 #include <unordered_map>
 
@@ -24,12 +25,12 @@ struct mallocator::impl
         const char* tag;
     };
 
-    void* allocate(size_t size, const char* tag = nullptr)
+    uint8* allocate(size_t size, size_t align, const char* tag = nullptr)
     {
-        auto* p = std::malloc(size);
+        auto* p = _aligned_malloc(size, align);
 
         if (!p) {
-            s_logger.error("Allocator cannot allocate memory `%s`.", (tag ? tag : ""));
+            ::s_logger.error("Allocator cannot allocate memory `%s`.", (tag ? tag : ""));
             TAV_ASSERT(false);
             return nullptr;
         }
@@ -41,17 +42,17 @@ struct mallocator::impl
 
         std::memset(p, 0, size);
 
-        return p;
+        return reinterpret_cast<uint8*>(p);
     }
 
-    void deallocate(void* ptr)
+    void deallocate(uint8* ptr)
     {
         if (auto it = allocations.find(ptr); it != allocations.end()) {
             auto info = it->second;
             allocations.erase(it);
             released[ptr] = info;
             std::memset(ptr, 0, info.size);
-            std::free(ptr);
+            _aligned_free(ptr);
         } else {
             if (auto it = released.find(ptr); it != released.end()) {
                 s_logger.error("Attempting to free memory twice.");
@@ -86,14 +87,14 @@ mallocator::~mallocator()
     clear();
 }
 
-void* mallocator::allocate(size_t size, const char* tag)
+void* mallocator::allocate(size_t size, size_t align, const char* tag)
 {
-    return m_impl->allocate(size, tag);
+    return m_impl->allocate(size, align, tag);
 }
 
 void mallocator::deallocate(void* ptr)
 {
-    m_impl->deallocate(ptr);
+    m_impl->deallocate(reinterpret_cast<uint8*>(ptr));
 }
 
 void mallocator::clear()

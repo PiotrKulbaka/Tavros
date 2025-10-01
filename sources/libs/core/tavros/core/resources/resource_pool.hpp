@@ -37,7 +37,7 @@ namespace tavros::core
             }
 
             if (m_resources) {
-                m_allocator->deallocate(reinterpret_cast<uint8*>(m_resources));
+                m_allocator->deallocate(m_resources);
             }
 
             delete m_allocator;
@@ -216,7 +216,7 @@ namespace tavros::core
 
                 if (m_resources != nullptr) {
                     move_resources_to_new_memory(new_res);
-                    m_allocator->deallocate(reinterpret_cast<uint8*>(m_resources));
+                    m_allocator->deallocate(m_resources);
                 }
 
                 m_resources = new_res;

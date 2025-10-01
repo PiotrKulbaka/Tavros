@@ -29,10 +29,11 @@ namespace tavros::core
          * @brief Allocates a block of memory.
          *
          * @param size The number of bytes to allocate.
+         * @param align Memory alignment, should be opw of two.
          * @param tag Optional string tag to identify or categorize the allocation (for debugging or profiling).
          * @return Pointer to the allocated memory block, or nullptr if allocation fails.
          */
-        virtual void* allocate(size_t size, const char* tag = nullptr) = 0;
+        virtual void* allocate(size_t size, size_t align, const char* tag = nullptr) = 0;
 
         /**
          * @brief Frees a previously allocated block of memory.

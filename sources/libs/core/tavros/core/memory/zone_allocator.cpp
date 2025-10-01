@@ -213,8 +213,10 @@ zone_allocator::~zone_allocator()
     clear();
 }
 
-void* zone_allocator::allocate(size_t size, const char* tag)
+void* zone_allocator::allocate(size_t size, size_t align, const char* tag)
 {
+    (void) align;
+
     auto* chunk = m_impl->allocate_chunk(size);
     TAV_ASSERT(chunk);
 
@@ -235,7 +237,7 @@ void* zone_allocator::allocate(size_t size, const char* tag)
 
 void zone_allocator::deallocate(void* ptr)
 {
-    auto* chunk = reinterpret_cast<zone_chunk*>(static_cast<uint8_t*>(ptr) - sizeof(zone_chunk));
+    auto* chunk = reinterpret_cast<zone_chunk*>(reinterpret_cast<uint8*>(ptr) - sizeof(zone_chunk));
 
     auto& map = m_impl->allocation_info;
     if (auto it = map.find(ptr); it != map.end()) {
