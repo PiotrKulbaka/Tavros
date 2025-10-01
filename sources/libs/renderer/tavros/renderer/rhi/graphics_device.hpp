@@ -2,6 +2,7 @@
 
 #include <tavros/core/containers/sapn.hpp>
 #include <tavros/core/optional.hpp>
+#include <tavros/core/memory/memory.hpp>
 
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/frame_composer_info.hpp>
@@ -14,14 +15,24 @@
 #include <tavros/renderer/rhi/render_pass_info.hpp>
 #include <tavros/renderer/rhi/shader_binding_info.hpp>
 #include <tavros/renderer/rhi/shader_info.hpp>
-
 #include <tavros/renderer/rhi/frame_composer.hpp>
 
 namespace tavros::renderer::rhi
 {
 
+    enum class rhi_backend : uint8
+    {
+        opengl,
+        vulkan,
+        directx12,
+        metal,
+    };
+
     class graphics_device
     {
+    public:
+        static core::unique_ptr<graphics_device> create(rhi_backend backend);
+
     public:
         virtual ~graphics_device() = default;
 

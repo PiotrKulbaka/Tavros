@@ -8,7 +8,22 @@ namespace tavros::renderer::rhi
     template<typename ResourceTag>
     struct handle_base
     {
-        uint32 id = 0;
+        uint32 id = 0xffffffffui32;
+
+        static consteval handle_base invalid() noexcept
+        {
+            return {0xffffffffui32};
+        }
+
+        constexpr bool operator==(handle_base other) const noexcept
+        {
+            return id == other.id;
+        }
+
+        constexpr bool operator!=(handle_base other) const noexcept
+        {
+            return id != other.id;
+        }
     };
 
     struct frame_composer_tag

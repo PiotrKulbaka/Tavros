@@ -43,7 +43,7 @@ namespace tavros::renderer::rhi
         bool             is_default = false;
 
         core::static_vector<texture_handle, k_max_color_attachments> color_attachments;
-        texture_handle                                               depth_stencil_attachment = {0};
+        texture_handle                                               depth_stencil_attachment = texture_handle::invalid();
     };
 
     struct gl_buffer

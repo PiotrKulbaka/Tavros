@@ -18,34 +18,12 @@ namespace tavros::core
         resource_pool() = default;
         ~resource_pool() = default;
 
-        constexpr auto begin() noexcept
+        template<typename Fn>
+        void for_each(Fn&& function)
         {
-            return m_storage.begin();
-        }
-
-        constexpr auto begin() const noexcept
-        {
-            return m_storage.begin();
-        }
-
-        constexpr auto end() noexcept
-        {
-            return m_storage.end();
-        }
-
-        constexpr auto end() const noexcept
-        {
-            return m_storage.end();
-        }
-
-        constexpr auto cbegin() const noexcept
-        {
-            return m_storage.cbegin();
-        }
-
-        constexpr auto cend() const noexcept
-        {
-            return m_storage.cend();
+            for (auto& it : m_storage) {
+                function(it.first, it.second);
+            }
         }
 
         constexpr auto size() const noexcept

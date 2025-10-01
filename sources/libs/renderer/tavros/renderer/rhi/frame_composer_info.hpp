@@ -21,10 +21,10 @@ namespace tavros::renderer::rhi
         bool vsync = false;
 
         /// Description of the color attachment used for rendering to the swapchain
-        pixel_format color_attachment_format;
+        pixel_format color_attachment_format = pixel_format::none;
 
         /// Description of the optional depth/stencil attachment used during rendering (format may be none)
-        pixel_format depth_stencil_attachment_format;
+        pixel_format depth_stencil_attachment_format = pixel_format::none;
 
         /// Number of back buffers to create (usually 2 for double-buffering or 3 for triple-buffering)
         uint32 buffer_count = 3;
