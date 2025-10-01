@@ -2,6 +2,7 @@
 
 #include <tavros/renderer/internal/opengl/frame_composer_opengl.hpp>
 #include <tavros/renderer/internal/opengl/type_conversions.hpp>
+#include <tavros/core/containers/unordered_map.hpp>
 #include <tavros/core/scoped_owner.hpp>
 #include <tavros/core/prelude.hpp>
 

@@ -90,103 +90,103 @@ namespace tavros::renderer::rhi
         // --- Create ---
         frame_composer_handle create(gl_composer&& data)
         {
-            return {composers.insert(std::move(data))};
+            return {composers.add(std::move(data))};
         }
 
         shader_handle create(gl_shader&& data)
         {
-            return {shaders.insert(std::move(data))};
+            return {shaders.add(std::move(data))};
         }
 
         shader_binding_handle create(gl_shader_binding&& data)
         {
-            return {shader_bindings.insert(std::move(data))};
+            return {shader_bindings.add(std::move(data))};
         }
 
         sampler_handle create(gl_sampler&& data)
         {
-            return {samplers.insert(std::move(data))};
+            return {samplers.add(std::move(data))};
         }
 
         texture_handle create(gl_texture&& data)
         {
-            return {textures.insert(std::move(data))};
+            return {textures.add(std::move(data))};
         }
 
         pipeline_handle create(gl_pipeline&& data)
         {
-            return {pipelines.insert(std::move(data))};
+            return {pipelines.add(std::move(data))};
         }
 
         framebuffer_handle create(gl_framebuffer&& data)
         {
-            return {framebuffers.insert(std::move(data))};
+            return {framebuffers.add(std::move(data))};
         }
 
         buffer_handle create(gl_buffer&& data)
         {
-            return {buffers.insert(std::move(data))};
+            return {buffers.add(std::move(data))};
         }
 
         geometry_handle create(gl_geometry&& data)
         {
-            return {geometries.insert(std::move(data))};
+            return {geometries.add(std::move(data))};
         }
 
         render_pass_handle create(gl_render_pass&& data)
         {
-            return {render_passes.insert(std::move(data))};
+            return {render_passes.add(std::move(data))};
         }
 
         // --- Remove ---
         void remove(frame_composer_handle handle)
         {
-            composers.remove(handle.id);
+            composers.erase(handle.id);
         }
 
         void remove(shader_handle handle)
         {
-            shaders.remove(handle.id);
+            shaders.erase(handle.id);
         }
 
         void remove(shader_binding_handle handle)
         {
-            shader_bindings.remove(handle.id);
+            shader_bindings.erase(handle.id);
         }
 
         void remove(sampler_handle handle)
         {
-            samplers.remove(handle.id);
+            samplers.erase(handle.id);
         }
 
         void remove(texture_handle handle)
         {
-            textures.remove(handle.id);
+            textures.erase(handle.id);
         }
 
         void remove(pipeline_handle handle)
         {
-            pipelines.remove(handle.id);
+            pipelines.erase(handle.id);
         }
 
         void remove(framebuffer_handle handle)
         {
-            framebuffers.remove(handle.id);
+            framebuffers.erase(handle.id);
         }
 
         void remove(buffer_handle handle)
         {
-            buffers.remove(handle.id);
+            buffers.erase(handle.id);
         }
 
         void remove(geometry_handle handle)
         {
-            geometries.remove(handle.id);
+            geometries.erase(handle.id);
         }
 
         void remove(render_pass_handle handle)
         {
-            render_passes.remove(handle.id);
+            render_passes.erase(handle.id);
         }
 
         // --- Try get ---
