@@ -49,7 +49,7 @@ namespace tavros::core
 
         [[nodiscard]] bool try_deallocate(index_type index) noexcept override;
 
-        [[nodiscard]] bool allocated(index_type index) noexcept override;
+        [[nodiscard]] bool allocated(index_type index) const noexcept override;
 
         void reset() noexcept override;
 

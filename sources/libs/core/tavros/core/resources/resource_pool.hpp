@@ -1,226 +1,353 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
 #include <tavros/core/debug/assert.hpp>
+#include <tavros/core/debug/verify.hpp>
 #include <tavros/core/math/bitops.hpp>
 #include <tavros/core/memory/mallocator.hpp>
 #include <tavros/core/ids/l3_bitmap_index_allocator.hpp>
+#include <tavros/core/resources/resource_handle.hpp>
+
+#include <type_traits>
 
 namespace tavros::core
 {
 
+    /**
+     * @brief Pool that manages resources of type T with stable handles.
+     *
+     * Objects are stored in contiguous memory, and handles are used to access them.
+     * Moving the pool does not invalidate handles for the moved resources.
+     *
+     * The pool allocates memory in powers-of-two sizes to efficiently grow
+     * and always keeps resources in a single contiguous block of memory,
+     * minimizing fragmentation. At any given time, the pool uses at most
+     * one contiguous dynamic memory block. Full defragmentation is the
+     * responsibility of the allocator provided to the pool.
+     *
+     * The type T must be nothrow-move-constructible, because resources
+     * may be relocated during memory expansion.
+     *
+     * Accessing resources is extremely fast, typically O(1), except in rare
+     * cases when memory expansion and object relocation occur.
+     */
     template<class T>
-    class resource_pool
+    class resource_pool : noncopyable
     {
     private:
         using idx_alc_t = l3_bitmap_index_allocator;
 
     public:
-        using handle_t = uint32;
+        using handle_type = resource_handle<T>;
 
-        static constexpr handle_t invalid_handle = 0xffffffffui32;
+        static_assert(idx_alc_t::k_max_index <= 0x00ffffffu, "index allocator supports more indices than 24 bits");
+        static_assert(std::is_nothrow_move_constructible_v<T>, "resource_pool requires noexcept move for exception-safety when expanding");
 
     public:
-        resource_pool()
+        /**
+         * @brief Construct a resource pool with a memory allocator.
+         * @param alc Memory allocator to use for internal allocations.
+         */
+        resource_pool(allocator* alc)
+            : m_mem_alc(alc)
         {
-            std::fill(m_gen, m_gen + idx_alc_t::k_max_index, 1);
-
-            m_allocator = new mallocator();
+            TAV_VERIFY(m_mem_alc);
         }
 
+        /**
+         * @brief Destructor destroys all allocated resources and frees memory.
+         */
         ~resource_pool()
         {
-            for (index_type i = 0; i <= m_max_idx; ++i) {
-                if (m_index_allocator.allocated(i)) {
-                    m_resources[i].~T();
+            // m_idx_alc can be in dirty state and m_res can be nullptr, because this object was moved
+            if (m_res) {
+                for (index_type i = 0; i <= m_max_idx; ++i) {
+                    if (m_idx_alc.allocated(i)) {
+                        std::destroy_at(m_res + i);
+                    }
                 }
             }
 
-            if (m_resources) {
-                m_allocator->deallocate(m_resources);
+            if (m_mem) {
+                m_mem_alc->deallocate(m_mem);
             }
-
-            delete m_allocator;
         }
 
-        /*struct resource_item
+        /**
+         * @brief Move constructor, transfers ownership from other pool.
+         */
+        resource_pool(resource_pool&& other) noexcept
+            : m_mem_alc(other.m_mem_alc)
+            , m_idx_alc(other.m_idx_alc)
+            , m_max_idx(other.m_max_idx)
+            , m_mem(other.m_mem)
+            , m_gen(other.m_gen)
+            , m_res(other.m_res)
+            , m_capacity(other.m_capacity)
+            , m_size(other.m_size)
+
         {
-            handle_t handle;
-            T& resource;
-        };
+            // If the verification failed, the object has already been moved.
+            TAV_VERIFY(other.m_mem_alc);
 
-        struct resource_item_iterator
+            other.m_mem_alc = nullptr;
+            // m_idx_alc - not needed to reset
+            other.m_max_idx = 0;
+            other.m_mem = nullptr;
+            other.m_gen = nullptr;
+            other.m_res = nullptr;
+            other.m_capacity = 0;
+            other.m_size = 0;
+        }
+
+        /**
+         * @brief Move assignment operator, transfers ownership from other pool.
+         */
+        resource_pool& operator=(resource_pool&& other) noexcept
         {
-            resource_pool* pool;
-            size_t index;
+            // If the verification failed, the object has already been moved.
+            TAV_VERIFY(other.m_mem_alc);
 
-            bool operator!=(const iterator& other) const { return index != other.index; }
+            if (this != &other) {
+                if (m_mem) {
+                    // Destroy existing resources and free memory
+                    for (index_type i = 0; i <= m_max_idx; ++i) {
+                        if (m_idx_alc.allocated(i)) {
+                            std::destroy_at(m_res + i);
+                        }
+                    }
+                    m_mem_alc->deallocate(m_mem);
+                }
 
-            resource_item_iterator& operator++()
-            {
-                ++index;
-                return *this;
+                // Move data
+                m_mem_alc = other.m_mem_alc;
+                m_idx_alc = other.m_idx_alc;
+                m_max_idx = other.m_max_idx;
+                m_mem = other.m_mem;
+                m_gen = other.m_gen;
+                m_res = other.m_res;
+                m_capacity = other.m_capacity;
+                m_size = other.m_size;
+
+                // Reset other
+                other.m_mem_alc = nullptr;
+                // other.m_idx_alc
+                other.m_max_idx = 0;
+                other.m_mem = nullptr;
+                other.m_gen = nullptr;
+                other.m_res = nullptr;
+                other.m_capacity = 0;
+                other.m_size = 0;
             }
+            return *this;
+        }
 
-            resource_item operator*() const
-            {
-                return { pool->m_dense_handles[index], pool->m_dense[index] };
-            }
-        };
-
-        struct items_range
-        {
-            resource_pool* pool;
-
-            resource_item_iterator begin()
-            {
-                return {pool, 0};
-            }
-
-            resource_item_iterator end()
-            {
-                return { pool, pool->m_dense.size() };
-            }
-        };
-
-        items_range items() { return { this }; }*/
-
+        /**
+         * @brief Iterate over all allocated resources and apply a function.
+         * @param fun Function to call for each handle and resource reference.
+         */
         template<typename Fn>
         void for_each(Fn&& fun)
         {
             for (index_type i = 0; i <= m_max_idx; ++i) {
-                if (m_index_allocator.allocated(i)) {
-                    handle_t h = make_handle(i);
-                    T&       res = m_resources[i];
+                if (m_idx_alc.allocated(i)) {
+                    handle_type h = make_handle(i);
+                    T&          res = m_res[i];
                     fun(h, res);
                 }
             }
         }
 
-        size_t size() const noexcept
+        /**
+         * @brief Returns the number of currently allocated resources.
+         */
+        [[nodiscard]] size_t size() const noexcept
         {
             return m_size;
         }
 
-        T* try_get(handle_t h)
+        /**
+         * @brief Try to get a pointer to a resource by handle.
+         * @param h Resource handle.
+         * @return Pointer to resource or nullptr if invalid.
+         */
+        [[nodiscard]] T* try_get(handle_type h) noexcept
         {
-            auto idx = extract_index(h);
-            TAV_ASSERT(idx < m_index_allocator.max_index());
+            return const_cast<T*>(static_cast<const resource_pool*>(this)->try_get(h));
+        }
 
-            if (idx >= m_index_allocator.max_index()) {
+        /**
+         * @brief Try to get a const pointer to a resource by handle.
+         * @param h Resource handle.
+         * @return Const pointer to resource or nullptr if invalid.
+         */
+        [[nodiscard]] const T* try_get(handle_type h) const noexcept
+        {
+            TAV_ASSERT(m_capacity != 0);
+            if (m_capacity == 0) {
                 return nullptr;
             }
 
-            auto gen = extract_gen(h);
-            auto cur = current_gen(idx);
+            auto idx = extract_index(h.id);
+            TAV_ASSERT(idx < m_capacity);
 
-            if (gen != cur || !m_index_allocator.allocated(idx)) {
+            if (idx >= m_capacity) {
                 return nullptr;
             }
 
-            return m_resources + idx;
-        }
-
-        const T* try_get(handle_t h) const
-        {
-            return try_get(h);
-        }
-
-        [[nodiscard]] handle_t add(T&& res)
-        {
-            auto idx = m_index_allocator.allocate();
-            TAV_ASSERT(idx != invalid_index);
-
-            if (idx == invalid_index) {
-                return invalid_handle;
-            }
-
-            // Should be called before update m_max_idx
-            ensure_allocation(idx);
-
-            if (m_max_idx < idx) {
-                m_max_idx = idx;
-            }
-
-            ++m_size;
-            m_resources[idx] = std::move(res);
-            return make_handle(idx);
-        }
-
-        template<typename... Args>
-        [[nodiscard]] handle_t emplace_add(Args&&... args)
-        {
-            auto idx = m_index_allocator.allocate();
-            TAV_ASSERT(idx != invalid_index);
-
-            if (idx == invalid_index) {
-                return invalid_handle;
-            }
-
-            // Should be called before update m_max_idx
-            ensure_allocation(idx);
-
-            if (m_max_idx < idx) {
-                m_max_idx = idx;
-            }
-
-            ++m_size;
-            new (m_resources + idx) T(std::forward<Args>(args)...);
-            return make_handle(idx);
-        }
-
-        bool erase(handle_t h)
-        {
-            auto idx = extract_index(h);
-            auto gen = extract_gen(h);
+            auto gen = extract_gen(h.id);
             auto cur = current_gen(idx);
 
             TAV_ASSERT(gen == cur);
 
             if (gen != cur) {
+                return nullptr;
+            }
+
+            if (!m_idx_alc.allocated(idx)) {
+                return nullptr;
+            }
+
+            return m_res + idx;
+        }
+
+        /**
+         * @brief Add a new resource by moving it into the pool.
+         * @param res Resource to move.
+         * @return Handle to the newly added resource.
+         */
+        [[nodiscard]] handle_type add(T&& res)
+        {
+            auto idx = m_idx_alc.allocate();
+            TAV_ASSERT(idx != invalid_index);
+
+            if (idx == invalid_index) {
+                return handle_type::invalid();
+            }
+
+            // Should be called before update m_max_idx
+            ensure_allocation(idx);
+
+            if (m_max_idx < idx) {
+                m_max_idx = idx;
+            }
+
+            // m_res[idx] = std::move(res); - UB; instead used placement new
+            std::construct_at(m_res + idx, std::move(res));
+            ++m_size;
+
+            return make_handle(idx);
+        }
+
+        /**
+         * @brief Construct and add a new resource in-place.
+         * @tparam Args Constructor argument types.
+         * @param args Arguments to forward to T constructor.
+         * @return Handle to the newly added resource.
+         */
+        template<typename... Args>
+        [[nodiscard]] handle_type emplace_add(Args&&... args)
+        {
+            auto idx = m_idx_alc.allocate();
+            TAV_ASSERT(idx != invalid_index);
+
+            if (idx == invalid_index) {
+                return handle_type::invalid();
+            }
+
+            // Should be called before update m_max_idx
+            ensure_allocation(idx);
+
+            if (m_max_idx < idx) {
+                m_max_idx = idx;
+            }
+
+            std::construct_at(m_res + idx, std::forward<Args>(args)...);
+            ++m_size;
+
+            return make_handle(idx);
+        }
+
+        /**
+         * @brief Erase a resource from the pool.
+         * @param h Resource handle.
+         * @return True if resource was successfully erased.
+         */
+        bool erase(handle_type h)
+        {
+            auto idx = extract_index(h.id);
+            auto gen = extract_gen(h.id);
+            auto cur = current_gen(idx);
+
+            if (gen != cur) {
                 return false;
             }
 
-            auto success = m_index_allocator.try_deallocate(idx);
+            auto success = m_idx_alc.try_deallocate(idx);
             if (!success) {
                 return false;
             }
 
+            if (m_max_idx == idx && idx > 0) {
+                index_type i = idx - 1;
+                while (i > 0) {
+                    if (m_idx_alc.allocated(i)) {
+                        break;
+                    }
+                    --i;
+                }
+                m_max_idx = i;
+            }
+
             increase_gen(idx);
-            m_resources[idx].~T();
+            std::destroy_at(m_res + idx);
             --m_size;
 
             return true;
         }
 
+        /**
+         * @brief Clear all resources from the pool.
+         * Resets internal index allocator and size counter.
+         */
         void clear()
         {
             for (index_type i = 0; i <= m_max_idx; ++i) {
-                if (m_index_allocator.allocated(i)) {
-                    m_resources[i].~T();
+                if (m_idx_alc.allocated(i)) {
+                    m_res[i].~T();
                 }
             }
-            std::fill(m_gen, m_gen + idx_alc_t::k_max_index, 1);
             m_max_idx = 0;
-            m_index_allocator.reset();
+            m_idx_alc.reset();
             m_size = 0;
         }
 
     private:
         void ensure_allocation(index_type idx)
         {
-            auto needed_capacity = adapt_capacity(static_cast<size_t>(idx) + 1);
-            if (m_current_capacity < needed_capacity) {
-                size_t required_size = needed_capacity * sizeof(T);
-                T*     new_res = reinterpret_cast<T*>(m_allocator->allocate(required_size, alignof(T), "resource_pool"));
+            auto new_capacity = adapt_capacity(static_cast<size_t>(idx) + 1);
+            if (m_capacity < new_capacity) {
+                // gen size + res size + aignment for res size
+                size_t new_gen_size = new_capacity;
+                size_t required_size = new_gen_size + new_capacity * sizeof(T) + alignof(T);
 
-                if (m_resources != nullptr) {
-                    move_resources_to_new_memory(new_res);
-                    m_allocator->deallocate(m_resources);
+                void* new_mem = m_mem_alc->allocate(required_size, 8, "resource_pool");
+                TAV_ASSERT(new_mem);
+
+                uint8* new_gen = reinterpret_cast<uint8*>(new_mem);
+                auto   res_addr = math::align_up(reinterpret_cast<size_t>(new_mem) + new_gen_size, alignof(T));
+                T*     new_res = reinterpret_cast<T*>(res_addr);
+
+                if (m_mem != nullptr) {
+                    move_to_new_memory(new_gen, new_res, new_capacity);
+                    m_mem_alc->deallocate(m_mem);
+                } else {
+                    std::fill(new_gen, new_gen + new_capacity, 0);
                 }
 
-                m_resources = new_res;
-                m_current_capacity = needed_capacity;
+                m_mem = new_mem;
+                m_gen = new_gen;
+                m_res = new_res;
+                m_capacity = new_capacity;
             }
         }
 
@@ -230,7 +357,7 @@ namespace tavros::core
                 return 2;
             }
             size_t adapted = static_cast<size_t>(math::ceil_power_of_two(capacity));
-            size_t max_idx = static_cast<size_t>(m_index_allocator.max_index());
+            size_t max_idx = static_cast<size_t>(m_idx_alc.max_index());
 
             if (adapted > max_idx) {
                 return max_idx;
@@ -238,25 +365,30 @@ namespace tavros::core
             return adapted;
         }
 
-        void move_resources_to_new_memory(T* new_resources)
+        void move_to_new_memory(uint8* new_gen, T* new_resources, size_t new_capacity)
         {
+            // Move gen
+            std::memcpy(new_gen, m_gen, m_capacity);
+            std::fill(new_gen + m_capacity, new_gen + new_capacity, 0);
+
+            // Move resources
             for (index_type i = 0; i <= m_max_idx; ++i) {
-                if (m_index_allocator.allocated(i)) {
+                if (m_idx_alc.allocated(i)) {
                     // Move to new resource
-                    new (new_resources + i) T(std::move(m_resources[i]));
+                    new (new_resources + i) T(std::move(m_res[i]));
                     // Deallocate old resource
-                    m_resources[i].~T();
+                    std::destroy_at(m_res + i);
                 }
             }
         }
 
-        handle_t make_handle(index_type idx)
+        handle_type make_handle(index_type idx) const
         {
             uint32 gen = static_cast<uint32>(current_gen(idx));
-            return (gen << 24) | idx;
+            return {(gen << 24) | idx};
         }
 
-        uint8 current_gen(index_type idx)
+        uint8 current_gen(index_type idx) const
         {
             return m_gen[idx] & 0x7f;
         }
@@ -266,25 +398,25 @@ namespace tavros::core
             ++m_gen[idx];
         }
 
-        static index_type extract_index(handle_t h)
+        static index_type extract_index(uint32 h_id)
         {
-            return h & 0x00ffffff;
+            return h_id & 0x00ffffff;
         }
 
-        static uint8 extract_gen(handle_t h)
+        static uint8 extract_gen(uint32 h_id)
         {
-            return static_cast<uint8>((h >> 24) & 0x7f);
+            return static_cast<uint8>((h_id >> 24) & 0x7f);
         }
 
     private:
-        allocator* m_allocator;
-        idx_alc_t  m_index_allocator;
-        uint8      m_gen[idx_alc_t::k_max_index]; // generation
+        allocator* m_mem_alc = nullptr; // Dynamic memory allocator
+        idx_alc_t  m_idx_alc;           // TODO: upgrade to dynamic index allocator
+        index_type m_max_idx = 0;       // Optimization for loops
 
-        index_type m_max_idx = 0;
-
-        T*     m_resources = nullptr;
-        size_t m_current_capacity = 0; // current capacity of m_resources
+        void*  m_mem = nullptr;         // memory pointer
+        uint8* m_gen = nullptr;         // generation
+        T*     m_res = nullptr;         // resources
+        size_t m_capacity = 0;          // current capacity of m_resources and m_gen
         size_t m_size = 0;
     };
 

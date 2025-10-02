@@ -25,7 +25,7 @@ namespace tavros::math
      * @param x Input value.
      * @return true if x is a power of two, false otherwise.
      */
-    inline bool is_power_of_two(uint64 x) noexcept
+    inline constexpr bool is_power_of_two(uint64 x) noexcept
     {
         return x != 0 && (x & (x - 1)) == 0;
     }
@@ -35,7 +35,7 @@ namespace tavros::math
      * @param x Input value.
      * @return Smallest power of two >= x.
      */
-    inline uint64 ceil_power_of_two(uint64 x) noexcept
+    inline constexpr uint64 ceil_power_of_two(uint64 x) noexcept
     {
         if (x == 0) {
             return 1;
@@ -55,7 +55,7 @@ namespace tavros::math
      * @param x Input value.
      * @return Largest power of two <= x.
      */
-    inline uint64 floor_power_of_two(uint64 x) noexcept
+    inline constexpr uint64 floor_power_of_two(uint64 x) noexcept
     {
         if (x == 0) {
             return 0;
@@ -144,6 +144,12 @@ namespace tavros::math
 #else
         return x ? static_cast<size_t>(__builtin_ctzll(x)) : 64;
 #endif
+    }
+
+    inline size_t align_up(size_t value, size_t align) noexcept
+    {
+        TAV_ASSERT(is_power_of_two(align)); // align must be power of two
+        return (value + (align - 1)) & ~(align - 1);
     }
 
 } // namespace tavros::math

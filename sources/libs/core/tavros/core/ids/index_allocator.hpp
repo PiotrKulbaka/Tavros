@@ -16,7 +16,7 @@ namespace tavros::core
      *
      * @note All indices are 0-based.
      */
-    class index_allocator : noncopyable
+    class index_allocator
     {
     public:
         /**
@@ -55,7 +55,7 @@ namespace tavros::core
          * @param index The index to check.
          * @return `true` if the index is currently allocated, or `false` otherwise.
          */
-        virtual [[nodiscard]] bool allocated(index_type index) noexcept = 0;
+        virtual [[nodiscard]] bool allocated(index_type index) const noexcept = 0;
 
         /**
          * @brief Resets the allocator, marking all indices as free.

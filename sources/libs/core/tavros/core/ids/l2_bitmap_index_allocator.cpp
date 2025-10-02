@@ -84,7 +84,7 @@ namespace tavros::core
         return true;
     }
 
-    bool l2_bitmap_index_allocator::allocated(index_type index) noexcept
+    bool l2_bitmap_index_allocator::allocated(index_type index) const noexcept
     {
         if (index >= k_max_index) {
             return false;
