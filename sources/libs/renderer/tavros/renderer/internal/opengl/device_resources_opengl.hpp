@@ -84,163 +84,177 @@ namespace tavros::renderer::rhi
     class device_resources_opengl
     {
     public:
-        device_resources_opengl() = default;
+        device_resources_opengl()
+            : samplers(&alc)
+            , composers(&alc)
+            , shader_bindings(&alc)
+            , shaders(&alc)
+            , textures(&alc)
+            , pipelines(&alc)
+            , framebuffers(&alc)
+            , buffers(&alc)
+            , geometries(&alc)
+            , render_passes(&alc)
+        {
+        }
+
         ~device_resources_opengl() = default;
 
         // --- Create ---
         frame_composer_handle create(gl_composer&& data)
         {
-            return {composers.add(std::move(data))};
+            return {composers.add(std::move(data)).id};
         }
 
         shader_handle create(gl_shader&& data)
         {
-            return {shaders.add(std::move(data))};
+            return {shaders.add(std::move(data)).id};
         }
 
         shader_binding_handle create(gl_shader_binding&& data)
         {
-            return {shader_bindings.add(std::move(data))};
+            return {shader_bindings.add(std::move(data)).id};
         }
 
         sampler_handle create(gl_sampler&& data)
         {
-            return {samplers.add(std::move(data))};
+            return {samplers.add(std::move(data)).id};
         }
 
         texture_handle create(gl_texture&& data)
         {
-            return {textures.add(std::move(data))};
+            return {textures.add(std::move(data)).id};
         }
 
         pipeline_handle create(gl_pipeline&& data)
         {
-            return {pipelines.add(std::move(data))};
+            return {pipelines.add(std::move(data)).id};
         }
 
         framebuffer_handle create(gl_framebuffer&& data)
         {
-            return {framebuffers.add(std::move(data))};
+            return {framebuffers.add(std::move(data)).id};
         }
 
         buffer_handle create(gl_buffer&& data)
         {
-            return {buffers.add(std::move(data))};
+            return {buffers.add(std::move(data)).id};
         }
 
         geometry_handle create(gl_geometry&& data)
         {
-            return {geometries.add(std::move(data))};
+            return {geometries.add(std::move(data)).id};
         }
 
         render_pass_handle create(gl_render_pass&& data)
         {
-            return {render_passes.add(std::move(data))};
+            return {render_passes.add(std::move(data)).id};
         }
 
         // --- Remove ---
         void remove(frame_composer_handle handle)
         {
-            composers.erase(handle.id);
+            composers.erase({handle.id});
         }
 
         void remove(shader_handle handle)
         {
-            shaders.erase(handle.id);
+            shaders.erase({handle.id});
         }
 
         void remove(shader_binding_handle handle)
         {
-            shader_bindings.erase(handle.id);
+            shader_bindings.erase({handle.id});
         }
 
         void remove(sampler_handle handle)
         {
-            samplers.erase(handle.id);
+            samplers.erase({handle.id});
         }
 
         void remove(texture_handle handle)
         {
-            textures.erase(handle.id);
+            textures.erase({handle.id});
         }
 
         void remove(pipeline_handle handle)
         {
-            pipelines.erase(handle.id);
+            pipelines.erase({handle.id});
         }
 
         void remove(framebuffer_handle handle)
         {
-            framebuffers.erase(handle.id);
+            framebuffers.erase({handle.id});
         }
 
         void remove(buffer_handle handle)
         {
-            buffers.erase(handle.id);
+            buffers.erase({handle.id});
         }
 
         void remove(geometry_handle handle)
         {
-            geometries.erase(handle.id);
+            geometries.erase({handle.id});
         }
 
         void remove(render_pass_handle handle)
         {
-            render_passes.erase(handle.id);
+            render_passes.erase({handle.id});
         }
 
         // --- Try get ---
         gl_composer* try_get(frame_composer_handle handle)
         {
-            return composers.try_get(handle.id);
+            return composers.try_get({handle.id});
         }
 
         gl_shader* try_get(shader_handle handle)
         {
-            return shaders.try_get(handle.id);
+            return shaders.try_get({handle.id});
         }
 
         gl_shader_binding* try_get(shader_binding_handle handle)
         {
-            return shader_bindings.try_get(handle.id);
+            return shader_bindings.try_get({handle.id});
         }
 
         gl_sampler* try_get(sampler_handle handle)
         {
-            return samplers.try_get(handle.id);
+            return samplers.try_get({handle.id});
         }
 
         gl_texture* try_get(texture_handle handle)
         {
-            return textures.try_get(handle.id);
+            return textures.try_get({handle.id});
         }
 
         gl_pipeline* try_get(pipeline_handle handle)
         {
-            return pipelines.try_get(handle.id);
+            return pipelines.try_get({handle.id});
         }
 
         gl_framebuffer* try_get(framebuffer_handle handle)
         {
-            return framebuffers.try_get(handle.id);
+            return framebuffers.try_get({handle.id});
         }
 
         gl_buffer* try_get(buffer_handle handle)
         {
-            return buffers.try_get(handle.id);
+            return buffers.try_get({handle.id});
         }
 
         gl_geometry* try_get(geometry_handle handle)
         {
-            return geometries.try_get(handle.id);
+            return geometries.try_get({handle.id});
         }
 
         gl_render_pass* try_get(render_pass_handle handle)
         {
-            return render_passes.try_get(handle.id);
+            return render_passes.try_get({handle.id});
         }
 
     public:
+        core::mallocator                       alc;
         core::resource_pool<gl_sampler>        samplers;
         core::resource_pool<gl_composer>       composers;
         core::resource_pool<gl_shader_binding> shader_bindings;

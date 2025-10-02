@@ -115,8 +115,8 @@ namespace
     {
         tavros::core::vector<uint32> handles;
         handles.reserve(pool.size());
-        pool.for_each([&](uint32 h, auto&) {
-            handles.push_back(h);
+        pool.for_each([&](auto h, auto&) {
+            handles.push_back(h.id);
         });
 
         for (auto handle : handles) {

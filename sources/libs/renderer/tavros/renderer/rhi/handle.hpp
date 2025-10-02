@@ -10,7 +10,7 @@ namespace tavros::renderer::rhi
     {
         uint32 id = 0xffffffffui32;
 
-        static consteval handle_base invalid() noexcept
+        static constexpr handle_base invalid() noexcept
         {
             return {0xffffffffui32};
         }
