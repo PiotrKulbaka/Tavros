@@ -14,7 +14,7 @@
 #include <tavros/renderer/rhi/graphics_device.hpp>
 
 #include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
-#include <tavros/renderer/internal/opengl/graphics_device_opengl.hpp>
+#include <tavros/renderer/render_system.hpp>
 
 #include <tavros/core/containers/static_vector.hpp>
 
@@ -525,7 +525,8 @@ int main()
     app->run();
 
 
-    auto gdevice = tavros::core::make_shared<rhi::graphics_device_opengl>();
+    auto gdevice = rhi::graphics_device::create(rhi::rhi_backend::opengl);
+    auto render_system = tavros::renderer::render_system(gdevice.get());
 
     rhi::frame_composer_info main_composer_info;
     main_composer_info.width = k_initial_window_width;
@@ -555,9 +556,9 @@ int main()
     cbuf->copy_buffer_data(stage_buffer, pixels, w * h * 4);
     free_pixels(pixels);
 
-    rhi::texture_info tex_desc{rhi::texture_type::texture_2d, rhi::pixel_format::rgba8un, static_cast<uint32>(w), static_cast<uint32>(h), 1, rhi::k_default_texture_usage, 1, 1, 1};
-    auto              tex1 = gdevice->create_texture(tex_desc);
-    cbuf->copy_buffer_to_texture(stage_buffer, tex1, 0, w * h * 4);
+    tavros::renderer::texture_create_info tex1_info{rhi::texture_type::texture_2d, rhi::pixel_format::rgba8un, static_cast<uint32>(w), static_cast<uint32>(h), 1, 100, 1};
+    auto                                  tex1_view = render_system.create_texture(tex1_info);
+    cbuf->copy_buffer_to_texture(stage_buffer, tex1_view->handle(), 0, w * h * 4);
 
 
     uint8* lut_pixels = load_pixels_from_file("C:\\Work\\img\\null_lut.png", w, h, c);
@@ -626,15 +627,6 @@ int main()
 
     int msaa_level = 16;
 
-    // msaa texture
-    rhi::texture_info msaa_texture_desc;
-    msaa_texture_desc.width = k_initial_window_width;
-    msaa_texture_desc.height = k_initial_window_height;
-    msaa_texture_desc.format = rhi::pixel_format::rgba8un;
-    msaa_texture_desc.usage = rhi::texture_usage::render_target | rhi::texture_usage::resolve_source;
-    msaa_texture_desc.sample_count = msaa_level;
-    auto msaa_texture = gdevice->create_texture(msaa_texture_desc);
-
     // resolve target texture
     rhi::texture_info msaa_resolve_desc;
     msaa_resolve_desc.width = k_initial_window_width;
@@ -644,25 +636,16 @@ int main()
     msaa_resolve_desc.sample_count = 1;
     auto msaa_resolve_texture = gdevice->create_texture(msaa_resolve_desc);
 
-    // depth/stencil texture
-    rhi::texture_info msaa_depth_stencil_desc;
-    msaa_depth_stencil_desc.width = k_initial_window_width;
-    msaa_depth_stencil_desc.height = k_initial_window_height;
-    msaa_depth_stencil_desc.format = rhi::pixel_format::depth24_stencil8;
-    msaa_depth_stencil_desc.usage = rhi::texture_usage::depth_stencil_target;
-    msaa_depth_stencil_desc.sample_count = msaa_level;
-    auto msaa_depth_stencil_texture = gdevice->create_texture(msaa_depth_stencil_desc);
+    tavros::renderer::render_target_create_info msaa_rt_info;
+    msaa_rt_info.target_type = rhi::texture_type::texture_2d;
+    msaa_rt_info.width = k_initial_window_width;
+    msaa_rt_info.height = k_initial_window_height;
+    msaa_rt_info.depth = 1;
+    msaa_rt_info.color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
+    msaa_rt_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
+    msaa_rt_info.sample_count = msaa_level;
 
-    // msaa framebuffer
-    rhi::framebuffer_info msaa_framebuffer_info;
-    msaa_framebuffer_info.width = k_initial_window_width;
-    msaa_framebuffer_info.height = k_initial_window_height;
-    msaa_framebuffer_info.color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
-    msaa_framebuffer_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
-    msaa_framebuffer_info.sample_count = msaa_level;
-    rhi::texture_handle msaa_attachments[] = {msaa_texture};
-    auto                msaa_framebuffer = gdevice->create_framebuffer(msaa_framebuffer_info, msaa_attachments, msaa_depth_stencil_texture);
-
+    auto msaa_rt = render_system.create_render_target(msaa_rt_info);
 
     rhi::render_pass_info msaa_render_pass;
     msaa_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, static_cast<uint32>(msaa_level), rhi::load_op::clear, rhi::store_op::resolve, 0, {0.1f, 0.1f, 0.1f, 1.0f}});
@@ -863,7 +846,7 @@ int main()
     shader_binding_info.texture_bindings.push_back({0, 0, 0});
     shader_binding_info.texture_bindings.push_back({1, 1, 8});
 
-    rhi::texture_handle textures_to_binding[] = {tex1, skycube_tex};
+    rhi::texture_handle textures_to_binding[] = {tex1_view->handle(), skycube_tex};
     rhi::sampler_handle samplers_to_binding[] = {sampler1, sampler_sky};
     rhi::buffer_handle  ubo_buffers_to_binding[] = {uniform_buffer};
 
@@ -926,7 +909,7 @@ int main()
         cbuf->copy_buffer(stage_buffer, uniform_buffer, 512, 0, 0);
 
 
-        cbuf->begin_render_pass(msaa_pass, msaa_framebuffer);
+        cbuf->begin_render_pass(msaa_pass, msaa_rt->handle());
 
         cbuf->bind_pipeline(msaa_pipeline);
 
@@ -957,6 +940,9 @@ int main()
 
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
+
+    render_system.release_texture(tex1_view);
+    render_system.release_render_target(msaa_rt);
 
     return 0;
 }

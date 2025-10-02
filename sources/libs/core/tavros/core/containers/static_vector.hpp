@@ -1,5 +1,8 @@
 #pragma once
 
+#include <tavros/core/containers/sapn.hpp>
+#include <tavros/core/debug/assert.hpp>
+
 #include <stdexcept>
 #include <initializer_list>
 #include <iterator>
@@ -20,12 +23,17 @@ namespace tavros::core
     public:
         static_vector() = default;
 
-        constexpr static_vector(std::initializer_list<T> init)
+        constexpr static_vector(std::initializer_list<T> init) noexcept
         {
-            if (init.size() > N) {
-                throw std::out_of_range("static_vector: initializer list too large");
+            TAV_ASSERT(init.size() <= N);
+            for (const auto& value : init) {
+                emplace_back(value);
             }
+        }
 
+        constexpr static_vector(span<const T> init) noexcept
+        {
+            TAV_ASSERT(init.size() <= N);
             for (const auto& value : init) {
                 emplace_back(value);
             }

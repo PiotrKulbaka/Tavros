@@ -166,6 +166,20 @@ namespace tavros::core
         }
 
         /**
+         * @brief Checks whether a resource with the given handle currently exists in the pool.
+         * @param h The handle of the resource to check.
+         * @return True if the resource exists and is currently allocated; false otherwise.
+         */
+        [[nodiscard]] bool exists(handle_type h) const noexcept
+        {
+            auto idx = extract_index(h.id);
+            if (idx < m_capacity && (extract_gen(h.id) == current_gen(idx))) {
+                return m_idx_alc.allocated(idx);
+            }
+            return false;
+        }
+
+        /**
          * @brief Try to get a pointer to a resource by handle.
          * @param h Resource handle.
          * @return Pointer to resource or nullptr if invalid.
@@ -261,7 +275,9 @@ namespace tavros::core
                 m_max_idx = idx;
             }
 
-            std::construct_at(m_res + idx, std::forward<Args>(args)...);
+            // Don't use construct_at here because it may not work in some cases
+            // std::construct_at(m_res + idx, std::forward<Args>(args)...);
+            new (m_res + idx) T(std::forward<Args>(args)...);
             ++m_size;
 
             return make_handle(idx);

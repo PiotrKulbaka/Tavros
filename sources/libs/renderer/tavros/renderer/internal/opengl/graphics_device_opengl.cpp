@@ -375,7 +375,8 @@ namespace tavros::renderer::rhi
             }
 
             // Resolve source texture must be a render target
-            if (info.usage.has_flag(texture_usage::resolve_source) && !info.usage.has_flag(texture_usage::render_target)) {
+            auto is_render_target = info.usage.has_flag(texture_usage::render_target) || info.usage.has_flag(texture_usage::depth_stencil_target);
+            if (info.usage.has_flag(texture_usage::resolve_source) && !is_render_target) {
                 ::logger.error("Failed to create texture: resolve source textures must be render targets");
                 return texture_handle::invalid();
             }

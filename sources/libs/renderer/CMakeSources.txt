@@ -4,6 +4,14 @@
 #
 
 set(TAV_RENDERER_CROSSPLATFORM_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/mesh.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_system.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_system.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture.hpp
+
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.hpp
 
@@ -18,6 +26,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/type_conversions.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/type_conversions.hpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/graphics_device.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/string_utils.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_info.hpp
