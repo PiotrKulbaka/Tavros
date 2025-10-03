@@ -70,10 +70,16 @@ namespace tavros::core
         [[nodiscard]] size_t remaining() const noexcept override;
 
     private:
+#pragma warning(push)
+#pragma warning(disable : 4324)
+
         alignas(64) uint64 m_l1_map[k_l1_map_size] = {0};
         alignas(64) uint64 m_l2_map[k_l2_map_size] = {0};
         alignas(64) uint64 m_l3_map[k_l3_map_size] = {0};
         alignas(64) uint64 m_l4_map[k_l4_map_size] = {0};
+
+
+#pragma warning(pop)
 
         size_t m_remaining = k_max_index;
     };

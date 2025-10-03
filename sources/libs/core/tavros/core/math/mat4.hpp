@@ -93,6 +93,10 @@ namespace tavros::math
         constexpr float* data() noexcept;
 
     public:
+#pragma warning(push)
+#pragma warning(disable : 4201)
+#pragma warning(disable : 4458)
+
         union
         {
             struct
@@ -106,6 +110,7 @@ namespace tavros::math
         };
     };
 
+#pragma warning(pop)
 
     constexpr mat4 operator-(const mat4& m) noexcept;
     constexpr mat4 operator+(const mat4& a, const mat4& b) noexcept;
@@ -120,4 +125,8 @@ namespace tavros::math
 
 } // namespace tavros::math
 
+#pragma warning(push)
+#pragma warning(disable : 4458)
 #include <tavros/core/math/mat4.inl>
+#pragma warning(pop)
+

@@ -87,6 +87,8 @@ namespace
         mouse.dwFlags = RIDEV_REMOVE;
         mouse.hwndTarget = nullptr; // if hwndTarget is hWnd, it will fail with ERROR
 
+        ((void) hWnd);
+
         if (RegisterRawInputDevices(&mouse, 1, sizeof(mouse))) {
             // Don't log this, because it is not critical
             //::logger.debug("Remove raw input mouse: succeeded");
@@ -447,12 +449,14 @@ void* window::get_handle() const
     return reinterpret_cast<void*>(m_hWnd);
 }
 
-long window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+LRESULT window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
 {
     move_event_args  mvargs;
     size_event_args  szargs;
     mouse_event_args margs;
     key_event_args   kargs;
+
+    ((void) hWnd);
 
     switch (uMsg) {
     case WM_CLOSE: {
@@ -481,7 +485,7 @@ long window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         if (raw.header.dwType == RIM_TYPEMOUSE) {
             RAWMOUSE& mouse = raw.data.mouse;
             if (mouse.usFlags == MOUSE_MOVE_RELATIVE && (mouse.lLastX != 0 || mouse.lLastY != 0)) {
-                auto margs = mouse_event_args{
+                margs = mouse_event_args{
                     .button = mouse_button::none,
                     .is_double_click = false,
                     .is_relative_move = true,
@@ -508,7 +512,7 @@ long window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
         size_t strings_size = 0; // Total size of null-terminated strings
 
                                  // Calculate the total size
-        for (auto i = 0; i < number; ++i) {
+        for (uint32 i = 0; i < number; ++i) {
             // Size of the string and +1 for a null symbol
             strings_size += DragQueryFile(hDrop, i, nullptr, 0) + 1;
         }
@@ -523,8 +527,8 @@ long window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM 
 
         // Filling strings
         auto remaining_size = strings_size;
-        for (auto i = 0; i < number; ++i) {
-            auto num_copied_chars = DragQueryFile(hDrop, i, cur_str, remaining_size) + 1;
+        for (uint32 i = 0; i < number; ++i) {
+            auto num_copied_chars = DragQueryFile(hDrop, i, cur_str, static_cast<UINT>(remaining_size)) + 1;
             files[i] = const_cast<const char*>(cur_str);
             remaining_size -= num_copied_chars;
             cur_str += num_copied_chars;

@@ -34,17 +34,6 @@ void tav_assertion_failed_impl(const char* expr, const char* file, int line, con
     }
 }
 
-void tav_verification_failed_impl(const char* expr, const char* file, int line, const char* function)
-{
-    constexpr auto size = 1024;
-    char           message[size];
-    std::snprintf(message, size - 1, "Verification failed: (%s)\n  In function: %s\n  At: %s:%d", expr, function, file, line);
-    logger.fatal("{}", message);
-    fprintf(stderr, "%s\n", message);
-    TAV_DEBUG_BREAK();
-    std::abort();
-}
-
 void tav_debug_break_impl()
 {
     #if TAV_COMPILER_MSVC
@@ -57,6 +46,17 @@ void tav_debug_break_impl()
 }
 
 #endif // TAV_DEBUG
+
+void tav_verification_failed_impl(const char* expr, const char* file, int line, const char* function)
+{
+    constexpr auto size = 1024;
+    char           message[size];
+    std::snprintf(message, size - 1, "Verification failed: (%s)\n  In function: %s\n  At: %s:%d", expr, function, file, line);
+    logger.fatal("{}", message);
+    fprintf(stderr, "%s\n", message);
+    TAV_DEBUG_BREAK();
+    std::abort();
+}
 
 void tav_check_failed_impl(const char* expr, const char* file, int line, const char* function)
 {

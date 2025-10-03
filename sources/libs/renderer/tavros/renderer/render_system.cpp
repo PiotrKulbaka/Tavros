@@ -162,7 +162,8 @@ namespace tavros::renderer
         auto rhi_fb_h = rt->handle();
         m_gdevice->destroy_framebuffer(rhi_fb_h);
 
-        for (size_t i = 0; i < rt->color_attachment_count(); ++i) {
+        auto count = rt->color_attachment_count();
+        for (uint32 i = 0; i < count; ++i) {
             m_gdevice->destroy_texture(rt->color_attachment(i));
         }
 

@@ -62,7 +62,7 @@ namespace tavros::system
         virtual void* get_handle() const override;
 
     public:
-        long process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
+        LRESULT process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam);
 
     protected:
         HWND           m_hWnd;

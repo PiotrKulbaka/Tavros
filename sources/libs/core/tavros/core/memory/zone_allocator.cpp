@@ -166,7 +166,6 @@ struct zone_allocator::impl
         chunk->free = true;
         auto* next = chunk->next;
         if (next && next->free) {
-            auto* nextnext = next->next;
             // remove the next chunk
             chunk->size += next->chunk_size();
             next->~zone_chunk();
@@ -215,7 +214,8 @@ zone_allocator::~zone_allocator()
 
 void* zone_allocator::allocate(size_t size, size_t align, const char* tag)
 {
-    (void) align;
+    TAV_UNUSED(align);
+    TAV_UNUSED(tag);
 
     auto* chunk = m_impl->allocate_chunk(size);
     TAV_ASSERT(chunk);

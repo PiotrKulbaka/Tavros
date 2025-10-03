@@ -61,6 +61,10 @@ namespace tavros::math
         constexpr float* data() noexcept;
 
     public:
+#pragma warning(push)
+#pragma warning(disable : 4201)
+#pragma warning(disable : 4458)
+
         union
         {
             vec2 xy;
@@ -79,6 +83,7 @@ namespace tavros::math
         };
     };
 
+#pragma warning(pop)
 
     constexpr vec3 operator-(const vec3& v) noexcept;
     constexpr vec3 operator+(const vec3& a, const vec3& b) noexcept;
@@ -92,4 +97,8 @@ namespace tavros::math
 
 } // namespace tavros::math
 
+#pragma warning(push)
+#pragma warning(disable : 4458)
 #include <tavros/core/math/vec3.inl>
+#pragma warning(pop)
+

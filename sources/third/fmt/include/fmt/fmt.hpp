@@ -2,6 +2,7 @@
 
 #if defined(_MSC_VER)
 #  pragma warning(push, 0)
+#pragma warning(disable: 4506)
 #elif defined(__clang__)
 #  pragma clang diagnostic push
 #  pragma clang diagnostic ignored "-Wsign-conversion"

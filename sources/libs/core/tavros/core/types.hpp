@@ -34,3 +34,5 @@ static_assert(sizeof(int32) == 4);
 static_assert(sizeof(uint64) == 8);
 static_assert(sizeof(int64) == 8);
 static_assert(sizeof(size_t) == sizeof(void*));
+
+#define TAV_UNUSED(x) ((void) (x))

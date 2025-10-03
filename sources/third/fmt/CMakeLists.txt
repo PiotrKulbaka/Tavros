@@ -300,7 +300,7 @@ endfunction()
 set(FMT_HEADERS)
 add_headers(FMT_HEADERS args.h base.h chrono.h color.h compile.h core.h format.h
                         format-inl.h os.h ostream.h printf.h ranges.h std.h
-                        xchar.h)
+                        xchar.h fmt.hpp)
 set(FMT_SOURCES src/format.cc)
 
 add_module_library(fmt src/fmt.cc FALLBACK

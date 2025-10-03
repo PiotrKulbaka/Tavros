@@ -137,6 +137,7 @@ namespace tavros::renderer::rhi
 
     void frame_composer_opengl::submit_command_list(command_list* list)
     {
+        TAV_UNUSED(list);
     }
 
     bool frame_composer_opengl::is_frame_complete()

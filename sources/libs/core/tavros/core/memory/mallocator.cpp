@@ -54,7 +54,7 @@ struct mallocator::impl
             std::memset(ptr, 0, info.size);
             _aligned_free(ptr);
         } else {
-            if (auto it = released.find(ptr); it != released.end()) {
+            if (auto it_released = released.find(ptr); it_released != released.end()) {
                 s_logger.error("Attempting to free memory twice");
                 TAV_ASSERT(false);
             } else {

@@ -614,6 +614,9 @@ namespace tavros::renderer::rhi
 
     void command_list_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
     {
+        // TODO: unused vertex_offset
+        TAV_UNUSED(vertex_offset);
+
         auto* p = m_device->get_resources()->try_get(m_current_pipeline);
         if (!p) {
             if (m_current_pipeline == pipeline_handle::invalid()) {
@@ -641,7 +644,7 @@ namespace tavros::renderer::rhi
 
         auto  gl_index_format = to_gl_index_format(g->info.index_format);
         auto  gl_topology = to_gl_topology(p->info.topology);
-        auto* gl_index_offset = reinterpret_cast<const void*>(first_index * gl_index_format.size);
+        auto* gl_index_offset = reinterpret_cast<const void*>(static_cast<size_t>(first_index * gl_index_format.size));
         auto  gl_index_count = static_cast<GLsizei>(index_count);
         auto  gl_instance_count = static_cast<GLsizei>(instance_count);
         auto  gl_first_instance = static_cast<GLuint>(first_instance);
@@ -789,6 +792,9 @@ namespace tavros::renderer::rhi
 
     void command_list_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset, uint32 row_stride)
     {
+        // TODO: unused size
+        TAV_UNUSED(size);
+
         auto* b = m_device->get_resources()->try_get(src_buffer);
         if (!b) {
             ::logger.error("Failed to copy buffer {} to texture {}: source buffer not found", src_buffer, dst_texture);

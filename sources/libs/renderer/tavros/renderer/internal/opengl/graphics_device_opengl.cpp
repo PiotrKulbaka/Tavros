@@ -88,17 +88,20 @@ namespace
 
     void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* user_param)
     {
+        TAV_UNUSED(user_param);
+        TAV_UNUSED(id);
+
         tavros::core::logger l("OpenGL_debug");
         if (severity == GL_DEBUG_SEVERITY_HIGH) {
-            l.error("{}", message);
+            l.error("{}", tavros::core::string_view(message, length));
         } else if (severity == GL_DEBUG_SEVERITY_MEDIUM) {
-            l.warning("{}", message);
+            l.warning("{}", tavros::core::string_view(message, length));
         } else if (severity == GL_DEBUG_SEVERITY_LOW) {
-            l.warning("{}", message);
+            l.info("{}", tavros::core::string_view(message, length));
         } else if (severity == GL_DEBUG_SEVERITY_NOTIFICATION) {
-            // l.info("{}", message);
+            // l.info("{}", tavros::core::string_view(message, length));
         } else {
-            l.debug("Unknown severity: {}", message);
+            l.debug("Unknown severity: {}", tavros::core::string_view(message, length));
         }
     }
 
@@ -1071,8 +1074,8 @@ namespace tavros::renderer::rhi
         }
 
         // Bind index buffer if present
-        auto index_buffer_h = index_buffer.value();
         if (info.has_index_buffer) {
+            auto  index_buffer_h = index_buffer.value();
             auto* b = m_resources.try_get(index_buffer_h);
             if (!b) {
                 ::logger.error("Failed to create geometry: index buffer {} not found", index_buffer_h);
