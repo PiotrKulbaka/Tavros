@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
+#include <fmt/fmt.hpp>
 
 namespace tavros::core
 {
@@ -36,3 +37,23 @@ namespace tavros::core
     };
 
 } // namespace tavros::core
+
+template<typename ResourceTag>
+struct fmt::formatter<tavros::core::resource_handle<ResourceTag>>
+{
+    fmt::formatter<uint32_t> m_base;
+
+    constexpr auto parse(fmt::format_parse_context& ctx)
+    {
+        return m_base.parse(ctx);
+    }
+
+    template<typename FormatContext>
+    auto format(const tavros::core::resource_handle<ResourceTag>& h, FormatContext& ctx) const
+    {
+        if (h == tavros::core::resource_handle<ResourceTag>::invalid()) {
+            return fmt::format_to(ctx.out(), "{}", fmt::styled_error("(invalid)"));
+        }
+        return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint32_to_base64(h.id)));
+    }
+};

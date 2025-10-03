@@ -120,7 +120,7 @@ struct zone_allocator::impl
         }
 
         chunk = base;
-        while (chunk != pivot && (!chunk->free || chunk->size < size)) {
+        while (chunk && chunk != pivot && (!chunk->free || chunk->size < size)) {
             chunk = chunk->next;
         }
         return chunk;

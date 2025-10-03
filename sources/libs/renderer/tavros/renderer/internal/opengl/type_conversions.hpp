@@ -99,12 +99,4 @@ namespace tavros::renderer::rhi
 
     GLenum to_gl_polygon_offset(polygon_mode mode);
 
-    const char* utos_base64(uint32 u);
-
-    template<class T>
-    const char* htos(handle_base<T> h)
-    {
-        return utos_base64(h.id);
-    }
-
 } // namespace tavros::renderer::rhi

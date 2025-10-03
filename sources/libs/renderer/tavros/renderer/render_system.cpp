@@ -53,7 +53,7 @@ namespace tavros::renderer
     {
         auto tex_h = tex.handle();
         if (!m_textures.exists(tex_h)) {
-            ::logger.error("Failed to remove texture: not exists");
+            ::logger.error("Failed to release texture {}: not exists", tex_h);
             return;
         }
 
@@ -155,7 +155,7 @@ namespace tavros::renderer
     {
         auto rt_h = rt.handle();
         if (!m_render_targets.exists(rt_h)) {
-            ::logger.error("Failed to remove render_target: not exists");
+            ::logger.error("Failed to release render_target {}: not exists", rt_h);
             return;
         }
 

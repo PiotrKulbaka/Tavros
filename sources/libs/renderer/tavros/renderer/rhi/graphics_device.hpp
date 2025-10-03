@@ -16,22 +16,15 @@
 #include <tavros/renderer/rhi/shader_binding_info.hpp>
 #include <tavros/renderer/rhi/shader_info.hpp>
 #include <tavros/renderer/rhi/frame_composer.hpp>
+#include <tavros/renderer/rhi/render_backend_type.hpp>
 
 namespace tavros::renderer::rhi
 {
 
-    enum class rhi_backend : uint8
-    {
-        opengl,
-        vulkan,
-        directx12,
-        metal,
-    };
-
     class graphics_device
     {
     public:
-        static core::unique_ptr<graphics_device> create(rhi_backend backend);
+        static core::unique_ptr<graphics_device> create(render_backend_type backend);
 
     public:
         virtual ~graphics_device() = default;

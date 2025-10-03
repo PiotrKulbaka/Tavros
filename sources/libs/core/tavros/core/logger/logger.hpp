@@ -29,12 +29,6 @@ namespace tavros::core
          */
         using consumer_type = std::function<void(severity_level, string_view, string_view)>;
 
-        inline static const fmt::text_style k_debug_style = fmt::fg(fmt::color::medium_sea_green);
-        inline static const fmt::text_style k_info_style = fmt::fg(fmt::color::sky_blue);
-        inline static const fmt::text_style k_warning_style = fmt::fg(fmt::color::gold);
-        inline static const fmt::text_style k_error_style = fmt::fg(fmt::color::orange_red);
-        inline static const fmt::text_style k_fatal_style = fmt::fg(fmt::color::red) | fmt::emphasis::bold | fmt::emphasis::reverse;
-
     public:
         /**
          * @brief Constructs a logger with a given tag.
@@ -138,27 +132,35 @@ namespace tavros::core
             switch (level) {
             case severity_level::debug:
                 lvl_s = "debug";
-                lvl_style = k_debug_style;
+                lvl_style = fmt::k_debug_style;
                 break;
             case severity_level::info:
                 lvl_s = "info";
-                lvl_style = k_info_style;
+                lvl_style = fmt::k_info_style;
                 break;
             case severity_level::warning:
                 lvl_s = "warning";
-                lvl_style = k_warning_style;
+                lvl_style = fmt::k_warning_style;
                 break;
             case severity_level::error:
                 lvl_s = "error";
-                lvl_style = k_error_style;
+                lvl_style = fmt::k_error_style;
                 break;
             case severity_level::fatal:
                 lvl_s = "fatal";
-                lvl_style = k_fatal_style;
+                lvl_style = fmt::k_fatal_style;
                 break;
             }
 
-            auto prefix_result = fmt::format_to_n(buf, buf_size - 1, "[{}|{}|{}][{}] ", fmt::styled("tavros", fmt::fg(fmt::color::medium_sea_green) | fmt::emphasis::italic), fmt::styled(now, fmt::fg(fmt::color::dark_sea_green) | fmt::emphasis::italic), fmt::styled(lvl_s, lvl_style), fmt::styled(tag, fmt::fg(fmt::color::dark_sea_green)));
+            auto prefix_result = fmt::format_to_n(
+                buf,
+                buf_size - 1,
+                "[{}|{}|{}][{}] ",
+                fmt::styled("tavros", fmt::fg(fmt::color::medium_sea_green) | fmt::emphasis::italic),
+                fmt::styled(now, fmt::fg(fmt::color::dark_sea_green) | fmt::emphasis::italic),
+                fmt::styled(lvl_s, lvl_style),
+                fmt::styled(tag, fmt::fg(fmt::color::dark_sea_green))
+            );
 
             size_t remaining = buf_size - 1 - static_cast<size_t>(prefix_result.out - buf);
             auto   result = fmt::format_to_n(prefix_result.out, remaining, fmt, std::forward<Args>(args)...);
@@ -180,36 +182,3 @@ namespace tavros::core
     };
 
 } // namespace tavros::core
-
-namespace fmt
-{
-    template<typename T>
-    FMT_CONSTEXPR auto styled_param(const T& v) -> detail::styled_arg<remove_cvref_t<T>>
-    {
-        return detail::styled_arg<remove_cvref_t<T>>{v, fmt::fg(fmt::color::orchid) | fmt::emphasis::italic};
-    }
-
-    template<typename T>
-    FMT_CONSTEXPR auto styled_text(const T& v) -> detail::styled_arg<remove_cvref_t<T>>
-    {
-        return detail::styled_arg<remove_cvref_t<T>>{v, fmt::fg(fmt::color::sky_blue)};
-    }
-
-    template<typename T>
-    FMT_CONSTEXPR auto styled_name(const T& v) -> detail::styled_arg<remove_cvref_t<T>>
-    {
-        return detail::styled_arg<remove_cvref_t<T>>{v, fmt::fg(fmt::color::medium_sea_green)};
-    }
-
-    template<typename T>
-    FMT_CONSTEXPR auto styled_important(const T& v) -> detail::styled_arg<remove_cvref_t<T>>
-    {
-        return detail::styled_arg<remove_cvref_t<T>>{v, fmt::fg(fmt::color::light_sea_green)};
-    }
-
-    template<typename T>
-    FMT_CONSTEXPR auto styled_error(const T& v) -> detail::styled_arg<remove_cvref_t<T>>
-    {
-        return detail::styled_arg<remove_cvref_t<T>>{v, tavros::core::logger::k_error_style};
-    }
-} // namespace fmt

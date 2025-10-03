@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 #include <tavros/core/utils/to_string.hpp>
-#include <tavros/core/logger/logger.hpp>
+#include <fmt/fmt.hpp>
 
 namespace tavros::renderer::rhi
 {

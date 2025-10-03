@@ -522,7 +522,7 @@ int main()
     app->run();
 
 
-    auto gdevice = rhi::graphics_device::create(rhi::rhi_backend::opengl);
+    auto gdevice = rhi::graphics_device::create(rhi::render_backend_type::opengl);
     auto render_system = tavros::renderer::render_system(gdevice.get());
 
     rhi::frame_composer_info main_composer_info;

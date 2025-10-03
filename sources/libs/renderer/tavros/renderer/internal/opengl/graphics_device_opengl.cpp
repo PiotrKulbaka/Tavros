@@ -88,6 +88,8 @@ namespace
 
     void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* user_param)
     {
+        TAV_UNUSED(type);
+        TAV_UNUSED(source);
         TAV_UNUSED(user_param);
         TAV_UNUSED(id);
 
@@ -688,10 +690,10 @@ namespace tavros::renderer::rhi
                     "Shader type/format = {}/{}, expected type/format = {}/{}",
                     fmt::styled_text(attrib_name),
                     fmt::styled_param(gl_attrib_location),
-                    to_string(shader_type.type),
-                    to_string(shader_type.format),
-                    to_string(it->second.type),
-                    to_string(it->second.format)
+                    shader_type.type,
+                    shader_type.format,
+                    it->second.type,
+                    it->second.format
                 );
                 return pipeline_handle::invalid();
             }

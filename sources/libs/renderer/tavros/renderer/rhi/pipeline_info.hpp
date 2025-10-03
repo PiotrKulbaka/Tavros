@@ -64,7 +64,7 @@ namespace tavros::renderer::rhi
      * Used to select which color channels (red, green, blue, alpha) are updated
      * during rendering operations.
      */
-    enum color_mask : uint8
+    enum class color_mask : uint8
     {
         red = 0x1,
         green = 0x2,

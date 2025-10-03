@@ -757,20 +757,12 @@ namespace tavros::renderer::rhi
         auto src_access = src->info.access;
 
         if (dst_access != buffer_access::gpu_only) {
-            ::logger.error(
-                "Failed to copy buffer {}: destination buffer has invalid access {}",
-                dst_buffer,
-                to_string(dst_access)
-            );
+            ::logger.error("Failed to copy buffer {}: destination buffer has invalid access {}", dst_buffer, dst_access);
             return;
         }
 
         if (src_access != buffer_access::cpu_to_gpu && src_access != buffer_access::gpu_only) {
-            ::logger.error(
-                "Failed to copy buffer {}: source buffer has invalid access {}",
-                src_buffer,
-                to_string(src_access)
-            );
+            ::logger.error("Failed to copy buffer {}: source buffer has invalid access {}", src_buffer, src_access);
             return;
         }
 
@@ -810,12 +802,12 @@ namespace tavros::renderer::rhi
         auto& tinfo = tex->info;
 
         if (b->info.usage != buffer_usage::stage) {
-            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer usage type, expected `stage` got {}", src_buffer, dst_texture, to_string(b->info.usage));
+            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer usage type, expected `stage` got {}", src_buffer, dst_texture, b->info.usage);
             return;
         }
 
         if (b->info.access != buffer_access::cpu_to_gpu) {
-            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer access type, expected `cpu_to_gpu` got {}", src_buffer, dst_texture, to_string(b->info.access));
+            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer access type, expected `cpu_to_gpu` got {}", src_buffer, dst_texture, b->info.access);
             return;
         }
 
