@@ -27,7 +27,7 @@ void tav_assertion_failed_impl(const char* expr, const char* file, int line, con
         constexpr auto size = 1024;
         char           message[size];
         std::snprintf(message, size - 1, "Assertion failed: (%s)\n  In function: %s\n  At: %s:%d", expr, function, file, line);
-        logger.error("%s", message);
+        logger.fatal("{}", message);
         fprintf(stderr, "%s\n", message);
         TAV_DEBUG_BREAK();
         std::abort();
@@ -39,7 +39,7 @@ void tav_verification_failed_impl(const char* expr, const char* file, int line, 
     constexpr auto size = 1024;
     char           message[size];
     std::snprintf(message, size - 1, "Verification failed: (%s)\n  In function: %s\n  At: %s:%d", expr, function, file, line);
-    logger.error("%s", message);
+    logger.fatal("{}", message);
     fprintf(stderr, "%s\n", message);
     TAV_DEBUG_BREAK();
     std::abort();
@@ -63,7 +63,7 @@ void tav_check_failed_impl(const char* expr, const char* file, int line, const c
     constexpr auto size = 1024;
     char           message[size];
     std::snprintf(message, size - 1, "Check failed: (%s)\n  In function: %s\n  At: %s:%d", expr, function, file, line);
-    logger.error("%s", message);
+    logger.fatal("{}", message);
     fprintf(stderr, "%s\n", message);
     TAV_DEBUG_BREAK();
     std::terminate();
@@ -74,7 +74,7 @@ void tav_unreachable_impl(const char* file, int line, const char* function)
     constexpr auto size = 1024;
     char           message[size];
     std::snprintf(message, size - 1, "Unreachable code:\n  In function: %s\n  At: %s:%d", function, file, line);
-    logger.error("%s", message);
+    logger.fatal("{}", message);
     fprintf(stderr, "%s\n", message);
 
     TAV_DEBUG_BREAK();

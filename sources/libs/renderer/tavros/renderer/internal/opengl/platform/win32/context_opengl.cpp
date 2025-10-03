@@ -1,7 +1,7 @@
 #include <tavros/renderer/internal/opengl/platform/win32/context_opengl.hpp>
 
 #include <tavros/core/prelude.hpp>
-#include <tavros/core/scoped_owner.hpp>
+#include <tavros/core/raii/scoped_owner.hpp>
 
 #include <WinUser.h>
 #include <windef.h>
@@ -40,7 +40,7 @@ namespace
         FreeLibrary((HMODULE) gl_lib);
 
         if (_wglCreateContext == nullptr || _wglDeleteContext == nullptr || _wglMakeCurrent == nullptr || _wglGetCurrentContext == nullptr) {
-            logger.info("Error loading wgl functions.");
+            logger.error("Error loading wgl functions.");
             return false;
         }
 
@@ -113,7 +113,7 @@ namespace tavros::renderer::rhi
             return nullptr;
         }
 
-        ::logger.info("Pixel format selected [ColorBits: %d, DepthBits: %d, StencilBits: %d]", pfd.cColorBits, pfd.cDepthBits, pfd.cStencilBits);
+        ::logger.info("Pixel format selected [ColorBits: {}, DepthBits: {}, StencilBits: {}]", fmt::styled_param(pfd.cColorBits), fmt::styled_param(pfd.cColorBits), fmt::styled_param(pfd.cDepthBits), fmt::styled_param(pfd.cStencilBits));
         if (!SetPixelFormat(hDC, pixel_format, &pfd)) {
             ::logger.error("SetPixelFormat failed" /*, last_win_error_str()*/);
             return nullptr;

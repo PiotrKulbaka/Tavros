@@ -19,7 +19,7 @@ namespace tavros::renderer::rhi
     command_list_opengl::command_list_opengl(graphics_device_opengl* device)
         : m_device(device)
     {
-        ::logger.info("command_list_opengl created");
+        ::logger.debug("command_list_opengl created");
 
         glGenFramebuffers(1, &m_resolve_fbo);
     }
@@ -28,14 +28,14 @@ namespace tavros::renderer::rhi
     {
         glDeleteFramebuffers(1, &m_resolve_fbo);
 
-        ::logger.info("command_list_opengl destroyed");
+        ::logger.debug("command_list_opengl destroyed");
     }
 
     void command_list_opengl::bind_pipeline(pipeline_handle pipeline)
     {
         auto* p = m_device->get_resources()->try_get(pipeline);
         if (!p) {
-            ::logger.error("Failed to bind pipeline `%s`: not found", htos(pipeline));
+            ::logger.error("Failed to bind pipeline {}: not found", pipeline);
             glUseProgram(0);
             return;
         }
@@ -45,14 +45,14 @@ namespace tavros::renderer::rhi
 
         auto* pass = m_device->get_resources()->try_get(m_current_render_pass);
         if (!pass) {
-            ::logger.error("Failed to bind pipeline `%s`: render pass `%s` not found", htos(pipeline), htos(m_current_render_pass));
+            ::logger.error("Failed to bind pipeline {}: render pass {} not found", pipeline, m_current_render_pass);
             glUseProgram(0);
             return;
         }
 
         auto& pass_info = pass->info;
         if (pass_info.color_attachments.size() != info.blend_states.size()) {
-            ::logger.error("Failed to bind pipeline `%s`: mismatch between color attachments in current render pass (%llu) and blend states in pipeline (%llu)", htos(pipeline), pass_info.color_attachments.size(), info.blend_states.size());
+            ::logger.error("Failed to bind pipeline {}: mismatch between color attachments in current render pass {} and blend states in pipeline {}", pipeline, fmt::styled_param(pass_info.color_attachments.size()), fmt::styled_param(info.blend_states.size()));
             return;
         }
 
@@ -88,10 +88,10 @@ namespace tavros::renderer::rhi
             }
 
             // Enable color mask
-            auto r_color_enabled = blend_state.mask.has_flag(color_mask::red) ? GL_TRUE : GL_FALSE;
-            auto g_color_enabled = blend_state.mask.has_flag(color_mask::green) ? GL_TRUE : GL_FALSE;
-            auto b_color_enabled = blend_state.mask.has_flag(color_mask::blue) ? GL_TRUE : GL_FALSE;
-            auto a_color_enabled = blend_state.mask.has_flag(color_mask::alpha) ? GL_TRUE : GL_FALSE;
+            GLboolean r_color_enabled = blend_state.mask.has_flag(color_mask::red) ? GL_TRUE : GL_FALSE;
+            GLboolean g_color_enabled = blend_state.mask.has_flag(color_mask::green) ? GL_TRUE : GL_FALSE;
+            GLboolean b_color_enabled = blend_state.mask.has_flag(color_mask::blue) ? GL_TRUE : GL_FALSE;
+            GLboolean a_color_enabled = blend_state.mask.has_flag(color_mask::alpha) ? GL_TRUE : GL_FALSE;
             if (gl_attachment_index == 0) {
                 // Also enable for default framebuffer
                 glColorMask(r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled);
@@ -203,7 +203,7 @@ namespace tavros::renderer::rhi
             glBindVertexArray(g->vao_obj);
             m_current_geometry = geometry;
         } else {
-            ::logger.error("Failed to bind geometry binding `%s`: not found", htos(geometry));
+            ::logger.error("Failed to bind geometry binding {}: not found", geometry);
             glBindVertexArray(0);
             m_current_geometry = geometry_handle::invalid();
         }
@@ -213,7 +213,7 @@ namespace tavros::renderer::rhi
     {
         auto* sb = m_device->get_resources()->try_get(shader_binding);
         if (!sb) {
-            ::logger.error("Failed to bind shader binding `%s`: shader binding not found", htos(shader_binding));
+            ::logger.error("Failed to bind shader binding {}: shader binding not found", shader_binding);
             return;
         }
 
@@ -227,13 +227,13 @@ namespace tavros::renderer::rhi
             auto tex_h = sb->textures[binding.texture_index];
             if (auto* t = m_device->get_resources()->try_get(tex_h)) {
                 if (!t->info.usage.has_flag(texture_usage::sampled)) {
-                    ::logger.error("Failed to bind shader binding `%s`: texture `%s` is not sampled", htos(shader_binding), htos(tex_h));
+                    ::logger.error("Failed to bind shader binding {}: texture {} is not sampled", shader_binding, tex_h);
                     return;
                 }
                 glActiveTexture(GL_TEXTURE0 + binding.binding);
                 glBindTexture(t->target, t->texture_obj);
             } else {
-                ::logger.error("Failed to bind shader binding `%s`: texture `%s` not found", htos(shader_binding), htos(tex_h));
+                ::logger.error("Failed to bind shader binding {}: texture {} not found", shader_binding, tex_h);
                 return;
             }
 
@@ -242,7 +242,7 @@ namespace tavros::renderer::rhi
             if (auto* s = m_device->get_resources()->try_get(sampler_h)) {
                 glBindSampler(binding.binding, s->sampler_obj);
             } else {
-                ::logger.error("Failed to bind shader binding `%s`: sampler `%s` not found", htos(shader_binding), htos(sampler_h));
+                ::logger.error("Failed to bind shader binding {}: sampler {} not found", shader_binding, sampler_h);
                 return;
             }
         }
@@ -269,7 +269,7 @@ namespace tavros::renderer::rhi
                     );
                 }
             } else {
-                ::logger.error("Failed to bind shader binding `%s`: buffer `%s` not found", htos(shader_binding), htos(buf_h));
+                ::logger.error("Failed to bind shader binding {}: buffer {} not found", shader_binding, buf_h);
                 return;
             }
         }
@@ -278,25 +278,25 @@ namespace tavros::renderer::rhi
     void command_list_opengl::begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer)
     {
         if (m_current_render_pass != render_pass_handle::invalid() || m_current_framebuffer != framebuffer_handle::invalid()) {
-            ::logger.error("Failed to begin render pass `%s`: previous render pass `%s` not ended", htos(render_pass), htos(m_current_render_pass));
+            ::logger.error("Failed to begin render pass {}: previous render pass {} not ended", render_pass, m_current_render_pass);
             return;
         }
 
         gl_render_pass* rp = m_device->get_resources()->try_get(render_pass);
         if (!rp) {
-            ::logger.error("Failed to begin render pass `%s`: render pass not found", htos(render_pass));
+            ::logger.error("Failed to begin render pass {}: render pass not found", render_pass);
             return;
         }
 
         gl_framebuffer* fb = m_device->get_resources()->try_get(framebuffer);
         if (fb == nullptr) {
-            ::logger.error("Failed to begin render pass `%s`: framebuffer `%s` not found", htos(render_pass), htos(framebuffer));
+            ::logger.error("Failed to begin render pass {}: framebuffer {} not found", render_pass, framebuffer);
             return;
         }
 
         // Validate color attachments size
         if (rp->info.color_attachments.size() != fb->info.color_attachment_formats.size()) {
-            ::logger.error("Failed to begin render pass `%s`: number of color attachments does not match framebuffer `%s`", htos(render_pass), htos(framebuffer));
+            ::logger.error("Failed to begin render pass {}: number of color attachments does not match framebuffer {}", render_pass, framebuffer);
             return;
         }
 
@@ -305,11 +305,11 @@ namespace tavros::renderer::rhi
             auto rp_color_format = rp->info.color_attachments[i].format;
             auto fb_color_format = fb->info.color_attachment_formats[i];
             if (rp_color_format != fb_color_format) {
-                ::logger.error("Failed to begin render pass `%s`: color attachment format mismatch with framebuffer `%s`", htos(render_pass), htos(framebuffer));
+                ::logger.error("Failed to begin render pass {}: color attachment format mismatch with framebuffer {}", render_pass, framebuffer);
                 return;
             }
             if (rp->info.color_attachments[i].sample_count != fb->info.sample_count) {
-                ::logger.error("Failed to begin render pass `%s`: color attachment sample count mismatch with framebuffer `%s`", htos(render_pass), htos(framebuffer));
+                ::logger.error("Failed to begin render pass {}: color attachment sample count mismatch with framebuffer {}", render_pass, framebuffer);
                 return;
             }
         }
@@ -321,35 +321,35 @@ namespace tavros::renderer::rhi
                 auto resolve_attachment_index = attachment.resolve_texture_index;
                 // Validate resolve target index
                 if (resolve_attachment_index >= rp->resolve_attachments.size()) {
-                    ::logger.error("Failed to begin render pass `%s`: invalid resolve target attachment index", htos(render_pass));
+                    ::logger.error("Failed to begin render pass {}: invalid resolve target attachment index", render_pass);
                     return;
                 }
                 // Validate that the resolve target attachment format matches
                 auto resolve_target_format = rp->info.color_attachments[resolve_attachment_index].format;
                 if (attachment.format != resolve_target_format) {
-                    ::logger.error("Failed to begin render pass `%s`: mismatched resolve target attachment format", htos(render_pass));
+                    ::logger.error("Failed to begin render pass {}: mismatched resolve target attachment format", render_pass);
                     return;
                 }
                 // Validate that the resolve target attachment texture is single-sampled
                 auto resolve_texture_h = rp->resolve_attachments[resolve_attachment_index];
                 if (auto* tex = m_device->get_resources()->try_get(resolve_texture_h)) {
                     if (tex->info.sample_count != 1) {
-                        ::logger.error("Failed to begin render pass `%s`: resolve target attachment texture '%s' must be single-sampled", htos(render_pass), htos(resolve_texture_h));
+                        ::logger.error("Failed to begin render pass {}: resolve target attachment texture {} must be single-sampled", render_pass, resolve_texture_h);
                         return;
                     }
                 } else {
-                    ::logger.error("Failed to begin render pass `%s`: resolve texture `%s` not found", htos(render_pass), htos(resolve_texture_h));
+                    ::logger.error("Failed to begin render pass {}: resolve texture {} not found", render_pass, resolve_texture_h);
                     return;
                 }
                 // Validate that the source attachment texture is multi-sampled
                 auto source_texture_h = fb->color_attachments[i];
                 if (auto* tex = m_device->get_resources()->try_get(source_texture_h)) {
                     if (tex->info.sample_count == 1) {
-                        ::logger.error("Failed to begin render pass `%s`: source attachment texture `%s` must be multi-sampled", htos(render_pass), htos(source_texture_h));
+                        ::logger.error("Failed to begin render pass {}: source attachment texture {} must be multi-sampled", render_pass, source_texture_h);
                         return;
                     }
                 } else {
-                    ::logger.error("Failed to begin render pass `%s`: source attachment texture `%s` not found", htos(render_pass), htos(source_texture_h));
+                    ::logger.error("Failed to begin render pass {}: source attachment texture {} not found", render_pass, source_texture_h);
                     return;
                 }
             }
@@ -357,7 +357,7 @@ namespace tavros::renderer::rhi
 
         // Validate depth/stencil attachment format
         if (rp->info.depth_stencil_attachment.format != fb->info.depth_stencil_attachment_format) {
-            ::logger.error("Failed to begin render pass `%s`: mismatched depth/stencil attachment format with framebuffer `%s`", htos(render_pass), htos(framebuffer));
+            ::logger.error("Failed to begin render pass {}: mismatched depth/stencil attachment format with framebuffer {}", render_pass, framebuffer);
             return;
         }
 
@@ -371,7 +371,7 @@ namespace tavros::renderer::rhi
             glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
 
             if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-                ::logger.error("Failed to begin render pass `%s`: framebuffer `%s` is not complete", htos(render_pass), htos(framebuffer));
+                ::logger.error("Failed to begin render pass {}: framebuffer {} is not complete", render_pass, framebuffer);
                 return;
             }
         }
@@ -420,7 +420,7 @@ namespace tavros::renderer::rhi
                         glClearBufferfv(GL_COLOR, attachment_index, rp_color_attachment.clear_value);
                     }
                 } else {
-                    ::logger.error("Failed to begin render pass `%s`: attachment texture `%s` not found", htos(render_pass), htos(attachment_h));
+                    ::logger.error("Failed to begin render pass {}: attachment texture {} not found", render_pass, attachment_h);
                     return;
                 }
             }
@@ -454,13 +454,13 @@ namespace tavros::renderer::rhi
 
         auto* rp = m_device->get_resources()->try_get(m_current_render_pass);
         if (!rp) {
-            ::logger.error("Failed to end render pass `%s`: render pass not found", htos(m_current_render_pass));
+            ::logger.error("Failed to end render pass {}: render pass not found", m_current_render_pass);
             return;
         }
 
         auto* fb = m_device->get_resources()->try_get(m_current_framebuffer);
         if (fb == nullptr) {
-            ::logger.error("Failed to end render pass `%s`: framebuffer `%s` not found", htos(m_current_render_pass), htos(m_current_framebuffer));
+            ::logger.error("Failed to end render pass {}: framebuffer {} not found", m_current_render_pass, m_current_framebuffer);
             return;
         }
 
@@ -497,7 +497,7 @@ namespace tavros::renderer::rhi
                     auto  resolve_attachment_h = rp->resolve_attachments[resolve_texture_index];
                     auto* resolve_tex = m_device->get_resources()->try_get(resolve_attachment_h);
                     if (resolve_tex == nullptr) {
-                        ::logger.error("Failed to end render pass `%s`: resolve attachment texture `%u` not found", htos(m_current_render_pass), resolve_texture_index);
+                        ::logger.error("Failed to end render pass {}: resolve attachment texture {} not found", m_current_render_pass, fmt::styled_param(resolve_texture_index));
                         return;
                     }
 
@@ -505,7 +505,7 @@ namespace tavros::renderer::rhi
                     blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, source_tex, resolve_tex});
                     attachment_index++;
                 } else {
-                    ::logger.error("Failed to end render pass `%s`: invalid resolve attachment index `%u`", htos(m_current_render_pass), resolve_texture_index);
+                    ::logger.error("Failed to end render pass {}: invalid resolve attachment index {}", m_current_render_pass, fmt::styled_param(resolve_texture_index));
                     return;
                 }
             }
@@ -582,7 +582,7 @@ namespace tavros::renderer::rhi
             if (m_current_pipeline == pipeline_handle::invalid()) {
                 ::logger.error("Failed to draw: no pipeline is bound");
             } else {
-                ::logger.error("Failed to draw: pipeline `%s` not found", htos(m_current_pipeline));
+                ::logger.error("Failed to draw: pipeline {} not found", m_current_pipeline);
             }
             return;
         }
@@ -608,7 +608,7 @@ namespace tavros::renderer::rhi
                 gl_vertex_count
             );
         } else {
-            ::logger.warning("Failed to draw: instance count `%u` must be at least 1", instance_count);
+            ::logger.warning("Failed to draw: instance count {} must be at least 1", fmt::styled_param((instance_count)));
         }
     }
 
@@ -619,7 +619,7 @@ namespace tavros::renderer::rhi
             if (m_current_pipeline == pipeline_handle::invalid()) {
                 ::logger.error("Failed to draw indexed: no pipeline is bound");
             } else {
-                ::logger.error("Failed to draw indexed: pipeline `%s` not found", htos(m_current_pipeline));
+                ::logger.error("Failed to draw indexed: pipeline {} not found", m_current_pipeline);
             }
             return;
         }
@@ -629,13 +629,13 @@ namespace tavros::renderer::rhi
             if (m_current_geometry == geometry_handle::invalid()) {
                 ::logger.error("Failed to draw indexed: no geometry binding is bound");
             } else {
-                ::logger.error("Failed to draw indexed: geometry binding `%s` not found", htos(m_current_geometry));
+                ::logger.error("Failed to draw indexed: geometry binding {} not found", m_current_geometry);
             }
             return;
         }
 
         if (!g->info.has_index_buffer) {
-            ::logger.error("Failed to draw indexed: current geometry binding `%s` has no index buffer", htos(m_current_geometry));
+            ::logger.error("Failed to draw indexed: current geometry binding {} has no index buffer", m_current_geometry);
             return;
         }
 
@@ -663,7 +663,7 @@ namespace tavros::renderer::rhi
                 gl_index_offset
             );
         } else {
-            ::logger.warning("Failed to draw indexed: instance count `%u` must be at least 1", instance_count);
+            ::logger.warning("Failed to draw indexed: instance count {} must be at least 1", fmt::styled_param(instance_count));
         }
     }
 
@@ -673,17 +673,17 @@ namespace tavros::renderer::rhi
 
         auto* b = m_device->get_resources()->try_get(buffer);
         if (!b) {
-            ::logger.error("Failed to copy data to buffer `%s`: buffer not found", htos(buffer));
+            ::logger.error("Failed to copy data to buffer {}: buffer not found", buffer);
             return;
         }
 
         if (offset + size > b->info.size) {
-            ::logger.error("Failed to copy data to buffer `%s`: offset %llu + size %llu exceeds buffer size %llu", htos(buffer), offset, size, b->info.size);
+            ::logger.error("Failed to copy data to buffer {}: offset {} + size {} exceeds buffer size {}", buffer, fmt::styled_param(offset), fmt::styled_param(size), fmt::styled_param(b->info.size));
             return;
         }
 
         if (b->info.access != buffer_access::cpu_to_gpu) {
-            ::logger.error("Failed to copy data to buffer `%s`: buffer is not CPU-to-GPU", htos(buffer));
+            ::logger.error("Failed to copy data to buffer {}: buffer is not CPU-to-GPU", buffer);
             return;
         }
 
@@ -714,29 +714,35 @@ namespace tavros::renderer::rhi
         // Get dst and src buffers
         auto* src = m_device->get_resources()->try_get(src_buffer);
         if (!src) {
-            ::logger.error("Failed to copy buffer `%s`: source buffer not found", htos(src_buffer));
+            ::logger.error("Failed to copy buffer {}: source buffer not found", src_buffer);
             return;
         }
 
         auto* dst = m_device->get_resources()->try_get(dst_buffer);
         if (!dst) {
-            ::logger.error("Failed to copy buffer `%s`: destination buffer not found", htos(dst_buffer));
+            ::logger.error("Failed to copy buffer {}: destination buffer not found", dst_buffer);
             return;
         }
 
         // Check memory region
         if (dst_offset + size > dst->info.size) {
             ::logger.error(
-                "Failed to copy buffer `%s`: destination buffer overflowed, offset %llu + size %llu exceeds buffer size %llu",
-                htos(dst_buffer), dst_offset, size, dst->info.size
+                "Failed to copy buffer {}: destination buffer overflowed, offset {} + size {} exceeds buffer size {}",
+                dst_buffer,
+                fmt::styled_param(dst_offset),
+                fmt::styled_param(size),
+                fmt::styled_param(dst->info.size)
             );
             return;
         }
 
         if (src_offset + size > src->info.size) {
             ::logger.error(
-                "Failed to copy buffer `%s`: source buffer overflowed, offset %llu + size %llu exceeds buffer size %llu",
-                htos(src_buffer), src_offset, size, src->info.size
+                "Failed to copy buffer {}: source buffer overflowed, offset {} + size {} exceeds buffer size {}",
+                src_buffer,
+                fmt::styled_param(src_offset),
+                fmt::styled_param(size),
+                fmt::styled_param(src->info.size)
             );
             return;
         }
@@ -749,16 +755,18 @@ namespace tavros::renderer::rhi
 
         if (dst_access != buffer_access::gpu_only) {
             ::logger.error(
-                "Failed to copy buffer `%s`: destination buffer has invalid access `%s`",
-                htos(dst_buffer), to_string(dst_access).data()
+                "Failed to copy buffer {}: destination buffer has invalid access {}",
+                dst_buffer,
+                to_string(dst_access)
             );
             return;
         }
 
         if (src_access != buffer_access::cpu_to_gpu && src_access != buffer_access::gpu_only) {
             ::logger.error(
-                "Failed to copy buffer `%s`: source buffer has invalid access `%s`",
-                htos(src_buffer), to_string(src_access).data()
+                "Failed to copy buffer {}: source buffer has invalid access {}",
+                src_buffer,
+                to_string(src_access)
             );
             return;
         }
@@ -783,52 +791,52 @@ namespace tavros::renderer::rhi
     {
         auto* b = m_device->get_resources()->try_get(src_buffer);
         if (!b) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: source buffer not found", htos(src_buffer), htos(dst_texture));
+            ::logger.error("Failed to copy buffer {} to texture {}: source buffer not found", src_buffer, dst_texture);
             return;
         }
 
         auto* tex = m_device->get_resources()->try_get(dst_texture);
         if (!tex) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: destination buffer not found", htos(src_buffer), htos(dst_texture));
+            ::logger.error("Failed to copy buffer {} to texture {}: destination buffer not found", src_buffer, dst_texture);
             return;
         }
 
         auto& tinfo = tex->info;
 
         if (b->info.usage != buffer_usage::stage) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: invalid source buffer usage type, expected `stage` got `%s`", htos(src_buffer), htos(dst_texture), to_string(b->info.usage).data());
+            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer usage type, expected `stage` got {}", src_buffer, dst_texture, to_string(b->info.usage));
             return;
         }
 
         if (b->info.access != buffer_access::cpu_to_gpu) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: invalid source buffer access type, expected `cpu_to_gpu` got `%s`", htos(src_buffer), htos(dst_texture), to_string(b->info.access).data());
+            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer access type, expected `cpu_to_gpu` got {}", src_buffer, dst_texture, to_string(b->info.access));
             return;
         }
 
         if (tinfo.sample_count != 1) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: destination texture has invalid sample count `%u`, only 1 is supported", htos(src_buffer), htos(dst_texture), tex->info.sample_count);
+            ::logger.error("Failed to copy buffer {} to texture {}: destination texture has invalid sample count {}, only 1 is supported", src_buffer, dst_texture, fmt::styled_param(tex->info.sample_count));
             return;
         }
 
         if (!tinfo.usage.has_flag(texture_usage::transfer_destination)) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: destination texture does not have `transfer_destination` usage flag", htos(src_buffer), htos(dst_texture));
+            ::logger.error("Failed to copy buffer {} to texture {}: destination texture does not have `transfer_destination` usage flag", src_buffer, dst_texture);
             return;
         }
 
         if (!is_color_format(tinfo.format)) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: destination texture format is not a color format", htos(src_buffer), htos(dst_texture));
+            ::logger.error("Failed to copy buffer {} to texture {}: destination texture format is not a color format", src_buffer, dst_texture);
             return;
         }
 
         auto gl_pixel_format = to_gl_pixel_format(tinfo.format);
         if (row_stride % gl_pixel_format.bytes != 0) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: row stride `%u` must be aligned to pixel size `%u`", htos(src_buffer), htos(dst_texture), row_stride, gl_pixel_format.bytes);
+            ::logger.error("Failed to copy buffer {} to texture {}: row stride {} must be aligned to pixel size {}", src_buffer, dst_texture, fmt::styled_param(row_stride), fmt::styled_param(gl_pixel_format.bytes));
             return;
         }
 
         uint32 real_row_bytes = tinfo.width * gl_pixel_format.bytes;
         if (row_stride > 0 && row_stride < real_row_bytes) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: row stride `%u` less than required row size `%u`", htos(src_buffer), htos(dst_texture), row_stride, real_row_bytes);
+            ::logger.error("Failed to copy buffer {} to texture {}: row stride {} less than required row size {}", src_buffer, dst_texture, fmt::styled_param(row_stride), fmt::styled_param(real_row_bytes));
             return;
         }
 
@@ -836,7 +844,7 @@ namespace tavros::renderer::rhi
         size_t need_bytes = stride_bytes * tinfo.height * tinfo.depth - (stride_bytes - real_row_bytes);
 
         if (src_offset + need_bytes > b->info.size) {
-            ::logger.error("Failed to copy buffer `%s` to texture `%s`: buffer is too small. Required %llu bytes, available %llu bytes", htos(src_buffer), htos(dst_texture), src_offset + need_bytes, b->info.size);
+            ::logger.error("Failed to copy buffer {} to texture {}: buffer is too small. Required {} bytes, available {} bytes", src_buffer, dst_texture, fmt::styled_param(src_offset + need_bytes), fmt::styled_param(b->info.size));
             return;
         }
 

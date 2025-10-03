@@ -5,6 +5,8 @@
 #include <tavros/renderer/rhi/texture_info.hpp>
 #include <tavros/renderer/rhi/framebuffer_info.hpp>
 
+#include <tavros/core/raii/scope_exit.hpp>
+
 namespace
 {
     tavros::core::logger logger("render_system");
@@ -62,7 +64,14 @@ namespace tavros::renderer
 
     render_target_view render_system::create_render_target(const render_target_create_info& info)
     {
-        core::static_vector<rhi::texture_handle, rhi::k_max_color_attachments> color_attachments;
+        using color_attachments_t = core::static_vector<rhi::texture_handle, rhi::k_max_color_attachments>;
+        color_attachments_t color_attachments;
+
+        auto color_attachments_guard = core::make_scope_exit([&]() {
+            for (auto i = 0; i < color_attachments.size(); ++i) {
+                m_gdevice->destroy_texture(color_attachments[i]);
+            }
+        });
 
         for (auto i = 0; i < info.color_attachment_formats.size(); ++i) {
             rhi::texture_info rhi_color_tex_info;
@@ -89,7 +98,12 @@ namespace tavros::renderer
             color_attachments.push_back(color_attachment_h);
         }
 
-        core::optional<rhi::texture_handle> depth_stencil_attachment = core::nullopt;
+        rhi::texture_handle depth_stencil_attachment = rhi::texture_handle::invalid();
+        auto                depth_stencil_attachment_guard = core::make_scope_exit([&]() {
+            if (depth_stencil_attachment != rhi::texture_handle::invalid()) {
+                m_gdevice->destroy_texture(depth_stencil_attachment);
+            }
+        });
 
         if (info.depth_stencil_attachment_format != rhi::pixel_format::none) {
             rhi::texture_info rhi_depth_stencil_tex_info;
@@ -119,15 +133,21 @@ namespace tavros::renderer
         rhi_framebuffer_info.height = info.height;
         rhi_framebuffer_info.color_attachment_formats = info.color_attachment_formats;
         rhi_framebuffer_info.depth_stencil_attachment_format = info.depth_stencil_attachment_format;
-        rhi_framebuffer_info.depth_stencil_attachment_format = info.depth_stencil_attachment_format;
         rhi_framebuffer_info.sample_count = info.sample_count;
 
-        auto rhi_framebuffer_h = m_gdevice->create_framebuffer(rhi_framebuffer_info, color_attachments, depth_stencil_attachment);
+        core::optional<rhi::texture_handle> optional_depth_stencil;
+        if (depth_stencil_attachment != rhi::texture_handle::invalid()) {
+            optional_depth_stencil = depth_stencil_attachment;
+        }
+        auto rhi_framebuffer_h = m_gdevice->create_framebuffer(rhi_framebuffer_info, color_attachments, optional_depth_stencil);
         if (rhi_framebuffer_h == rhi::framebuffer_handle::invalid()) {
             return render_target_view();
         }
 
-        auto framebuffer_h = m_render_targets.emplace_add(rhi_framebuffer_h, info, color_attachments, depth_stencil_attachment.value_or(rhi::texture_handle::invalid()));
+        color_attachments_guard.release();
+        depth_stencil_attachment_guard.release();
+
+        auto framebuffer_h = m_render_targets.emplace_add(rhi_framebuffer_h, info, color_attachments, depth_stencil_attachment);
         return render_target_view(&m_render_targets, framebuffer_h);
     }
 
@@ -142,7 +162,7 @@ namespace tavros::renderer
         auto rhi_fb_h = rt->handle();
         m_gdevice->destroy_framebuffer(rhi_fb_h);
 
-        for (auto i = 0; i < rt->color_attachment_count(); ++i) {
+        for (size_t i = 0; i < rt->color_attachment_count(); ++i) {
             m_gdevice->destroy_texture(rt->color_attachment(i));
         }
 

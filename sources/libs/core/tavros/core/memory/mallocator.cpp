@@ -30,7 +30,7 @@ struct mallocator::impl
         auto* p = _aligned_malloc(size, align);
 
         if (!p) {
-            ::s_logger.error("Allocator cannot allocate memory `%s`.", (tag ? tag : ""));
+            ::s_logger.error("Allocator cannot allocate memory {}", (tag ? tag : ""));
             TAV_ASSERT(false);
             return nullptr;
         }
@@ -55,10 +55,10 @@ struct mallocator::impl
             _aligned_free(ptr);
         } else {
             if (auto it = released.find(ptr); it != released.end()) {
-                s_logger.error("Attempting to free memory twice.");
+                s_logger.error("Attempting to free memory twice");
                 TAV_ASSERT(false);
             } else {
-                s_logger.error("Attempting to free previously unallocated memory with this allocator.");
+                s_logger.error("Attempting to free previously unallocated memory with this allocator");
                 TAV_ASSERT(false);
             }
         }

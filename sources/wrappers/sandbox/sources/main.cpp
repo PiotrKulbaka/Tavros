@@ -24,7 +24,7 @@
 
 #include <thread>
 
-#include <tavros/core/scoped_owner.hpp>
+#include <tavros/core/raii/scoped_owner.hpp>
 
 #include <stb/stb_image.h>
 
@@ -379,14 +379,14 @@ bool load_md3(std::string path, model_t* model)
 {
     std::ifstream file(path, std::ios::binary);
     if (!file) {
-        tavros::core::logger::print(tavros::core::severity_level::warning, "R_LoadMD3: couldn't read %s", path.c_str());
+        tavros::core::logger::print(tavros::core::severity_level::warning, "main", "R_LoadMD3: couldn't read {}", path);
         return false;
     }
 
     md3_header_t header{};
     file.read(reinterpret_cast<char*>(&header), sizeof(header));
     if (header.ident != MD3_IDENT || header.version != MD3_VERSION) {
-        tavros::core::logger::print(tavros::core::severity_level::warning, "R_LoadMD3: %s has wrong version", path.c_str());
+        tavros::core::logger::print(tavros::core::severity_level::warning, "main", "R_LoadMD3: %s has wrong version", path);
         return false;
     }
 
@@ -465,10 +465,7 @@ constexpr auto k_initial_window_height = static_cast<int32>(720 * k_window_size_
 int main()
 {
     tavros::core::logger::add_consumer([](tavros::core::severity_level lvl, tavros::core::string_view tag, tavros::core::string_view msg) {
-        TAV_ASSERT(tag.data());
-        // if (lvl == tavros::core::severity_level::error) {
         std::cout << msg << std::endl;
-        //}
     });
 
     auto logger = tavros::core::logger("main");
@@ -861,7 +858,6 @@ int main()
     rhi::sampler_handle samplers_to_binding_main[] = {sampler1, sampler_lut};
 
     auto fullstreen_shader_binding = gdevice->create_shader_binding(fullstreen_shader_binding_info, textures_to_binding_main, samplers_to_binding_main, {});
-
 
     while (app->is_runing()) {
         app->poll_events();

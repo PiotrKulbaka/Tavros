@@ -16,12 +16,33 @@ namespace
         tavros::core::severity_level                              level = tavros::core::severity_level::debug;
         tavros::core::vector<tavros::core::logger::consumer_type> consumers;
         std::mutex                                                mtx;
-        std::atomic_bool                                          has_consumers = false;
+        bool                                                      has_consumers = false;
     };
 
     static log_helper g_log;
+} // namespace
 
-    const char* now_time()
+namespace tavros::core
+{
+
+    void logger::set_severity_level(severity_level level) noexcept
+    {
+        g_log.level = level;
+    }
+
+    void logger::add_consumer(const consumer_type& consumer) noexcept
+    {
+        std::scoped_lock<std::mutex> lock(g_log.mtx);
+        g_log.consumers.push_back(consumer);
+        g_log.has_consumers = true;
+    }
+
+    bool logger::allowed_print(severity_level level) noexcept
+    {
+        return level >= g_log.level && g_log.has_consumers;
+    }
+
+    string_view logger::now_time() noexcept
     {
         static const char         alpha[] = "0123456789";
         thread_local static char  str_time[] = "00:00:00.000";
@@ -35,7 +56,7 @@ namespace
         // Milliseconds
         auto ms = duration_cast<milliseconds>(system_clock::now().time_since_epoch()).count();
         if (ms == last_ms) {
-            return str_time;
+            return string_view(str_time, sizeof(str_time) - 1);
         } else {
             last_ms = ms;
             str_time[11] = alpha[(ms / 1) % 10];
@@ -46,7 +67,7 @@ namespace
         // Seconds
         auto s = last_ms / 1000;
         if (s == last_s) {
-            return str_time;
+            return string_view(str_time, sizeof(str_time) - 1);
         }
         last_s = s;
         s %= 60;
@@ -57,7 +78,7 @@ namespace
         // Minutes
         auto m = last_s / 60;
         if (m == last_m) {
-            return str_time;
+            return string_view(str_time, sizeof(str_time) - 1);
         }
         last_m = m;
         m %= 60;
@@ -67,114 +88,22 @@ namespace
         // Hours
         auto h = last_m / 60;
         if (h == last_h) {
-            return str_time;
+            return string_view(str_time, sizeof(str_time) - 1);
         }
         last_h = h;
         h %= 24;
         str_time[1] = alpha[(h / 1) % 10];
         str_time[0] = alpha[(h / 10) % 10];
 
-        return str_time;
+        return string_view(str_time, sizeof(str_time) - 1);
     }
 
-    void log_vprint(tavros::core::severity_level level, tavros::core::string_view tag, const char* fmt, va_list args)
+    void logger::print_message(severity_level level, string_view tag, string_view msg) noexcept
     {
-        TAV_ASSERT(tag.data());
-        TAV_ASSERT(fmt);
-
-        if (level < g_log.level || !g_log.has_consumers.load(std::memory_order_relaxed)) {
-            return;
-        }
-
-        static constexpr auto size = 4096;
-        char                  message[size];
-        static const char*    level_strings[] = {
-            "debug",
-            "info",
-            "warning",
-            "error"
-        };
-
-        const auto* now_s = now_time();
-        const auto* lvl_s = level_strings[static_cast<uint32>(level)];
-
-        auto len = std::snprintf(message, size - 1, "[tavros|%s|%s][%s] ", now_s, lvl_s, tag.data());
-        if (len < size) {
-            len += std::vsnprintf(message + len, static_cast<size_t>(size - len - 1), fmt, args);
-        }
-
         std::scoped_lock<std::mutex> lock(g_log.mtx);
         for (auto& consumer : g_log.consumers) {
-            consumer(level, tag, tavros::core::string_view(message, static_cast<size_t>(len)));
+            consumer(level, tag, msg);
         }
     }
-} // namespace
 
-using namespace tavros::core;
-
-logger::logger(string_view tag)
-    : m_tag(tag)
-{
-}
-
-void logger::debug(const char* fmt, ...)
-{
-    va_list args = nullptr;
-    va_start(args, fmt);
-    log_vprint(severity_level::debug, m_tag, fmt, args);
-    va_end(args);
-}
-
-void logger::info(const char* fmt, ...)
-{
-    va_list args = nullptr;
-    va_start(args, fmt);
-    log_vprint(severity_level::info, m_tag, fmt, args);
-    va_end(args);
-}
-
-void logger::warning(const char* fmt, ...)
-{
-    va_list args = nullptr;
-    va_start(args, fmt);
-    log_vprint(severity_level::warning, m_tag, fmt, args);
-    va_end(args);
-}
-
-void logger::error(const char* fmt, ...)
-{
-    va_list args = nullptr;
-    va_start(args, fmt);
-    log_vprint(severity_level::error, m_tag, fmt, args);
-    va_end(args);
-}
-
-string_view logger::tag() const
-{
-    return m_tag;
-}
-
-void logger::print(severity_level level, const char* tag, const char* fmt, ...)
-{
-    va_list args = nullptr;
-    va_start(args, fmt);
-    log_vprint(level, tag, fmt, args);
-    va_end(args);
-}
-
-void logger::vprint(severity_level level, const char* tag, const char* fmt, va_list args)
-{
-    log_vprint(level, tag, fmt, args);
-}
-
-void logger::set_severity_level(severity_level level)
-{
-    g_log.level = level;
-}
-
-void logger::add_consumer(const consumer_type& consumer)
-{
-    std::scoped_lock<std::mutex> lock(g_log.mtx);
-    g_log.consumers.push_back(consumer);
-    g_log.has_consumers.store(true, std::memory_order_relaxed);
-}
+} // namespace tavros::core

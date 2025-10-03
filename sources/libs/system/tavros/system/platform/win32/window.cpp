@@ -29,7 +29,7 @@ namespace
             return wnd->process_window_message(hWnd, uMsg, wParam, lParam);
         }
         // Does not log here to avoid spam, because some messages can be sent before GWLP_USERDATA is set
-        // logger.warning("Event `%s` occurred but the window was not found.", wm_message_to_str(uMsg));
+        // logger.warning("Event {} occurred but the window was not found.", wm_message_to_str(uMsg));
         return DefWindowProc(hWnd, uMsg, wParam, lParam);
     }
 
@@ -55,10 +55,10 @@ namespace
         wcex.hIconSm = nullptr;
 
         if (!RegisterClassEx(&wcex)) {
-            logger.error("Failed to register windowclass `%s`: ", last_win_error_str());
+            logger.error("Failed to register windowclass {}: ", last_win_error_str());
             return false;
         }
-        logger.info("Registered window class `%s`", wnd_class_name);
+        logger.info("Registered window class {}", fmt::styled_text(wnd_class_name));
 
         is_class_registered = true;
         return true;
@@ -75,7 +75,7 @@ namespace
             // Don't log this, because it is not critical
             //::logger.debug("Registered mouse raw input");
         } else {
-            ::logger.error("Failed to register mouse raw input: %s", last_win_error_str());
+            ::logger.error("Failed to register mouse raw input: {}", last_win_error_str());
         }
     }
 
@@ -91,7 +91,7 @@ namespace
             // Don't log this, because it is not critical
             //::logger.debug("Remove raw input mouse: succeeded");
         } else {
-            ::logger.error("Failed to remove raw input mouse: %s", last_win_error_str());
+            ::logger.error("Failed to remove raw input mouse: {}", last_win_error_str());
         }
     }
 
@@ -104,9 +104,9 @@ namespace
         // because remove_raw_inpput_mouse() will remove raw input for all windows (for this process)
         // remove_raw_inpput_mouse(hWnd);
         if (DestroyWindow(hWnd)) {
-            ::logger.info("Window `%s` destroyed", name);
+            ::logger.info("Window {} destroyed", fmt::styled_text(name));
         } else {
-            ::logger.error("Failed to destroy window `%s`: %s", name, last_win_error_str());
+            ::logger.error("Failed to destroy window {}: {}", fmt::styled_text(name), last_win_error_str());
         }
     }
 } // namespace
@@ -138,12 +138,12 @@ window::window(tavros::core::string_view name)
     );
 
     if (hWnd) {
-        ::logger.info("Window `%s` created", name.data());
+        ::logger.info("Window {} created", fmt::styled_text(name));
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<uint64>(this));
         m_hWnd = hWnd;
         register_raw_inpput_mouse(hWnd);
     } else {
-        ::logger.error("Failed to create window `%s`", name.data());
+        ::logger.error("Failed to create window {}", fmt::styled_text(name));
     }
 }
 
@@ -157,7 +157,7 @@ window::~window()
 void window::set_text(tavros::core::string_view text)
 {
     if (!SetWindowText(m_hWnd, text.data())) {
-        ::logger.error("Failed to set window text: %s", last_win_error_str());
+        ::logger.error("Failed to set window text: {}", last_win_error_str());
     }
 }
 
@@ -199,14 +199,14 @@ tavros::math::isize2 window::get_window_size()
         int32 height = rect.bottom - rect.top;
         return math::isize2(width, height);
     }
-    ::logger.error("Failed to get window size: %s", last_win_error_str());
+    ::logger.error("Failed to get window size: {}", last_win_error_str());
     return math::isize2();
 }
 
 void window::set_window_size(int32 width, int32 height)
 {
     if (!SetWindowPos(m_hWnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER)) {
-        ::logger.error("Failed to set window size: %s", last_win_error_str());
+        ::logger.error("Failed to set window size: {}", last_win_error_str());
     }
 }
 
@@ -219,14 +219,14 @@ tavros::math::ipoint2 window::get_location()
         ScreenToClient(parent, &pt);
         return math::ipoint2(pt.x, pt.y);
     }
-    ::logger.error("Failed to get window location: %s", last_win_error_str());
+    ::logger.error("Failed to get window location: {}", last_win_error_str());
     return math::ipoint2();
 }
 
 void window::set_location(int32 left, int32 top)
 {
     if (!SetWindowPos(m_hWnd, nullptr, left, top, 0, 0, SWP_NOSIZE | SWP_NOZORDER)) {
-        ::logger.error("Failed to set window location: %s", last_win_error_str());
+        ::logger.error("Failed to set window location: {}", last_win_error_str());
     }
 }
 
@@ -238,7 +238,7 @@ tavros::math::isize2 window::get_client_size()
         int32 height = rect.bottom - rect.top;
         return math::isize2(width, height);
     }
-    ::logger.error("Failed to get client size: %s", last_win_error_str());
+    ::logger.error("Failed to get client size: {}", last_win_error_str());
     return math::isize2();
 }
 
@@ -247,7 +247,7 @@ void window::set_client_size(int32 width, int32 height)
     RECT rect{.left = 0, .top = 0, .right = width, .bottom = height};
     AdjustWindowRect(&rect, GetWindowLong(m_hWnd, GWL_STYLE), FALSE);
     if (!SetWindowPos(m_hWnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER)) {
-        ::logger.error("Failed to set client size: %s", last_win_error_str());
+        ::logger.error("Failed to set client size: {}", last_win_error_str());
     }
 }
 

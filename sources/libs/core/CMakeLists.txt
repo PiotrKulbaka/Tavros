@@ -8,5 +8,7 @@ tavros_add_library(
     LIB_CROSSPLATFORM_SOURCES
         ${TAV_CORE_CROSSPLATFORM_SOURCES}
     LIB_DEPENDS
+        PUBLIC
+            fmt
     LIB_DEFINES
 )

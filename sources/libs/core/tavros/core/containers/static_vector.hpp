@@ -21,7 +21,11 @@ namespace tavros::core
         using const_reverse_iterator = std::reverse_iterator<const_iterator>;
 
     public:
-        static_vector() = default;
+        static_vector() noexcept
+            : m_data({})
+            , m_size(0)
+        {
+        }
 
         constexpr static_vector(std::initializer_list<T> init) noexcept
         {
@@ -197,7 +201,6 @@ namespace tavros::core
                 throw std::out_of_range("static_vector::emplace_back - capacity exceeded");
             }
 
-            // ������������� ������� �� ����� (����� �������� �� placement new ��� �������� � ����� ������)
             m_data[m_size] = T(std::forward<Args>(args)...);
             return m_data[m_size++];
         }

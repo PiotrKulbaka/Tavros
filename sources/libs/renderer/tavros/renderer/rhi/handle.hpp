@@ -1,6 +1,8 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
+#include <tavros/core/utils/to_string.hpp>
+#include <tavros/core/logger/logger.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -69,3 +71,23 @@ namespace tavros::renderer::rhi
     using shader_handle = handle_base<shader_tag>;
 
 } // namespace tavros::renderer::rhi
+
+template<typename ResourceTag>
+struct fmt::formatter<tavros::renderer::rhi::handle_base<ResourceTag>>
+{
+    fmt::formatter<uint32_t> m_base;
+
+    constexpr auto parse(fmt::format_parse_context& ctx)
+    {
+        return m_base.parse(ctx);
+    }
+
+    template<typename FormatContext>
+    auto format(const tavros::renderer::rhi::handle_base<ResourceTag>& h, FormatContext& ctx) const
+    {
+        if (h == tavros::renderer::rhi::handle_base<ResourceTag>::invalid()) {
+            return fmt::format_to(ctx.out(), "{}", fmt::styled_error("(invalid)"));
+        }
+        return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint32_to_base64(h.id)));
+    }
+};

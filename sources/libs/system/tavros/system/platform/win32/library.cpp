@@ -38,7 +38,7 @@ namespace tavros::system
 
         HMODULE lib = LoadLibrary(lib_name.data());
         if (lib == nullptr) {
-            ::logger.error("Failed to load library '%s': %s", lib_name.data(), last_win_error_str());
+            ::logger.error("Failed to load library {}: {}", fmt::styled_name(lib_name), last_win_error_str());
             return false;
         }
         m_handle = static_cast<void*>(lib);
@@ -50,7 +50,7 @@ namespace tavros::system
     {
         if (is_open()) {
             if (!FreeLibrary(static_cast<HMODULE>(m_handle))) {
-                ::logger.error("Failed to unload library: %s", last_win_error_str());
+                ::logger.error("Failed to unload library: {}", last_win_error_str());
             }
             m_handle = nullptr;
         }
@@ -60,7 +60,7 @@ namespace tavros::system
     {
         FARPROC func = GetProcAddress(static_cast<HMODULE>(m_handle), symbol_name);
         if (func == nullptr) {
-            ::logger.warning("Failed to load symbol '%s': %s", symbol_name, last_win_error_str());
+            ::logger.warning("Failed to load symbol {}: {}", fmt::styled_name(symbol_name), last_win_error_str());
         }
         return static_cast<void*>(func);
     }
