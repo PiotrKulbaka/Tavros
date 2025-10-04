@@ -525,6 +525,7 @@ int main()
     auto gdevice = rhi::graphics_device::create(rhi::render_backend_type::opengl);
     auto render_system = tavros::renderer::render_system(gdevice.get());
 
+
     rhi::frame_composer_create_info main_composer_info;
     main_composer_info.width = k_initial_window_width;
     main_composer_info.height = k_initial_window_height;
@@ -536,7 +537,7 @@ int main()
     auto main_composer_handle = gdevice->create_frame_composer(main_composer_info, wnd->get_handle());
 
     auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
-    auto* cbuf = composer->create_command_list();
+
 
     rhi::buffer_create_info stage_buffer_info{1024 * 1024 * 16 /* 16 Mb */, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu};
     auto                    stage_buffer = gdevice->create_buffer(stage_buffer_info);
@@ -548,21 +549,18 @@ int main()
         return -1;
     }
 
-    int32 w, h, c;
-    auto* pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.jpg", w, h, c);
-    cbuf->copy_buffer_data(stage_buffer, pixels, w * h * 4);
+    int32  w, h, c;
+    auto*  pixels = load_pixels_from_file("C:\\Work\\q3pp_res\\baseq3\\models\\weapons2\\plasma\\plasma.jpg", w, h, c);
+    uint8* mapped = gdevice->map_buffer(stage_buffer);
+    memcpy(mapped, pixels, w * h * 4);
+    size_t tex1_pixsels_size = w * h * 4;
     free_pixels(pixels);
 
     tavros::renderer::texture_create_info tex1_info{rhi::texture_type::texture_2d, rhi::pixel_format::rgba8un, static_cast<uint32>(w), static_cast<uint32>(h), 1, 100, 1};
     auto                                  tex1_view = render_system.create_texture(tex1_info);
-    cbuf->copy_buffer_to_texture(stage_buffer, tex1_view->handle(), 0, w * h * 4);
 
 
     uint8* lut_pixels = load_pixels_from_file("C:\\Work\\img\\null_lut.png", w, h, c);
-    uint8* lut_data = reinterpret_cast<uint8*>(malloc(w * h * 4));
-
-    uint8* dst = lut_data;
-    uint8* src = lut_pixels;
 
     constexpr int slice_size = 64;                           // размер стороны одного квадрата
     constexpr int blocks_per_row = 8;                        // 8x8 блоков
@@ -571,7 +569,8 @@ int main()
     constexpr int total_width = slice_size * blocks_per_row; // 512
     constexpr int total_height = total_width;                // 512
 
-    uint8* dst_p = lut_data;
+
+    uint8* dst_p = mapped + tex1_pixsels_size;
     uint8* src_p = lut_pixels;
 
     for (int z = 0; z < size; ++z) {
@@ -580,15 +579,12 @@ int main()
 
         for (int y = 0; y < slice_size; ++y) {
             for (int x = 0; x < slice_size; ++x) {
-                // координаты в 2D текстуре
                 int src_x = block_x * slice_size + x;
                 int src_y = block_y * slice_size + y;
 
-                // индексы
                 int src_index = (src_y * total_width + src_x) * channels;
                 int dst_index = (z * size * size + y * size + x) * channels;
 
-                // копируем пиксель
                 dst_p[dst_index + 0] = src_p[src_index + 0];
                 dst_p[dst_index + 1] = src_p[src_index + 1];
                 dst_p[dst_index + 2] = src_p[src_index + 2];
@@ -597,14 +593,11 @@ int main()
         }
     }
 
-
-    cbuf->copy_buffer_data(stage_buffer, lut_data, w * h * 4);
-    free(lut_data);
+    size_t lut_pixels_size = w * h * 4;
     free_pixels(lut_pixels);
 
     rhi::texture_create_info lut_tex_info{rhi::texture_type::texture_3d, rhi::pixel_format::rgba8un, 64, 64, 64, rhi::k_default_texture_usage, 16, 1, 1};
     auto                     lut_tex = gdevice->create_texture(lut_tex_info);
-    cbuf->copy_buffer_to_texture(stage_buffer, lut_tex, 0, w * h * 4);
 
 
     rhi::texture_create_info cube_tex_info{rhi::texture_type::texture_cube, rhi::pixel_format::rgba8un, 512, 512, 1, rhi::k_default_texture_usage, 16, 6, 1};
@@ -612,15 +605,10 @@ int main()
 
 
     uint8* sky_pixels = load_pixels_from_file("C:\\Work\\img\\sky2.png", w, h, c);
-    cbuf->copy_buffer_data(stage_buffer, sky_pixels, w * h * 4);
+    uint8* dst_sky_pixels = mapped + tex1_pixsels_size + lut_pixels_size;
+    size_t sky_pixels_size = w * h * 4;
+    memcpy(dst_sky_pixels, sky_pixels, sky_pixels_size);
     free_pixels(sky_pixels);
-
-    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 2, 512 * 512 * 4, 512 * 4, 512 * 4 * 4);
-    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 1, 512 * 512 * 4, 512 * 512 * 4 * 4, 512 * 4 * 4);
-    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 4, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4, 512 * 4 * 4);
-    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 0, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4 * 2, 512 * 4 * 4);
-    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 5, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4 * 3, 512 * 4 * 4);
-    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 3, 512 * 512 * 4, 512 * 512 * 4 * 4 * 2 + 512 * 4, 512 * 4 * 4);
 
     int msaa_level = 16;
 
@@ -729,38 +717,35 @@ int main()
     rhi::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
     auto               main_pipeline = gdevice->create_pipeline(main_pipeline_info, fullscreen_quad_shaders);
 
+    size_t stage_offset_now = tex1_pixsels_size + lut_pixels_size + sky_pixels_size;
+
     // Copy XYZ
-    uint32 xyz_offset = 0;
+    uint32 xyz_offset = stage_offset_now;
     uint32 xyz_size = model.xyz.size() * sizeof(tavros::math::vec3);
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.xyz.data()), xyz_size, xyz_offset);
+    memcpy(mapped + xyz_offset, model.xyz.data(), xyz_size);
 
     // Copy Normals
     uint32 norm_offset = xyz_offset + xyz_size;
     uint32 norm_size = model.norm.size() * sizeof(tavros::math::vec3);
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.norm.data()), norm_size, norm_offset);
+    memcpy(mapped + norm_offset, model.norm.data(), norm_size);
 
     // Copy UV
     uint32 uv_offset = norm_offset + norm_size;
     uint32 uv_size = model.uv.size() * sizeof(tavros::math::vec2);
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.uv.data()), uv_size, uv_offset);
+    memcpy(mapped + uv_offset, model.uv.data(), uv_size);
 
     // Copy Indices
     uint64 indices_offset = uv_offset + uv_size;
     uint64 indices_size = model.surfaces[0].indices.size() * sizeof(uint32);
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(model.surfaces[0].indices.data()), model.surfaces[0].indices.size() * sizeof(uint32), indices_offset);
+    memcpy(mapped + indices_offset, model.surfaces[0].indices.data(), indices_size);
 
 
     // Make vertices buffer
     rhi::buffer_create_info xyz_normal_uv_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
     auto                    buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
 
-    cbuf->copy_buffer(stage_buffer, buffer_xyz_normal_uv, xyz_size + norm_size + uv_size, 0, 0);
-
-
     rhi::buffer_create_info indices_desc{1024 * 128, rhi::buffer_usage::index, rhi::buffer_access::gpu_only};
     auto                    buffer_indices = gdevice->create_buffer(indices_desc);
-
-    cbuf->copy_buffer(stage_buffer, buffer_indices, indices_size, indices_offset, 0);
 
     auto                                     instance_number = 100;
     tavros::core::vector<tavros::math::mat4> instance_data;
@@ -776,13 +761,31 @@ int main()
 
         instance_data.push_back(m * m2);
     }
-    cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(instance_data.data()), instance_data.size() * sizeof(tavros::math::mat4));
+
+    size_t instance_offset = indices_offset + indices_size;
+    size_t instance_data_size = instance_data.size() * sizeof(tavros::math::mat4);
+
+    memcpy(mapped + instance_offset, instance_data.data(), instance_data_size);
 
 
     rhi::buffer_create_info instance_buffer_desc{sizeof(tavros::math::mat4) * instance_number, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
     auto                    instance_buffer = gdevice->create_buffer(instance_buffer_desc);
+    gdevice->unmap_buffer(stage_buffer);
 
-    cbuf->copy_buffer(stage_buffer, instance_buffer, sizeof(tavros::math::mat4) * instance_number, 0, 0);
+
+    auto* cbuf = composer->create_command_list();
+    cbuf->copy_buffer_to_texture(stage_buffer, tex1_view->handle(), 0, w * h * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, lut_tex, 0, lut_pixels_size, tex1_pixsels_size);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 2, 512 * 512 * 4, 512 * 4 + tex1_pixsels_size + lut_pixels_size, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 1, 512 * 512 * 4, 512 * 512 * 4 * 4 + tex1_pixsels_size + lut_pixels_size, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 4, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4 + tex1_pixsels_size + lut_pixels_size, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 0, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4 * 2 + tex1_pixsels_size + lut_pixels_size, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 5, 512 * 512 * 4, 512 * 512 * 4 * 4 + 512 * 4 * 3 + tex1_pixsels_size + lut_pixels_size, 512 * 4 * 4);
+    cbuf->copy_buffer_to_texture(stage_buffer, skycube_tex, 3, 512 * 512 * 4, 512 * 512 * 4 * 4 * 2 + 512 * 4 + tex1_pixsels_size + lut_pixels_size, 512 * 4 * 4);
+    cbuf->copy_buffer(stage_buffer, buffer_xyz_normal_uv, xyz_size + norm_size + uv_size, 0, 0);
+    cbuf->copy_buffer(stage_buffer, buffer_indices, indices_size, indices_offset, 0);
+    cbuf->copy_buffer(stage_buffer, instance_buffer, instance_data_size, instance_offset);
+    composer->submit_command_list(cbuf);
 
 
     rhi::geometry_create_info gbi;
@@ -801,9 +804,6 @@ int main()
 
     rhi::buffer_handle buffers_to_binding[] = {buffer_xyz_normal_uv, instance_buffer};
     auto               geometry1 = gdevice->create_geometry(gbi, buffers_to_binding, buffer_indices);
-
-
-    composer->submit_command_list(cbuf);
 
 
     auto cam = tavros::renderer::camera({0.0, 0.0, 0.0}, {0.0, 0.0, 1.0}, {0.0, 1.0, 0.0});
@@ -900,8 +900,11 @@ int main()
         auto* cbuf = composer->create_command_list();
         composer->begin_frame();
 
-        cbuf->copy_buffer_data(stage_buffer, &camera_shader_data, sizeof(camera_shader_t), 0);
-        cbuf->copy_buffer_data(stage_buffer, &scene_shader_data, sizeof(scene_shader_t), align_in_ubo);
+        uint8* shader_data_mapped = gdevice->map_buffer(stage_buffer);
+        memcpy(shader_data_mapped, &camera_shader_data, sizeof(camera_shader_t));
+        memcpy(shader_data_mapped + align_in_ubo, &scene_shader_data, sizeof(scene_shader_t));
+        gdevice->unmap_buffer(stage_buffer);
+
         cbuf->copy_buffer(stage_buffer, uniform_buffer, 512, 0, 0);
 
 

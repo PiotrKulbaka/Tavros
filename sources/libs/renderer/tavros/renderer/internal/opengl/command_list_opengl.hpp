@@ -10,6 +10,7 @@ namespace tavros::renderer::rhi
     {
     public:
         command_list_opengl(graphics_device_opengl* device);
+
         ~command_list_opengl() override;
 
         void bind_pipeline(pipeline_handle pipeline) override;
@@ -26,13 +27,9 @@ namespace tavros::renderer::rhi
 
         void draw_indexed(uint32 index_count, uint32 first_index = 0, uint32 vertex_offset = 0, uint32 instance_count = 1, uint32 first_instance = 0) override;
 
-        void copy_buffer_data(buffer_handle buffer, const void* data, size_t size, size_t offset = 0) override;
-
         void copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset = 0, size_t dst_offset = 0) override;
 
         void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset = 0, uint32 row_stride = 0) override;
-
-        // void* map_buffer(buffer_handle b);
 
     private:
         graphics_device_opengl* m_device = nullptr;

@@ -89,6 +89,31 @@ namespace tavros::renderer::rhi
             const core::span<const buffer_handle>  buffers
         ) = 0;
         virtual void destroy_shader_binding(shader_binding_handle shader_binding) = 0;
+
+
+        /**
+         * @brief Map a CPU-visible buffer for read or write access.
+         *
+         * Returns a pointer to the buffer's memory region accessible by the CPU.
+         * If both @p offset and @p size are zero, the entire buffer is mapped.
+         *
+         * @note Only CPU-visible buffers (e.g., staging or upload) can be mapped.
+         *
+         * @param buffer Buffer handle to map.
+         * @param offset Offset within the buffer to start mapping (in bytes).
+         * @param size   Size of the region to map in bytes (0 = entire buffer).
+         * @return Pointer to the mapped memory region.
+         */
+        virtual uint8* map_buffer(buffer_handle buffer, size_t offset = 0, size_t size = 0) = 0;
+
+        /**
+         * @brief Unmap a previously mapped buffer.
+         *
+         * Flushes any pending writes (if required by backend) and invalidates CPU access.
+         *
+         * @param buffer Buffer handle to unmap.
+         */
+        virtual void unmap_buffer(buffer_handle buffer) = 0;
     };
 
 } // namespace tavros::renderer::rhi

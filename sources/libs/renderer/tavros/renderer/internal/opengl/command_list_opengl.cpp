@@ -670,48 +670,6 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_list_opengl::copy_buffer_data(buffer_handle buffer, const void* data, size_t size, size_t offset)
-    {
-        TAV_ASSERT(data != nullptr);
-
-        auto* b = m_device->get_resources()->try_get(buffer);
-        if (!b) {
-            ::logger.error("Failed to copy data to buffer {}: buffer not found", buffer);
-            return;
-        }
-
-        if (offset + size > b->info.size) {
-            ::logger.error("Failed to copy data to buffer {}: offset {} + size {} exceeds buffer size {}", buffer, fmt::styled_param(offset), fmt::styled_param(size), fmt::styled_param(b->info.size));
-            return;
-        }
-
-        if (b->info.access != buffer_access::cpu_to_gpu) {
-            ::logger.error("Failed to copy data to buffer {}: buffer is not CPU-to-GPU", buffer);
-            return;
-        }
-
-        TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER);
-
-        auto target = b->gl_target;
-
-        // Get buffer range
-        glBindBuffer(target, b->buffer_obj);
-
-        void* ptr = glMapBufferRange(
-            target,
-            static_cast<GLintptr>(offset),
-            static_cast<GLsizeiptr>(size),
-            GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT
-        );
-
-        // Write data
-        memcpy(ptr, data, size);
-
-        glUnmapBuffer(target);
-
-        glBindBuffer(target, 0);
-    }
-
     void command_list_opengl::copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset, size_t dst_offset)
     {
         // Get dst and src buffers
@@ -834,7 +792,13 @@ namespace tavros::renderer::rhi
 
         uint32 real_row_bytes = tinfo.width * gl_pixel_format.bytes;
         if (row_stride > 0 && row_stride < real_row_bytes) {
-            ::logger.error("Failed to copy buffer {} to texture {}: row stride {} less than required row size {}", src_buffer, dst_texture, fmt::styled_param(row_stride), fmt::styled_param(real_row_bytes));
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: row stride {} less than required row size {}",
+                src_buffer,
+                dst_texture,
+                fmt::styled_param(row_stride),
+                fmt::styled_param(real_row_bytes)
+            );
             return;
         }
 
@@ -842,7 +806,13 @@ namespace tavros::renderer::rhi
         size_t need_bytes = stride_bytes * tinfo.height * tinfo.depth - (stride_bytes - real_row_bytes);
 
         if (src_offset + need_bytes > b->info.size) {
-            ::logger.error("Failed to copy buffer {} to texture {}: buffer is too small. Required {} bytes, available {} bytes", src_buffer, dst_texture, fmt::styled_param(src_offset + need_bytes), fmt::styled_param(b->info.size));
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: buffer is too small. Required {} bytes, available {} bytes",
+                src_buffer,
+                dst_texture,
+                fmt::styled_param(src_offset + need_bytes),
+                fmt::styled_param(b->info.size)
+            );
             return;
         }
 

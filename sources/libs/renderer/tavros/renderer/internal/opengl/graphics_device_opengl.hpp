@@ -72,8 +72,14 @@ namespace tavros::renderer::rhi
             const core::span<const sampler_handle> samplers,
             const core::span<const buffer_handle>  buffers
         ) override;
-        virtual void destroy_shader_binding(shader_binding_handle shader_binding) override;
+        void destroy_shader_binding(shader_binding_handle shader_binding) override;
 
+        uint8* map_buffer(
+            buffer_handle buffer,
+            size_t        offset = 0,
+            size_t        size = 0
+        ) override;
+        void unmap_buffer(buffer_handle buffer) override;
 
         device_resources_opengl* get_resources();
 

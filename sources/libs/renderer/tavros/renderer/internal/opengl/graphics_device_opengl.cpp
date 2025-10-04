@@ -1301,6 +1301,84 @@ namespace tavros::renderer::rhi
         }
     }
 
+    uint8* graphics_device_opengl::map_buffer(buffer_handle buffer, size_t offset, size_t size)
+    {
+        auto* b = m_resources.try_get(buffer);
+        if (!b) {
+            ::logger.error("Failed to map buffer {}: buffer not found", buffer);
+            return nullptr;
+        }
+
+        if (offset + size > b->info.size) {
+            ::logger.error(
+                "Failed to map buffer {}: offset {} + size {} exceeds buffer size {}",
+                buffer,
+                fmt::styled_param(offset),
+                fmt::styled_param(size),
+                fmt::styled_param(b->info.size)
+            );
+            return nullptr;
+        }
+
+        if (offset > 0 && size == 0) {
+            ::logger.error(
+                "Failed to map buffer {}: offset {} is set but size {} is not set",
+                buffer,
+                fmt::styled_param(offset),
+                fmt::styled_param(size)
+            );
+            return nullptr;
+        }
+
+        if (b->info.access != buffer_access::cpu_to_gpu) {
+            ::logger.error("Failed to map buffer {}: buffer is not CPU-to-GPU", buffer);
+            return nullptr;
+        }
+
+        TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER);
+
+        auto target = b->gl_target;
+
+        // Get buffer range
+        glBindBuffer(target, b->buffer_obj);
+
+        void* ptr = nullptr;
+
+        if (size == 0) {
+            ptr = glMapBuffer(
+                target,
+                GL_WRITE_ONLY // available GL_READ_ONLY, GL_WRITE_ONLY, or GL_READ_WRITE
+            );
+        } else {
+            ptr = glMapBufferRange(
+                target,
+                static_cast<GLintptr>(offset),
+                static_cast<GLsizeiptr>(size),
+                GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT
+            );
+        }
+
+        glBindBuffer(target, 0);
+
+        return static_cast<uint8*>(ptr);
+    }
+
+    void graphics_device_opengl::unmap_buffer(buffer_handle buffer)
+    {
+        auto* b = m_resources.try_get(buffer);
+        if (!b) {
+            ::logger.error("Failed to unmap buffer {}: buffer not found", buffer);
+            return;
+        }
+
+        auto target = b->gl_target;
+        glBindBuffer(target, b->buffer_obj);
+
+        glUnmapBuffer(target);
+
+        glBindBuffer(target, 0);
+    }
+
     device_resources_opengl* graphics_device_opengl::get_resources()
     {
         return &m_resources;

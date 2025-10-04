@@ -36,9 +36,7 @@ namespace tavros::renderer
     public:
         ~mesh();
 
-
         bool has_index_buffer() const noexcept;
-
 
         rhi::index_buffer_format index_format() const noexcept;
 
