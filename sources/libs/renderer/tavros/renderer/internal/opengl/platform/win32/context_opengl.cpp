@@ -51,7 +51,7 @@ namespace
 namespace tavros::renderer::rhi
 {
 
-    core::unique_ptr<context_opengl> context_opengl::create(const frame_composer_info& info, void* native_handle)
+    core::unique_ptr<context_opengl> context_opengl::create(const frame_composer_create_info& info, void* native_handle)
     {
         // Validate the swapchain info
         // Validate width and height

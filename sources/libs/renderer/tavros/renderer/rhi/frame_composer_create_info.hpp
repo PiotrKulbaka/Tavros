@@ -1,7 +1,6 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
-#include <tavros/renderer/rhi/pixel_format.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -9,7 +8,7 @@ namespace tavros::renderer::rhi
     /**
      * Describes a swapchain to be created for a window or view.
      */
-    struct frame_composer_info
+    struct frame_composer_create_info
     {
         /// Width of the rendering surface, in pixels
         uint32 width = 0;

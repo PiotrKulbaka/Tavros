@@ -1,4 +1,4 @@
-#include <iostream>
+п»ї#include <iostream>
 
 #include <tavros/core/prelude.hpp>
 #include <tavros/core/timer.hpp>
@@ -52,7 +52,7 @@ layout (binding = 1) uniform Scene
 {
     mat4 u_view;       // view matrix (world->view)
     vec3 u_camera_pos; // world-space camera position
-    // padding rules apply in std140 — pad on CPU side if using UBO
+    // padding rules apply in std140 вЂ” pad on CPU side if using UBO
     vec3 u_sun_dir;    // world-space, should be normalized
     vec3 u_sun_color;  // linear RGB
     float u_sun_intensity;
@@ -525,7 +525,7 @@ int main()
     auto gdevice = rhi::graphics_device::create(rhi::render_backend_type::opengl);
     auto render_system = tavros::renderer::render_system(gdevice.get());
 
-    rhi::frame_composer_info main_composer_info;
+    rhi::frame_composer_create_info main_composer_info;
     main_composer_info.width = k_initial_window_width;
     main_composer_info.height = k_initial_window_height;
     main_composer_info.buffer_count = 3;
@@ -538,8 +538,8 @@ int main()
     auto* composer = gdevice->get_frame_composer_ptr(main_composer_handle);
     auto* cbuf = composer->create_command_list();
 
-    rhi::buffer_info stage_buffer_info{1024 * 1024 * 16 /* 16 Mb */, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu};
-    auto             stage_buffer = gdevice->create_buffer(stage_buffer_info);
+    rhi::buffer_create_info stage_buffer_info{1024 * 1024 * 16 /* 16 Mb */, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu};
+    auto                    stage_buffer = gdevice->create_buffer(stage_buffer_info);
 
 
     model_t model;
@@ -564,9 +564,9 @@ int main()
     uint8* dst = lut_data;
     uint8* src = lut_pixels;
 
-    constexpr int slice_size = 64;                           // размер стороны одного квадрата
-    constexpr int blocks_per_row = 8;                        // 8x8 блоков
-    constexpr int size = 64;                                 // сторона 3D LUT
+    constexpr int slice_size = 64;                           // СЂР°Р·РјРµСЂ СЃС‚РѕСЂРѕРЅС‹ РѕРґРЅРѕРіРѕ РєРІР°РґСЂР°С‚Р°
+    constexpr int blocks_per_row = 8;                        // 8x8 Р±Р»РѕРєРѕРІ
+    constexpr int size = 64;                                 // СЃС‚РѕСЂРѕРЅР° 3D LUT
     constexpr int channels = 4;                              // RGBA
     constexpr int total_width = slice_size * blocks_per_row; // 512
     constexpr int total_height = total_width;                // 512
@@ -580,15 +580,15 @@ int main()
 
         for (int y = 0; y < slice_size; ++y) {
             for (int x = 0; x < slice_size; ++x) {
-                // координаты в 2D текстуре
+                // РєРѕРѕСЂРґРёРЅР°С‚С‹ РІ 2D С‚РµРєСЃС‚СѓСЂРµ
                 int src_x = block_x * slice_size + x;
                 int src_y = block_y * slice_size + y;
 
-                // индексы
+                // РёРЅРґРµРєСЃС‹
                 int src_index = (src_y * total_width + src_x) * channels;
                 int dst_index = (z * size * size + y * size + x) * channels;
 
-                // копируем пиксель
+                // РєРѕРїРёСЂСѓРµРј РїРёРєСЃРµР»СЊ
                 dst_p[dst_index + 0] = src_p[src_index + 0];
                 dst_p[dst_index + 1] = src_p[src_index + 1];
                 dst_p[dst_index + 2] = src_p[src_index + 2];
@@ -602,13 +602,13 @@ int main()
     free(lut_data);
     free_pixels(lut_pixels);
 
-    rhi::texture_info lut_tex_info{rhi::texture_type::texture_3d, rhi::pixel_format::rgba8un, 64, 64, 64, rhi::k_default_texture_usage, 16, 1, 1};
-    auto              lut_tex = gdevice->create_texture(lut_tex_info);
+    rhi::texture_create_info lut_tex_info{rhi::texture_type::texture_3d, rhi::pixel_format::rgba8un, 64, 64, 64, rhi::k_default_texture_usage, 16, 1, 1};
+    auto                     lut_tex = gdevice->create_texture(lut_tex_info);
     cbuf->copy_buffer_to_texture(stage_buffer, lut_tex, 0, w * h * 4);
 
 
-    rhi::texture_info cube_tex_info{rhi::texture_type::texture_cube, rhi::pixel_format::rgba8un, 512, 512, 1, rhi::k_default_texture_usage, 16, 6, 1};
-    auto              skycube_tex = gdevice->create_texture(cube_tex_info);
+    rhi::texture_create_info cube_tex_info{rhi::texture_type::texture_cube, rhi::pixel_format::rgba8un, 512, 512, 1, rhi::k_default_texture_usage, 16, 6, 1};
+    auto                     skycube_tex = gdevice->create_texture(cube_tex_info);
 
 
     uint8* sky_pixels = load_pixels_from_file("C:\\Work\\img\\sky2.png", w, h, c);
@@ -625,7 +625,7 @@ int main()
     int msaa_level = 16;
 
     // resolve target texture
-    rhi::texture_info msaa_resolve_desc;
+    rhi::texture_create_info msaa_resolve_desc;
     msaa_resolve_desc.width = k_initial_window_width;
     msaa_resolve_desc.height = k_initial_window_height;
     msaa_resolve_desc.format = rhi::pixel_format::rgba8un;
@@ -644,26 +644,26 @@ int main()
 
     auto msaa_rt = render_system.create_render_target(msaa_rt_info);
 
-    rhi::render_pass_info msaa_render_pass;
+    rhi::render_pass_create_info msaa_render_pass;
     msaa_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, static_cast<uint32>(msaa_level), rhi::load_op::clear, rhi::store_op::resolve, 0, {0.1f, 0.1f, 0.1f, 1.0f}});
     msaa_render_pass.depth_stencil_attachment = {rhi::pixel_format::depth24_stencil8, rhi::load_op::clear, rhi::store_op::dont_care, 1.0f, rhi::load_op::clear, rhi::store_op::dont_care, 0};
     rhi::texture_handle msaa_resolve_attachments[] = {msaa_resolve_texture};
     auto                msaa_pass = gdevice->create_render_pass(msaa_render_pass, msaa_resolve_attachments);
 
-    rhi::render_pass_info main_render_pass;
+    rhi::render_pass_create_info main_render_pass;
     main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, 1, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.1f, 0.1f, 0.4f, 1.0f}});
     main_render_pass.depth_stencil_attachment = {rhi::pixel_format::depth24_stencil8, rhi::load_op::dont_care, rhi::store_op::dont_care, 1.0f, rhi::load_op::dont_care, rhi::store_op::dont_care, 0};
     auto main_pass = gdevice->create_render_pass(main_render_pass);
 
 
-    rhi::sampler_info sampler_info;
+    rhi::sampler_create_info sampler_info;
     sampler_info.filter.mipmap_filter = rhi::mipmap_filter_mode::off;
     sampler_info.filter.min_filter = rhi::filter_mode::linear;
     sampler_info.filter.mag_filter = rhi::filter_mode::linear;
 
     auto sampler1 = gdevice->create_sampler(sampler_info);
 
-    rhi::sampler_info sampler_lut_info;
+    rhi::sampler_create_info sampler_lut_info;
     sampler_lut_info.filter.mipmap_filter = rhi::mipmap_filter_mode::linear;
     sampler_lut_info.filter.min_filter = rhi::filter_mode::linear;
     sampler_lut_info.filter.mag_filter = rhi::filter_mode::linear;
@@ -673,7 +673,7 @@ int main()
 
     auto sampler_lut = gdevice->create_sampler(sampler_lut_info);
 
-    rhi::sampler_info sampler_sky_info;
+    rhi::sampler_create_info sampler_sky_info;
     sampler_sky_info.filter.mipmap_filter = rhi::mipmap_filter_mode::linear;
     sampler_sky_info.filter.min_filter = rhi::filter_mode::linear;
     sampler_sky_info.filter.mag_filter = rhi::filter_mode::linear;
@@ -688,7 +688,7 @@ int main()
     auto msaa_fragment_shader = gdevice->create_shader({msaa_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
 
-    rhi::pipeline_info msaa_pipeline_info;
+    rhi::pipeline_create_info msaa_pipeline_info;
     msaa_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
     msaa_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
 
@@ -714,7 +714,7 @@ int main()
     auto fullscreen_quad_vertex_shader = gdevice->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
     auto fullscreen_quad_fragment_shader = gdevice->create_shader({fullscreen_quad_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
-    rhi::pipeline_info main_pipeline_info;
+    rhi::pipeline_create_info main_pipeline_info;
     main_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
     main_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
     main_pipeline_info.depth_stencil.depth_test_enable = false;
@@ -751,14 +751,14 @@ int main()
 
 
     // Make vertices buffer
-    rhi::buffer_info xyz_normal_uv_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
-    auto             buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
+    rhi::buffer_create_info xyz_normal_uv_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
+    auto                    buffer_xyz_normal_uv = gdevice->create_buffer(xyz_normal_uv_info);
 
     cbuf->copy_buffer(stage_buffer, buffer_xyz_normal_uv, xyz_size + norm_size + uv_size, 0, 0);
 
 
-    rhi::buffer_info indices_desc{1024 * 128, rhi::buffer_usage::index, rhi::buffer_access::gpu_only};
-    auto             buffer_indices = gdevice->create_buffer(indices_desc);
+    rhi::buffer_create_info indices_desc{1024 * 128, rhi::buffer_usage::index, rhi::buffer_access::gpu_only};
+    auto                    buffer_indices = gdevice->create_buffer(indices_desc);
 
     cbuf->copy_buffer(stage_buffer, buffer_indices, indices_size, indices_offset, 0);
 
@@ -779,13 +779,13 @@ int main()
     cbuf->copy_buffer_data(stage_buffer, reinterpret_cast<void*>(instance_data.data()), instance_data.size() * sizeof(tavros::math::mat4));
 
 
-    rhi::buffer_info instance_buffer_desc{sizeof(tavros::math::mat4) * instance_number, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
-    auto             instance_buffer = gdevice->create_buffer(instance_buffer_desc);
+    rhi::buffer_create_info instance_buffer_desc{sizeof(tavros::math::mat4) * instance_number, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
+    auto                    instance_buffer = gdevice->create_buffer(instance_buffer_desc);
 
     cbuf->copy_buffer(stage_buffer, instance_buffer, sizeof(tavros::math::mat4) * instance_number, 0, 0);
 
 
-    rhi::geometry_info gbi;
+    rhi::geometry_create_info gbi;
     gbi.buffer_layouts.push_back({0, xyz_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, norm_offset, 4 * 3});
     gbi.buffer_layouts.push_back({0, uv_offset, 4 * 2});
@@ -813,8 +813,8 @@ int main()
     float sun_angle = 0.0f;
 
 
-    rhi::buffer_info uniform_buffer_desc{1024, rhi::buffer_usage::uniform, rhi::buffer_access::gpu_only};
-    auto             uniform_buffer = gdevice->create_buffer(uniform_buffer_desc);
+    rhi::buffer_create_info uniform_buffer_desc{1024, rhi::buffer_usage::uniform, rhi::buffer_access::gpu_only};
+    auto                    uniform_buffer = gdevice->create_buffer(uniform_buffer_desc);
 
 
     struct camera_shader_t
@@ -837,7 +837,7 @@ int main()
     };
 
 
-    rhi::shader_binding_info shader_binding_info;
+    rhi::shader_binding_create_info shader_binding_info;
     shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(camera_shader_t), 0});
     shader_binding_info.buffer_bindings.push_back({0, 256, sizeof(scene_shader_t), 1});
     shader_binding_info.texture_bindings.push_back({0, 0, 0});
@@ -850,7 +850,7 @@ int main()
     auto shader_binding = gdevice->create_shader_binding(shader_binding_info, textures_to_binding, samplers_to_binding, ubo_buffers_to_binding);
 
 
-    rhi::shader_binding_info fullstreen_shader_binding_info;
+    rhi::shader_binding_create_info fullstreen_shader_binding_info;
     fullstreen_shader_binding_info.texture_bindings.push_back({0, 0, 0});
     fullstreen_shader_binding_info.texture_bindings.push_back({1, 1, 1});
 

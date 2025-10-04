@@ -1,20 +1,11 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 
 namespace tavros::renderer::rhi
 {
-
-    /**
-     * Specifies the format of the index buffer
-     */
-    enum class index_buffer_format : uint8
-    {
-        u16, /// 16-bit unsigned integer
-        u32, /// 32-bit unsigned integer
-    };
 
     /**
      * Describes how a single vertex buffer is bound to the GPU
@@ -56,7 +47,7 @@ namespace tavros::renderer::rhi
      * Describes the layout of vertex attributes and their source buffers
      * This structure is used by the GPU to correctly interpret vertex data from one or more buffers
      */
-    struct geometry_info
+    struct geometry_create_info
     {
         /// /// Array of buffer bindings describing physical vertex buffers
         core::static_vector<buffer_layout, k_max_vertex_buffers> buffer_layouts;

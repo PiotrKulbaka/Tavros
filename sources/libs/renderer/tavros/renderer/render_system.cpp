@@ -2,8 +2,8 @@
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
-#include <tavros/renderer/rhi/texture_info.hpp>
-#include <tavros/renderer/rhi/framebuffer_info.hpp>
+#include <tavros/renderer/rhi/texture_create_info.hpp>
+#include <tavros/renderer/rhi/framebuffer_create_info.hpp>
 
 #include <tavros/core/raii/scope_exit.hpp>
 
@@ -29,7 +29,7 @@ namespace tavros::renderer
 
     texture_view render_system::create_texture(const texture_create_info& info)
     {
-        rhi::texture_info rhi_info;
+        rhi::texture_create_info rhi_info;
         rhi_info.type = info.type;
         rhi_info.format = info.format;
         rhi_info.width = info.width;
@@ -74,7 +74,7 @@ namespace tavros::renderer
         });
 
         for (auto i = 0; i < info.color_attachment_formats.size(); ++i) {
-            rhi::texture_info rhi_color_tex_info;
+            rhi::texture_create_info rhi_color_tex_info;
             rhi_color_tex_info.type = info.target_type;
             rhi_color_tex_info.format = info.color_attachment_formats[i];
             rhi_color_tex_info.width = info.width;
@@ -106,7 +106,7 @@ namespace tavros::renderer
         });
 
         if (info.depth_stencil_attachment_format != rhi::pixel_format::none) {
-            rhi::texture_info rhi_depth_stencil_tex_info;
+            rhi::texture_create_info rhi_depth_stencil_tex_info;
             rhi_depth_stencil_tex_info.type = info.target_type;
             rhi_depth_stencil_tex_info.format = info.depth_stencil_attachment_format;
             rhi_depth_stencil_tex_info.width = info.width;
@@ -128,7 +128,7 @@ namespace tavros::renderer
             depth_stencil_attachment = rhi_depth_stencil_attachment_h;
         }
 
-        rhi::framebuffer_info rhi_framebuffer_info;
+        rhi::framebuffer_create_info rhi_framebuffer_info;
         rhi_framebuffer_info.width = info.width;
         rhi_framebuffer_info.height = info.height;
         rhi_framebuffer_info.color_attachment_formats = info.color_attachment_formats;

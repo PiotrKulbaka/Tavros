@@ -1,43 +1,10 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
 #include <tavros/core/flags.hpp>
-#include <tavros/renderer/rhi/pixel_format.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 
 namespace tavros::renderer::rhi
 {
-
-    /**
-     * Specifies the fundamental type of a texture.
-     * Determines dimensionality, interpretation, and certain restrictions (e.g., square size for cubemaps)
-     */
-    enum class texture_type : uint8
-    {
-        texture_2d,   /// 2D texture
-        texture_3d,   /// 3D texture
-        texture_cube, /// Cubemap texture
-    };
-
-    /**
-     * Specifies how a texture will be used within the rendering pipeline.
-     * These flags allow the renderer and GPU driver to optimize memory and access patterns accordingly.
-     * Multiple flags can be combined using bitwise OR to express compound usage.
-     */
-    enum class texture_usage : uint8
-    {
-        render_target = 0x01,        /// Texture can be used as a render target (color attachment in a framebuffer)
-        depth_stencil_target = 0x02, /// Texture can be used as a depth and/or stencil attachment
-
-        sampled = 0x04,              /// Texture can be sampled in shaders (e.g., as sampler2D)
-
-        storage = 0x08,              /// Texture can be used as a storage image (read/write access in shaders)
-
-        transfer_source = 0x10,      /// Texture can be used as the source in copy or blit operations
-        transfer_destination = 0x20, /// Texture can be used as the destination in copy or blit operations
-
-        resolve_source = 0x40,       /// Texture can be used as the source in a multisample resolve operation (typically a MSAA render target)
-        resolve_destination = 0x80,  /// Texture can be used as the destination of a resolve operation (must be non-multisampled)
-    };
 
     constexpr core::flags<texture_usage> operator|(texture_usage lhs, texture_usage rhs) noexcept
     {
@@ -52,7 +19,7 @@ namespace tavros::renderer::rhi
      * This includes pixel format, dimensions, usage, mipmaps, array layers, and multisampling.
      * This struct is passed to the backend texture creation function.
      */
-    struct texture_info
+    struct texture_create_info
     {
         /// Type of the texture
         texture_type type = texture_type::texture_2d;

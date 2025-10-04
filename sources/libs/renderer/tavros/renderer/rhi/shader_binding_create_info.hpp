@@ -44,7 +44,7 @@ namespace tavros::renderer::rhi
      * Describes a complete set of shader resource bindings
      * Includes textures/samplers and uniform/storage buffers
      */
-    struct shader_binding_info
+    struct shader_binding_create_info
     {
         /// List of texture/sampler bindings
         core::static_vector<texture_binding, k_max_shader_textures> texture_bindings;

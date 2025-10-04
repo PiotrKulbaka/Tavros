@@ -32,6 +32,8 @@ namespace tavros::renderer::rhi
 
         void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset = 0, uint32 row_stride = 0) override;
 
+        // void* map_buffer(buffer_handle b);
+
     private:
         graphics_device_opengl* m_device = nullptr;
         pipeline_handle         m_current_pipeline = pipeline_handle::invalid();

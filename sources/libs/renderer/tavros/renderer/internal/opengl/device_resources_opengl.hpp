@@ -12,35 +12,35 @@ namespace tavros::renderer::rhi
 
     struct gl_composer
     {
-        frame_composer_info              info;
+        frame_composer_create_info       info;
         core::unique_ptr<frame_composer> composer_ptr;
         void*                            native_handle = nullptr;
     };
 
     struct gl_sampler
     {
-        sampler_info info;
-        GLuint       sampler_obj = 0;
+        sampler_create_info info;
+        GLuint              sampler_obj = 0;
     };
 
     struct gl_texture
     {
-        texture_info info;
-        GLuint       texture_obj = 0;
-        GLenum       target = 0;
+        texture_create_info info;
+        GLuint              texture_obj = 0;
+        GLenum              target = 0;
     };
 
     struct gl_pipeline
     {
-        pipeline_info info;
-        GLuint        program_obj = 0;
+        pipeline_create_info info;
+        GLuint               program_obj = 0;
     };
 
     struct gl_framebuffer
     {
-        framebuffer_info info;
-        GLuint           framebuffer_obj = 0;
-        bool             is_default = false;
+        framebuffer_create_info info;
+        GLuint                  framebuffer_obj = 0;
+        bool                    is_default = false;
 
         core::static_vector<texture_handle, k_max_color_attachments> color_attachments;
         texture_handle                                               depth_stencil_attachment = texture_handle::invalid();
@@ -48,27 +48,27 @@ namespace tavros::renderer::rhi
 
     struct gl_buffer
     {
-        buffer_info info;
-        GLuint      buffer_obj = 0;
-        GLenum      gl_target = 0;
-        GLenum      gl_usage = 0;
+        buffer_create_info info;
+        GLuint             buffer_obj = 0;
+        GLenum             gl_target = 0;
+        GLenum             gl_usage = 0;
     };
 
     struct gl_geometry
     {
-        geometry_info info;
-        GLuint        vao_obj = 0;
+        geometry_create_info info;
+        GLuint               vao_obj = 0;
     };
 
     struct gl_render_pass
     {
-        render_pass_info                                             info;
+        render_pass_create_info                                      info;
         core::static_vector<texture_handle, k_max_color_attachments> resolve_attachments;
     };
 
     struct gl_shader_binding
     {
-        shader_binding_info                                        info;
+        shader_binding_create_info                                 info;
         core::static_vector<texture_handle, k_max_shader_textures> textures;
         core::static_vector<sampler_handle, k_max_shader_textures> samplers;
         core::static_vector<buffer_handle, k_max_shader_buffers>   buffers;
@@ -76,8 +76,8 @@ namespace tavros::renderer::rhi
 
     struct gl_shader
     {
-        shader_info info;
-        GLuint      shader_obj = 0;
+        shader_create_info info;
+        GLuint             shader_obj = 0;
     };
 
 

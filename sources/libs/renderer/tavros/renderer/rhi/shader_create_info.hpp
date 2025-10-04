@@ -1,25 +1,15 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
-#include <tavros/core/containers/vector.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 #include <tavros/core/string_view.hpp>
 
 namespace tavros::renderer::rhi
 {
 
     /**
-     * Specifies the stage of a shader program, such as vertex or fragment.
-     */
-    enum class shader_stage : uint8
-    {
-        vertex,   /// Vertex shader
-        fragment, /// Fragment shader
-    };
-
-    /**
      * Represents information about a shader program
      */
-    struct shader_info
+    struct shader_create_info
     {
         // The source code of the shader to be compiled
         core::string_view source_code;

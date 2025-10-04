@@ -2,7 +2,7 @@
 
 #include <tavros/core/resources/resource_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
-#include <tavros/renderer/rhi/texture_info.hpp>
+#include <tavros/renderer/rhi/texture_create_info.hpp>
 
 namespace tavros::renderer
 {

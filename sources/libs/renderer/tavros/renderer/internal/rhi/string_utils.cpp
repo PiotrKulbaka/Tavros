@@ -1,18 +1,35 @@
 #include <tavros/renderer/rhi/string_utils.hpp>
 
 #include <tavros/core/debug/unreachable.hpp>
-#include <tavros/renderer/rhi/buffer_info.hpp>
-#include <tavros/renderer/rhi/texture_info.hpp>
-#include <tavros/renderer/rhi/vertex_attribute.hpp>
-#include <tavros/renderer/rhi/compare_op.hpp>
-#include <tavros/renderer/rhi/geometry_info.hpp>
-#include <tavros/renderer/rhi/render_backend_type.hpp>
-#include <tavros/renderer/rhi/pipeline_info.hpp>
-#include <tavros/renderer/rhi/render_pass_info.hpp>
-#include <tavros/renderer/rhi/sampler_info.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 
 namespace tavros::renderer::rhi
 {
+
+    enum class buffer_usage : uint8;
+    enum class buffer_access : uint8;
+    enum class index_buffer_format : uint8;
+    enum class attribute_format : uint8;
+    enum class attribute_type : uint8;
+    enum class primitive_topology : uint8;
+    enum class compare_op : uint8;
+    enum class stencil_op : uint8;
+    enum class blend_factor : uint8;
+    enum class blend_op : uint8;
+    enum class color_mask : uint8;
+    enum class cull_face : uint8;
+    enum class front_face : uint8;
+    enum class polygon_mode : uint8;
+    enum class pixel_format : uint8;
+    enum class texture_type : uint8;
+    enum class texture_usage : uint8;
+    enum class filter_mode : uint8;
+    enum class mipmap_filter_mode : uint8;
+    enum class wrap_mode : uint8;
+    enum class shader_stage : uint8;
+    enum class render_backend_type : uint8;
+    enum class load_op : uint8;
+    enum class store_op : uint8;
 
     core::string_view to_string(buffer_usage val) noexcept
     {
@@ -42,6 +59,96 @@ namespace tavros::renderer::rhi
         TAV_UNREACHABLE();
     }
 
+    core::string_view to_string(index_buffer_format val) noexcept
+    {
+        switch (val) {
+        case index_buffer_format::u16:
+            return "u16";
+        case index_buffer_format::u32:
+            return "u32";
+        }
+        TAV_UNREACHABLE();
+    }
+
+    core::string_view to_string(attribute_format format) noexcept
+    {
+        switch (format) {
+        case attribute_format::u8:
+            return "u8";
+        case attribute_format::i8:
+            return "i8";
+        case attribute_format::u16:
+            return "u16";
+        case attribute_format::i16:
+            return "i16";
+        case attribute_format::u32:
+            return "u32";
+        case attribute_format::i32:
+            return "i32";
+        case attribute_format::f16:
+            return "f16";
+        case attribute_format::f32:
+            return "f32";
+        case attribute_format::f64:
+            return "f64";
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    core::string_view to_string(attribute_type type) noexcept
+    {
+        switch (type) {
+        case attribute_type::scalar:
+            return "scalar";
+        case attribute_type::vec2:
+            return "vec2";
+        case attribute_type::vec3:
+            return "vec3";
+        case attribute_type::vec4:
+            return "vec4";
+        case attribute_type::mat2:
+            return "mat2";
+        case attribute_type::mat2x3:
+            return "mat2x3";
+        case attribute_type::mat2x4:
+            return "mat2x4";
+        case attribute_type::mat3x2:
+            return "mat3x2";
+        case attribute_type::mat3:
+            return "mat3";
+        case attribute_type::mat3x4:
+            return "mat3x4";
+        case attribute_type::mat4x2:
+            return "mat4x2";
+        case attribute_type::mat4x3:
+            return "mat4x3";
+        case attribute_type::mat4:
+            return "mat4";
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
+    core::string_view to_string(primitive_topology val) noexcept
+    {
+        switch (val) {
+        case primitive_topology::points:
+            return "points";
+        case primitive_topology::lines:
+            return "lines";
+        case primitive_topology::line_strip:
+            return "line_strip";
+        case primitive_topology::triangles:
+            return "triangles";
+        case primitive_topology::triangle_strip:
+            return "triangle_strip";
+        case primitive_topology::triangle_fan:
+            return "triangle_fan";
+        }
+        TAV_UNREACHABLE();
+    }
+
     core::string_view to_string(compare_op val) noexcept
     {
         switch (val) {
@@ -66,45 +173,25 @@ namespace tavros::renderer::rhi
         }
     }
 
-    core::string_view to_string(index_buffer_format val) noexcept
+    core::string_view to_string(stencil_op val) noexcept
     {
         switch (val) {
-        case index_buffer_format::u16:
-            return "u16";
-        case index_buffer_format::u32:
-            return "u32";
-        }
-        TAV_UNREACHABLE();
-    }
-
-    core::string_view to_string(render_backend_type val) noexcept
-    {
-        switch (val) {
-        case render_backend_type::opengl:
-            return "opengl";
-        case render_backend_type::vulkan:
-            return "vulkan";
-        case render_backend_type::directx12:
-            return "directx12";
-        case render_backend_type::metal:
-            return "metal";
-        }
-        TAV_UNREACHABLE();
-    }
-
-    core::string_view to_string(blend_op val) noexcept
-    {
-        switch (val) {
-        case blend_op::add:
-            return "add";
-        case blend_op::subtract:
-            return "subtract";
-        case blend_op::reverse_subtract:
-            return "reverse_subtract";
-        case blend_op::min:
-            return "min";
-        case blend_op::max:
-            return "max";
+        case stencil_op::keep:
+            return "keep";
+        case stencil_op::zero:
+            return "zero";
+        case stencil_op::replace:
+            return "replace";
+        case stencil_op::increment_clamp:
+            return "increment_clamp";
+        case stencil_op::decrement_clamp:
+            return "decrement_clamp";
+        case stencil_op::invert:
+            return "invert";
+        case stencil_op::increment_wrap:
+            return "increment_wrap";
+        case stencil_op::decrement_wrap:
+            return "decrement_wrap";
         }
         TAV_UNREACHABLE();
     }
@@ -140,6 +227,23 @@ namespace tavros::renderer::rhi
         TAV_UNREACHABLE();
     }
 
+    core::string_view to_string(blend_op val) noexcept
+    {
+        switch (val) {
+        case blend_op::add:
+            return "add";
+        case blend_op::subtract:
+            return "subtract";
+        case blend_op::reverse_subtract:
+            return "reverse_subtract";
+        case blend_op::min:
+            return "min";
+        case blend_op::max:
+            return "max";
+        }
+        TAV_UNREACHABLE();
+    }
+
     core::string_view to_string(color_mask val) noexcept
     {
         switch (val) {
@@ -151,29 +255,6 @@ namespace tavros::renderer::rhi
             return "blue";
         case color_mask::alpha:
             return "alpha";
-        }
-        TAV_UNREACHABLE();
-    }
-
-    core::string_view to_string(stencil_op val) noexcept
-    {
-        switch (val) {
-        case stencil_op::keep:
-            return "keep";
-        case stencil_op::zero:
-            return "zero";
-        case stencil_op::replace:
-            return "replace";
-        case stencil_op::increment_clamp:
-            return "increment_clamp";
-        case stencil_op::decrement_clamp:
-            return "decrement_clamp";
-        case stencil_op::invert:
-            return "invert";
-        case stencil_op::increment_wrap:
-            return "increment_wrap";
-        case stencil_op::decrement_wrap:
-            return "decrement_wrap";
         }
         TAV_UNREACHABLE();
     }
@@ -211,25 +292,6 @@ namespace tavros::renderer::rhi
             return "lines";
         case polygon_mode::points:
             return "points";
-        }
-        TAV_UNREACHABLE();
-    }
-
-    core::string_view to_string(primitive_topology val) noexcept
-    {
-        switch (val) {
-        case primitive_topology::points:
-            return "points";
-        case primitive_topology::lines:
-            return "lines";
-        case primitive_topology::line_strip:
-            return "line_strip";
-        case primitive_topology::triangles:
-            return "triangles";
-        case primitive_topology::triangle_strip:
-            return "triangle_strip";
-        case primitive_topology::triangle_fan:
-            return "triangle_fan";
         }
         TAV_UNREACHABLE();
     }
@@ -361,28 +423,39 @@ namespace tavros::renderer::rhi
         TAV_UNREACHABLE();
     }
 
-    core::string_view to_string(load_op val) noexcept
+    core::string_view to_string(texture_type val) noexcept
     {
         switch (val) {
-        case load_op::load:
-            return "load";
-        case load_op::clear:
-            return "clear";
-        case load_op::dont_care:
-            return "dont_care";
+        case texture_type::texture_2d:
+            return "texture_2d";
+        case texture_type::texture_3d:
+            return "texture_3d";
+        case texture_type::texture_cube:
+            return "texture_cube";
+        default:
+            TAV_UNREACHABLE();
         }
-        TAV_UNREACHABLE();
     }
 
-    core::string_view to_string(store_op val) noexcept
+    core::string_view to_string(texture_usage val) noexcept
     {
         switch (val) {
-        case store_op::store:
-            return "store";
-        case store_op::resolve:
-            return "resolve";
-        case store_op::dont_care:
-            return "dont_care";
+        case texture_usage::render_target:
+            return "render_target";
+        case texture_usage::depth_stencil_target:
+            return "depth_stencil_target";
+        case texture_usage::sampled:
+            return "sampled";
+        case texture_usage::storage:
+            return "storage";
+        case texture_usage::transfer_source:
+            return "transfer_source";
+        case texture_usage::transfer_destination:
+            return "transfer_destination";
+        case texture_usage::resolve_source:
+            return "resolve_source";
+        case texture_usage::resolve_destination:
+            return "resolve_destination";
         }
         TAV_UNREACHABLE();
     }
@@ -437,101 +510,45 @@ namespace tavros::renderer::rhi
         TAV_UNREACHABLE();
     }
 
-    core::string_view to_string(texture_type val) noexcept
+    core::string_view to_string(render_backend_type val) noexcept
     {
         switch (val) {
-        case texture_type::texture_2d:
-            return "texture_2d";
-        case texture_type::texture_3d:
-            return "texture_3d";
-        case texture_type::texture_cube:
-            return "texture_cube";
-        default:
-            TAV_UNREACHABLE();
-        }
-    }
-
-    core::string_view to_string(texture_usage val) noexcept
-    {
-        switch (val) {
-        case texture_usage::render_target:
-            return "render_target";
-        case texture_usage::depth_stencil_target:
-            return "depth_stencil_target";
-        case texture_usage::sampled:
-            return "sampled";
-        case texture_usage::storage:
-            return "storage";
-        case texture_usage::transfer_source:
-            return "transfer_source";
-        case texture_usage::transfer_destination:
-            return "transfer_destination";
-        case texture_usage::resolve_source:
-            return "resolve_source";
-        case texture_usage::resolve_destination:
-            return "resolve_destination";
+        case render_backend_type::opengl:
+            return "opengl";
+        case render_backend_type::vulkan:
+            return "vulkan";
+        case render_backend_type::directx12:
+            return "directx12";
+        case render_backend_type::metal:
+            return "metal";
         }
         TAV_UNREACHABLE();
     }
 
-    core::string_view to_string(attribute_format format) noexcept
+    core::string_view to_string(load_op val) noexcept
     {
-        switch (format) {
-        case attribute_format::u8:
-            return "u8";
-        case attribute_format::i8:
-            return "i8";
-        case attribute_format::u16:
-            return "u16";
-        case attribute_format::i16:
-            return "i16";
-        case attribute_format::u32:
-            return "u32";
-        case attribute_format::i32:
-            return "i32";
-        case attribute_format::f16:
-            return "f16";
-        case attribute_format::f32:
-            return "f32";
-        case attribute_format::f64:
-            return "f64";
-        default:
-            TAV_UNREACHABLE();
+        switch (val) {
+        case load_op::load:
+            return "load";
+        case load_op::clear:
+            return "clear";
+        case load_op::dont_care:
+            return "dont_care";
         }
+        TAV_UNREACHABLE();
     }
 
-    core::string_view to_string(attribute_type type) noexcept
+    core::string_view to_string(store_op val) noexcept
     {
-        switch (type) {
-        case attribute_type::scalar:
-            return "scalar";
-        case attribute_type::vec2:
-            return "vec2";
-        case attribute_type::vec3:
-            return "vec3";
-        case attribute_type::vec4:
-            return "vec4";
-        case attribute_type::mat2:
-            return "mat2";
-        case attribute_type::mat2x3:
-            return "mat2x3";
-        case attribute_type::mat2x4:
-            return "mat2x4";
-        case attribute_type::mat3x2:
-            return "mat3x2";
-        case attribute_type::mat3:
-            return "mat3";
-        case attribute_type::mat3x4:
-            return "mat3x4";
-        case attribute_type::mat4x2:
-            return "mat4x2";
-        case attribute_type::mat4x3:
-            return "mat4x3";
-        case attribute_type::mat4:
-            return "mat4";
-        default:
-            TAV_UNREACHABLE();
+        switch (val) {
+        case store_op::store:
+            return "store";
+        case store_op::resolve:
+            return "resolve";
+        case store_op::dont_care:
+            return "dont_care";
         }
+        TAV_UNREACHABLE();
     }
 
 } // namespace tavros::renderer::rhi

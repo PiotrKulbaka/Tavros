@@ -14,7 +14,7 @@ namespace
 namespace tavros::renderer::rhi
 {
 
-    core::unique_ptr<frame_composer> frame_composer_opengl::create(graphics_device_opengl* device, const frame_composer_info& info, void* native_handle)
+    core::unique_ptr<frame_composer> frame_composer_opengl::create(graphics_device_opengl* device, const frame_composer_create_info& info, void* native_handle)
     {
         TAV_ASSERT(device);
 
@@ -35,7 +35,7 @@ namespace tavros::renderer::rhi
         return core::make_unique<frame_composer_opengl>(device, std::move(context), info);
     }
 
-    frame_composer_opengl::frame_composer_opengl(graphics_device_opengl* device, core::unique_ptr<context_opengl> context, const frame_composer_info& info)
+    frame_composer_opengl::frame_composer_opengl(graphics_device_opengl* device, core::unique_ptr<context_opengl> context, const frame_composer_create_info& info)
         : m_device(device)
         , m_context(std::move(context))
         , m_info(info)
@@ -45,7 +45,7 @@ namespace tavros::renderer::rhi
         TAV_ASSERT(info.width > 0 && info.height > 0);
 
         // Create default backbuffer
-        framebuffer_info backbuffer_info;
+        framebuffer_create_info backbuffer_info;
         backbuffer_info.width = info.width;
         backbuffer_info.height = info.height;
         backbuffer_info.color_attachment_formats.push_back(info.color_attachment_format);

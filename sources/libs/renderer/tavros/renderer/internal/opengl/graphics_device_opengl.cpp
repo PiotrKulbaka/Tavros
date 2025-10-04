@@ -203,7 +203,7 @@ namespace tavros::renderer::rhi
         });
     }
 
-    frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_info& info, void* native_handle)
+    frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_create_info& info, void* native_handle)
     {
         // Check if frame composer with native handle already created
         bool has_native_handle = false;
@@ -251,7 +251,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    shader_handle graphics_device_opengl::create_shader(const shader_info& info)
+    shader_handle graphics_device_opengl::create_shader(const shader_create_info& info)
     {
         if (info.entry_point != "main") {
             ::logger.error("Failed to create shader: not supported entry point name {} only 'main' entry point is supported", fmt::styled_name(info.entry_point));
@@ -281,7 +281,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    sampler_handle graphics_device_opengl::create_sampler(const sampler_info& info)
+    sampler_handle graphics_device_opengl::create_sampler(const sampler_create_info& info)
     {
         GLuint sampler;
         glGenSamplers(1, &sampler);
@@ -327,7 +327,7 @@ namespace tavros::renderer::rhi
     }
 
     texture_handle graphics_device_opengl::create_texture(
-        const texture_info& info
+        const texture_create_info& info
     )
     {
         auto gl_pixel_format = to_gl_pixel_format(info.format);
@@ -571,7 +571,7 @@ namespace tavros::renderer::rhi
     }
 
     pipeline_handle graphics_device_opengl::create_pipeline(
-        const pipeline_info&                  info,
+        const pipeline_create_info&           info,
         const core::span<const shader_handle> shaders
     )
     {
@@ -725,7 +725,7 @@ namespace tavros::renderer::rhi
     }
 
     framebuffer_handle graphics_device_opengl::create_framebuffer(
-        const framebuffer_info&                info,
+        const framebuffer_create_info&         info,
         const core::span<const texture_handle> color_attachments,
         core::optional<texture_handle>         depth_stencil_attachment
     )
@@ -910,7 +910,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    buffer_handle graphics_device_opengl::create_buffer(const buffer_info& info)
+    buffer_handle graphics_device_opengl::create_buffer(const buffer_create_info& info)
     {
         if (info.size == 0) {
             ::logger.warning("Creating buffer with size 0: OpenGL will allocate an empty buffer");
@@ -990,7 +990,7 @@ namespace tavros::renderer::rhi
     }
 
     geometry_handle graphics_device_opengl::create_geometry(
-        const geometry_info&                  info,
+        const geometry_create_info&           info,
         const core::span<const buffer_handle> vertex_buffers,
         core::optional<buffer_handle>         index_buffer
     )
@@ -1111,7 +1111,7 @@ namespace tavros::renderer::rhi
     }
 
     render_pass_handle graphics_device_opengl::create_render_pass(
-        const render_pass_info&                info,
+        const render_pass_create_info&         info,
         const core::span<const texture_handle> resolve_textures
     )
     {
@@ -1217,7 +1217,7 @@ namespace tavros::renderer::rhi
     }
 
     shader_binding_handle graphics_device_opengl::create_shader_binding(
-        const shader_binding_info&             info,
+        const shader_binding_create_info&      info,
         const core::span<const texture_handle> textures,
         const core::span<const sampler_handle> samplers,
         const core::span<const buffer_handle>  buffers

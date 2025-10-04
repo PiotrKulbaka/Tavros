@@ -1,10 +1,9 @@
 #pragma once
 
-#include <tavros/renderer/rhi/pixel_format.hpp>
-#include <tavros/renderer/rhi/sampler_info.hpp>
-#include <tavros/renderer/rhi/shader_info.hpp>
-#include <tavros/renderer/rhi/pipeline_info.hpp>
-#include <tavros/renderer/rhi/geometry_info.hpp>
+#include <tavros/renderer/rhi/sampler_create_info.hpp>
+#include <tavros/renderer/rhi/shader_create_info.hpp>
+#include <tavros/renderer/rhi/pipeline_create_info.hpp>
+#include <tavros/renderer/rhi/geometry_create_info.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 
 #include <glad/glad.h>

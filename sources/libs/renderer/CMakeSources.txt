@@ -29,25 +29,23 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/graphics_device.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/string_utils.cpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/command_list.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/compare_op.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/enums.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/frame_composer.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/frame_composer_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/framebuffer_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/geometry_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/frame_composer_create_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/framebuffer_create_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/geometry_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/graphics_device.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/handle.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/limits.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pipeline_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pixel_format.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/render_backend_type.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/render_pass_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/sampler_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_binding_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/pipeline_create_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/render_pass_create_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/sampler_create_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_binding_create_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/string_utils.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/texture_info.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/texture_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/vertex_attribute.hpp
 )
 

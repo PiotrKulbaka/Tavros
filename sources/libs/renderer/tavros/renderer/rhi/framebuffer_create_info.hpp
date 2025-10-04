@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/containers/static_vector.hpp>
-#include <tavros/renderer/rhi/pixel_format.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
 namespace tavros::renderer::rhi
@@ -10,7 +10,7 @@ namespace tavros::renderer::rhi
     /**
      * Describes a complete framebuffer configuration
      */
-    struct framebuffer_info
+    struct framebuffer_create_info
     {
         /// Framebuffer width, in pixels. Must match all attachments
         uint32 width = 0;

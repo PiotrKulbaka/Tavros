@@ -1,31 +1,11 @@
 #pragma once
 
 #include <tavros/core/containers/static_vector.hpp>
-#include <tavros/renderer/rhi/pixel_format.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
 namespace tavros::renderer::rhi
 {
-
-    /**
-     * Describes how a framebuffer attachment is handled at the start of a render pass
-     */
-    enum class load_op : uint8
-    {
-        load,      /// Load existing contents from the attachment (preserve previous frame)
-        clear,     /// Clear the attachment to a specified clear value at the start of the render pass
-        dont_care, /// Attachment contents are undefined at the start; previous contents may be discarded
-    };
-
-    /**
-     * Describes how a framebuffer attachment is handled at the end of a render pass
-     */
-    enum class store_op : uint8
-    {
-        store,     /// Store the rendered result to the attachment (make it available after the render pass)
-        resolve,   /// Resolve the MSAA result to a single-sampled texture (only valid for multisample color attachments)
-        dont_care, /// Final contents are undefined; rendering result may be discarded
-    };
 
     /**
      * Describes a single color attachment used in a framebuffer
@@ -82,7 +62,7 @@ namespace tavros::renderer::rhi
     /**
      * Describes a complete render pass configuration
      */
-    struct render_pass_info
+    struct render_pass_create_info
     {
         /// List of color attachments. The order matches the layout in the framebuffer
         core::static_vector<color_attachment_info, k_max_color_attachments> color_attachments;
