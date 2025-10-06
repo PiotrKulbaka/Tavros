@@ -67,6 +67,6 @@ namespace tavros::system::interfaces
         virtual void on_key_up(key_event_args& e) = 0;
         virtual void on_key_press(key_event_args& e) = 0;
 
-        virtual void* get_handle() const = 0;
+        virtual void* native_handle() const noexcept = 0;
     };
 } // namespace tavros::system::interfaces

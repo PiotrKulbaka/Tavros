@@ -84,3 +84,20 @@ void application::poll_events()
         DispatchMessage(&msg);
     }
 }
+
+void application::wait_events()
+{
+    MsgWaitForMultipleObjects(0, nullptr, FALSE, INFINITE, QS_ALLINPUT);
+}
+
+tavros::math::isize2 application::desktop_size()
+{
+    RECT       desktopRect;
+    const HWND hDesktop = GetDesktopWindow();
+    if (GetWindowRect(hDesktop, &desktopRect)) {
+        int32 width = desktopRect.right - desktopRect.left;
+        int32 height = desktopRect.bottom - desktopRect.top;
+        return {width, height};
+    }
+    return {0, 0};
+}

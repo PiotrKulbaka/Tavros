@@ -44,7 +44,7 @@ namespace
 
         memset(&wcex, 0, sizeof(WNDCLASSEXA));
         wcex.cbSize = sizeof(WNDCLASSEXA);
-        wcex.style = CS_DBLCLKS | CS_HREDRAW | CS_VREDRAW;
+        wcex.style = CS_DBLCLKS;
         wcex.lpfnWndProc = wnd_proc_window;
         wcex.hInstance = GetModuleHandle(nullptr);
         wcex.hIcon = LoadIcon(nullptr, IDI_APPLICATION);
@@ -444,7 +444,7 @@ void window::on_key_press(key_event_args& e)
     }
 }
 
-void* window::get_handle() const
+void* window::native_handle() const noexcept
 {
     return reinterpret_cast<void*>(m_hWnd);
 }
@@ -546,6 +546,9 @@ LRESULT window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
     case WM_DESTROY:
         m_hWnd = nullptr;
         return 0;
+
+    case WM_ERASEBKGND:
+        return TRUE;
 
     case WM_MOVE:
         mvargs = {.pos = create_point2(lParam)};

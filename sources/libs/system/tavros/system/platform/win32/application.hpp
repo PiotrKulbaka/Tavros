@@ -10,13 +10,17 @@ namespace tavros::system
     public:
         application();
 
-        virtual ~application() override;
+        ~application() override;
 
-        virtual void run() override;
-        virtual void exit() override;
-        virtual bool is_runing() override;
+        void run() override;
+        void exit() override;
+        bool is_runing() override;
 
-        virtual void poll_events() override;
+        void poll_events() override;
+
+        void wait_events() override;
+
+        math::isize2 desktop_size() override;
 
     public:
         bool m_is_running;

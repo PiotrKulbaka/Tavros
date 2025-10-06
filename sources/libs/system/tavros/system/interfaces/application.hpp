@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/prelude.hpp>
+#include <tavros/core/math/ivec2.hpp>
 
 namespace tavros::system::interfaces
 {
@@ -28,6 +29,10 @@ namespace tavros::system::interfaces
         virtual bool is_runing() = 0;
 
         virtual void poll_events() = 0;
+
+        virtual void wait_events() = 0;
+
+        virtual math::isize2 desktop_size() = 0;
 
         // virtual void add_window(window_ptr wnd) = 0;
         // virtual void remove_window(window_ptr wnd) = 0;
