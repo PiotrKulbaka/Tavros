@@ -17,6 +17,11 @@ namespace tavros::renderer::rhi
             return {0xffffffffui32};
         }
 
+        bool constexpr is_valid() const noexcept
+        {
+            return id != 0xffffffffui32;
+        }
+
         constexpr bool operator==(handle_base other) const noexcept
         {
             return id == other.id;

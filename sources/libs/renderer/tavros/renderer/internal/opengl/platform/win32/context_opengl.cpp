@@ -1,6 +1,8 @@
 #include <tavros/renderer/internal/opengl/platform/win32/context_opengl.hpp>
 
-#include <tavros/core/prelude.hpp>
+#include <tavros/core/logger/logger.hpp>
+#include <tavros/core/debug/assert.hpp>
+#include <tavros/core/debug/unreachable.hpp>
 #include <tavros/core/raii/scoped_owner.hpp>
 
 #include <WinUser.h>

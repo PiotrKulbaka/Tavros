@@ -4,7 +4,9 @@
 #include <tavros/renderer/internal/opengl/type_conversions.hpp>
 #include <tavros/core/containers/unordered_map.hpp>
 #include <tavros/core/raii/scoped_owner.hpp>
-#include <tavros/core/prelude.hpp>
+#include <tavros/core/logger/logger.hpp>
+#include <tavros/core/debug/unreachable.hpp>
+#include <tavros/core/containers/vector.hpp>
 
 #include <tavros/renderer/rhi/string_utils.hpp>
 
