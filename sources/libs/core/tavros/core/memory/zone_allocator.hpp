@@ -11,9 +11,10 @@ namespace tavros::core
     {
     public:
         zone_allocator(size_t zone_size);
-        ~zone_allocator();
+        ~zone_allocator() override;
 
         void* allocate(size_t size, size_t align, const char* tag = nullptr) override;
+        void* reallocate(void* ptr, size_t new_size, size_t align, const char* tag = nullptr) override;
         void  deallocate(void* ptr) override;
         void  clear() override;
 

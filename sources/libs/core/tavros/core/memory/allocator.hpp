@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
+#include <tavros/core/noncopyable.hpp>
 
 namespace tavros::core
 {
@@ -15,7 +16,7 @@ namespace tavros::core
      * Custom allocators can be used for performance tuning, debugging,
      * memory tracking, or platform-specific optimization.
      */
-    class allocator
+    class allocator : noncopyable
     {
     public:
         /**
@@ -34,6 +35,26 @@ namespace tavros::core
          * @return Pointer to the allocated memory block, or nullptr if allocation fails.
          */
         virtual void* allocate(size_t size, size_t align, const char* tag = nullptr) = 0;
+
+        /**
+         * @brief Reallocates a previously allocated memory block to a new size.
+         *
+         * This function attempts to resize an existing memory block referenced by @p ptr
+         * to @p new_size bytes while preserving its contents up to the minimum of the
+         * old and new sizes. If the existing block cannot be resized in place, a new
+         * block is allocated, the data is copied, and the old block is freed.
+         *
+         * @param ptr Pointer to the previously allocated memory block. Can be nullptr,
+         *        in which case this function behaves like @c allocate().
+         * @param new_size The new size of the memory block, in bytes.
+         * @param align Memory alignment, must be the same as the alignment used during
+         *        the original allocation. Typically a power of two.
+         * @param tag Optional string tag used for debugging, profiling, or tracking allocations.
+         * @return Pointer to the reallocated memory block, or nullptr if allocation fails.
+         *         If nullptr is returned, the original memory remains valid and must be freed
+         *         by the caller if no longer needed.
+         */
+        virtual void* reallocate(void* ptr, size_t new_size, size_t align, const char* tag = nullptr) = 0;
 
         /**
          * @brief Frees a previously allocated block of memory.

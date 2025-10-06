@@ -2,6 +2,7 @@
 
 #include <tavros/core/containers/unordered_map.hpp>
 #include <tavros/core/debug/assert.hpp>
+#include <tavros/core/debug/unreachable.hpp>
 
 #include <new>
 #include <cstdlib>
@@ -233,6 +234,15 @@ void* zone_allocator::allocate(size_t size, size_t align, const char* tag)
     }
 
     return chunk->memptr();
+}
+
+void* zone_allocator::reallocate(void* ptr, size_t new_size, size_t align, const char* tag)
+{
+    TAV_UNUSED(ptr);
+    TAV_UNUSED(new_size);
+    TAV_UNUSED(align);
+    TAV_UNUSED(tag);
+    TAV_UNREACHABLE();
 }
 
 void zone_allocator::deallocate(void* ptr)

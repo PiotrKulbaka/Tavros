@@ -2,102 +2,151 @@
 
 #include <tavros/core/containers/unordered_map.hpp>
 #include <tavros/core/debug/assert.hpp>
+#include <tavros/core/debug/debug_break.hpp>
+#include <tavros/core/debug/unreachable.hpp>
 #include <tavros/core/logger/logger.hpp>
 
 #include <cstdlib>
 #include <cstring>
 #include <malloc.h>
 
-#include <unordered_map>
+#include <tavros/core/math/bitops.hpp>
 
-using namespace tavros::core;
 
 namespace
 {
-    tavros::core::logger s_logger("mallocator");
+    tavros::core::logger logger("mallocator");
 }
 
-struct mallocator::impl
+namespace tavros::core
 {
-    struct allocation_info
-    {
-        size_t      size;
-        const char* tag;
-    };
 
-    uint8* allocate(size_t size, size_t align, const char* tag = nullptr)
-    {
-        auto* p = _aligned_malloc(size, align);
+    mallocator::mallocator() = default;
 
-        if (!p) {
-            ::s_logger.error("Allocator cannot allocate memory {}", (tag ? tag : ""));
-            TAV_ASSERT(false);
+    mallocator::~mallocator()
+    {
+        if (!m_allocations.empty()) {
+            ::logger.warning("Called an allocator destructor with active allocations {} - possible memory leak", m_allocations.size());
+        }
+
+        clear();
+    }
+
+    void* mallocator::allocate(size_t size, size_t align, const char* tag)
+    {
+        if (!math::is_power_of_two(align)) {
+            ::logger.error("Invalid alignment ({}) provided to allocate; must be a power of two", align);
+            TAV_DEBUG_BREAK();
             return nullptr;
         }
 
-        allocations[p] = allocation_info{
-            .size = size,
-            .tag = tag
-        };
+        void* ptr = _aligned_malloc(size, align);
 
-        std::memset(p, 0, size);
+        if (!ptr) {
+            ::logger.error("Failed to allocate {} bytes (align {}), tag: {}", size, align, (tag ? tag : "(not provided)"));
+            TAV_DEBUG_BREAK();
+            return nullptr;
+        }
 
-        return reinterpret_cast<uint8*>(p);
+        // Sometimes the allocator may allocate already released memory pointer
+        if (auto it = m_released.find(ptr); it != m_released.end()) {
+            // So just rease released info
+            m_released.erase(it);
+        }
+        // And add to the allocations
+        m_allocations[ptr] = allocation_info{size, align, tag};
+
+        return ptr;
     }
 
-    void deallocate(uint8* ptr)
+    void* mallocator::reallocate(void* ptr, size_t new_size, size_t align, const char* tag)
     {
-        if (auto it = allocations.find(ptr); it != allocations.end()) {
-            auto info = it->second;
-            allocations.erase(it);
-            released[ptr] = info;
-            std::memset(ptr, 0, info.size);
-            _aligned_free(ptr);
+        if (!math::is_power_of_two(align)) {
+            ::logger.error("Invalid alignment ({}) provided to reallocate; must be a power of two", align);
+            TAV_DEBUG_BREAK();
+            return nullptr;
+        }
+
+        // handle realloc semantics explicitly
+        if (ptr == nullptr) {
+            return allocate(new_size, align, tag);
+        }
+
+        if (new_size == 0) {
+            deallocate(ptr);
+            return nullptr;
+        }
+
+        if (auto it = m_allocations.find(ptr); it == m_allocations.end()) {
+            ::logger.error("Attempt to reallocate an unknown pointer {}", fmt::ptr(ptr));
+            TAV_DEBUG_BREAK();
+            return nullptr;
+        }
+
+        void* new_ptr = _aligned_realloc(ptr, new_size, align);
+        if (!new_ptr) {
+            ::logger.error("Failed to reallocate {} bytes (align {}), tag: {}", new_size, align, (tag ? tag : "(not provided)"));
+            TAV_DEBUG_BREAK();
+            return nullptr;
+        }
+
+        // Update track data
+        if (new_ptr == ptr) {
+            // Just update old data
+            auto old_info = m_allocations[new_ptr];
+            m_allocations[new_ptr] = allocation_info{new_size, align, tag ? tag : old_info.tag};
         } else {
-            if (auto it_released = released.find(ptr); it_released != released.end()) {
-                s_logger.error("Attempting to free memory twice");
-                TAV_ASSERT(false);
+            // First of all check the released memory
+            // Sometimes the allocator may allocate already released memory pointer
+            if (auto it = m_released.find(new_ptr); it != m_released.end()) {
+                // So just rease released info
+                m_released.erase(it);
+            }
+
+            // And add new data
+            m_allocations[new_ptr] = allocation_info{new_size, align, tag};
+
+            // Migrate old data
+            if (auto it = m_allocations.find(ptr); it != m_allocations.end()) {
+                auto info = it->second;
+                m_allocations.erase(it);
+                m_released[ptr] = info;
             } else {
-                s_logger.error("Attempting to free previously unallocated memory with this allocator");
-                TAV_ASSERT(false);
+                // Something went wrong
+                TAV_UNREACHABLE();
             }
         }
+
+        return new_ptr;
     }
 
-    void clear()
+    void mallocator::deallocate(void* ptr)
     {
-        for (auto& it : allocations) {
-            auto* p = it.first;
-            std::memset(p, 0, it.second.size);
-            std::free(p);
+        if (!ptr) {
+            return;
         }
-        allocations.clear();
-        released.clear();
+
+        if (auto it = m_allocations.find(ptr); it != m_allocations.end()) {
+            auto info = it->second;
+            m_allocations.erase(it);
+            m_released[ptr] = info;
+            _aligned_free(ptr);
+        } else if (auto it_released = m_released.find(ptr); it_released != m_released.end()) {
+            ::logger.error("Double free detected for pointer {}", fmt::ptr(ptr));
+            TAV_DEBUG_BREAK();
+        } else {
+            ::logger.error("Attempt to free an unknown pointer {}", fmt::ptr(ptr));
+            TAV_DEBUG_BREAK();
+        }
     }
 
-    unordered_map<void*, allocation_info> allocations;
-    unordered_map<void*, allocation_info> released;
-}; // struct mallocator::impl
+    void mallocator::clear()
+    {
+        for (auto& [ptr, info] : m_allocations) {
+            _aligned_free(ptr);
+            m_released[ptr] = info;
+        }
+        m_allocations.clear();
+    }
 
-
-mallocator::mallocator() = default;
-
-mallocator::~mallocator()
-{
-    clear();
-}
-
-void* mallocator::allocate(size_t size, size_t align, const char* tag)
-{
-    return m_impl->allocate(size, align, tag);
-}
-
-void mallocator::deallocate(void* ptr)
-{
-    m_impl->deallocate(reinterpret_cast<uint8*>(ptr));
-}
-
-void mallocator::clear()
-{
-    m_impl->clear();
-}
+} // namespace tavros::core
