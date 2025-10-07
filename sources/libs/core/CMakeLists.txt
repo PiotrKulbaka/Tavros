@@ -12,3 +12,5 @@ tavros_add_library(
             fmt
     LIB_DEFINES
 )
+
+set_target_group(tav_core "libs")

@@ -17,4 +17,4 @@ tavros_add_library(
     LIB_DEFINES
 )
 
-
+set_target_group(tav_system "libs")

@@ -17,3 +17,5 @@ tavros_add_library(
             glad
     LIB_DEFINES
 )
+
+set_target_group(tav_renderer "libs")

@@ -19,6 +19,23 @@ function(group_sources_by_folder target)
     endforeach()
 endfunction()
 
+function(set_target_group target group_name)
+    if (NOT TARGET ${target})
+        message(WARNING "set_target_group: target '${target}' does not exist.")
+        return()
+    endif()
+
+    if (NOT group_name)
+        message(WARNING "set_target_group: group name is empty for target '${target}'.")
+        return()
+    endif()
+
+    # Replace forward slashes with backslashes for Visual Studio
+    string(REPLACE "/" "\\" _group_path "${group_name}")
+
+    set_target_properties(${target} PROPERTIES FOLDER "${_group_path}")
+endfunction()
+
 function(set_if_not_defined var value)
     if (NOT DEFINED ${var})
         set(${var} ${value} CACHE STRING "Set ${var} if not defined" FORCE)
