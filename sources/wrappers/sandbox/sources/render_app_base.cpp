@@ -139,7 +139,6 @@ namespace app
             m_event_queue.swap_queues();
             auto events = m_event_queue.front_queue();
             render(events, elapsed);
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         } while (m_running.load(std::memory_order_acquire));
 
         shutdown();

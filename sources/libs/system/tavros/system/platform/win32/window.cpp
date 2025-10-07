@@ -1,5 +1,7 @@
 #include <tavros/system/platform/win32/window.hpp>
 
+#include <tavros/core/logger/logger.hpp>
+#include <tavros/core/debug/unreachable.hpp>
 #include <tavros/system/platform/win32/utils.hpp>
 
 

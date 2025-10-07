@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/prelude.hpp>
+#include <tavros/core/memory/memory.hpp>
 #include <tavros/core/math/ivec2.hpp>
 
 namespace tavros::system::interfaces

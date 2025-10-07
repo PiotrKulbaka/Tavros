@@ -1,8 +1,10 @@
 #pragma once
 
 #include <tavros/core/math.hpp>
+#include <tavros/core/noncopyable.hpp>
 #include <tavros/system/interfaces/window.hpp>
 #include <mutex>
+#include <array>
 
 namespace app
 {

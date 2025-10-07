@@ -39,14 +39,9 @@ namespace tavros::renderer
     public:
         ~render_target() = default;
 
-        [[nodiscard]] uint32 width() const noexcept
+        [[nodiscard]] const render_target_create_info& info() const noexcept
         {
-            return m_info.width;
-        }
-
-        [[nodiscard]] uint32 height() const noexcept
-        {
-            return m_info.height;
+            return m_info;
         }
 
         [[nodiscard]] bool has_color_attachments() const noexcept
@@ -76,17 +71,17 @@ namespace tavros::renderer
 
         rhi::framebuffer_handle handle() const
         {
-            return m_handle;
+            return m_framebuffer;
         }
 
     private:
         render_target(
-            rhi::framebuffer_handle               handle,
+            rhi::framebuffer_handle               framebuffer,
             const render_target_create_info&      info,
             core::span<const rhi::texture_handle> coror_attachments,
             rhi::texture_handle                   depth_stencil_attachment
         ) noexcept
-            : m_handle(handle)
+            : m_framebuffer(framebuffer)
             , m_info(info)
             , m_color_attachments(coror_attachments)
             , m_depth_stencil_attachment(depth_stencil_attachment)
@@ -96,7 +91,7 @@ namespace tavros::renderer
         friend class core::resource_pool<render_target>; // for empalce_add in render_system
 
     private:
-        rhi::framebuffer_handle                                                m_handle = rhi::framebuffer_handle::invalid();
+        rhi::framebuffer_handle                                                m_framebuffer = rhi::framebuffer_handle::invalid();
         render_target_create_info                                              m_info;
         core::static_vector<rhi::texture_handle, rhi::k_max_color_attachments> m_color_attachments;
         rhi::texture_handle                                                    m_depth_stencil_attachment;

@@ -237,6 +237,9 @@ public:
         m_composer->submit_command_list(cbuf);
         m_composer->end_frame();
         m_composer->present();
+
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
 private:

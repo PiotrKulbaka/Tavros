@@ -1,5 +1,7 @@
 #include "event_queue.hpp"
 
+#include <tavros/core/logger/logger.hpp>
+
 namespace app
 {
 

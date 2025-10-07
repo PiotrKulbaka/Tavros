@@ -1,5 +1,6 @@
 #include <tavros/system/library.hpp>
 
+#include <tavros/core/logger/logger.hpp>
 #include <tavros/system/platform/win32/utils.hpp>
 #include <libloaderapi.h>
 

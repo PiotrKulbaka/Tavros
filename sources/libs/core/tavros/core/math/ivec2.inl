@@ -1,5 +1,7 @@
 #include <tavros/core/math/ivec2.hpp>
 
+#include <tavros/core/debug/assert.hpp>
+
 namespace tavros::math
 {
 

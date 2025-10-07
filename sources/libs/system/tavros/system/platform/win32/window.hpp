@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tavros/core/noncopyable.hpp>
+#include <tavros/core/nonmovable.hpp>
 #include <tavros/system/interfaces/window.hpp>
 
 #include <Windows.h>
