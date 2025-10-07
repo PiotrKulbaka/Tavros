@@ -2,8 +2,9 @@
 
 #include <tavros/core/containers/sapn.hpp>
 #include <tavros/core/debug/assert.hpp>
+#include <tavros/core/debug/verify.hpp>
 
-#include <stdexcept>
+#include <type_traits>
 #include <initializer_list>
 #include <iterator>
 #include <array>
@@ -11,31 +12,39 @@
 namespace tavros::core
 {
 
-    template<typename T, std::size_t N>
+    /**
+     * @brief A fixed-capacity, stack-allocated vector container.
+     *
+     * This class provides an STL-like interface similar to `vector`,
+     * but stores elements in a statically allocated buffer of size `N`.
+     * No dynamic memory allocations are performed.
+     *
+     * @tparam T Element type. Must be nothrow move-constructible.
+     * @tparam N Maximum number of elements that can be stored in the container.
+     */
+    template<typename T, size_t N>
+        requires std::is_nothrow_move_constructible_v<T>
     class static_vector
     {
     public:
-        using iterator = T*;
-        using const_iterator = const T*;
-        using reverse_iterator = std::reverse_iterator<iterator>;
-        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+        using iterator = T*;                                                  /// Mutable iterator type.
+        using const_iterator = const T*;                                      /// Immutable iterator type.
+        using reverse_iterator = std::reverse_iterator<iterator>;             /// Mutable reverse iterator.
+        using const_reverse_iterator = std::reverse_iterator<const_iterator>; /// Immutable reverse iterator.
 
     public:
-        static_vector() noexcept
-            : m_data({})
-            , m_size(0)
-        {
-        }
+        /**
+         * @brief Default constructor. Initializes an empty container.
+         */
+        constexpr static_vector() noexcept = default;
 
-        constexpr static_vector(std::initializer_list<T> init) noexcept
-        {
-            TAV_ASSERT(init.size() <= N);
-            for (const auto& value : init) {
-                emplace_back(value);
-            }
-        }
-
-        constexpr static_vector(span<const T> init) noexcept
+        /**
+         * @brief Constructs the container from an initializer list.
+         *
+         * @param init Initializer list of elements to insert.
+         * @note The number of elements must not exceed `N`.
+         */
+        constexpr explicit static_vector(std::initializer_list<T> init) noexcept
         {
             TAV_ASSERT(init.size() <= N);
             for (const auto& value : init) {
@@ -43,7 +52,27 @@ namespace tavros::core
             }
         }
 
-        constexpr void swap(static_vector& other) noexcept
+        /**
+         * @brief Constructs the container from a span.
+         *
+         * @param init Span of elements to copy into the container.
+         * @note The number of elements must not exceed `N`.
+         */
+        constexpr explicit static_vector(span<const T> init) noexcept
+        {
+            TAV_ASSERT(init.size() <= N);
+            for (const auto& value : init) {
+                emplace_back(value);
+            }
+        }
+
+        /**
+         * @brief Swaps contents with another static_vector.
+         *
+         * @param other Another container to swap contents with.
+         * @note Swapping is `noexcept` if `T` is nothrow swappable.
+         */
+        constexpr void swap(static_vector& other) noexcept(std::is_nothrow_swappable_v<T>)
         {
             m_data.swap(other.m_data);
             auto sz = m_size;
@@ -111,41 +140,51 @@ namespace tavros::core
             return rend();
         }
 
+        /**
+         * @brief Returns the current number of elements.
+         */
         constexpr size_t size() const noexcept
         {
             return m_size;
         }
 
+        /**
+         * @brief Returns the maximum number of elements the container can hold.
+         */
         constexpr size_t max_size() const noexcept
         {
             return N;
         }
 
+        /**
+         * @brief Checks whether the container is empty.
+         */
         constexpr bool empty() const noexcept
         {
             return m_size == 0;
         }
 
-        constexpr T& at(size_t p)
+        constexpr T& at(size_t p) noexcept
         {
-            if (p >= m_size) {
-                throw std::out_of_range("static_vector::at");
-            }
+            TAV_VERIFY(p < m_size);
             return m_data.at(p);
         }
 
-        constexpr const T& at(size_t p) const
+        constexpr const T& at(size_t p) const noexcept
         {
-            return at(p);
+            TAV_VERIFY(p < m_size);
+            return m_data.at(p);
         }
 
         constexpr T& operator[](size_t p) noexcept
         {
+            TAV_ASSERT(p < m_size);
             return m_data[p];
         }
 
         constexpr const T& operator[](size_t p) const noexcept
         {
+            TAV_ASSERT(p < m_size);
             return m_data[p];
         }
 
@@ -169,47 +208,64 @@ namespace tavros::core
             return *(end() - 1);
         }
 
-        constexpr void push_back(const T& value)
+        /**
+         * @brief Adds a copy of the given value to the end.
+         *
+         * @param value Element to add.
+         * @note Behavior is undefined if size exceeds N.
+         */
+        constexpr void push_back(const T& value) noexcept
         {
-            if (m_size >= N) {
-                throw std::out_of_range("static_vector::push_back - capacity exceeded");
-            }
+            TAV_VERIFY(m_size < N);
             m_data[m_size++] = value;
         }
 
-        constexpr void push_back(T&& value)
+        /**
+         * @brief Adds a moved value to the end.
+         *
+         * @param value Element to move.
+         * @note Behavior is undefined if size exceeds N.
+         */
+        constexpr void push_back(T&& value) noexcept
         {
-            if (m_size >= N) {
-                throw std::out_of_range("static_vector::push_back - capacity exceeded");
-            }
+            TAV_VERIFY(m_size < N);
             m_data[m_size++] = std::move(value);
         }
 
-        constexpr void pop_back()
+        /**
+         * @brief Removes the last element.
+         *
+         * @note Behavior is undefined if the container is empty.
+         */
+        constexpr void pop_back() noexcept
         {
-            if (m_size == 0) {
-                throw std::out_of_range("static_vector::pop_back - vector is empty");
-            }
+            TAV_VERIFY(m_size > 0);
             --m_size;
             m_data[m_size] = T{};
         }
 
+        /**
+         * @brief Constructs a new element in place at the end.
+         *
+         * @tparam Args Argument types for T's constructor.
+         * @param args Arguments to forward to T's constructor.
+         * @return Reference to the newly constructed element.
+         */
         template<typename... Args>
-        constexpr T& emplace_back(Args&&... args)
+        constexpr T& emplace_back(Args&&... args) noexcept
         {
-            if (m_size >= N) {
-                throw std::out_of_range("static_vector::emplace_back - capacity exceeded");
-            }
-
-            m_data[m_size] = T(std::forward<Args>(args)...);
+            TAV_VERIFY(m_size < N);
+            new (&m_data[m_size]) T(std::forward<Args>(args)...);
             return m_data[m_size++];
         }
 
+        /**
+         * @brief Clears the container.
+         *
+         * @note Does not destroy elements explicitly; only resets the size.
+         */
         constexpr void clear() noexcept
         {
-            for (size_t i = 0; i < m_size; ++i) {
-                m_data[i] = T{};
-            }
             m_size = 0;
         }
 
@@ -224,7 +280,7 @@ namespace tavros::core
         }
 
     private:
-        std::array<T, N> m_data;
+        std::array<T, N> m_data{};
         size_t           m_size = 0;
     };
 
