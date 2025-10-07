@@ -5,11 +5,11 @@
 #include <tavros/core/math/bitops.hpp>
 #include <tavros/core/memory/mallocator.hpp>
 #include <tavros/core/ids/l3_bitmap_index_allocator.hpp>
-#include <tavros/core/resources/resource_handle.hpp>
+#include <tavros/resources/resource_handle.hpp>
 
 #include <type_traits>
 
-namespace tavros::core
+namespace tavros::resources
 {
 
     /**
@@ -31,10 +31,10 @@ namespace tavros::core
      * cases when memory expansion and object relocation occur.
      */
     template<class T>
-    class resource_pool : noncopyable
+    class resource_pool : core::noncopyable
     {
     private:
-        using idx_alc_t = l3_bitmap_index_allocator;
+        using idx_alc_t = core::l3_bitmap_index_allocator;
 
     public:
         using handle_type = resource_handle<T>;
@@ -47,7 +47,7 @@ namespace tavros::core
          * @brief Construct a resource pool with a memory allocator.
          * @param alc Memory allocator to use for internal allocations.
          */
-        resource_pool(allocator* alc)
+        resource_pool(core::allocator* alc)
             : m_mem_alc(alc)
         {
             TAV_VERIFY(m_mem_alc);
@@ -60,7 +60,7 @@ namespace tavros::core
         {
             // m_idx_alc can be in dirty state and m_res can be nullptr, because this object was moved
             if (m_res) {
-                for (index_type i = 0; i <= m_max_idx; ++i) {
+                for (core::index_type i = 0; i <= m_max_idx; ++i) {
                     if (m_idx_alc.allocated(i)) {
                         std::destroy_at(m_res + i);
                     }
@@ -110,7 +110,7 @@ namespace tavros::core
             if (this != &other) {
                 if (m_mem) {
                     // Destroy existing resources and free memory
-                    for (index_type i = 0; i <= m_max_idx; ++i) {
+                    for (core::index_type i = 0; i <= m_max_idx; ++i) {
                         if (m_idx_alc.allocated(i)) {
                             std::destroy_at(m_res + i);
                         }
@@ -148,7 +148,7 @@ namespace tavros::core
         template<typename Fn>
         void for_each(Fn&& fun)
         {
-            for (index_type i = 0; i <= m_max_idx; ++i) {
+            for (core::index_type i = 0; i <= m_max_idx; ++i) {
                 if (m_idx_alc.allocated(i)) {
                     handle_type h = make_handle(i);
                     T&          res = m_res[i];
@@ -232,9 +232,9 @@ namespace tavros::core
         [[nodiscard]] handle_type add(T&& res)
         {
             auto idx = m_idx_alc.allocate();
-            TAV_ASSERT(idx != invalid_index);
+            TAV_ASSERT(idx != core::invalid_index);
 
-            if (idx == invalid_index) {
+            if (idx == core::invalid_index) {
                 return handle_type::invalid();
             }
 
@@ -262,9 +262,9 @@ namespace tavros::core
         [[nodiscard]] handle_type emplace_add(Args&&... args)
         {
             auto idx = m_idx_alc.allocate();
-            TAV_ASSERT(idx != invalid_index);
+            TAV_ASSERT(idx != core::invalid_index);
 
-            if (idx == invalid_index) {
+            if (idx == core::invalid_index) {
                 return handle_type::invalid();
             }
 
@@ -304,7 +304,7 @@ namespace tavros::core
             }
 
             if (m_max_idx == idx && idx > 0) {
-                index_type i = idx - 1;
+                core::index_type i = idx - 1;
                 while (i > 0) {
                     if (m_idx_alc.allocated(i)) {
                         break;
@@ -327,7 +327,7 @@ namespace tavros::core
          */
         void clear()
         {
-            for (index_type i = 0; i <= m_max_idx; ++i) {
+            for (core::index_type i = 0; i <= m_max_idx; ++i) {
                 if (m_idx_alc.allocated(i)) {
                     m_res[i].~T();
                 }
@@ -338,7 +338,7 @@ namespace tavros::core
         }
 
     private:
-        void ensure_allocation(index_type idx)
+        void ensure_allocation(core::index_type idx)
         {
             auto new_capacity = adapt_capacity(static_cast<size_t>(idx) + 1);
             if (m_capacity < new_capacity) {
@@ -388,7 +388,7 @@ namespace tavros::core
             std::fill(new_gen + m_capacity, new_gen + new_capacity, 0);
 
             // Move resources
-            for (index_type i = 0; i <= m_max_idx; ++i) {
+            for (core::index_type i = 0; i <= m_max_idx; ++i) {
                 if (m_idx_alc.allocated(i)) {
                     // Move to new resource
                     new (new_resources + i) T(std::move(m_res[i]));
@@ -398,23 +398,23 @@ namespace tavros::core
             }
         }
 
-        handle_type make_handle(index_type idx) const
+        handle_type make_handle(core::index_type idx) const
         {
             uint32 gen = static_cast<uint32>(current_gen(idx));
             return {(gen << 24) | idx};
         }
 
-        uint8 current_gen(index_type idx) const
+        uint8 current_gen(core::index_type idx) const
         {
             return m_gen[idx] & 0x7f;
         }
 
-        void increase_gen(index_type idx)
+        void increase_gen(core::index_type idx)
         {
             ++m_gen[idx];
         }
 
-        static index_type extract_index(uint32 h_id)
+        static core::index_type extract_index(uint32 h_id)
         {
             return h_id & 0x00ffffff;
         }
@@ -425,15 +425,15 @@ namespace tavros::core
         }
 
     private:
-        allocator* m_mem_alc = nullptr; // Dynamic memory allocator
-        idx_alc_t  m_idx_alc;           // TODO: upgrade to dynamic index allocator
-        index_type m_max_idx = 0;       // Optimization for loops
+        core::allocator* m_mem_alc = nullptr; // Dynamic memory allocator
+        idx_alc_t        m_idx_alc;           // TODO: upgrade to dynamic index allocator
+        core::index_type m_max_idx = 0;       // Optimization for loops
 
-        void*  m_mem = nullptr;         // memory pointer
-        uint8* m_gen = nullptr;         // generation
-        T*     m_res = nullptr;         // resources
-        size_t m_capacity = 0;          // current capacity of m_resources and m_gen
+        void*  m_mem = nullptr;               // memory pointer
+        uint8* m_gen = nullptr;               // generation
+        T*     m_res = nullptr;               // resources
+        size_t m_capacity = 0;                // current capacity of m_resources and m_gen
         size_t m_size = 0;
     };
 
-} // namespace tavros::core
+} // namespace tavros::resources

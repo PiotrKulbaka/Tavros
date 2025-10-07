@@ -12,6 +12,7 @@ tests = "${builtin_root}/tests"
 lib_core = "${path.libs}/core"
 lib_renderer = "${path.libs}/renderer"
 lib_system = "${path.libs}/system"
+lib_resources = "${path.libs}/resources"
 
 
 [command.autoformat]
@@ -22,6 +23,7 @@ include = [
     "${path.lib_core}",
     "${path.lib_renderer}",
     "${path.lib_system}",
+    "${path.lib_resources}",
     "${path.wrappers}/sandbox",
     "${path.wrappers}/q3pp",
 ]
@@ -34,6 +36,7 @@ collect_paths = [
     "${path.lib_core}",
     "${path.lib_renderer}",
     "${path.lib_system}",
+    "${path.lib_resources}",
     "${path.wrappers}/sandbox",
     "${path.tests}/sources",
     "${path.tests}/sources",

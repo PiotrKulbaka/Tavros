@@ -2,7 +2,7 @@
 
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/core/containers/sapn.hpp>
-#include <tavros/core/resources/resource_view.hpp>
+#include <tavros/resources/resource_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/texture_create_info.hpp>
@@ -88,7 +88,7 @@ namespace tavros::renderer
         {
         }
 
-        friend class core::resource_pool<render_target>; // for empalce_add in render_system
+        friend class resources::resource_pool<render_target>; // for empalce_add in render_system
 
     private:
         rhi::framebuffer_handle                                                m_framebuffer = rhi::framebuffer_handle::invalid();
@@ -97,6 +97,6 @@ namespace tavros::renderer
         rhi::texture_handle                                                    m_depth_stencil_attachment;
     };
 
-    using render_target_view = core::resource_view<render_target>;
+    using render_target_view = resources::resource_view<render_target>;
 
 } // namespace tavros::renderer

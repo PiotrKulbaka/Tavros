@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/resources/resource_view.hpp>
+#include <tavros/resources/resource_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/texture_create_info.hpp>
 
@@ -114,7 +114,7 @@ namespace tavros::renderer
         {
         }
 
-        friend class core::resource_pool<texture>; // for empalce_add in render_system
+        friend class resources::resource_pool<texture>; // for empalce_add in render_system
 
     private:
         rhi::texture_handle m_handle = rhi::texture_handle::invalid();
@@ -129,6 +129,6 @@ namespace tavros::renderer
      * without owning it. The underlying texture may be invalidated if
      * the `render_system` destroys it, so `valid()` should be checked before use.
      */
-    using texture_view = core::resource_view<texture>;
+    using texture_view = resources::resource_view<texture>;
 
 } // namespace tavros::renderer

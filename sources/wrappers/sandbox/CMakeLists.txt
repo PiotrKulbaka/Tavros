@@ -11,7 +11,7 @@ target_link_libraries(
         tav_core
         tav_renderer
         tav_system
-        glad
+        tav_resources
         tinyobjloader
         stb
 )

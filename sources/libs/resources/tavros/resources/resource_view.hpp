@@ -1,16 +1,16 @@
 #pragma once
 
-#include <tavros/core/resources/resource_handle.hpp>
-#include <tavros/core/resources/resource_pool.hpp>
+#include <tavros/resources/resource_handle.hpp>
+#include <tavros/resources/resource_pool.hpp>
 
-namespace tavros::core
+namespace tavros::resources
 {
 
     /**
      * @brief Lightweight non-owning view for a resource stored in a resource pool.
      *
      * This class provides safe, read-only access to a resource managed by a resource pool.
-     * It does not manage the lifetime of the resource itself � the pool is responsible for creation
+     * It does not manage the lifetime of the resource itself, and the pool is responsible for creation
      * and destruction. The view is considered valid as long as the pool exists and the resource
      * has not been removed.
      */
@@ -18,8 +18,8 @@ namespace tavros::core
     class resource_view
     {
     public:
-        using resource_handle = core::resource_handle<T>;
-        using resource_pool = core::resource_pool<T>;
+        using resource_handle = resource_handle<T>;
+        using resource_pool = resource_pool<T>;
 
         /**
          * @brief Constructs an invalid resource view.
@@ -81,4 +81,4 @@ namespace tavros::core
         resource_handle m_handle;
     };
 
-} // namespace tavros::core
+} // namespace tavros::resources

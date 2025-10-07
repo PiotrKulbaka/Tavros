@@ -267,7 +267,6 @@ int main()
         printf("%s\n", msg.data());
     });
 
-    my_app app;
-
-    return app.run();
+    auto app = std::make_unique<my_app>();
+    return app->run();
 }
