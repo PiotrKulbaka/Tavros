@@ -24,10 +24,10 @@ namespace tavros::renderer
         void release_render_target(render_target_view rt);
 
     private:
-        rhi::graphics_device*                   m_gdevice;
-        core::mallocator                        m_mallocator;
-        resources::resource_pool<texture>       m_textures;
-        resources::resource_pool<render_target> m_render_targets;
+        rhi::graphics_device*            m_gdevice;
+        core::mallocator                 m_mallocator;
+        core::object_pool<texture>       m_textures;
+        core::object_pool<render_target> m_render_targets;
     };
 
 } // namespace tavros::renderer

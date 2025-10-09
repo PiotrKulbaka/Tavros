@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/resources/resource_view.hpp>
+#include <tavros/core/object_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/geometry_create_info.hpp>
 

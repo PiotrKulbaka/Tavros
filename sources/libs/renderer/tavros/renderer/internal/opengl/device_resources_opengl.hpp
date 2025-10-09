@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/memory/memory.hpp>
-#include <tavros/resources/resource_pool.hpp>
+#include <tavros/core/object_pool.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/rhi/frame_composer.hpp>
 
@@ -254,17 +254,17 @@ namespace tavros::renderer::rhi
         }
 
     public:
-        core::mallocator                            alc;
-        resources::resource_pool<gl_sampler>        samplers;
-        resources::resource_pool<gl_composer>       composers;
-        resources::resource_pool<gl_shader_binding> shader_bindings;
-        resources::resource_pool<gl_shader>         shaders;
-        resources::resource_pool<gl_texture>        textures;
-        resources::resource_pool<gl_pipeline>       pipelines;
-        resources::resource_pool<gl_framebuffer>    framebuffers;
-        resources::resource_pool<gl_buffer>         buffers;
-        resources::resource_pool<gl_geometry>       geometries;
-        resources::resource_pool<gl_render_pass>    render_passes;
+        core::mallocator                     alc;
+        core::object_pool<gl_sampler>        samplers;
+        core::object_pool<gl_composer>       composers;
+        core::object_pool<gl_shader_binding> shader_bindings;
+        core::object_pool<gl_shader>         shaders;
+        core::object_pool<gl_texture>        textures;
+        core::object_pool<gl_pipeline>       pipelines;
+        core::object_pool<gl_framebuffer>    framebuffers;
+        core::object_pool<gl_buffer>         buffers;
+        core::object_pool<gl_geometry>       geometries;
+        core::object_pool<gl_render_pass>    render_passes;
     };
 
 } // namespace tavros::renderer::rhi

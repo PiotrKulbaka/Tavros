@@ -14,7 +14,6 @@ tavros_add_library(
     LIB_DEPENDS
         PRIVATE
             tav_core
-            tav_resources
             glad
     LIB_DEFINES
 )

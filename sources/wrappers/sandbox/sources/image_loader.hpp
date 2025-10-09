@@ -1,5 +1,7 @@
 #pragma once
 
+#include <tavros/resources/resource.hpp>
+#include <tavros/core/memory/memory.hpp>
 #include <tavros/core/memory/resizable_buffer.hpp>
 
 namespace app
@@ -29,9 +31,9 @@ namespace app
 
         ~image_loader() = default;
 
-        image_info load_image_info(tavros::core::string_view filename) const;
+        image_info decode_image_info(tavros::core::resizable_buffer<uint8>& data) const;
 
-        pixels_view load_image(tavros::core::string_view filename, uint32 required_channels = 4);
+        pixels_view decode_image(tavros::core::resizable_buffer<uint8>& data, uint32 required_channels = 4);
 
     private:
         tavros::core::resizable_buffer<uint8> m_buffer;
