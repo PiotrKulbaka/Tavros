@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/memory/dynamic_buffer.hpp>
+#include <concepts>
 
 namespace tavros::core
 {
@@ -25,6 +26,18 @@ namespace tavros::core
         constexpr buffer_span() noexcept = default;
 
         /**
+         * @brief Constructs an empty span from nullptr.
+         *
+         * Useful to represent an empty span.
+         */
+        constexpr buffer_span(std::nullptr_t) noexcept
+            : m_data(nullptr)
+            , m_size(0)
+        {
+        }
+
+
+        /**
          * @brief Constructs a span from a pointer and a size.
          *
          * @param data Pointer to the first element.
@@ -33,6 +46,27 @@ namespace tavros::core
         constexpr buffer_span(T* data, size_t size) noexcept
             : m_data(data)
             , m_size(size)
+        {
+        }
+
+        /**
+         * @brief Constructs a span from a fixed-size array.
+         *
+         * @tparam N Size of the array (deduces the size automatically).
+         * @param arr Reference to the array.
+         */
+        template<size_t N>
+        constexpr buffer_span(T (&arr)[N]) noexcept
+            : m_data(arr)
+            , m_size(N)
+        {
+        }
+
+        template<class Container>
+            requires requires(Container c) { c.data(); c.size(); }
+        constexpr buffer_span(Container& c) noexcept
+            : m_data(c.data())
+            , m_size(c.size())
         {
         }
 

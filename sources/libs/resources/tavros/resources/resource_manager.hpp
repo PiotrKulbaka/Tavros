@@ -6,13 +6,21 @@
 
 #include <tavros/resources/resource_provider.hpp>
 
-#include <tavros/core/containers/vector.hpp>
+#include <tavros/core/containers/static_vector.hpp>
 
 namespace tavros::resources
 {
 
     class resource_manager : core::noncopyable
     {
+    public:
+        /**
+         * There should be a limited number of providers. The more providers there are,
+         * the longer it will take to find a resource.
+         * If needed many providers, then need to change the resource search algorithm.
+         */
+        constexpr static size_t k_max_resource_providers = 32;
+
     public:
         resource_manager();
 
@@ -23,11 +31,6 @@ namespace tavros::resources
         void mount(Args&&... args)
         {
             auto provider = core::make_shared<T>(std::forward<Args>(args)...);
-            for (auto& p : m_providers) {
-                if (p == provider) {
-                    return;
-                }
-            }
             m_providers.push_back(provider);
         }
 
@@ -36,8 +39,9 @@ namespace tavros::resources
         core::shared_ptr<resource> open(core::string_view path);
 
     private:
-        core::mallocator                                  m_alc;
-        core::vector<core::shared_ptr<resource_provider>> m_providers;
+        using providers_vector = core::static_vector<core::shared_ptr<resource_provider>, k_max_resource_providers>;
+        core::mallocator m_alc;
+        providers_vector m_providers;
     };
 
 } // namespace tavros::resources

@@ -91,10 +91,11 @@ namespace tavros::renderer
         friend class core::object_pool<render_target>; // for empalce_add in render_system
 
     private:
-        rhi::framebuffer_handle                                                m_framebuffer = rhi::framebuffer_handle::invalid();
-        render_target_create_info                                              m_info;
-        core::static_vector<rhi::texture_handle, rhi::k_max_color_attachments> m_color_attachments;
-        rhi::texture_handle                                                    m_depth_stencil_attachment;
+        using textures_vector = core::static_vector<rhi::texture_handle, rhi::k_max_color_attachments>;
+        rhi::framebuffer_handle   m_framebuffer = rhi::framebuffer_handle::invalid();
+        render_target_create_info m_info;
+        textures_vector           m_color_attachments;
+        rhi::texture_handle       m_depth_stencil_attachment;
     };
 
     using render_target_view = core::object_view<render_target>;

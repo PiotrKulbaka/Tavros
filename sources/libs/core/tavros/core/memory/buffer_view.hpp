@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/memory/dynamic_buffer.hpp>
+#include <concepts>
 
 namespace tavros::core
 {
@@ -23,6 +24,17 @@ namespace tavros::core
         constexpr buffer_view() noexcept = default;
 
         /**
+         * @brief Constructs an empty view from nullptr.
+         *
+         * Useful to represent an empty view.
+         */
+        constexpr buffer_view(std::nullptr_t) noexcept
+            : m_data(nullptr)
+            , m_size(0)
+        {
+        }
+
+        /**
          * @brief Constructs a view from a pointer and number of elements.
          * @param data Pointer to the first element (can be nullptr if size is zero).
          * @param size Number of elements in the buffer.
@@ -30,6 +42,36 @@ namespace tavros::core
         constexpr buffer_view(const T* data, size_t size) noexcept
             : m_data(data)
             , m_size(size)
+        {
+        }
+
+        /**
+         * @brief Constructs a view from a fixed-size array.
+         *
+         * @tparam N Size of the array (deduces the size automatically).
+         * @param arr Reference to the array.
+         */
+        template<size_t N>
+        constexpr buffer_view(T (&arr)[N]) noexcept
+            : m_data(arr)
+            , m_size(N)
+        {
+        }
+
+        /**
+         * @brief Constructs a view from any container that provides data() and size().
+         *
+         * This constructor allows creating a view over existing containers without copying.
+         * The view will reference the original container's data.
+         *
+         * @tparam Container Type of the container.
+         * @param c Reference to the container.
+         */
+        template<class Container>
+            requires requires(Container c) { c.data(); c.size(); }
+        constexpr buffer_view(Container& c) noexcept
+            : m_data(c.data())
+            , m_size(c.size())
         {
         }
 

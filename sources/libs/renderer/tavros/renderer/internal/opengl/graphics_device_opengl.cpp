@@ -573,8 +573,8 @@ namespace tavros::renderer::rhi
     }
 
     pipeline_handle graphics_device_opengl::create_pipeline(
-        const pipeline_create_info&           info,
-        const core::span<const shader_handle> shaders
+        const pipeline_create_info&      info,
+        core::buffer_view<shader_handle> shaders
     )
     {
         if (info.shaders.size() != 2) {
@@ -727,9 +727,9 @@ namespace tavros::renderer::rhi
     }
 
     framebuffer_handle graphics_device_opengl::create_framebuffer(
-        const framebuffer_create_info&         info,
-        const core::span<const texture_handle> color_attachments,
-        core::optional<texture_handle>         depth_stencil_attachment
+        const framebuffer_create_info&    info,
+        core::buffer_view<texture_handle> color_attachments,
+        core::optional<texture_handle>    depth_stencil_attachment
     )
     {
         // Validate attachments size
@@ -992,9 +992,9 @@ namespace tavros::renderer::rhi
     }
 
     geometry_handle graphics_device_opengl::create_geometry(
-        const geometry_create_info&           info,
-        const core::span<const buffer_handle> vertex_buffers,
-        core::optional<buffer_handle>         index_buffer
+        const geometry_create_info&      info,
+        core::buffer_view<buffer_handle> vertex_buffers,
+        core::optional<buffer_handle>    index_buffer
     )
     {
         // Check vertex buffers
@@ -1113,8 +1113,8 @@ namespace tavros::renderer::rhi
     }
 
     render_pass_handle graphics_device_opengl::create_render_pass(
-        const render_pass_create_info&         info,
-        const core::span<const texture_handle> resolve_textures
+        const render_pass_create_info&    info,
+        core::buffer_view<texture_handle> resolve_textures
     )
     {
         // Validate attachments
@@ -1219,10 +1219,10 @@ namespace tavros::renderer::rhi
     }
 
     shader_binding_handle graphics_device_opengl::create_shader_binding(
-        const shader_binding_create_info&      info,
-        const core::span<const texture_handle> textures,
-        const core::span<const sampler_handle> samplers,
-        const core::span<const buffer_handle>  buffers
+        const shader_binding_create_info& info,
+        core::buffer_view<texture_handle> textures,
+        core::buffer_view<sampler_handle> samplers,
+        core::buffer_view<buffer_handle>  buffers
     )
     {
         // Validate texture bindings
@@ -1303,7 +1303,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    uint8* graphics_device_opengl::map_buffer(buffer_handle buffer, size_t offset, size_t size)
+    core::buffer_span<uint8> graphics_device_opengl::map_buffer(buffer_handle buffer, size_t offset, size_t size)
     {
         auto* b = m_resources.try_get(buffer);
         if (!b) {
@@ -1362,7 +1362,7 @@ namespace tavros::renderer::rhi
 
         glBindBuffer(target, 0);
 
-        return static_cast<uint8*>(ptr);
+        return core::buffer_span<uint8>(reinterpret_cast<uint8*>(ptr), size);
     }
 
     void graphics_device_opengl::unmap_buffer(buffer_handle buffer)

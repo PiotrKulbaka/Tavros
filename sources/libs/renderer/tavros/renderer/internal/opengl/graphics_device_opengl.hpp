@@ -38,15 +38,15 @@ namespace tavros::renderer::rhi
         void destroy_texture(texture_handle handle) override;
 
         pipeline_handle create_pipeline(
-            const pipeline_create_info&           info,
-            const core::span<const shader_handle> shaders
+            const pipeline_create_info&      info,
+            core::buffer_view<shader_handle> shaders
         ) override;
         void destroy_pipeline(pipeline_handle pipeline) override;
 
         framebuffer_handle create_framebuffer(
-            const framebuffer_create_info&         info,
-            const core::span<const texture_handle> color_attachments,
-            core::optional<texture_handle>         depth_stencil_attachment = core::nullopt
+            const framebuffer_create_info&    info,
+            core::buffer_view<texture_handle> color_attachments,
+            core::optional<texture_handle>    depth_stencil_attachment = core::nullopt
         ) override;
         void destroy_framebuffer(framebuffer_handle framebuffer) override;
 
@@ -54,27 +54,27 @@ namespace tavros::renderer::rhi
         void          destroy_buffer(buffer_handle buffer) override;
 
         geometry_handle create_geometry(
-            const geometry_create_info&           info,
-            const core::span<const buffer_handle> vertex_buffers,
-            core::optional<buffer_handle>         index_buffer = core::nullopt
+            const geometry_create_info&      info,
+            core::buffer_view<buffer_handle> vertex_buffers,
+            core::optional<buffer_handle>    index_buffer = core::nullopt
         ) override;
         void destroy_geometry(geometry_handle geometry) override;
 
         render_pass_handle create_render_pass(
-            const render_pass_create_info&         info,
-            const core::span<const texture_handle> resolve_textures = core::span<const texture_handle>()
+            const render_pass_create_info&    info,
+            core::buffer_view<texture_handle> resolve_textures = core::buffer_view<texture_handle>()
         ) override;
         void destroy_render_pass(render_pass_handle render_pass) override;
 
         shader_binding_handle create_shader_binding(
-            const shader_binding_create_info&      info,
-            const core::span<const texture_handle> textures,
-            const core::span<const sampler_handle> samplers,
-            const core::span<const buffer_handle>  buffers
+            const shader_binding_create_info& info,
+            core::buffer_view<texture_handle> textures,
+            core::buffer_view<sampler_handle> samplers,
+            core::buffer_view<buffer_handle>  buffers
         ) override;
         void destroy_shader_binding(shader_binding_handle shader_binding) override;
 
-        uint8* map_buffer(
+        core::buffer_span<uint8> map_buffer(
             buffer_handle buffer,
             size_t        offset = 0,
             size_t        size = 0

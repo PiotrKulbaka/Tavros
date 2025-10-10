@@ -11,7 +11,7 @@
 
 #include <tavros/resources/resource_manager.hpp>
 #include <tavros/resources/providers/filesystem_provider.hpp>
-#include <tavros/core/memory/dynamic_buffer.hpp>
+#include <tavros/core/memory/buffer.hpp>
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -167,8 +167,8 @@ public:
         auto im_view = load_image("textures/base_wall/archpipe2_ifin.jpg");
 
         size_t tex_size = im_view.width * im_view.height * im_view.channels;
-        auto*  dst = m_graphics_device->map_buffer(m_stage_buffer);
-        memcpy(dst, im_view.data, tex_size);
+        auto   dst = m_graphics_device->map_buffer(m_stage_buffer);
+        memcpy(dst.data(), im_view.data, tex_size);
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
         rhi::texture_create_info tex_create_info;
