@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/object_view.hpp>
+#include <tavros/core/object/object_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/texture_create_info.hpp>
 

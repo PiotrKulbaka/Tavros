@@ -1,7 +1,7 @@
 #pragma once
 
-#include <tavros/core/object_handle.hpp>
-#include <tavros/core/object_pool.hpp>
+#include <tavros/core/object/object_handle.hpp>
+#include <tavros/core/object/object_pool.hpp>
 
 namespace tavros::core
 {

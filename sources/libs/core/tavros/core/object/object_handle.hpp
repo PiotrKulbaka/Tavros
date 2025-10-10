@@ -12,7 +12,7 @@ namespace tavros::core
      * Encapsulates an ID that contains index and generation to safely refer
      * to objects in a object_pool.
      */
-    template<class T>
+    template<class ObjectTag>
     struct object_handle
     {
         uint32 id = 0xffffffffui32;

@@ -2,7 +2,7 @@
 
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/core/containers/sapn.hpp>
-#include <tavros/core/object_view.hpp>
+#include <tavros/core/object/object_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/texture_create_info.hpp>

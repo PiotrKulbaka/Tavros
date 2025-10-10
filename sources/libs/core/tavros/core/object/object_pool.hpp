@@ -5,7 +5,7 @@
 #include <tavros/core/math/bitops.hpp>
 #include <tavros/core/memory/mallocator.hpp>
 #include <tavros/core/ids/l3_bitmap_index_allocator.hpp>
-#include <tavros/core/object_handle.hpp>
+#include <tavros/core/object/object_handle.hpp>
 
 #include <type_traits>
 
