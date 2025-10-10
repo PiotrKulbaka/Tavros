@@ -3,6 +3,7 @@
 #include <tavros/core/types.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/resources/seek_dir.hpp>
+#include <tavros/core/memory/buffer.hpp>
 
 namespace tavros::resources
 {
@@ -12,7 +13,7 @@ namespace tavros::resources
     public:
         virtual ~resource_writer() = default;
         virtual bool   is_open() const = 0;
-        virtual size_t write(const void* buffer, size_t size) = 0;
+        virtual size_t write(core::buffer_view<uint8> buffer) = 0;
         virtual bool   seek(size_t offset, seek_dir dir = seek_dir::begin) = 0;
         virtual size_t tell() const = 0;
         virtual size_t size() const = 0;

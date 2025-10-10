@@ -2,7 +2,7 @@
 
 #include <tavros/resources/resource.hpp>
 #include <tavros/core/memory/memory.hpp>
-#include <tavros/core/memory/resizable_buffer.hpp>
+#include <tavros/core/memory/dynamic_buffer.hpp>
 
 namespace app
 {
@@ -39,7 +39,7 @@ namespace app
         pixels_view decode_image(const uint8* data, size_t size, uint32 required_channels = 4);
 
     private:
-        tavros::core::resizable_buffer<uint8> m_buffer;
+        tavros::core::dynamic_buffer<uint8> m_buffer;
     };
 
 } // namespace app

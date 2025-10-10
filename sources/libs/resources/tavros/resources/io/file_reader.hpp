@@ -17,7 +17,7 @@ namespace tavros::resources
         void close();
 
         bool   is_open() const override;
-        size_t read(void* buffer, size_t size) override;
+        size_t read(core::buffer_span<uint8> buffer) override;
         bool   seek(size_t offset, seek_dir dir = seek_dir::begin) override;
         size_t tell() const override;
         size_t size() const override;

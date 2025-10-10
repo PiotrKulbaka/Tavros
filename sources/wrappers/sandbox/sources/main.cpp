@@ -11,7 +11,7 @@
 
 #include <tavros/resources/resource_manager.hpp>
 #include <tavros/resources/providers/filesystem_provider.hpp>
-#include <tavros/core/memory/resizable_buffer.hpp>
+#include <tavros/core/memory/dynamic_buffer.hpp>
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -95,20 +95,20 @@ public:
 
     app::image_decoder::pixels_view load_image(tavros::core::string_view path)
     {
-        tavros::core::resizable_buffer<uint8> buffer(&m_allocator);
+        tavros::core::dynamic_buffer<uint8> buffer(&m_allocator);
 
         auto res = m_resource_manager->open(path);
         if (res) {
             auto* reader = res->reader();
             if (reader->is_open()) {
                 auto size = reader->size();
-                buffer.ensure_size(size);
-                reader->read(buffer.data(), size);
+                buffer.reserve(size);
+                reader->read(buffer);
             }
         }
 
         // buffer.data() can be nullptr; decode_image will return fallback with white pixel
-        return m_image_decoder.decode_image(buffer.data(), buffer.size());
+        return m_image_decoder.decode_image(buffer.data(), buffer.capacity());
     }
 
     void init() override

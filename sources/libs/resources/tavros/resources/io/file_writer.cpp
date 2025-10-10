@@ -77,7 +77,7 @@ namespace tavros::resources
         return m_file.is_open();
     }
 
-    size_t file_writer::write(const void* buffer, size_t size)
+    size_t file_writer::write(core::buffer_view<uint8> buffer)
     {
         if (!m_file.is_open()) {
             ::logger.warning("Attempted to write to a file that is not open");
@@ -85,14 +85,14 @@ namespace tavros::resources
             return 0;
         }
 
-        if (!buffer || size == 0) {
+        if (buffer.empty()) {
             ::logger.warning("Write called with null buffer or size 0");
             return 0;
         }
 
-        m_file.write(reinterpret_cast<const char*>(buffer), size);
+        m_file.write(reinterpret_cast<const char*>(buffer.data()), buffer.size());
         if (!m_file.good()) {
-            ::logger.error("Failed to write {} bytes to file", size);
+            ::logger.error("Failed to write {} bytes to file", buffer.size());
             TAV_DEBUG_BREAK();
             return 0;
         }
@@ -102,7 +102,7 @@ namespace tavros::resources
             m_size = pos;
         }
 
-        return size;
+        return buffer.size();
     }
 
     bool file_writer::seek(size_t offset, seek_dir dir)

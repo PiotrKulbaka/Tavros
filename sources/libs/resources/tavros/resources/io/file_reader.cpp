@@ -78,16 +78,16 @@ namespace tavros::resources
         return m_file.is_open();
     }
 
-    size_t file_reader::read(void* buffer, size_t size)
+    size_t file_reader::read(core::buffer_span<uint8> buffer)
     {
-        if (!buffer || size == 0) {
+        if (buffer.empty()) {
             ::logger.warning("Read called with null buffer or size 0");
             TAV_DEBUG_BREAK();
             return 0;
         }
 
         try {
-            m_file.read(reinterpret_cast<char*>(buffer), size);
+            m_file.read(reinterpret_cast<char*>(buffer.data()), buffer.size());
             if (m_file.bad()) {
                 ::logger.error("Read failed");
                 TAV_DEBUG_BREAK();
