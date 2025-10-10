@@ -7,7 +7,7 @@
 namespace app
 {
 
-    class image_loader : tavros::core::noncopyable
+    class image_decoder : tavros::core::noncopyable
     {
     public:
         struct pixels_view
@@ -27,13 +27,16 @@ namespace app
         };
 
     public:
-        explicit image_loader(tavros::core::allocator* alc);
+        explicit image_decoder(tavros::core::allocator* alc)
+            : m_buffer(alc)
+        {
+        }
 
-        ~image_loader() = default;
+        ~image_decoder() = default;
 
-        image_info decode_image_info(tavros::core::resizable_buffer<uint8>& data) const;
+        image_info decode_image_info(const uint8* data, size_t size) const;
 
-        pixels_view decode_image(tavros::core::resizable_buffer<uint8>& data, uint32 required_channels = 4);
+        pixels_view decode_image(const uint8* data, size_t size, uint32 required_channels = 4);
 
     private:
         tavros::core::resizable_buffer<uint8> m_buffer;

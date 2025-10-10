@@ -16,6 +16,9 @@ namespace tavros::resources
     filesystem_provider::filesystem_provider(core::string_view path)
         : m_base(path)
     {
+        if (!std::filesystem::exists(path)) {
+            ::logger.warning("Filesystem provider for `{}` created, but path is invalid", path);
+        }
     }
 
     filesystem_provider::~filesystem_provider() = default;

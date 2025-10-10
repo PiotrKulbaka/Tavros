@@ -1,8 +1,7 @@
 ﻿#include <stdio.h>
 
 #include "render_app_base.hpp"
-#include "image_loader.hpp"
-#include "resource_locator.hpp"
+#include "image_decoder.hpp"
 
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/memory/mallocator.hpp>
@@ -71,7 +70,7 @@ class my_app : public app::render_app_base
 public:
     my_app(tavros::core::shared_ptr<tavros::resources::resource_manager> resource_manager)
         : app::render_app_base("TavrosEngine")
-        , m_im_loader(&m_allocator)
+        , m_image_decoder(&m_allocator)
         , m_resource_manager(resource_manager)
     {
     }
@@ -79,7 +78,6 @@ public:
     ~my_app() override
     {
     }
-
 
     rhi::buffer_handle create_stage_buffer(size_t size)
     {
@@ -93,6 +91,24 @@ public:
             exit_fail();
         }
         return buffer;
+    }
+
+    app::image_decoder::pixels_view load_image(tavros::core::string_view path)
+    {
+        tavros::core::resizable_buffer<uint8> buffer(&m_allocator);
+
+        auto res = m_resource_manager->open(path);
+        if (res) {
+            auto* reader = res->reader();
+            if (reader->is_open()) {
+                auto size = reader->size();
+                buffer.ensure_size(size);
+                reader->read(buffer.data(), size);
+            }
+        }
+
+        // buffer.data() can be nullptr; decode_image will return fallback with white pixel
+        return m_image_decoder.decode_image(buffer.data(), buffer.size());
     }
 
     void init() override
@@ -148,10 +164,7 @@ public:
 
         m_stage_buffer = create_stage_buffer(1024 * 1024 * 16);
 
-        tavros::core::resizable_buffer<uint8> buffer(&m_allocator);
-
-        m_resource_manager->read_data("textures/base_wall/archpipe2_ifin.jpg", buffer);
-        auto im_view = m_im_loader.decode_image(buffer);
+        auto im_view = load_image("textures/base_wall/archpipe2_ifin.jpg");
 
         size_t tex_size = im_view.width * im_view.height * im_view.channels;
         auto*  dst = m_graphics_device->map_buffer(m_stage_buffer);
@@ -254,7 +267,7 @@ private:
     tavros::core::unique_ptr<tavros::renderer::render_system> m_render_system;
     rhi::frame_composer*                                      m_composer = nullptr;
 
-    app::image_loader m_im_loader;
+    app::image_decoder m_image_decoder;
 
     rhi::pipeline_handle       m_main_pipeline;
     rhi::render_pass_handle    m_main_pass;
@@ -274,13 +287,9 @@ int main()
         printf("%s\n", msg.data());
     });
 
-    auto assets_provider = tavros::core::make_shared<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
-    auto q3_provider = tavros::core::make_shared<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
-
     auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
-    resource_manager->mount(assets_provider);
-    resource_manager->mount(q3_provider);
-
+    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
+    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
 
     auto app = std::make_unique<my_app>(resource_manager);
     return app->run();

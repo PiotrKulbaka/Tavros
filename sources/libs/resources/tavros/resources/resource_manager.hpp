@@ -1,8 +1,8 @@
 #pragma once
 
 #include <tavros/core/memory/memory.hpp>
+#include <tavros/core/memory/mallocator.hpp>
 #include <tavros/core/noncopyable.hpp>
-#include <tavros/core/memory/resizable_buffer.hpp>
 
 #include <tavros/resources/resource_provider.hpp>
 
@@ -18,15 +18,25 @@ namespace tavros::resources
 
         ~resource_manager();
 
-        void mount(core::shared_ptr<resource_provider> provider);
+        template<typename T, typename... Args>
+            requires std::derived_from<T, resource_provider>
+        void mount(Args&&... args)
+        {
+            auto provider = core::make_shared<T>(std::forward<Args>(args)...);
+            for (auto& p : m_providers) {
+                if (p == provider) {
+                    return;
+                }
+            }
+            m_providers.push_back(provider);
+        }
 
         bool exists(core::string_view path) const;
 
         core::shared_ptr<resource> open(core::string_view path);
 
-        size_t read_data(core::string_view path, core::resizable_buffer<uint8>& buffer);
-
     private:
+        core::mallocator                                  m_alc;
         core::vector<core::shared_ptr<resource_provider>> m_providers;
     };
 
