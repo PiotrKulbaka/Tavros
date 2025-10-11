@@ -15,14 +15,19 @@ namespace tavros::core
     template<class ObjectTag>
     struct object_handle
     {
-        uint32 id = 0xffffffffui32;
+        uint64 id = 0xffffffffffffffffui64;
 
         /**
          * @brief Returns an invalid handle.
          */
         static constexpr object_handle invalid() noexcept
         {
-            return {0xffffffffui32};
+            return {0xffffffffffffffffui64};
+        }
+
+        bool constexpr is_valid() const noexcept
+        {
+            return id != 0xffffffffffffffffui64;
         }
 
         constexpr bool operator==(object_handle other) const noexcept
@@ -41,7 +46,7 @@ namespace tavros::core
 template<typename ObjectTag>
 struct fmt::formatter<tavros::core::object_handle<ObjectTag>>
 {
-    fmt::formatter<uint32_t> m_base;
+    fmt::formatter<uint64_t> m_base;
 
     constexpr auto parse(fmt::format_parse_context& ctx)
     {
@@ -54,6 +59,6 @@ struct fmt::formatter<tavros::core::object_handle<ObjectTag>>
         if (h == tavros::core::object_handle<ObjectTag>::invalid()) {
             return fmt::format_to(ctx.out(), "{}", fmt::styled_error("(invalid)"));
         }
-        return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint32_to_base64(h.id)));
+        return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint64_to_base64(h.id)));
     }
 };

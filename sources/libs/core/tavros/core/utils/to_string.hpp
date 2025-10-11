@@ -5,5 +5,5 @@
 
 namespace tavros::core
 {
-    string_view uint32_to_base64(uint32 u);
+    string_view uint64_to_base64(uint64 u);
 }

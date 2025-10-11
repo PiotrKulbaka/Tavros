@@ -7,19 +7,19 @@
 namespace tavros::renderer::rhi
 {
 
-    template<typename ResourceTag>
+    template<typename ObjectTag>
     struct handle_base
     {
-        uint32 id = 0xffffffffui32;
+        uint64 id = 0xffffffffffffffffui64;
 
         static constexpr handle_base invalid() noexcept
         {
-            return {0xffffffffui32};
+            return {0xffffffffffffffffui64};
         }
 
         bool constexpr is_valid() const noexcept
         {
-            return id != 0xffffffffui32;
+            return id != 0xffffffffffffffffui64;
         }
 
         constexpr bool operator==(handle_base other) const noexcept
@@ -77,10 +77,10 @@ namespace tavros::renderer::rhi
 
 } // namespace tavros::renderer::rhi
 
-template<typename ResourceTag>
-struct fmt::formatter<tavros::renderer::rhi::handle_base<ResourceTag>>
+template<typename ObjectTag>
+struct fmt::formatter<tavros::renderer::rhi::handle_base<ObjectTag>>
 {
-    fmt::formatter<uint32_t> m_base;
+    fmt::formatter<uint64_t> m_base;
 
     constexpr auto parse(fmt::format_parse_context& ctx)
     {
@@ -88,11 +88,11 @@ struct fmt::formatter<tavros::renderer::rhi::handle_base<ResourceTag>>
     }
 
     template<typename FormatContext>
-    auto format(const tavros::renderer::rhi::handle_base<ResourceTag>& h, FormatContext& ctx) const
+    auto format(const tavros::renderer::rhi::handle_base<ObjectTag>& h, FormatContext& ctx) const
     {
-        if (h == tavros::renderer::rhi::handle_base<ResourceTag>::invalid()) {
+        if (h == tavros::renderer::rhi::handle_base<ObjectTag>::invalid()) {
             return fmt::format_to(ctx.out(), "{}", fmt::styled_error("(invalid)"));
         }
-        return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint32_to_base64(h.id)));
+        return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint64_to_base64(h.id)));
     }
 };

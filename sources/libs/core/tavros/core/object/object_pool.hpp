@@ -39,7 +39,7 @@ namespace tavros::core
     public:
         using handle_type = object_handle<T>;
 
-        static_assert(idx_alc_t::k_max_index <= 0x00ffffffu, "index allocator supports more indices than 24 bits");
+        static_assert(idx_alc_t::k_max_index <= 0xffffffffu, "index allocator supports more indices than 32 bits");
         static_assert(std::is_nothrow_move_constructible_v<T>, "object_pool requires noexcept move for exception-safety when expanding");
 
     public:
@@ -400,13 +400,13 @@ namespace tavros::core
 
         handle_type make_handle(index_type idx) const
         {
-            uint32 gen = static_cast<uint32>(current_gen(idx));
-            return {(gen << 24) | idx};
+            uint64 gen = static_cast<uint64>(current_gen(idx));
+            return {(gen << 32) | idx};
         }
 
         uint8 current_gen(index_type idx) const
         {
-            return m_gen[idx] & 0x7f;
+            return m_gen[idx];
         }
 
         void increase_gen(index_type idx)
@@ -414,14 +414,14 @@ namespace tavros::core
             ++m_gen[idx];
         }
 
-        static index_type extract_index(uint32 h_id)
+        static index_type extract_index(uint64 h_id)
         {
-            return h_id & 0x00ffffff;
+            return h_id & 0xffffffff;
         }
 
-        static uint8 extract_gen(uint32 h_id)
+        static uint8 extract_gen(uint64 h_id)
         {
-            return static_cast<uint8>((h_id >> 24) & 0x7f);
+            return static_cast<uint8>((h_id >> 32) & 0xff);
         }
 
     private:
