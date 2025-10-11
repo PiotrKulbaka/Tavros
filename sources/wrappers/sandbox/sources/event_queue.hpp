@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/math.hpp>
+#include <tavros/core/memory/buffer.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/system/interfaces/window.hpp>
 #include <mutex>
@@ -28,18 +29,15 @@ namespace app
         tavros::math::vec2           vec_info;                                               // for mouse_move (relative mouse_move)
         tavros::system::keys         key_info = tavros::system::keys::none;                  // for key_down or key_up
         tavros::system::mouse_button mouse_button_info = tavros::system::mouse_button::none; // for mouse_button_down or mouse_button_up
+        uint64                       event_time_us = 0;
     };
+
+    using event_queue_view = tavros::core::buffer_view<event_info>;
 
     class event_queue : tavros::core::noncopyable
     {
     public:
         static constexpr size_t k_max_events = 1024;
-
-        struct queue_view
-        {
-            event_info* begin = nullptr;
-            event_info* end = nullptr;
-        };
 
     public:
         event_queue() noexcept;
@@ -48,14 +46,20 @@ namespace app
 
         void swap_queues();
 
-        queue_view front_queue() const;
+        event_queue_view front_queue() const;
 
     private:
         std::array<event_info, k_max_events> m_buffer_a{};
         std::array<event_info, k_max_events> m_buffer_b{};
 
-        queue_view m_front;
-        queue_view m_back;
+        struct queue_data
+        {
+            event_info* begin = nullptr;
+            event_info* end = nullptr;
+        };
+
+        queue_data m_front;
+        queue_data m_back;
 
         std::mutex m_mutex;
     };

@@ -6,15 +6,16 @@ namespace app
 {
 
     event_queue::event_queue() noexcept
+        : m_front(m_buffer_a.data(), m_buffer_a.data())
+        , m_back(m_buffer_b.data(), m_buffer_b.data())
     {
-        m_front = {m_buffer_a.data(), m_buffer_a.data()};
-        m_back = {m_buffer_b.data(), m_buffer_b.data()};
     }
 
     void event_queue::push_event(const event_info& e)
     {
         std::lock_guard<std::mutex> lock(m_mutex);
-        const size_t                count = static_cast<size_t>(m_back.end - m_back.begin);
+
+        size_t count = static_cast<size_t>(m_back.end - m_back.begin);
         if (count < k_max_events) {
             *m_back.end++ = e;
         } else {
@@ -33,9 +34,10 @@ namespace app
         m_back.end = m_back.begin;
     }
 
-    event_queue::queue_view event_queue::front_queue() const
+    event_queue_view event_queue::front_queue() const
     {
-        return m_front;
+        size_t size = static_cast<size_t>(m_front.end - m_front.begin);
+        return event_queue_view(m_front.begin, size);
     }
 
 } // namespace app

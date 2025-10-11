@@ -9,6 +9,9 @@
 
 namespace tavros::system
 {
+
+    uint64 get_event_time_us(); // Implemented in time.cpp
+
     const char*      wm_message_to_str(UINT msg);
     keys             map_key(UINT vk);
     const char*      last_win_error_str(); // do not store a pointer to the str
@@ -18,4 +21,5 @@ namespace tavros::system
     mouse_button     create_mouse_x_button(WPARAM wParam);
     key_event_args   create_key_event_args(WPARAM wParam, LPARAM lParam);
     key_event_args   create_char_event_args(WPARAM wParam, LPARAM lParam);
+
 } // namespace tavros::system

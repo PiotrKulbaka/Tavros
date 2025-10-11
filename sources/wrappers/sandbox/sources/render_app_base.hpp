@@ -23,7 +23,7 @@ namespace app
 
         virtual void shutdown() = 0;
 
-        virtual void render(event_queue::queue_view events, float delta_time) = 0;
+        virtual void render(event_queue_view events, double delta_time) = 0;
 
     private:
         void center_window();

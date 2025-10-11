@@ -64,9 +64,9 @@ namespace tavros::core
         /**
          * @brief Returns the elapsed time since the last start in seconds, excluding any paused duration.
          */
-        float elapsed_seconds() const noexcept
+        double elapsed_seconds() const noexcept
         {
-            return static_cast<float>(elapsed<std::chrono::nanoseconds>()) / 1000000000.0f;
+            return static_cast<float>(elapsed<std::chrono::nanoseconds>()) / 1000000000.0;
         }
 
         /**

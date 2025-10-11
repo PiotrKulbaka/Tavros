@@ -462,7 +462,7 @@ LRESULT window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 
     switch (uMsg) {
     case WM_CLOSE: {
-        close_event_args args{.cancel = false};
+        close_event_args args{.event_time_us = get_event_time_us(), .cancel = false};
         on_close(args);
         if (!args.cancel) {
             return 0;
@@ -488,6 +488,7 @@ LRESULT window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
             RAWMOUSE& mouse = raw.data.mouse;
             if (mouse.usFlags == MOUSE_MOVE_RELATIVE && (mouse.lLastX != 0 || mouse.lLastY != 0)) {
                 margs = mouse_event_args{
+                    .event_time_us = get_event_time_us(),
                     .button = mouse_button::none,
                     .is_double_click = false,
                     .is_relative_move = true,
@@ -553,12 +554,12 @@ LRESULT window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
         return TRUE;
 
     case WM_MOVE:
-        mvargs = {.pos = create_point2(lParam)};
+        mvargs = {.event_time_us = get_event_time_us(), .pos = create_point2(lParam)};
         on_move(mvargs);
         return 0;
 
     case WM_SIZE:
-        szargs = {.size = create_size2(lParam)};
+        szargs = {.event_time_us = get_event_time_us(), .size = create_size2(lParam)};
         on_resize(szargs);
         return 0;
 

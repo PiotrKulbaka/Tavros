@@ -8,10 +8,13 @@
 #include <tavros/renderer/rhi/command_list.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/render_system.hpp>
+#include <tavros/renderer/camera/camera.hpp>
 
 #include <tavros/resources/resource_manager.hpp>
 #include <tavros/resources/providers/filesystem_provider.hpp>
 #include <tavros/core/memory/buffer.hpp>
+
+#include <tavros/system/time.hpp>
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -63,6 +66,156 @@ static tavros::core::logger logger("main");
 {
     std::exit(-1);
 }
+
+class input_manager
+{
+public:
+    input_manager()
+    {
+        clear_state();
+    }
+
+    /**
+     * @brief Clears all key states.
+     * Called for example when the window is deactivated,
+     * to ensure that key states are valid when the window becomes active again.
+     */
+    void clear_state()
+    {
+        for (auto& state : m_keys) {
+            state.press_time_us = 0;
+            state.release_time_us = 0;
+            state.accumulated_us = 0;
+            state.is_pressed = false;
+        }
+
+        m_last_frame_time_us = 0;
+        m_current_frame_time_us = 0;
+        m_mouse_delta.set(0.0f, 0.0f);
+    }
+
+    /**
+     * @brief Called at the beginning of each frame.
+     * Updates time markers and resets accumulated frame-specific data.
+     * @param frame_time_us start frame time
+     */
+    void on_frame_started(uint64 frame_time_us)
+    {
+        m_last_frame_time_us = m_current_frame_time_us;
+        m_current_frame_time_us = frame_time_us;
+
+        for (auto& state : m_keys) {
+            state.accumulated_us = 0;
+        }
+
+        m_mouse_delta.set(0.0f, 0.0f);
+    }
+
+    /**
+     * @brief Called when a key is pressed.
+     * @param key Key identifier
+     * @param time_us Time in microseconds when the event occurred
+     */
+    void on_key_press(tavros::system::keys key, uint64 time_us)
+    {
+        const size_t idx = static_cast<size_t>(key);
+        TAV_ASSERT(idx < k_keyboard_size);
+
+        auto& s = m_keys[idx];
+        if (!s.is_pressed) {
+            s.is_pressed = true;
+            s.press_time_us = time_us;
+        }
+    }
+
+    /**
+     * @brief Called when a key is released.
+     * @param key Key identifier
+     * @param time_us Time in microseconds when the event occurred
+     */
+    void on_key_release(tavros::system::keys key, uint64 time_us)
+    {
+        const size_t idx = static_cast<size_t>(key);
+        TAV_ASSERT(idx < k_keyboard_size);
+
+        auto& s = m_keys[idx];
+        if (s.is_pressed) {
+            s.is_pressed = false;
+            s.release_time_us = time_us;
+
+            // Add a gap us if the key was pressed within the frame
+            if (s.press_time_us > m_last_frame_time_us) {
+                uint64 duration = std::min(time_us, m_current_frame_time_us) - s.press_time_us;
+                s.accumulated_us += duration;
+            }
+        }
+    }
+
+    void on_mouse_move(tavros::math::vec2 delta, uint64 time_us)
+    {
+        TAV_UNUSED(time_us);
+
+        m_mouse_delta += delta;
+    }
+
+    /**
+     * @brief Returns how long the key was pressed during the last frame, in normalized [0..1] form.
+     * @param key Key identifier
+     * @return 0.0 if not pressed at all, 1.0 if pressed the entire frame, otherwise partial
+     */
+    double key_pressed_factor(tavros::system::keys key)
+    {
+        const size_t idx = static_cast<size_t>(key);
+        TAV_ASSERT(idx < k_keyboard_size);
+
+        const auto& s = m_keys[idx];
+
+        const uint64 frame_duration = m_current_frame_time_us - m_last_frame_time_us;
+        if (frame_duration == 0) {
+            return 0.0f;
+        }
+
+        uint64 total_us = s.accumulated_us;
+
+        // If the key is pressed and still held, add the hold time to the current moment
+        if (s.is_pressed) {
+            uint64 pressed_since = std::max(s.press_time_us, m_last_frame_time_us);
+            total_us += m_current_frame_time_us - pressed_since;
+        }
+
+        double factor = static_cast<double>(total_us) / static_cast<double>(frame_duration);
+        return factor > 1.0 ? 1.0 : factor;
+    }
+
+    bool is_key_pressed(tavros::system::keys key)
+    {
+        const size_t idx = static_cast<size_t>(key);
+        TAV_ASSERT(idx < k_keyboard_size);
+
+        return m_keys[idx].is_pressed;
+    }
+
+    tavros::math::vec2 get_mouse_delta()
+    {
+        return m_mouse_delta;
+    }
+
+private:
+    static constexpr size_t k_keyboard_size = static_cast<size_t>(tavros::system::keys::k_last_key);
+
+    struct key_state
+    {
+        uint64 press_time_us = 0;   // Time when key was last pressed
+        uint64 release_time_us = 0; // Time when key was last released
+        uint64 accumulated_us = 0;  // Time accumulated during the current frame
+        bool   is_pressed = false;  // Whether the key is currently pressed
+    };
+
+    uint64                                 m_current_frame_time_us = 0; // Time of the current frame
+    uint64                                 m_last_frame_time_us = 0;    // Time of the previous frame
+    std::array<key_state, k_keyboard_size> m_keys;                      // State data per key
+    tavros::math::vec2                     m_mouse_delta;
+};
 
 
 class my_app : public app::render_app_base
@@ -230,19 +383,89 @@ public:
         m_graphics_device = nullptr;
     }
 
-    void render(app::event_queue::queue_view events, float delta_time) override
+    void process_events(app::event_queue_view events, double delta_time)
     {
+        m_input_manager.on_frame_started(tavros::system::get_high_precision_system_time_us());
+
         bool need_resize = false;
-        for (auto* it = events.begin; it != events.end; ++it) {
-            if (it->type == app::event_type::window_resize) {
-                m_current_size = tavros::math::ivec2(static_cast<int32>(it->vec_info.x), static_cast<int32>(it->vec_info.y));
+
+        // Process all events
+        for (auto& it : events) {
+            switch (it.type) {
+            case app::event_type::key_down:
+                m_input_manager.on_key_press(it.key_info, it.event_time_us);
+                break;
+
+            case app::event_type::key_up:
+                m_input_manager.on_key_release(it.key_info, it.event_time_us);
+                break;
+
+            case app::event_type::mouse_move:
+                m_input_manager.on_mouse_move(it.vec_info, it.event_time_us);
+                break;
+
+            case app::event_type::mouse_button_down:
+                break;
+
+            case app::event_type::mouse_button_up:
+                break;
+
+            case app::event_type::window_resize:
+                m_current_frame_size = tavros::math::ivec2(static_cast<int32>(it.vec_info.x), static_cast<int32>(it.vec_info.y));
                 need_resize = true;
+                break;
+
+            case app::event_type::deactivate:
+                m_input_manager.clear_state();
+                break;
+
+            case app::event_type::activate:
+                m_input_manager.clear_state();
+                break;
+
+            default:
+                break;
             }
         }
 
         if (need_resize) {
-            m_composer->resize(m_current_size.width, m_current_size.height);
+            m_composer->resize(m_current_frame_size.width, m_current_frame_size.height);
         }
+
+        // Update camera
+        auto factor = [&](tavros::system::keys key) -> float {
+            return static_cast<float>(m_input_manager.key_pressed_factor(key));
+        };
+
+        tavros::math::vec3 move_delta =
+            m_camera.forward() * factor(tavros::system::keys::k_W) - m_camera.forward() * factor(tavros::system::keys::k_S) + m_camera.right() * factor(tavros::system::keys::k_D) - m_camera.right() * factor(tavros::system::keys::k_A) + m_camera.up() * factor(tavros::system::keys::k_space) - m_camera.up() * factor(tavros::system::keys::k_C);
+
+        float len = tavros::math::length(move_delta);
+        if (len > 1.0f) {
+            move_delta /= len;
+        }
+
+        m_camera.move(move_delta * static_cast<float>(delta_time) * 2.0f);
+
+        auto mouse_delta = m_input_manager.get_mouse_delta();
+        if (tavros::math::squared_length(mouse_delta) > 0.0f) {
+            auto m = (mouse_delta / 5.0f) * static_cast<float>(delta_time);
+
+            auto q_pitch = tavros::math::quat::from_axis_angle(m_camera.right(), -m.y);
+            auto q_yaw = tavros::math::quat::from_axis_angle(tavros::math::vec3{0.0f, 1.0f, 0.0f}, -m.x);
+            auto rotation = tavros::math::normalize(q_yaw * q_pitch);
+
+            m_camera.set_orientation(rotation * m_camera.forward(), rotation * m_camera.up());
+        }
+
+        constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
+        float           aspect_ratio = static_cast<float>(m_current_frame_size.width) / static_cast<float>(m_current_frame_size.height);
+        m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 1000.0f);
+    }
+
+    void render(app::event_queue_view events, double delta_time) override
+    {
+        process_events(events, delta_time);
 
         auto* cbuf = m_composer->create_command_list();
         m_composer->begin_frame();
@@ -276,9 +499,12 @@ private:
     rhi::buffer_handle         m_stage_buffer;
     rhi::sampler_handle        m_sampler;
 
-    tavros::math::ivec2 m_current_size;
+    tavros::math::ivec2 m_current_frame_size;
 
     tavros::core::shared_ptr<tavros::resources::resource_manager> m_resource_manager;
+
+    input_manager            m_input_manager;
+    tavros::renderer::camera m_camera;
 };
 
 int main()

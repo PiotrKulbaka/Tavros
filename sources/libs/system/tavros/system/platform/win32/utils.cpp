@@ -820,7 +820,14 @@ tavros::math::isize2 tavros::system::create_size2(LPARAM lParam)
 
 mouse_event_args tavros::system::create_mouse_event_args(LPARAM lParam, mouse_button btn, bool double_click, int32 delta)
 {
-    return {.button = btn, .is_double_click = double_click, .is_relative_move = false, .delta = tavros::math::vec2(0.0f, static_cast<float>(delta)), .pos = create_fpoint2(lParam)};
+    return {
+        .event_time_us = get_event_time_us(),
+        .button = btn,
+        .is_double_click = double_click,
+        .is_relative_move = false,
+        .delta = tavros::math::vec2(0.0f, static_cast<float>(delta)),
+        .pos = create_fpoint2(lParam)
+    };
 }
 
 mouse_button tavros::system::create_mouse_x_button(WPARAM wParam)
@@ -852,6 +859,7 @@ key_event_args tavros::system::create_key_event_args(WPARAM wParam, LPARAM lPara
     }
 
     return {
+        .event_time_us = get_event_time_us(),
         .key = map_key(vkCode),
         .is_prev_pressed = static_cast<bool>(wasKeyDown),
         .repeats = repeatCount,

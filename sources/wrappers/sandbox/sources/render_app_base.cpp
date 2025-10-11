@@ -70,6 +70,7 @@ namespace app
             event_info ei;
             ei.type = event_type::window_resize;
             ei.vec_info = tavros::math::vec2(static_cast<float>(e.size.width), static_cast<float>(e.size.height));
+            ei.event_time_us = e.event_time_us;
             m_event_queue.push_event(ei);
         });
 
@@ -77,6 +78,7 @@ namespace app
             event_info ei;
             ei.type = event_type::key_down;
             ei.key_info = e.key;
+            ei.event_time_us = e.event_time_us;
             m_event_queue.push_event(ei);
         });
 
@@ -84,6 +86,7 @@ namespace app
             event_info ei;
             ei.type = event_type::key_up;
             ei.key_info = e.key;
+            ei.event_time_us = e.event_time_us;
             m_event_queue.push_event(ei);
         });
 
@@ -104,6 +107,7 @@ namespace app
                 event_info ei;
                 ei.type = event_type::mouse_move;
                 ei.vec_info = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
+                ei.event_time_us = e.event_time_us;
                 m_event_queue.push_event(ei);
             }
         });
@@ -113,6 +117,7 @@ namespace app
                 event_info ei;
                 ei.type = event_type::mouse_button_down;
                 ei.mouse_button_info = e.button;
+                ei.event_time_us = e.event_time_us;
                 m_event_queue.push_event(ei);
             }
         });
@@ -122,6 +127,7 @@ namespace app
                 event_info ei;
                 ei.type = event_type::mouse_button_up;
                 ei.mouse_button_info = e.button;
+                ei.event_time_us = e.event_time_us;
                 m_event_queue.push_event(ei);
             }
         });
@@ -134,7 +140,7 @@ namespace app
         tavros::core::timer tm;
         tm.start();
         do {
-            float elapsed = tm.elapsed_seconds();
+            auto elapsed = tm.elapsed_seconds();
             tm.start();
             m_event_queue.swap_queues();
             auto events = m_event_queue.front_queue();
