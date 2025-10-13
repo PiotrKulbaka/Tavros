@@ -52,6 +52,8 @@ namespace app
         size_t required_size = static_cast<size_t>(info.width) * static_cast<size_t>(info.height) * static_cast<size_t>(required_channels);
         m_buffer.reserve(required_size);
 
+        // stbi_set_flip_vertically_on_load(true);
+
         int    x = 0, y = 0, channels_in_file = 0;
         uint8* pixels = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, desired_channels);
 

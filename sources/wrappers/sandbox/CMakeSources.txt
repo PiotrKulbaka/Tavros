@@ -4,6 +4,8 @@
 #
 
 set(TAV_SANDBOX_CROSSPLATFORM_SOURCES
+    ${CMAKE_CURRENT_LIST_DIR}/sources/built_in_meshes.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/sources/built_in_meshes.hpp
     ${CMAKE_CURRENT_LIST_DIR}/sources/event_queue.cpp
     ${CMAKE_CURRENT_LIST_DIR}/sources/event_queue.hpp
     ${CMAKE_CURRENT_LIST_DIR}/sources/image_decoder.cpp
