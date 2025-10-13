@@ -126,6 +126,80 @@ void main()
 }
 )";
 
+const char* world_grid_vertex_shader_source = R"(
+#version 420 core
+
+const vec2 xy_plane_verts[4] = vec2[](
+    vec2(-1.0, -1.0),
+    vec2( 1.0, -1.0),
+    vec2(-1.0,  1.0),
+    vec2( 1.0,  1.0)
+);
+
+layout (binding = 0) uniform Scene
+{
+    mat4 u_view;
+    mat4 u_perspective_projection;
+    mat4 u_view_projection;
+    mat4 u_inverse_view;
+    mat4 u_inverse_projection;
+};
+
+out vec3 v_world_pos;
+out vec3 v_cam_pos;
+
+void main()
+{
+    v_cam_pos = (u_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+
+    vec2 pos = xy_plane_verts[gl_VertexID];
+    v_world_pos = vec3(pos.x * 2000.0 + v_cam_pos.x, pos.y * 2000.0 + v_cam_pos.y, 0.0);
+    gl_Position = u_view_projection * vec4(v_world_pos, 1.0);
+}
+)";
+
+const char* world_grid_fragment_shader_source = R"(
+#version 420 core
+
+in vec3 v_world_pos;
+in vec3 v_cam_pos;
+
+out vec4 FragColor;
+
+void main()
+{
+    float grid_step = 1.0f;
+    float line_width =  0.005 * sqrt(abs(v_cam_pos.z));
+
+    float lineX = abs(fract((v_world_pos.x + line_width * 0.5) / grid_step));
+    float lineY = abs(fract((v_world_pos.y + line_width * 0.5) / grid_step));
+
+    float x_axis_mask = step(abs(v_world_pos.x), line_width * 2.0);
+    float y_axis_mask = step(abs(v_world_pos.y), line_width * 2.0);
+    float xy_mask = max(x_axis_mask, y_axis_mask);
+    float grid_mask = clamp(step(lineX, line_width) + step(lineY, line_width) - (x_axis_mask + y_axis_mask) * 2.0, 0.0, 1.0);
+    float mask = clamp(grid_mask + x_axis_mask + y_axis_mask, 0.0, 1.0);
+    
+    vec3 mask_color = vec3(0.3, 1.0, 0.3) * x_axis_mask + vec3(1.0, 0.3, 0.3) * y_axis_mask;
+
+    vec3 final_color = vec3(0.4) * grid_mask + mask_color;
+
+    // fading by camera angle
+    vec3 plane_normal = vec3(0.0, 0.0, 1.0);
+    vec3 view_dir = normalize(v_cam_pos - v_world_pos);
+    float angle_factor = abs(dot(plane_normal, view_dir));
+    angle_factor = clamp(angle_factor * 2.0, 0.0, 1.0);
+
+    // fading by distance
+    float dist = length(v_cam_pos - v_world_pos);
+    float dist_factor = 1.0 - smoothstep(120.0, 150.0, dist);
+
+    float final_alpha = mask * angle_factor * dist_factor * 0.8; // умножаем на базовую прозрачность
+
+    FragColor = vec4(final_color, final_alpha);
+}
+)";
+
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -431,7 +505,7 @@ public:
         }
 
         rhi::render_pass_create_info main_render_pass;
-        main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, 1, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.1f, 0.7f, 0.4f, 1.0f}});
+        main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, 1, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.2f, 0.2f, 0.25f, 1.0f}});
         main_render_pass.depth_stencil_attachment = {rhi::pixel_format::depth24_stencil8, rhi::load_op::clear, rhi::store_op::store, 1.0f, rhi::load_op::dont_care, rhi::store_op::dont_care, 0};
         m_main_pass = m_graphics_device->create_render_pass(main_render_pass);
         if (!m_main_pass.is_valid()) {
@@ -539,8 +613,46 @@ public:
         rhi::buffer_handle  mesh_ubo_buffers_to_binding[] = {m_uniform_buffer};
 
         m_mesh_shader_binding = m_graphics_device->create_shader_binding(mesh_shader_binding_info, mesh_textures_to_binding, mesh_samplers_to_binding, mesh_ubo_buffers_to_binding);
-        if (!m_mesh_geometry.is_valid()) {
+        if (!m_mesh_shader_binding.is_valid()) {
             ::logger.fatal("Failed to create shader binding");
+            exit_fail();
+        }
+
+
+        // World grid
+        auto world_grid_rendering_vertex_shader = m_graphics_device->create_shader({world_grid_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+        auto world_grid_rendering_fragment_shader = m_graphics_device->create_shader({world_grid_fragment_shader_source, rhi::shader_stage::fragment, "main"});
+
+        rhi::pipeline_create_info world_grid_rendering_pipeline_info;
+        world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
+        world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
+        world_grid_rendering_pipeline_info.depth_stencil.depth_test_enable = true;
+        world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = true;
+        world_grid_rendering_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
+        world_grid_rendering_pipeline_info.rasterizer.cull = rhi::cull_face::off;
+        world_grid_rendering_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
+        world_grid_rendering_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
+        world_grid_rendering_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
+        world_grid_rendering_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
+        world_grid_rendering_pipeline_info.multisample.sample_shading_enabled = false;
+        world_grid_rendering_pipeline_info.multisample.sample_count = 1;
+        world_grid_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
+
+        rhi::shader_handle world_grid_rendering_shaders[] = {world_grid_rendering_vertex_shader, world_grid_rendering_fragment_shader};
+        m_world_grid_rendering_pipeline = m_graphics_device->create_pipeline(world_grid_rendering_pipeline_info, world_grid_rendering_shaders);
+        if (!m_world_grid_rendering_pipeline.is_valid()) {
+            ::logger.fatal("Failed to create world grid rendering pipeline");
+            exit_fail();
+        }
+
+
+        rhi::shader_binding_create_info world_grid_shader_binding_info;
+        world_grid_shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(frame_data), 0});
+        rhi::buffer_handle world_grid_ubo_buffers_to_binding[] = {m_uniform_buffer};
+
+        m_world_grid_shader_binding = m_graphics_device->create_shader_binding(world_grid_shader_binding_info, {}, {}, world_grid_ubo_buffers_to_binding);
+        if (!m_world_grid_shader_binding.is_valid()) {
+            ::logger.fatal("Failed to create worrld grid shader binding");
             exit_fail();
         }
     }
@@ -620,7 +732,10 @@ public:
             move_delta /= len;
         }
 
-        m_camera.move(move_delta * static_cast<float>(delta_time) * 2.0f);
+        bool  is_shift_pressed = m_input_manager.is_key_pressed(tavros::system::keys::k_lshift);
+        bool  is_control_pressed = m_input_manager.is_key_pressed(tavros::system::keys::k_lcontrol);
+        float speed_factor = static_cast<float>(delta_time) * (is_shift_pressed ? 10.0f * (is_control_pressed ? 10.0f : 1.0f) : 2.0f);
+        m_camera.move(move_delta * speed_factor);
 
         auto mouse_delta = m_input_manager.get_mouse_delta();
         if (tavros::math::squared_length(mouse_delta) > 0.0f) {
@@ -666,11 +781,20 @@ public:
         cbuf->copy_buffer(m_stage_buffer, m_uniform_buffer, sizeof(m_renderer_frame_data));
 
         cbuf->begin_render_pass(m_main_pass, m_composer->backbuffer());
+
+        // Draw cube
         cbuf->bind_pipeline(m_mesh_rendering_pipeline);
         cbuf->bind_geometry(m_mesh_geometry);
         cbuf->bind_shader_binding(m_mesh_shader_binding);
         cbuf->draw_indexed(6 * 6);
+
+        // Draw world grid
+        cbuf->bind_pipeline(m_world_grid_rendering_pipeline);
+        cbuf->bind_shader_binding(m_world_grid_shader_binding);
+        cbuf->draw(4);
+
         cbuf->end_render_pass();
+
 
         m_composer->submit_command_list(cbuf);
         m_composer->end_frame();
@@ -690,9 +814,11 @@ private:
 
     rhi::pipeline_handle       m_main_pipeline;
     rhi::pipeline_handle       m_mesh_rendering_pipeline;
+    rhi::pipeline_handle       m_world_grid_rendering_pipeline;
     rhi::render_pass_handle    m_main_pass;
     rhi::shader_binding_handle m_shader_binding;
     rhi::shader_binding_handle m_mesh_shader_binding;
+    rhi::shader_binding_handle m_world_grid_shader_binding;
     rhi::texture_handle        m_texture;
     rhi::buffer_handle         m_stage_buffer;
     rhi::sampler_handle        m_sampler;
