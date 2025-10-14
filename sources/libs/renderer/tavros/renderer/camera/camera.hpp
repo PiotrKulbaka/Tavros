@@ -30,6 +30,26 @@ namespace tavros::renderer
         math::mat4 get_projection_matrix() noexcept;
         math::mat4 get_view_projection_matrix() noexcept;
 
+        [[nodiscard]] float fov_y() const noexcept
+        {
+            return m_fov_y;
+        }
+
+        [[nodiscard]] float aspect() const noexcept
+        {
+            return m_aspect;
+        }
+
+        [[nodiscard]] float near_plane() const noexcept
+        {
+            return m_z_near;
+        }
+
+        [[nodiscard]] float far_plane() const noexcept
+        {
+            return m_z_far;
+        }
+
     private:
         math::vec3 m_position;                // Положение камеры
         math::vec3 m_forward;                 // Направление взгляда (нормализованное)

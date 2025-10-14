@@ -71,9 +71,18 @@ layout (binding = 0) uniform Scene
 {
     mat4 u_view;
     mat4 u_perspective_projection;
-    mat4 u_view_projection;
+    mat4 u_view_perspective_projection;
     mat4 u_inverse_view;
-    mat4 u_inverse_projection;
+    mat4 u_inverse_perspective_projection;
+
+    float u_frame_width;
+    float u_frame_height;
+
+    float u_near_plane;
+    float u_far_plane;
+    float u_view_space_depth;
+    float u_aspect_ratio;
+    float u_fov_y;
 };
 
 out vec2 v_tex_coord_outside;
@@ -93,7 +102,7 @@ void main()
     v_tex_coord_outside = a_uv_outside;
     v_tex_coord_inside = a_uv_inside;
 
-    gl_Position = u_view_projection * vec4(a_pos, 1.0);
+    gl_Position = u_view_perspective_projection * vec4(a_pos, 1.0);
 }
 )";
 
@@ -143,17 +152,57 @@ layout (binding = 0) uniform Scene
     mat4 u_view_projection;
     mat4 u_inverse_view;
     mat4 u_inverse_projection;
+    
+    float u_frame_width;
+    float u_frame_height;
+
+    float u_near_plane;
+    float u_far_plane;
+    float u_view_space_depth;
+    float u_aspect_ratio;
+    float u_fov_y;
 };
 
 out vec3 v_world_pos;
 out vec3 v_cam_pos;
+out float v_minor_grid_step;
+out float v_major_grid_step;
+out float v_line_width;
+out float v_view_space_depth;
 
 void main()
 {
+    const float SQRT2 = 1.4142135623730951;
+
+    float plane_scale = (u_view_space_depth) * SQRT2;
     v_cam_pos = (u_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
+    float minor_step_base = 1.0;
+    float major_step_base = 10.0;
+
+    v_view_space_depth = u_view_space_depth;
+
+    // thresholds
+    float t1 = u_view_space_depth * 0.03;
+    float t2 = u_view_space_depth * 0.3;
+
+    float cam_height = abs(v_cam_pos.z);
+    float mask1 = 1.0 - step(t1, cam_height);
+    float mask10 = step(t1, cam_height) * (1.0 - step(t2, cam_height));
+    float mask100 = step(t2, cam_height); 
+
+    float step1 = 1.0;
+    float step10 = 10.0;
+    float step100 = 100.0;
+
+    float scale_factor = step1 * mask1 + step10 * mask10 + step100 * mask100;
+    v_minor_grid_step = minor_step_base * scale_factor;
+    v_major_grid_step = major_step_base * scale_factor;
+    
+    v_line_width = 0.01 * pow(cam_height, 0.63);
+
     vec2 pos = xy_plane_verts[gl_VertexID];
-    v_world_pos = vec3(pos.x * 2000.0 + v_cam_pos.x, pos.y * 2000.0 + v_cam_pos.y, 0.0);
+    v_world_pos = vec3(pos.x * plane_scale + v_cam_pos.x, pos.y * plane_scale + v_cam_pos.y, 0.0);
     gl_Position = u_view_projection * vec4(v_world_pos, 1.0);
 }
 )";
@@ -163,38 +212,51 @@ const char* world_grid_fragment_shader_source = R"(
 
 in vec3 v_world_pos;
 in vec3 v_cam_pos;
+in float v_minor_grid_step;
+in float v_major_grid_step;
+in float v_line_width;
+in float v_view_space_depth;
 
 out vec4 FragColor;
 
 void main()
 {
-    float grid_step = 1.0f;
-    float line_width =  0.005 * sqrt(abs(v_cam_pos.z));
+    const vec3 x_axis_color = vec3(0.3, 1.0, 0.3);
+    const vec3 y_axis_color = vec3(1.0, 0.3, 0.3);
+    const vec3 minor_grid_color = vec3(0.3);
+    const vec3 major_grid_color = vec3(0.4);
 
-    float lineX = abs(fract((v_world_pos.x + line_width * 0.5) / grid_step));
-    float lineY = abs(fract((v_world_pos.y + line_width * 0.5) / grid_step));
+    vec2 world_xy = abs(v_world_pos.xy);
 
-    float x_axis_mask = step(abs(v_world_pos.x), line_width * 2.0);
-    float y_axis_mask = step(abs(v_world_pos.y), line_width * 2.0);
-    float xy_mask = max(x_axis_mask, y_axis_mask);
-    float grid_mask = clamp(step(lineX, line_width) + step(lineY, line_width) - (x_axis_mask + y_axis_mask) * 2.0, 0.0, 1.0);
-    float mask = clamp(grid_mask + x_axis_mask + y_axis_mask, 0.0, 1.0);
+    // axis lines
+    vec2 axis_mask = step(world_xy, vec2(v_line_width * 2.0));
+    float xy_mask = max(axis_mask.x, axis_mask.y);
+
+    // major lines
+    vec2 major_lines = step(mod(world_xy, v_major_grid_step), vec2(v_line_width * 2.0));
+    float major_mask = clamp(max(major_lines.x, major_lines.y) - xy_mask, 0.0, 1.0);
+
+    // minor lines
+    vec2 minor_lines = step(mod(world_xy, v_minor_grid_step), vec2(v_line_width));
+    float minor_mask = clamp(max(minor_lines.x, minor_lines.y) - major_mask, 0.0, 1.0);
     
-    vec3 mask_color = vec3(0.3, 1.0, 0.3) * x_axis_mask + vec3(1.0, 0.3, 0.3) * y_axis_mask;
-
-    vec3 final_color = vec3(0.4) * grid_mask + mask_color;
+    float final_mask = xy_mask + major_mask + minor_mask;
+    
+    vec3 final_color = x_axis_color * axis_mask.x + y_axis_color * axis_mask.y + minor_grid_color * minor_mask + major_grid_color * major_mask;
 
     // fading by camera angle
-    vec3 plane_normal = vec3(0.0, 0.0, 1.0);
     vec3 view_dir = normalize(v_cam_pos - v_world_pos);
-    float angle_factor = abs(dot(plane_normal, view_dir));
-    angle_factor = clamp(angle_factor * 2.0, 0.0, 1.0);
+    float angle_factor = clamp(abs(view_dir.z) * 2.2, 0.0, 1.0);
 
     // fading by distance
-    float dist = length(v_cam_pos - v_world_pos);
-    float dist_factor = 1.0 - smoothstep(120.0, 150.0, dist);
+    float dist_factor = clamp(
+        1.0
+        - smoothstep(v_view_space_depth * 0.85, v_view_space_depth * 0.95, length(v_cam_pos.xy - v_world_pos.xy))
+        - smoothstep(v_view_space_depth * 0.45, v_view_space_depth * 0.5, v_cam_pos.z)
+        , 0.0, 1.0
+    );
 
-    float final_alpha = mask * angle_factor * dist_factor * 0.8; // умножаем на базовую прозрачность
+    float final_alpha = dist_factor *  angle_factor * final_mask * 0.8;
 
     FragColor = vec4(final_color, final_alpha);
 }
@@ -710,6 +772,10 @@ public:
 
         if (need_resize) {
             m_composer->resize(m_current_frame_size.width, m_current_frame_size.height);
+
+            constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
+            float           aspect_ratio = static_cast<float>(m_current_frame_size.width) / static_cast<float>(m_current_frame_size.height);
+            m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 1000.0f);
         }
 
         // Update camera
@@ -747,10 +813,6 @@ public:
 
             m_camera.set_orientation(rotation * m_camera.forward(), rotation * m_camera.up());
         }
-
-        constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
-        float           aspect_ratio = static_cast<float>(m_current_frame_size.width) / static_cast<float>(m_current_frame_size.height);
-        m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 1000.0f);
     }
 
     void update_scene()
@@ -760,6 +822,13 @@ public:
         m_renderer_frame_data.view_projection = tavros::math::transpose(m_camera.get_view_projection_matrix());
         m_renderer_frame_data.inverse_view = tavros::math::transpose(tavros::math::inverse(m_camera.get_view_matrix()));
         m_renderer_frame_data.inverse_projection = tavros::math::transpose(tavros::math::inverse(m_camera.get_projection_matrix()));
+        m_renderer_frame_data.frame_width = static_cast<float>(m_current_frame_size.width);
+        m_renderer_frame_data.frame_height = static_cast<float>(m_current_frame_size.height);
+        m_renderer_frame_data.near_plane = m_camera.near_plane();
+        m_renderer_frame_data.far_plane = m_camera.far_plane();
+        m_renderer_frame_data.view_space_depth = m_camera.far_plane() - m_camera.near_plane();
+        m_renderer_frame_data.aspect_ratio = m_camera.aspect();
+        m_renderer_frame_data.fov_y = m_camera.fov_y();
     }
 
     void render(app::event_queue_view events, double delta_time) override
@@ -839,6 +908,15 @@ private:
         tavros::math::mat4 view_projection;
         tavros::math::mat4 inverse_view;
         tavros::math::mat4 inverse_projection;
+
+        float frame_width = 0.0f;
+        float frame_height = 0.0f;
+
+        float near_plane = 0.0f;
+        float far_plane = 0.0f;
+        float view_space_depth = 0.0f;
+        float aspect_ratio = 0.0f;
+        float fov_y = 0.0f;
     };
 
     frame_data m_renderer_frame_data;
