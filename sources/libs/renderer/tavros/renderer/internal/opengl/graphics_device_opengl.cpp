@@ -2,6 +2,8 @@
 
 #include <tavros/renderer/internal/opengl/frame_composer_opengl.hpp>
 #include <tavros/renderer/internal/opengl/type_conversions.hpp>
+#include <tavros/renderer/internal/opengl/gl_check.hpp>
+
 #include <tavros/core/containers/unordered_map.hpp>
 #include <tavros/core/raii/scoped_owner.hpp>
 #include <tavros/core/logger/logger.hpp>
@@ -27,17 +29,17 @@ namespace
         // compile shader
         const char* program_text = program.data();
         auto        text_length = static_cast<GLint>(program.size());
-        glShaderSource(shader, 1, &program_text, &text_length);
-        glCompileShader(shader);
+        GL_CALL(glShaderSource(shader, 1, &program_text, &text_length));
+        GL_CALL(glCompileShader(shader));
 
         // check compile status
         GLint status;
-        glGetShaderiv(shader, GL_COMPILE_STATUS, &status);
+        GL_CALL(glGetShaderiv(shader, GL_COMPILE_STATUS, &status));
         if (!status) {
             char buffer[4096];
-            glGetShaderInfoLog(shader, sizeof(buffer), nullptr, buffer);
+            GL_CALL(glGetShaderInfoLog(shader, sizeof(buffer), nullptr, buffer));
             logger.error("glCompileShader() failed:\n{}", buffer);
-            glDeleteShader(shader);
+            GL_CALL(glDeleteShader(shader));
             return 0;
         }
         return shader;
@@ -53,35 +55,35 @@ namespace
             return 0;
         }
 
-        glAttachShader(program, vert_shader);
-        glAttachShader(program, frag_shader);
-        glLinkProgram(program);
+        GL_CALL(glAttachShader(program, vert_shader));
+        GL_CALL(glAttachShader(program, frag_shader));
+        GL_CALL(glLinkProgram(program));
 
         // check link status
         GLint status;
-        glGetProgramiv(program, GL_LINK_STATUS, &status);
+        GL_CALL(glGetProgramiv(program, GL_LINK_STATUS, &status));
         if (!status) {
             char buffer[4096];
-            glGetProgramInfoLog(program, sizeof(buffer), nullptr, buffer);
+            GL_CALL(glGetProgramInfoLog(program, sizeof(buffer), nullptr, buffer));
             logger.error("glLinkProgram() failed:\n{}", buffer);
             failed = true;
         }
 
         // validate program
-        glValidateProgram(program);
-        glGetProgramiv(program, GL_VALIDATE_STATUS, &status);
+        GL_CALL(glValidateProgram(program));
+        GL_CALL(glGetProgramiv(program, GL_VALIDATE_STATUS, &status));
         if (!status) {
             char buffer[4096];
-            glGetProgramInfoLog(program, sizeof(buffer), nullptr, buffer);
+            GL_CALL(glGetProgramInfoLog(program, sizeof(buffer), nullptr, buffer));
             logger.error("glValidateProgram() failed:\n{}", buffer);
             failed = true;
         }
 
-        glDetachShader(program, vert_shader);
-        glDetachShader(program, frag_shader);
+        GL_CALL(glDetachShader(program, vert_shader));
+        GL_CALL(glDetachShader(program, frag_shader));
 
         if (failed) {
-            glDeleteProgram(program);
+            GL_CALL(glDeleteProgram(program));
             return 0;
         }
 
@@ -274,7 +276,7 @@ namespace tavros::renderer::rhi
     void graphics_device_opengl::destroy_shader(shader_handle shader)
     {
         if (auto* s = m_resources.try_get(shader)) {
-            glDeleteShader(s->shader_obj);
+            GL_CALL(glDeleteShader(s->shader_obj));
             s->shader_obj = 0;
             m_resources.remove(shader);
             ::logger.debug("Shader {} destroyed", shader);
@@ -286,30 +288,30 @@ namespace tavros::renderer::rhi
     sampler_handle graphics_device_opengl::create_sampler(const sampler_create_info& info)
     {
         GLuint sampler;
-        glGenSamplers(1, &sampler);
+        GL_CALL(glGenSamplers(1, &sampler));
 
         auto filter = to_gl_filter(info.filter);
 
         // Filtering
-        glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, filter.min_filter);
-        glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, filter.mag_filter);
+        GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_MIN_FILTER, filter.min_filter));
+        GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_MAG_FILTER, filter.mag_filter));
 
         // Wrapping
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(info.wrap_mode.wrap_s));
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(info.wrap_mode.wrap_t));
-        glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(info.wrap_mode.wrap_r));
+        GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_WRAP_S, to_gl_wrap_mode(info.wrap_mode.wrap_s)));
+        GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_WRAP_T, to_gl_wrap_mode(info.wrap_mode.wrap_t)));
+        GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_WRAP_R, to_gl_wrap_mode(info.wrap_mode.wrap_r)));
 
         // LOD parameters
-        glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, info.mip_lod_bias);
-        glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, info.min_lod);
-        glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, info.max_lod);
+        GL_CALL(glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, info.mip_lod_bias));
+        GL_CALL(glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, info.min_lod));
+        GL_CALL(glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, info.max_lod));
 
         // Depth compare
         if (info.depth_compare != compare_op::off) {
-            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE);
-            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(info.depth_compare));
+            GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_COMPARE_REF_TO_TEXTURE));
+            GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(info.depth_compare)));
         } else {
-            glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE);
+            GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE));
         }
 
         auto h = m_resources.create({info, sampler});
@@ -320,7 +322,7 @@ namespace tavros::renderer::rhi
     void graphics_device_opengl::destroy_sampler(sampler_handle sampler)
     {
         if (auto* s = m_resources.try_get(sampler)) {
-            glDeleteSamplers(1, &s->sampler_obj);
+            GL_CALL(glDeleteSamplers(1, &s->sampler_obj));
             m_resources.remove(sampler);
             ::logger.debug("Sampler {} destroyed", sampler);
         } else {
@@ -491,27 +493,27 @@ namespace tavros::renderer::rhi
         }
 
         GLuint tex;
-        glGenTextures(1, &tex);
+        GL_CALL(glGenTextures(1, &tex));
 
         auto texture_owner = core::make_scoped_owner(tex, [gl_target](GLuint id) {
-            glBindTexture(gl_target, 0);
-            glDeleteTextures(1, &id);
+            GL_CALL(glBindTexture(gl_target, 0));
+            GL_CALL(glDeleteTextures(1, &id));
         });
 
         // Bind texture
-        glBindTexture(gl_target, tex);
+        GL_CALL(glBindTexture(gl_target, tex));
 
         if (gl_target == GL_TEXTURE_2D_MULTISAMPLE) {
-            glTexImage2DMultisample(
+            GL_CALL(glTexImage2DMultisample(
                 gl_target,
                 info.sample_count,
                 gl_pixel_format.internal_format,
                 info.width,
                 info.height,
                 GL_TRUE
-            );
+            ));
         } else if (gl_target == GL_TEXTURE_2D) {
-            glTexImage2D(
+            GL_CALL(glTexImage2D(
                 gl_target,
                 0, // mip level
                 gl_pixel_format.internal_format,
@@ -521,9 +523,9 @@ namespace tavros::renderer::rhi
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 nullptr
-            );
+            ));
         } else if (gl_target == GL_TEXTURE_3D) {
-            glTexImage3D(
+            GL_CALL(glTexImage3D(
                 gl_target,
                 0, // mip level
                 gl_pixel_format.internal_format,
@@ -534,11 +536,11 @@ namespace tavros::renderer::rhi
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 nullptr
-            );
+            ));
         } else if (gl_target == GL_TEXTURE_CUBE_MAP) {
             // Cubemap, allocate memory for all 6 faces
             for (int32 i = 0; i < 6; ++i) {
-                glTexImage2D(
+                GL_CALL(glTexImage2D(
                     GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
                     0, // mip level
                     gl_pixel_format.internal_format,
@@ -548,13 +550,13 @@ namespace tavros::renderer::rhi
                     gl_pixel_format.format,
                     gl_pixel_format.type,
                     nullptr
-                );
+                ));
             }
         } else {
             TAV_UNREACHABLE();
         }
 
-        glBindTexture(gl_target, 0);
+        GL_CALL(glBindTexture(gl_target, 0));
 
         auto h = m_resources.create({info, texture_owner.release(), gl_target});
         ::logger.debug("Texture {} created", h);
@@ -564,7 +566,7 @@ namespace tavros::renderer::rhi
     void graphics_device_opengl::destroy_texture(texture_handle texture)
     {
         if (auto* tex = m_resources.try_get(texture)) {
-            glDeleteTextures(1, &tex->texture_obj);
+            GL_CALL(glDeleteTextures(1, &tex->texture_obj));
             m_resources.remove(texture);
             ::logger.debug("Texture {} destroyed", texture);
         } else {
@@ -637,7 +639,7 @@ namespace tavros::renderer::rhi
         }
 
         auto program_owner = core::make_scoped_owner(gl_program, [](GLuint id) {
-            glDeleteProgram(id);
+            GL_CALL(glDeleteProgram(id));
         });
 
 
@@ -656,7 +658,7 @@ namespace tavros::renderer::rhi
 
         // Get number of attributes in compiled shader
         GLint gl_prog_attrib_count;
-        glGetProgramiv(gl_program, GL_ACTIVE_ATTRIBUTES, &gl_prog_attrib_count);
+        GL_CALL(glGetProgramiv(gl_program, GL_ACTIVE_ATTRIBUTES, &gl_prog_attrib_count));
 
         // And validate each attribute
         size_t total_gl_attributes = 0;
@@ -664,7 +666,7 @@ namespace tavros::renderer::rhi
             GLchar attrib_name[256] = {0};
             GLint  size;
             GLenum type;
-            glGetActiveAttrib(gl_program, i, sizeof(attrib_name), nullptr, &size, &type, attrib_name);
+            GL_CALL(glGetActiveAttrib(gl_program, i, sizeof(attrib_name), nullptr, &size, &type, attrib_name));
 
             GLint gl_attrib_location = glGetAttribLocation(gl_program, attrib_name);
             if (gl_attrib_location < 0) {
@@ -718,7 +720,7 @@ namespace tavros::renderer::rhi
     void graphics_device_opengl::destroy_pipeline(pipeline_handle handle)
     {
         if (auto* p = m_resources.try_get(handle)) {
-            glDeleteProgram(p->program_obj);
+            GL_CALL(glDeleteProgram(p->program_obj));
             m_resources.remove(handle);
             ::logger.debug("Pipeline {} destroyed", handle);
         } else {
@@ -804,16 +806,16 @@ namespace tavros::renderer::rhi
         }
 
         GLuint fbo;
-        glGenFramebuffers(1, &fbo);
+        GL_CALL(glGenFramebuffers(1, &fbo));
 
         // Scope for framebuffer deletion if something goes wrong
         auto fbo_owner = core::make_scoped_owner(fbo, [](GLuint id) {
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
-            glDeleteFramebuffers(1, &id);
+            GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+            GL_CALL(glDeleteFramebuffers(1, &id));
         });
 
         // Bind framebuffer and attach textures
-        glBindFramebuffer(GL_FRAMEBUFFER, fbo);
+        GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
 
         // Attach color textures to the framebuffer
         core::static_vector<GLenum, k_max_color_attachments> draw_buffers;
@@ -821,7 +823,7 @@ namespace tavros::renderer::rhi
             auto*  tex = color_attachment_textures[i];
             GLenum attachment_type = GL_COLOR_ATTACHMENT0 + i;
             draw_buffers.push_back(attachment_type);
-            glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_type, tex->target, tex->texture_obj, 0);
+            GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, attachment_type, tex->target, tex->texture_obj, 0));
         }
 
         // Attach depth/stencil texture to the framebuffer if provided
@@ -867,7 +869,7 @@ namespace tavros::renderer::rhi
             }
 
             // Everything is ok, attach depth/stencil texture
-            glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, tex->target, tex->texture_obj, 0);
+            GL_CALL(glFramebufferTexture2D(GL_FRAMEBUFFER, gl_format.depth_stencil_attachment_type, tex->target, tex->texture_obj, 0));
         }
 
         // Framebuffer will be incomplete if the depth/stencil texture is not attached and
@@ -881,11 +883,11 @@ namespace tavros::renderer::rhi
         if (draw_buffers.empty()) {
             // Drawing only onto depth/stencil buffer
             // Framebuffer will be incomplete if the depth/stencil texture is not attached
-            glDrawBuffer(GL_NONE);
-            glReadBuffer(GL_NONE);
+            GL_CALL(glDrawBuffer(GL_NONE));
+            GL_CALL(glReadBuffer(GL_NONE));
         } else {
             // Drawing onto color attachments
-            glDrawBuffers(draw_buffers.size(), draw_buffers.data());
+            GL_CALL(glDrawBuffers(draw_buffers.size(), draw_buffers.data()));
         }
 
         // Validate framebuffer
@@ -894,7 +896,7 @@ namespace tavros::renderer::rhi
             return framebuffer_handle::invalid();
         }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
         auto h = m_resources.create({info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachment_h});
         ::logger.debug("Framebuffer {} created", h);
@@ -904,7 +906,7 @@ namespace tavros::renderer::rhi
     void graphics_device_opengl::destroy_framebuffer(framebuffer_handle framebuffer)
     {
         if (auto* fb = m_resources.try_get(framebuffer)) {
-            glDeleteFramebuffers(1, &fb->framebuffer_obj);
+            GL_CALL(glDeleteFramebuffers(1, &fb->framebuffer_obj));
             m_resources.remove(framebuffer);
             ::logger.debug("Framebuffer {} destroyed", framebuffer);
         } else {
@@ -962,18 +964,18 @@ namespace tavros::renderer::rhi
         }
 
         GLuint bo;
-        glGenBuffers(1, &bo);
+        GL_CALL(glGenBuffers(1, &bo));
 
         auto bo_owner = core::make_scoped_owner(bo, [gl_target](GLuint id) {
-            glBindBuffer(gl_target, 0);
-            glDeleteBuffers(1, &id);
+            GL_CALL(glBindBuffer(gl_target, 0));
+            GL_CALL(glDeleteBuffers(1, &id));
         });
 
         auto gl_size = static_cast<GLsizeiptr>(info.size);
 
-        glBindBuffer(gl_target, bo);
-        glBufferData(gl_target, gl_size, nullptr, gl_usage);
-        glBindBuffer(gl_target, 0);
+        GL_CALL(glBindBuffer(gl_target, bo));
+        GL_CALL(glBufferData(gl_target, gl_size, nullptr, gl_usage));
+        GL_CALL(glBindBuffer(gl_target, 0));
 
         auto h = m_resources.create({info, bo_owner.release(), gl_target, gl_usage});
         ::logger.debug("Buffer {} created", h);
@@ -983,7 +985,7 @@ namespace tavros::renderer::rhi
     void graphics_device_opengl::destroy_buffer(buffer_handle buffer)
     {
         if (auto* b = m_resources.try_get(buffer)) {
-            glDeleteBuffers(1, &b->buffer_obj);
+            GL_CALL(glDeleteBuffers(1, &b->buffer_obj));
             m_resources.remove(buffer);
             ::logger.debug("Buffer {} destroyed", buffer);
         } else {
@@ -1036,15 +1038,15 @@ namespace tavros::renderer::rhi
 
         // Create VAO
         GLuint vao;
-        glGenVertexArrays(1, &vao);
+        GL_CALL(glGenVertexArrays(1, &vao));
 
         // Scope for vertex array deletion if something goes wrong
         auto vao_owner = core::make_scoped_owner(vao, [](GLuint id) {
-            glBindVertexArray(0);
-            glDeleteVertexArrays(1, &id);
+            GL_CALL(glBindVertexArray(0));
+            GL_CALL(glDeleteVertexArrays(1, &id));
         });
 
-        glBindVertexArray(vao);
+        GL_CALL(glBindVertexArray(vao));
 
 
         // Setup attribute bindings
@@ -1062,7 +1064,7 @@ namespace tavros::renderer::rhi
             }
 
             // Enable the vertex buffer
-            glBindVertexBuffer(attrib_i, b->buffer_obj, buf_layout.base_offset, buf_layout.stride);
+            GL_CALL(glBindVertexBuffer(attrib_i, b->buffer_obj, buf_layout.base_offset, buf_layout.stride));
 
             auto gl_attrib_info = to_gl_attribute_info(attrib.type, attrib.format);
             for (uint32 col = 0; col < gl_attrib_info.cols; ++col) {
@@ -1070,11 +1072,11 @@ namespace tavros::renderer::rhi
                 GLuint offset = attrib_bind.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
 
                 // Enable attribute and set pointer
-                glEnableVertexAttribArray(location);
-                glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, attrib.normalize, offset);
-                glVertexAttribBinding(location, attrib_i);
+                GL_CALL(glEnableVertexAttribArray(location));
+                GL_CALL(glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, attrib.normalize, offset));
+                GL_CALL(glVertexAttribBinding(location, attrib_i));
             }
-            glVertexBindingDivisor(attrib_i, attrib_bind.instance_divisor);
+            GL_CALL(glVertexBindingDivisor(attrib_i, attrib_bind.instance_divisor));
         }
 
         // Bind index buffer if present
@@ -1091,10 +1093,10 @@ namespace tavros::renderer::rhi
             }
 
             // Everything is ok, so bind index buffer
-            glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj);
+            GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj));
         }
 
-        glBindVertexArray(0);
+        GL_CALL(glBindVertexArray(0));
 
         auto h = m_resources.create({info, vao_owner.release()});
         ::logger.debug("Geometry {} created", h);
@@ -1104,7 +1106,7 @@ namespace tavros::renderer::rhi
     void graphics_device_opengl::destroy_geometry(geometry_handle geometry)
     {
         if (auto* g = m_resources.try_get(geometry)) {
-            glDeleteVertexArrays(1, &g->vao_obj);
+            GL_CALL(glDeleteVertexArrays(1, &g->vao_obj));
             m_resources.remove(geometry);
             ::logger.debug("Geometry {} destroyed", geometry);
         } else {
@@ -1342,7 +1344,7 @@ namespace tavros::renderer::rhi
         auto target = b->gl_target;
 
         // Get buffer range
-        glBindBuffer(target, b->buffer_obj);
+        GL_CALL(glBindBuffer(target, b->buffer_obj));
 
         void* ptr = nullptr;
 
@@ -1360,7 +1362,7 @@ namespace tavros::renderer::rhi
             );
         }
 
-        glBindBuffer(target, 0);
+        GL_CALL(glBindBuffer(target, 0));
 
         return core::buffer_span<uint8>(reinterpret_cast<uint8*>(ptr), size);
     }
@@ -1374,11 +1376,11 @@ namespace tavros::renderer::rhi
         }
 
         auto target = b->gl_target;
-        glBindBuffer(target, b->buffer_obj);
+        GL_CALL(glBindBuffer(target, b->buffer_obj));
 
-        glUnmapBuffer(target);
+        GL_CALL(glUnmapBuffer(target));
 
-        glBindBuffer(target, 0);
+        GL_CALL(glBindBuffer(target, 0));
     }
 
     device_resources_opengl* graphics_device_opengl::get_resources()

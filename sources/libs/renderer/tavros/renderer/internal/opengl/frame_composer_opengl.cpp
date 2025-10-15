@@ -71,6 +71,8 @@ namespace tavros::renderer::rhi
             }
         }
 
+        m_internal_command_list = nullptr;
+
         m_context.reset();
     }
 

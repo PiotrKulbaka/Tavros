@@ -21,6 +21,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/device_resources_opengl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/frame_composer_opengl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/frame_composer_opengl.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/gl_check.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/gl_check.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/graphics_device_opengl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/graphics_device_opengl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/type_conversions.cpp

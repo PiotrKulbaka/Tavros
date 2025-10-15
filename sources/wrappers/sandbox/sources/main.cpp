@@ -547,7 +547,7 @@ public:
         world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
         world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
         world_grid_rendering_pipeline_info.depth_stencil.depth_test_enable = true;
-        world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = false;
+        world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = true;
         world_grid_rendering_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
         world_grid_rendering_pipeline_info.rasterizer.cull = rhi::cull_face::off;
         world_grid_rendering_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
@@ -557,9 +557,6 @@ public:
         world_grid_rendering_pipeline_info.multisample.sample_shading_enabled = false;
         world_grid_rendering_pipeline_info.multisample.sample_count = 1;
         world_grid_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
-        /*world_grid_rendering_pipeline_info.rasterizer.depth_bias_enable = true;
-        world_grid_rendering_pipeline_info.rasterizer.depth_bias_factor = 1.0;
-        world_grid_rendering_pipeline_info.rasterizer.depth_bias = 1.0;*/
 
         rhi::shader_handle world_grid_rendering_shaders[] = {world_grid_rendering_vertex_shader, world_grid_rendering_fragment_shader};
         m_world_grid_rendering_pipeline = m_graphics_device->create_pipeline(world_grid_rendering_pipeline_info, world_grid_rendering_shaders);

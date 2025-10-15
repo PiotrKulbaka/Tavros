@@ -2,6 +2,7 @@
 
 #include <tavros/renderer/internal/opengl/type_conversions.hpp>
 #include <tavros/renderer/rhi/string_utils.hpp>
+#include <tavros/renderer/internal/opengl/gl_check.hpp>
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/unreachable.hpp>
@@ -28,12 +29,12 @@ namespace tavros::renderer::rhi
     {
         ::logger.debug("command_list_opengl created");
 
-        glGenFramebuffers(1, &m_resolve_fbo);
+        GL_CALL(glGenFramebuffers(1, &m_resolve_fbo));
     }
 
     command_list_opengl::~command_list_opengl()
     {
-        glDeleteFramebuffers(1, &m_resolve_fbo);
+        GL_CALL(glDeleteFramebuffers(1, &m_resolve_fbo));
 
         ::logger.debug("command_list_opengl destroyed");
     }
@@ -43,7 +44,7 @@ namespace tavros::renderer::rhi
         auto* p = m_device->get_resources()->try_get(pipeline);
         if (!p) {
             ::logger.error("Failed to bind pipeline {}: not found", pipeline);
-            glUseProgram(0);
+            GL_CALL(glUseProgram(0));
             return;
         }
 
@@ -53,7 +54,7 @@ namespace tavros::renderer::rhi
         auto* pass = m_device->get_resources()->try_get(m_current_render_pass);
         if (!pass) {
             ::logger.error("Failed to bind pipeline {}: render pass {} not found", pipeline, m_current_render_pass);
-            glUseProgram(0);
+            GL_CALL(glUseProgram(0));
             return;
         }
 
@@ -80,18 +81,18 @@ namespace tavros::renderer::rhi
                 // Set params
                 if (gl_attachment_index == 0) {
                     // Also enable blending for default framebuffer
-                    glBlendFuncSeparate(src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor);
-                    glBlendEquationSeparate(color_blend_op, alpha_blend_op);
+                    GL_CALL(glBlendFuncSeparate(src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor));
+                    GL_CALL(glBlendEquationSeparate(color_blend_op, alpha_blend_op));
                 }
                 // Enable blending for i attachment
-                glBlendFuncSeparatei(gl_attachment_index, src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor);
-                glBlendEquationSeparatei(gl_attachment_index, color_blend_op, alpha_blend_op);
+                GL_CALL(glBlendFuncSeparatei(gl_attachment_index, src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor));
+                GL_CALL(glBlendEquationSeparatei(gl_attachment_index, color_blend_op, alpha_blend_op));
 
                 need_enable_blending = true;
             } else {
                 // Disable blending for i attachment
-                glBlendFunci(gl_attachment_index, GL_ONE, GL_ZERO);
-                glBlendEquationi(gl_attachment_index, GL_FUNC_ADD);
+                GL_CALL(glBlendFunci(gl_attachment_index, GL_ONE, GL_ZERO));
+                GL_CALL(glBlendEquationi(gl_attachment_index, GL_FUNC_ADD));
             }
 
             // Enable color mask
@@ -101,120 +102,120 @@ namespace tavros::renderer::rhi
             auto a_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::alpha));
             if (gl_attachment_index == 0) {
                 // Also enable for default framebuffer
-                glColorMask(r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled);
+                GL_CALL(glColorMask(r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled));
             }
-            glColorMaski(gl_attachment_index, r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled);
+            GL_CALL(glColorMaski(gl_attachment_index, r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled));
         }
 
         if (need_enable_blending) {
-            glEnable(GL_BLEND);
+            GL_CALL(glEnable(GL_BLEND));
         } else {
-            glDisable(GL_BLEND);
+            GL_CALL(glDisable(GL_BLEND));
         }
 
         // depth test
         if (info.depth_stencil.depth_test_enable) {
-            glEnable(GL_DEPTH_TEST);
+            GL_CALL(glEnable(GL_DEPTH_TEST));
 
             // depth write
             auto depth_write = to_gl_bool(info.depth_stencil.depth_write_enable);
-            glDepthMask(depth_write);
+            GL_CALL(glDepthMask(depth_write));
 
             // depth compare func
             auto depth_compare = to_gl_compare_func(info.depth_stencil.depth_compare);
-            glDepthFunc(depth_compare);
+            GL_CALL(glDepthFunc(depth_compare));
         } else {
-            glDisable(GL_DEPTH_TEST);
+            GL_CALL(glDisable(GL_DEPTH_TEST));
         }
 
         // stencil test
         if (info.depth_stencil.stencil_test_enable) {
-            glEnable(GL_STENCIL_TEST);
+            GL_CALL(glEnable(GL_STENCIL_TEST));
 
             // stencil front
-            glStencilFuncSeparate(
+            GL_CALL(glStencilFuncSeparate(
                 GL_FRONT,
                 to_gl_compare_func(info.depth_stencil.stencil_front.compare),
                 info.depth_stencil.stencil_front.reference_value,
                 info.depth_stencil.stencil_front.read_mask
-            );
-            glStencilOpSeparate(
+            ));
+            GL_CALL(glStencilOpSeparate(
                 GL_FRONT,
                 to_gl_stencil_op(info.depth_stencil.stencil_front.stencil_fail_op),
                 to_gl_stencil_op(info.depth_stencil.stencil_front.depth_fail_op),
                 to_gl_stencil_op(info.depth_stencil.stencil_front.pass_op)
-            );
-            glStencilMaskSeparate(GL_FRONT, info.depth_stencil.stencil_front.write_mask);
+            ));
+            GL_CALL(glStencilMaskSeparate(GL_FRONT, info.depth_stencil.stencil_front.write_mask));
 
             // stencil back
-            glStencilFuncSeparate(
+            GL_CALL(glStencilFuncSeparate(
                 GL_BACK,
                 to_gl_compare_func(info.depth_stencil.stencil_back.compare),
                 info.depth_stencil.stencil_back.reference_value,
                 info.depth_stencil.stencil_back.read_mask
-            );
-            glStencilOpSeparate(
+            ));
+            GL_CALL(glStencilOpSeparate(
                 GL_BACK,
                 to_gl_stencil_op(info.depth_stencil.stencil_back.stencil_fail_op),
                 to_gl_stencil_op(info.depth_stencil.stencil_back.depth_fail_op),
                 to_gl_stencil_op(info.depth_stencil.stencil_back.pass_op)
-            );
-            glStencilMaskSeparate(GL_BACK, info.depth_stencil.stencil_back.write_mask);
+            ));
+            GL_CALL(glStencilMaskSeparate(GL_BACK, info.depth_stencil.stencil_back.write_mask));
         } else {
-            glDisable(GL_STENCIL_TEST);
+            GL_CALL(glDisable(GL_STENCIL_TEST));
         }
 
         // rasterizer state
         // cull face
         if (info.rasterizer.cull == cull_face::off) {
-            glDisable(GL_CULL_FACE);
+            GL_CALL(glDisable(GL_CULL_FACE));
         } else {
-            glEnable(GL_CULL_FACE);
-            glCullFace(to_gl_cull_face(info.rasterizer.cull));
+            GL_CALL(glEnable(GL_CULL_FACE));
+            GL_CALL(glCullFace(to_gl_cull_face(info.rasterizer.cull)));
         }
 
         // front face
-        glFrontFace(to_gl_face(info.rasterizer.face));
+        GL_CALL(glFrontFace(to_gl_face(info.rasterizer.face)));
 
         // polygon mode
-        glPolygonMode(GL_FRONT_AND_BACK, to_gl_polygon_mode(info.rasterizer.polygon));
+        GL_CALL(glPolygonMode(GL_FRONT_AND_BACK, to_gl_polygon_mode(info.rasterizer.polygon)));
 
         // depth clamp
         if (info.rasterizer.depth_clamp_enable) {
-            glEnable(GL_DEPTH_CLAMP);
-            glDepthRange(info.rasterizer.depth_clamp_near, info.rasterizer.depth_clamp_far);
+            GL_CALL(glEnable(GL_DEPTH_CLAMP));
+            GL_CALL(glDepthRange(info.rasterizer.depth_clamp_near, info.rasterizer.depth_clamp_far));
         } else {
-            glDisable(GL_DEPTH_CLAMP);
+            GL_CALL(glDisable(GL_DEPTH_CLAMP));
         }
 
         // depth bias
         auto gl_polygon_offset = to_gl_polygon_offset(info.rasterizer.polygon);
         if (info.rasterizer.depth_bias_enable) {
-            glEnable(gl_polygon_offset);
-            glPolygonOffset(info.rasterizer.depth_bias_factor, info.rasterizer.depth_bias);
+            GL_CALL(glEnable(gl_polygon_offset));
+            GL_CALL(glPolygonOffset(info.rasterizer.depth_bias_factor, info.rasterizer.depth_bias));
         } else {
-            glDisable(gl_polygon_offset);
+            GL_CALL(glDisable(gl_polygon_offset));
         }
 
         // multisample state
         if (info.multisample.sample_shading_enabled) {
-            glEnable(GL_SAMPLE_SHADING);
-            glMinSampleShading(info.multisample.min_sample_shading);
+            GL_CALL(glEnable(GL_SAMPLE_SHADING));
+            GL_CALL(glMinSampleShading(info.multisample.min_sample_shading));
         } else {
-            glDisable(GL_SAMPLE_SHADING);
+            GL_CALL(glDisable(GL_SAMPLE_SHADING));
         }
 
-        glUseProgram(p->program_obj);
+        GL_CALL(glUseProgram(p->program_obj));
     }
 
     void command_list_opengl::bind_geometry(geometry_handle geometry)
     {
         if (auto* g = m_device->get_resources()->try_get(geometry)) {
-            glBindVertexArray(g->vao_obj);
+            GL_CALL(glBindVertexArray(g->vao_obj));
             m_current_geometry = geometry;
         } else {
             ::logger.error("Failed to bind geometry binding {}: not found", geometry);
-            glBindVertexArray(0);
+            GL_CALL(glBindVertexArray(0));
             m_current_geometry = geometry_handle::invalid();
         }
     }
@@ -240,8 +241,8 @@ namespace tavros::renderer::rhi
                     ::logger.error("Failed to bind shader binding {}: texture {} is not sampled", shader_binding, tex_h);
                     return;
                 }
-                glActiveTexture(GL_TEXTURE0 + binding.binding);
-                glBindTexture(t->target, t->texture_obj);
+                GL_CALL(glActiveTexture(GL_TEXTURE0 + binding.binding));
+                GL_CALL(glBindTexture(t->target, t->texture_obj));
             } else {
                 ::logger.error("Failed to bind shader binding {}: texture {} not found", shader_binding, tex_h);
                 return;
@@ -250,7 +251,7 @@ namespace tavros::renderer::rhi
             // Bind sampler
             auto sampler_h = sb->samplers[binding.sampler_index];
             if (auto* s = m_device->get_resources()->try_get(sampler_h)) {
-                glBindSampler(binding.binding, s->sampler_obj);
+                GL_CALL(glBindSampler(binding.binding, s->sampler_obj));
             } else {
                 ::logger.error("Failed to bind shader binding {}: sampler {} not found", shader_binding, sampler_h);
                 return;
@@ -267,16 +268,16 @@ namespace tavros::renderer::rhi
 
                 if (binding.size == 0) {
                     // Bind the entire buffer
-                    glBindBufferBase(b->gl_target, binding.binding, b->buffer_obj);
+                    GL_CALL(glBindBufferBase(b->gl_target, binding.binding, b->buffer_obj));
                 } else {
                     // Bind a range of the buffer (subbuffer)
-                    glBindBufferRange(
+                    GL_CALL(glBindBufferRange(
                         b->gl_target,
                         binding.binding,
                         b->buffer_obj,
                         static_cast<GLintptr>(binding.offset),
                         static_cast<GLsizeiptr>(binding.size)
-                    );
+                    ));
                 }
             } else {
                 ::logger.error("Failed to bind shader binding {}: buffer {} not found", shader_binding, buf_h);
@@ -376,9 +377,9 @@ namespace tavros::renderer::rhi
             TAV_ASSERT(fb->framebuffer_obj == 0);
             TAV_ASSERT(rp->info.color_attachments.size() == 1);
 
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
         } else {
-            glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj);
+            GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj));
 
             if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
                 ::logger.error("Failed to begin render pass {}: framebuffer {} is not complete", render_pass, framebuffer);
@@ -387,7 +388,7 @@ namespace tavros::renderer::rhi
         }
 
         // Set viewport
-        glViewport(0, 0, fb->info.width, fb->info.height);
+        GL_CALL(glViewport(0, 0, fb->info.width, fb->info.height));
 
         // Allpy load operations to the color attachments and depth/stencil attachment
         // Only clear is supported, any other load operations are ignored
@@ -397,25 +398,25 @@ namespace tavros::renderer::rhi
             if (rp->info.color_attachments[0].load == load_op::clear) {
                 clear_mask |= GL_COLOR_BUFFER_BIT;
                 auto color = rp->info.color_attachments[0].clear_value;
-                glClearColor(color[0], color[1], color[2], color[3]);
+                GL_CALL(glClearColor(color[0], color[1], color[2], color[3]));
             }
 
             if (rp->info.depth_stencil_attachment.format != pixel_format::none) {
                 // Clear for depth buffer
                 if (rp->info.depth_stencil_attachment.depth_load == load_op::clear) {
                     clear_mask |= GL_DEPTH_BUFFER_BIT;
-                    glClearDepth(rp->info.depth_stencil_attachment.depth_clear_value);
+                    GL_CALL(glClearDepth(rp->info.depth_stencil_attachment.depth_clear_value));
                 }
                 // Clear for stencil buffer
                 if (rp->info.depth_stencil_attachment.stencil_load == load_op::clear) {
                     clear_mask |= GL_STENCIL_BUFFER_BIT;
-                    glClearStencil(rp->info.depth_stencil_attachment.stencil_clear_value);
+                    GL_CALL(glClearStencil(rp->info.depth_stencil_attachment.stencil_clear_value));
                 }
             }
 
             // Clear buffers if needed
             if (clear_mask) {
-                glClear(clear_mask);
+                GL_CALL(glClear(clear_mask));
             }
         } else {
             // Apply load operations (only clear)
@@ -427,7 +428,7 @@ namespace tavros::renderer::rhi
                     // Apply load operation (only clear)
                     // Any other load operation doesn't need to be applied
                     if (load_op::clear == rp_color_attachment.load) {
-                        glClearBufferfv(GL_COLOR, attachment_index, rp_color_attachment.clear_value);
+                        GL_CALL(glClearBufferfv(GL_COLOR, attachment_index, rp_color_attachment.clear_value));
                     }
                 } else {
                     ::logger.error("Failed to begin render pass {}: attachment texture {} not found", render_pass, attachment_h);
@@ -441,12 +442,12 @@ namespace tavros::renderer::rhi
 
                 // Apply load operation to depth component
                 if (rp_depth_stencil_attachment.depth_load == load_op::clear) {
-                    glClearBufferfv(GL_DEPTH, 0, &rp_depth_stencil_attachment.depth_clear_value);
+                    GL_CALL(glClearBufferfv(GL_DEPTH, 0, &rp_depth_stencil_attachment.depth_clear_value));
                 }
 
                 // Apply load operation to stencil component
                 if (rp_depth_stencil_attachment.stencil_load == load_op::clear) {
-                    glClearBufferiv(GL_STENCIL, 0, &rp_depth_stencil_attachment.stencil_clear_value);
+                    GL_CALL(glClearBufferiv(GL_STENCIL, 0, &rp_depth_stencil_attachment.stencil_clear_value));
                 }
             }
         }
@@ -477,7 +478,7 @@ namespace tavros::renderer::rhi
         if (fb->is_default) {
             TAV_ASSERT(rp->info.color_attachments[0].store != store_op::resolve);
 
-            glBindFramebuffer(GL_FRAMEBUFFER, 0);
+            GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
             m_current_framebuffer = framebuffer_handle::invalid();
             m_current_render_pass = render_pass_handle::invalid();
             return;
@@ -533,55 +534,55 @@ namespace tavros::renderer::rhi
         auto need_resolve = depth_stencil_blit_mask != 0 || blit_data.size() > 0;
         if (need_resolve) {
             // Bind for resolve and attach textures
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj);
+            GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo));
+            GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj));
 
             // Check if need to resolve for any attachment
             if (blit_data.size() > 0) {
                 for (uint32 i = 0; i < blit_data.size(); ++i) {
                     TAV_ASSERT(blit_data[i].destination->target == GL_TEXTURE_2D);
-                    glFramebufferTexture2D(
+                    GL_CALL(glFramebufferTexture2D(
                         GL_DRAW_FRAMEBUFFER,
                         GL_COLOR_ATTACHMENT0,
                         blit_data[i].destination->target,
                         blit_data[i].destination->texture_obj,
                         0
-                    );
+                    ));
                 }
 
                 // Resolve color attachments
                 for (uint32 i = 0; i < blit_data.size(); ++i) {
-                    glReadBuffer(blit_data[i].attachment);
-                    glDrawBuffer(GL_COLOR_ATTACHMENT0);
-                    glBlitFramebuffer(
+                    GL_CALL(glReadBuffer(blit_data[i].attachment));
+                    GL_CALL(glDrawBuffer(GL_COLOR_ATTACHMENT0));
+                    GL_CALL(glBlitFramebuffer(
                         0, 0, fb->info.width, fb->info.height,
                         0, 0, fb->info.width, fb->info.height,
                         GL_COLOR_BUFFER_BIT,
                         GL_NEAREST
-                    );
+                    ));
                 }
             }
 
             // Check if need to resolve depth/stencil attachment
             if (depth_stencil_blit_mask) {
                 // Resolve depth/stencil attachment
-                glBlitFramebuffer(
+                GL_CALL(glBlitFramebuffer(
                     0, 0, fb->info.width, fb->info.height,
                     0, 0, fb->info.width, fb->info.height,
                     depth_stencil_blit_mask,
                     GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
-                );
+                ));
             }
 
 
-            glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0);
-            glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
+            GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
+            GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));
         }
 
-        glBindFramebuffer(GL_FRAMEBUFFER, 0);
+        GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
         m_current_framebuffer = framebuffer_handle::invalid();
         m_current_render_pass = render_pass_handle::invalid();
-        glBindVertexArray(0);
+        GL_CALL(glBindVertexArray(0));
         m_current_geometry = geometry_handle::invalid();
     }
 
@@ -604,19 +605,19 @@ namespace tavros::renderer::rhi
         auto gl_first_instance = static_cast<GLuint>(first_instance);
 
         if (instance_count > 1 || first_instance > 0) {
-            glDrawArraysInstancedBaseInstance(
+            GL_CALL(glDrawArraysInstancedBaseInstance(
                 gl_topology,
                 gl_first_vertex,
                 gl_vertex_count,
                 gl_instance_count,
                 gl_first_instance
-            );
+            ));
         } else if (instance_count == 1) {
-            glDrawArrays(
+            GL_CALL(glDrawArrays(
                 gl_topology,
                 gl_first_vertex,
                 gl_vertex_count
-            );
+            ));
         } else {
             ::logger.warning("Failed to draw: instance count {} must be at least 1", fmt::styled_param((instance_count)));
         }
@@ -660,21 +661,21 @@ namespace tavros::renderer::rhi
         auto  gl_first_instance = static_cast<GLuint>(first_instance);
 
         if (instance_count > 1 || first_instance > 0) {
-            glDrawElementsInstancedBaseInstance(
+            GL_CALL(glDrawElementsInstancedBaseInstance(
                 gl_topology,
                 gl_index_count,
                 gl_index_format.type,
                 gl_index_offset,
                 gl_instance_count,
                 gl_first_instance
-            );
+            ));
         } else if (instance_count == 1) {
-            glDrawElements(
+            GL_CALL(glDrawElements(
                 gl_topology,
                 gl_index_count,
                 gl_index_format.type,
                 gl_index_offset
-            );
+            ));
         } else {
             ::logger.warning("Failed to draw indexed: instance count {} must be at least 1", fmt::styled_param(instance_count));
         }
@@ -735,19 +736,19 @@ namespace tavros::renderer::rhi
         }
 
         // Make copy data
-        glBindBuffer(GL_COPY_READ_BUFFER, src->buffer_obj);
-        glBindBuffer(GL_COPY_WRITE_BUFFER, dst->buffer_obj);
+        GL_CALL(glBindBuffer(GL_COPY_READ_BUFFER, src->buffer_obj));
+        GL_CALL(glBindBuffer(GL_COPY_WRITE_BUFFER, dst->buffer_obj));
 
-        glCopyBufferSubData(
+        GL_CALL(glCopyBufferSubData(
             GL_COPY_READ_BUFFER,
             GL_COPY_WRITE_BUFFER,
             static_cast<GLintptr>(src_offset),
             static_cast<GLintptr>(dst_offset),
             static_cast<GLsizeiptr>(size)
-        );
+        ));
 
-        glBindBuffer(GL_COPY_READ_BUFFER, 0);
-        glBindBuffer(GL_COPY_WRITE_BUFFER, 0);
+        GL_CALL(glBindBuffer(GL_COPY_READ_BUFFER, 0));
+        GL_CALL(glBindBuffer(GL_COPY_WRITE_BUFFER, 0));
     }
 
     void command_list_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset, uint32 row_stride)
@@ -826,17 +827,17 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, b->buffer_obj);
-        glBindTexture(tex->target, tex->texture_obj);
+        GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, b->buffer_obj));
+        GL_CALL(glBindTexture(tex->target, tex->texture_obj));
 
         auto row_length_in_pixels = static_cast<GLint>(row_stride / gl_pixel_format.bytes);
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_in_pixels);
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_in_pixels));
+        GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
         auto* gl_buffer_offset = reinterpret_cast<const void*>(src_offset);
 
         if (tinfo.type == texture_type::texture_2d) {
-            glTexSubImage2D(
+            GL_CALL(glTexSubImage2D(
                 GL_TEXTURE_2D,
                 0,    // Mip level
                 0, 0, // xoffset, yoffset
@@ -844,9 +845,9 @@ namespace tavros::renderer::rhi
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 gl_buffer_offset
-            );
+            ));
         } else if (tinfo.type == texture_type::texture_3d) {
-            glTexSubImage3D(
+            GL_CALL(glTexSubImage3D(
                 GL_TEXTURE_3D,
                 0,       // mip level
                 0, 0, 0, // xoffset, yoffset, zoffset
@@ -854,7 +855,7 @@ namespace tavros::renderer::rhi
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 gl_buffer_offset
-            );
+            ));
         } else if (tinfo.type == texture_type::texture_cube) {
             static constexpr GLenum faces[6] = {
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -865,7 +866,7 @@ namespace tavros::renderer::rhi
                 GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
             };
 
-            glTexSubImage2D(
+            GL_CALL(glTexSubImage2D(
                 faces[layer_index % 6],
                 0,    // mip level
                 0, 0, // xoffset, yoffset
@@ -873,23 +874,23 @@ namespace tavros::renderer::rhi
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 gl_buffer_offset
-            );
+            ));
         } else {
             TAV_UNREACHABLE();
         }
 
-        glPixelStorei(GL_UNPACK_ALIGNMENT, 4);
-        glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+        GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
+        GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
 
         if (tinfo.mip_levels > 1) {
             // This call gets warning for texture_cube:
             // warning [OpenGL_debug] Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering
             // TODO: fix it
-            glGenerateMipmap(tex->target);
+            GL_CALL(glGenerateMipmap(tex->target));
         }
 
-        glBindTexture(tex->target, 0);
-        glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0);
+        GL_CALL(glBindTexture(tex->target, 0));
+        GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
 
 } // namespace tavros::renderer::rhi
