@@ -3,6 +3,7 @@
 #include "render_app_base.hpp"
 #include "image_decoder.hpp"
 #include "built_in_meshes.hpp"
+#include "input_manager.hpp"
 
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/memory/mallocator.hpp>
@@ -16,6 +17,8 @@
 #include <tavros/core/memory/buffer.hpp>
 
 #include <tavros/system/time.hpp>
+
+#include <algorithm>
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -272,157 +275,6 @@ static tavros::core::logger logger("main");
     std::exit(-1);
 }
 
-class input_manager
-{
-public:
-    input_manager()
-    {
-        clear_state();
-    }
-
-    /**
-     * @brief Clears all key states.
-     * Called for example when the window is deactivated,
-     * to ensure that key states are valid when the window becomes active again.
-     */
-    void clear_state()
-    {
-        for (auto& state : m_keys) {
-            state.press_time_us = 0;
-            state.release_time_us = 0;
-            state.accumulated_us = 0;
-            state.is_pressed = false;
-        }
-
-        m_last_frame_time_us = 0;
-        m_current_frame_time_us = 0;
-        m_mouse_delta.set(0.0f, 0.0f);
-    }
-
-    /**
-     * @brief Called at the beginning of each frame.
-     * Updates time markers and resets accumulated frame-specific data.
-     * @param frame_time_us start frame time
-     */
-    void on_frame_started(uint64 frame_time_us)
-    {
-        m_last_frame_time_us = m_current_frame_time_us;
-        m_current_frame_time_us = frame_time_us;
-
-        for (auto& state : m_keys) {
-            state.accumulated_us = 0;
-        }
-
-        m_mouse_delta.set(0.0f, 0.0f);
-    }
-
-    /**
-     * @brief Called when a key is pressed.
-     * @param key Key identifier
-     * @param time_us Time in microseconds when the event occurred
-     */
-    void on_key_press(tavros::system::keys key, uint64 time_us)
-    {
-        const size_t idx = static_cast<size_t>(key);
-        TAV_ASSERT(idx < k_keyboard_size);
-
-        auto& s = m_keys[idx];
-        if (!s.is_pressed) {
-            s.is_pressed = true;
-            s.press_time_us = time_us;
-        }
-    }
-
-    /**
-     * @brief Called when a key is released.
-     * @param key Key identifier
-     * @param time_us Time in microseconds when the event occurred
-     */
-    void on_key_release(tavros::system::keys key, uint64 time_us)
-    {
-        const size_t idx = static_cast<size_t>(key);
-        TAV_ASSERT(idx < k_keyboard_size);
-
-        auto& s = m_keys[idx];
-        if (s.is_pressed) {
-            s.is_pressed = false;
-            s.release_time_us = time_us;
-
-            // Add a gap us if the key was pressed within the frame
-            if (s.press_time_us > m_last_frame_time_us) {
-                uint64 duration = std::min(time_us, m_current_frame_time_us) - s.press_time_us;
-                s.accumulated_us += duration;
-            }
-        }
-    }
-
-    void on_mouse_move(tavros::math::vec2 delta, uint64 time_us)
-    {
-        TAV_UNUSED(time_us);
-
-        m_mouse_delta += delta;
-    }
-
-    /**
-     * @brief Returns how long the key was pressed during the last frame, in normalized [0..1] form.
-     * @param key Key identifier
-     * @return 0.0 if not pressed at all, 1.0 if pressed the entire frame, otherwise partial
-     */
-    double key_pressed_factor(tavros::system::keys key)
-    {
-        const size_t idx = static_cast<size_t>(key);
-        TAV_ASSERT(idx < k_keyboard_size);
-
-        const auto& s = m_keys[idx];
-
-        const uint64 frame_duration = m_current_frame_time_us - m_last_frame_time_us;
-        if (frame_duration == 0) {
-            return 0.0f;
-        }
-
-        uint64 total_us = s.accumulated_us;
-
-        // If the key is pressed and still held, add the hold time to the current moment
-        if (s.is_pressed) {
-            uint64 pressed_since = std::max(s.press_time_us, m_last_frame_time_us);
-            total_us += m_current_frame_time_us - pressed_since;
-        }
-
-        double factor = static_cast<double>(total_us) / static_cast<double>(frame_duration);
-        return factor > 1.0 ? 1.0 : factor;
-    }
-
-    bool is_key_pressed(tavros::system::keys key)
-    {
-        const size_t idx = static_cast<size_t>(key);
-        TAV_ASSERT(idx < k_keyboard_size);
-
-        return m_keys[idx].is_pressed;
-    }
-
-    tavros::math::vec2 get_mouse_delta()
-    {
-        return m_mouse_delta;
-    }
-
-private:
-    static constexpr size_t k_keyboard_size = static_cast<size_t>(tavros::system::keys::k_last_key);
-
-    struct key_state
-    {
-        uint64 press_time_us = 0;   // Time when key was last pressed
-        uint64 release_time_us = 0; // Time when key was last released
-        uint64 accumulated_us = 0;  // Time accumulated during the current frame
-        bool   is_pressed = false;  // Whether the key is currently pressed
-    };
-
-    uint64                                 m_current_frame_time_us = 0; // Time of the current frame
-    uint64                                 m_last_frame_time_us = 0;    // Time of the previous frame
-    std::array<key_state, k_keyboard_size> m_keys;                      // State data per key
-    tavros::math::vec2                     m_mouse_delta;
-};
-
-
 class my_app : public app::render_app_base
 {
 public:
@@ -473,7 +325,7 @@ public:
     {
         m_camera.set_orientation({1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f});
 
-        m_camera.set_position({-1.0f, 0.0f, 0.0f});
+        m_camera.set_position({0.0f, 0.0f, 0.0f});
 
         m_graphics_device = rhi::graphics_device::create(rhi::render_backend_type::opengl);
         if (!m_graphics_device) {
@@ -568,7 +420,13 @@ public:
 
         rhi::render_pass_create_info main_render_pass;
         main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, 1, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.2f, 0.2f, 0.25f, 1.0f}});
-        main_render_pass.depth_stencil_attachment = {rhi::pixel_format::depth24_stencil8, rhi::load_op::clear, rhi::store_op::store, 1.0f, rhi::load_op::dont_care, rhi::store_op::dont_care, 0};
+        main_render_pass.depth_stencil_attachment.format = rhi::pixel_format::depth24_stencil8;
+        main_render_pass.depth_stencil_attachment.depth_load = rhi::load_op::clear;
+        main_render_pass.depth_stencil_attachment.depth_store = rhi::store_op::store;
+        main_render_pass.depth_stencil_attachment.depth_clear_value = 1.0f;
+        main_render_pass.depth_stencil_attachment.stencil_load = rhi::load_op::clear;
+        main_render_pass.depth_stencil_attachment.stencil_store = rhi::store_op::dont_care;
+        main_render_pass.depth_stencil_attachment.stencil_clear_value = 0;
         m_main_pass = m_graphics_device->create_render_pass(main_render_pass);
         if (!m_main_pass.is_valid()) {
             ::logger.fatal("Failed to create render pass");
@@ -689,7 +547,7 @@ public:
         world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
         world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
         world_grid_rendering_pipeline_info.depth_stencil.depth_test_enable = true;
-        world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = true;
+        world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = false;
         world_grid_rendering_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
         world_grid_rendering_pipeline_info.rasterizer.cull = rhi::cull_face::off;
         world_grid_rendering_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
@@ -699,6 +557,9 @@ public:
         world_grid_rendering_pipeline_info.multisample.sample_shading_enabled = false;
         world_grid_rendering_pipeline_info.multisample.sample_count = 1;
         world_grid_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
+        /*world_grid_rendering_pipeline_info.rasterizer.depth_bias_enable = true;
+        world_grid_rendering_pipeline_info.rasterizer.depth_bias_factor = 1.0;
+        world_grid_rendering_pipeline_info.rasterizer.depth_bias = 1.0;*/
 
         rhi::shader_handle world_grid_rendering_shaders[] = {world_grid_rendering_vertex_shader, world_grid_rendering_fragment_shader};
         m_world_grid_rendering_pipeline = m_graphics_device->create_pipeline(world_grid_rendering_pipeline_info, world_grid_rendering_shaders);
@@ -803,15 +664,33 @@ public:
         float speed_factor = static_cast<float>(delta_time) * (is_shift_pressed ? 10.0f * (is_control_pressed ? 10.0f : 1.0f) : 2.0f);
         m_camera.move(move_delta * speed_factor);
 
-        auto mouse_delta = m_input_manager.get_mouse_delta();
+        // Update camera rotation
+        auto mouse_delta = m_input_manager.get_smooth_mouse_delta();
+
         if (tavros::math::squared_length(mouse_delta) > 0.0f) {
-            auto m = (mouse_delta / 5.0f) * static_cast<float>(delta_time);
+            constexpr float base_sensitivity = 0.5f;
+            auto            scaled_mouse_delta = mouse_delta * base_sensitivity * static_cast<float>(delta_time);
 
-            auto q_pitch = tavros::math::quat::from_axis_angle(m_camera.right(), -m.y);
-            auto q_yaw = tavros::math::quat::from_axis_angle(tavros::math::vec3{0.0f, 0.0f, 1.0f}, -m.x);
-            auto rotation = tavros::math::normalize(q_yaw * q_pitch);
+            auto world_up = m_camera.world_up();
 
-            m_camera.set_orientation(rotation * m_camera.forward(), rotation * m_camera.up());
+            auto q_yaw = tavros::math::quat::from_axis_angle(world_up, -scaled_mouse_delta.x);
+            auto q_pitch = tavros::math::quat::from_axis_angle(m_camera.right(), -scaled_mouse_delta.y);
+            auto yaw_pitch_rotation = tavros::math::normalize(q_yaw * q_pitch);
+
+            auto candidate_forward = tavros::math::normalize(yaw_pitch_rotation * m_camera.forward());
+
+            auto current_forward_dot_up = tavros::math::dot(m_camera.forward(), world_up);
+            auto forward_in_horizontal_plane = tavros::math::normalize(tavros::math::cross(m_camera.right(), world_up));
+            auto candidate_dot_horizontal_forward = tavros::math::dot(candidate_forward, forward_in_horizontal_plane);
+
+            if (candidate_dot_horizontal_forward < 0.000001f) {
+                constexpr float cos_threshold = 0.000001f;
+                auto            constrained_forward = forward_in_horizontal_plane * cos_threshold + (current_forward_dot_up > 0 ? world_up : -world_up);
+                m_camera.set_orientation(q_yaw * constrained_forward, world_up);
+                m_camera.rotate(q_yaw);
+            } else {
+                m_camera.set_orientation(candidate_forward, world_up);
+            }
         }
     }
 
@@ -869,7 +748,6 @@ public:
         m_composer->end_frame();
         m_composer->present();
 
-
         // std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
 
@@ -898,7 +776,7 @@ private:
 
     tavros::core::shared_ptr<tavros::resources::resource_manager> m_resource_manager;
 
-    input_manager            m_input_manager;
+    app::input_manager       m_input_manager;
     tavros::renderer::camera m_camera;
 
     struct frame_data

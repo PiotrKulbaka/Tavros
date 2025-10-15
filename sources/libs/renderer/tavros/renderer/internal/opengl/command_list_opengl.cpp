@@ -13,6 +13,11 @@ using namespace tavros::renderer::rhi;
 namespace
 {
     tavros::core::logger logger("command_list_opengl");
+
+    GLboolean to_gl_bool(bool value) noexcept
+    {
+        return value ? GL_TRUE : GL_FALSE;
+    }
 } // namespace
 
 namespace tavros::renderer::rhi
@@ -90,10 +95,10 @@ namespace tavros::renderer::rhi
             }
 
             // Enable color mask
-            GLboolean r_color_enabled = blend_state.mask.has_flag(color_mask::red) ? GL_TRUE : GL_FALSE;
-            GLboolean g_color_enabled = blend_state.mask.has_flag(color_mask::green) ? GL_TRUE : GL_FALSE;
-            GLboolean b_color_enabled = blend_state.mask.has_flag(color_mask::blue) ? GL_TRUE : GL_FALSE;
-            GLboolean a_color_enabled = blend_state.mask.has_flag(color_mask::alpha) ? GL_TRUE : GL_FALSE;
+            auto r_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::red));
+            auto g_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::green));
+            auto b_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::blue));
+            auto a_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::alpha));
             if (gl_attachment_index == 0) {
                 // Also enable for default framebuffer
                 glColorMask(r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled);
@@ -112,10 +117,12 @@ namespace tavros::renderer::rhi
             glEnable(GL_DEPTH_TEST);
 
             // depth write
-            glDepthMask(info.depth_stencil.depth_write_enable ? GL_TRUE : GL_FALSE);
+            auto depth_write = to_gl_bool(info.depth_stencil.depth_write_enable);
+            glDepthMask(depth_write);
 
             // depth compare func
-            glDepthFunc(to_gl_compare_func(info.depth_stencil.depth_compare));
+            auto depth_compare = to_gl_compare_func(info.depth_stencil.depth_compare);
+            glDepthFunc(depth_compare);
         } else {
             glDisable(GL_DEPTH_TEST);
         }
@@ -181,11 +188,12 @@ namespace tavros::renderer::rhi
         }
 
         // depth bias
+        auto gl_polygon_offset = to_gl_polygon_offset(info.rasterizer.polygon);
         if (info.rasterizer.depth_bias_enable) {
-            glEnable(to_gl_polygon_offset(info.rasterizer.polygon));
+            glEnable(gl_polygon_offset);
             glPolygonOffset(info.rasterizer.depth_bias_factor, info.rasterizer.depth_bias);
         } else {
-            glDisable(to_gl_polygon_offset(info.rasterizer.polygon));
+            glDisable(gl_polygon_offset);
         }
 
         // multisample state

@@ -16,13 +16,14 @@ namespace tavros::renderer
 
         void set_perspective(float fov_y, float aspect, float z_near, float z_far) noexcept;
         void set_position(const math::vec3& position) noexcept;
-        void set_orientation(const math::vec3& forward, const math::vec3& up) noexcept;
+        void set_orientation(const math::vec3& forward, const math::vec3& world_up) noexcept;
 
         void move(const math::vec3& delta) noexcept;
         void rotate(const math::quat& q) noexcept;
 
         math::vec3 forward() const noexcept;
         math::vec3 up() const noexcept;
+        math::vec3 world_up() const noexcept;
         math::vec3 right() const noexcept;
         math::vec3 position() const noexcept;
 

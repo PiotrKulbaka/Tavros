@@ -17,10 +17,10 @@ namespace tavros::renderer
     {
     }
 
-    camera::camera(const vec3& position, const vec3& forward, const vec3& up) noexcept
+    camera::camera(const vec3& position, const vec3& forward, const vec3& world_up) noexcept
         : m_position(position)
         , m_forward(normalize(forward))
-        , m_up(normalize(up))
+        , m_up(normalize(world_up))
         , m_fov_y(1.0f)
         , m_aspect(1.0f)
         , m_z_near(0.1f)
@@ -45,10 +45,10 @@ namespace tavros::renderer
         m_dirty = true;
     }
 
-    void camera::set_orientation(const vec3& forward, const vec3& up) noexcept
+    void camera::set_orientation(const vec3& forward, const vec3& world_up) noexcept
     {
         m_forward = normalize(forward);
-        m_up = normalize(up);
+        m_up = normalize(world_up);
         m_dirty = true;
     }
 
@@ -71,6 +71,12 @@ namespace tavros::renderer
     }
 
     vec3 camera::up() const noexcept
+    {
+        auto r = right();
+        return cross(m_forward, r);
+    }
+
+    math::vec3 camera::world_up() const noexcept
     {
         return m_up;
     }
