@@ -84,6 +84,7 @@ namespace tavros::renderer::rhi
         device_resources_opengl* get_resources();
 
     private:
+        core::mallocator        m_internal_allocator;
         device_resources_opengl m_resources;
     };
 

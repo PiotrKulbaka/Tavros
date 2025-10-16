@@ -84,187 +84,101 @@ namespace tavros::renderer::rhi
     class device_resources_opengl
     {
     public:
-        device_resources_opengl()
-            : samplers(&alc)
-            , composers(&alc)
-            , shader_bindings(&alc)
-            , shaders(&alc)
-            , textures(&alc)
-            , pipelines(&alc)
-            , framebuffers(&alc)
-            , buffers(&alc)
-            , geometries(&alc)
-            , render_passes(&alc)
+        template<typename T>
+        struct data_type_traits;
+        template<typename T>
+        struct handle_type_traits;
+
+        template<class T>
+        using object_type_of = typename data_type_traits<T>::type;
+
+    public:
+        explicit device_resources_opengl(core::allocator* alc)
+            : m_samplers(alc)
+            , m_composers(alc)
+            , m_shader_bindings(alc)
+            , m_shaders(alc)
+            , m_textures(alc)
+            , m_pipelines(alc)
+            , m_framebuffers(alc)
+            , m_buffers(alc)
+            , m_geometries(alc)
+            , m_render_passes(alc)
         {
         }
 
         ~device_resources_opengl() = default;
 
-        // --- Create ---
-        frame_composer_handle create(gl_composer&& data)
+        template<typename T>
+        auto create(T&& data)
         {
-            return frame_composer_handle{composers.add(std::move(data)).id};
+            auto& pool = get_pool<std::decay_t<T>>();
+            return typename handle_type_traits<T>::type{pool.add(std::forward<T>(data)).id};
         }
 
-        shader_handle create(gl_shader&& data)
+        template<typename Handle>
+        void remove(Handle handle)
         {
-            return shader_handle{shaders.add(std::move(data)).id};
+            auto& pool = get_pool<object_type_of<Handle>>();
+            pool.erase(core::object_handle<object_type_of<Handle>>(handle.id));
         }
 
-        shader_binding_handle create(gl_shader_binding&& data)
+        template<typename Handle>
+        auto try_get(Handle handle)
         {
-            return shader_binding_handle{shader_bindings.add(std::move(data)).id};
+            auto& pool = get_pool<object_type_of<Handle>>();
+            return pool.try_get(core::object_handle<object_type_of<Handle>>(handle.id));
         }
 
-        sampler_handle create(gl_sampler&& data)
-        {
-            return sampler_handle{samplers.add(std::move(data)).id};
-        }
+        template<typename T>
+        core::object_pool<T>& get_pool();
 
-        texture_handle create(gl_texture&& data)
-        {
-            return texture_handle{textures.add(std::move(data)).id};
-        }
-
-        pipeline_handle create(gl_pipeline&& data)
-        {
-            return pipeline_handle{pipelines.add(std::move(data)).id};
-        }
-
-        framebuffer_handle create(gl_framebuffer&& data)
-        {
-            return framebuffer_handle{framebuffers.add(std::move(data)).id};
-        }
-
-        buffer_handle create(gl_buffer&& data)
-        {
-            return buffer_handle{buffers.add(std::move(data)).id};
-        }
-
-        geometry_handle create(gl_geometry&& data)
-        {
-            return geometry_handle{geometries.add(std::move(data)).id};
-        }
-
-        render_pass_handle create(gl_render_pass&& data)
-        {
-            return render_pass_handle{render_passes.add(std::move(data)).id};
-        }
-
-        // --- Remove ---
-        void remove(frame_composer_handle handle)
-        {
-            composers.erase(core::object_handle<gl_composer>(handle.id));
-        }
-
-        void remove(shader_handle handle)
-        {
-            shaders.erase(core::object_handle<gl_shader>(handle.id));
-        }
-
-        void remove(shader_binding_handle handle)
-        {
-            shader_bindings.erase(core::object_handle<gl_shader_binding>(handle.id));
-        }
-
-        void remove(sampler_handle handle)
-        {
-            samplers.erase(core::object_handle<gl_sampler>(handle.id));
-        }
-
-        void remove(texture_handle handle)
-        {
-            textures.erase(core::object_handle<gl_texture>(handle.id));
-        }
-
-        void remove(pipeline_handle handle)
-        {
-            pipelines.erase(core::object_handle<gl_pipeline>(handle.id));
-        }
-
-        void remove(framebuffer_handle handle)
-        {
-            framebuffers.erase(core::object_handle<gl_framebuffer>(handle.id));
-        }
-
-        void remove(buffer_handle handle)
-        {
-            buffers.erase(core::object_handle<gl_buffer>(handle.id));
-        }
-
-        void remove(geometry_handle handle)
-        {
-            geometries.erase(core::object_handle<gl_geometry>(handle.id));
-        }
-
-        void remove(render_pass_handle handle)
-        {
-            render_passes.erase(core::object_handle<gl_render_pass>(handle.id));
-        }
-
-        // --- Try get ---
-        gl_composer* try_get(frame_composer_handle handle)
-        {
-            return composers.try_get(core::object_handle<gl_composer>(handle.id));
-        }
-
-        gl_shader* try_get(shader_handle handle)
-        {
-            return shaders.try_get(core::object_handle<gl_shader>(handle.id));
-        }
-
-        gl_shader_binding* try_get(shader_binding_handle handle)
-        {
-            return shader_bindings.try_get(core::object_handle<gl_shader_binding>(handle.id));
-        }
-
-        gl_sampler* try_get(sampler_handle handle)
-        {
-            return samplers.try_get(core::object_handle<gl_sampler>(handle.id));
-        }
-
-        gl_texture* try_get(texture_handle handle)
-        {
-            return textures.try_get(core::object_handle<gl_texture>(handle.id));
-        }
-
-        gl_pipeline* try_get(pipeline_handle handle)
-        {
-            return pipelines.try_get(core::object_handle<gl_pipeline>(handle.id));
-        }
-
-        gl_framebuffer* try_get(framebuffer_handle handle)
-        {
-            return framebuffers.try_get(core::object_handle<gl_framebuffer>(handle.id));
-        }
-
-        gl_buffer* try_get(buffer_handle handle)
-        {
-            return buffers.try_get(core::object_handle<gl_buffer>(handle.id));
-        }
-
-        gl_geometry* try_get(geometry_handle handle)
-        {
-            return geometries.try_get(core::object_handle<gl_geometry>(handle.id));
-        }
-
-        gl_render_pass* try_get(render_pass_handle handle)
-        {
-            return render_passes.try_get(core::object_handle<gl_render_pass>(handle.id));
-        }
-
-    public:
-        core::mallocator                     alc;
-        core::object_pool<gl_sampler>        samplers;
-        core::object_pool<gl_composer>       composers;
-        core::object_pool<gl_shader_binding> shader_bindings;
-        core::object_pool<gl_shader>         shaders;
-        core::object_pool<gl_texture>        textures;
-        core::object_pool<gl_pipeline>       pipelines;
-        core::object_pool<gl_framebuffer>    framebuffers;
-        core::object_pool<gl_buffer>         buffers;
-        core::object_pool<gl_geometry>       geometries;
-        core::object_pool<gl_render_pass>    render_passes;
+    private:
+        core::object_pool<gl_sampler>        m_samplers;
+        core::object_pool<gl_composer>       m_composers;
+        core::object_pool<gl_shader_binding> m_shader_bindings;
+        core::object_pool<gl_shader>         m_shaders;
+        core::object_pool<gl_texture>        m_textures;
+        core::object_pool<gl_pipeline>       m_pipelines;
+        core::object_pool<gl_framebuffer>    m_framebuffers;
+        core::object_pool<gl_buffer>         m_buffers;
+        core::object_pool<gl_geometry>       m_geometries;
+        core::object_pool<gl_render_pass>    m_render_passes;
     };
+
+    // clang-format off
+    template<> struct device_resources_opengl::data_type_traits<frame_composer_handle> { using type = gl_composer; };
+    template<> struct device_resources_opengl::data_type_traits<shader_handle> { using type = gl_shader; };
+    template<> struct device_resources_opengl::data_type_traits<shader_binding_handle> { using type = gl_shader_binding; };
+    template<> struct device_resources_opengl::data_type_traits<sampler_handle> { using type = gl_sampler; };
+    template<> struct device_resources_opengl::data_type_traits<texture_handle> { using type = gl_texture; };
+    template<> struct device_resources_opengl::data_type_traits<pipeline_handle> { using type = gl_pipeline; };
+    template<> struct device_resources_opengl::data_type_traits<framebuffer_handle> { using type = gl_framebuffer; };
+    template<> struct device_resources_opengl::data_type_traits<buffer_handle> { using type = gl_buffer; };
+    template<> struct device_resources_opengl::data_type_traits<geometry_handle> { using type = gl_geometry; };
+    template<> struct device_resources_opengl::data_type_traits<render_pass_handle> { using type = gl_render_pass; };
+
+    template<> struct device_resources_opengl::handle_type_traits<gl_composer> { using type = frame_composer_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_shader> { using type = shader_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_shader_binding> { using type = shader_binding_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_sampler> { using type = sampler_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_texture> { using type = texture_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_pipeline> { using type = pipeline_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_framebuffer> { using type = framebuffer_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_buffer> { using type = buffer_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_geometry> { using type = geometry_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_render_pass> { using type = render_pass_handle; };
+
+    template<> inline core::object_pool<gl_composer>& device_resources_opengl::get_pool<gl_composer>() { return m_composers; }
+    template<> inline core::object_pool<gl_shader>& device_resources_opengl::get_pool<gl_shader>() { return m_shaders; }
+    template<> inline core::object_pool<gl_shader_binding>& device_resources_opengl::get_pool<gl_shader_binding>() { return m_shader_bindings; }
+    template<> inline core::object_pool<gl_sampler>& device_resources_opengl::get_pool<gl_sampler>() { return m_samplers; }
+    template<> inline core::object_pool<gl_texture>& device_resources_opengl::get_pool<gl_texture>() { return m_textures; }
+    template<> inline core::object_pool<gl_pipeline>& device_resources_opengl::get_pool<gl_pipeline>() { return m_pipelines; }
+    template<> inline core::object_pool<gl_framebuffer>& device_resources_opengl::get_pool<gl_framebuffer>() { return m_framebuffers; }
+    template<> inline core::object_pool<gl_buffer>& device_resources_opengl::get_pool<gl_buffer>() { return m_buffers; }
+    template<> inline core::object_pool<gl_geometry>& device_resources_opengl::get_pool<gl_geometry>() { return m_geometries; }
+    template<> inline core::object_pool<gl_render_pass>& device_resources_opengl::get_pool<gl_render_pass>() { return m_render_passes; }
+    // clang-format on
 
 } // namespace tavros::renderer::rhi

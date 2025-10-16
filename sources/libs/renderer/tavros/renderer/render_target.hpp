@@ -67,7 +67,7 @@ namespace tavros::renderer
 
         [[nodiscard]] rhi::texture_handle depth_stencil_attachment() const noexcept
         {
-			TAV_ASSERT(has_depth_stencil_attachment());
+            TAV_ASSERT(has_depth_stencil_attachment());
             return m_depth_stencil_attachment;
         }
 

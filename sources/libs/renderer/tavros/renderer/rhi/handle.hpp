@@ -12,10 +12,10 @@ namespace tavros::renderer::rhi
     {
         uint64 id = 0xffffffffffffffffui64;
 
-		handle_base() noexcept = default;
+        handle_base() noexcept = default;
 
         explicit handle_base(uint64 handle_id)
-			: id(handle_id)
+            : id(handle_id)
         {
         }
 

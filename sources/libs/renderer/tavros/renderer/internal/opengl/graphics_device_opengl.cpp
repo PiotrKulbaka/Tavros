@@ -119,18 +119,21 @@ namespace
         glDebugMessageControl(GL_DONT_CARE, GL_DONT_CARE, GL_DONT_CARE, 0, nullptr, GL_TRUE);
     }
 
-    template<class Pool, class Del>
-    void destroy_for(Pool& pool, Del deleter)
+    template<class HandleT, class Del>
+    void destroy_for(tavros::renderer::rhi::device_resources_opengl& res, Del deleter)
     {
-        static_assert(sizeof(Pool::handle_type::id_t) == sizeof(uint64));
-        tavros::core::vector<uint64> handles;
+        static_assert(sizeof(uint64) == sizeof(HandleT));
+
+        auto& pool = res.get_pool<tavros::renderer::rhi::device_resources_opengl::object_type_of<HandleT>>();
+
+        tavros::core::vector<HandleT> handles;
         handles.reserve(pool.size());
         pool.for_each([&](auto h, auto&) {
-            handles.push_back(h.id);
+            handles.push_back(HandleT(h.id));
         });
 
-        for (auto handle_id : handles) {
-            deleter(handle_id);
+        for (auto h : handles) {
+            deleter(h);
         }
     }
 
@@ -140,6 +143,8 @@ namespace tavros::renderer::rhi
 {
 
     graphics_device_opengl::graphics_device_opengl()
+        : graphics_device()
+        , m_resources(&m_internal_allocator)
     {
         ::logger.debug("graphics_device_opengl created");
     }
@@ -152,62 +157,47 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy()
     {
-        destroy_for(m_resources.samplers, [this](uint64 h) {
-            destroy_sampler(sampler_handle(h));
-        });
+        destroy_for<sampler_handle>(m_resources, [this](auto h) { destroy_sampler(h); });
 
-        destroy_for(m_resources.textures, [this](uint64 h) {
-            destroy_texture(texture_handle(h));
-        });
+        destroy_for<texture_handle>(m_resources, [this](auto h) { destroy_texture(h); });
 
-        destroy_for(m_resources.pipelines, [this](uint64 h) {
-            destroy_pipeline(pipeline_handle(h));
-        });
+        destroy_for<pipeline_handle>(m_resources, [this](auto h) { destroy_pipeline(h); });
 
-        destroy_for(m_resources.framebuffers, [this](uint64 h) {
+        destroy_for<framebuffer_handle>(m_resources, [this](auto h) {
             if (auto* fb = m_resources.try_get(framebuffer_handle(h))) {
                 if (!fb->is_default) {
                     // We only delete non default framebuffers
                     // Default ones should be deleted elsewhere, in frame_composer
-                    destroy_framebuffer(framebuffer_handle(h));
+                    destroy_framebuffer(h);
                 }
             } else {
                 // This shouldn't happen, but just in case, we call a method that will throw an error in the log
-                destroy_framebuffer(framebuffer_handle(h));
+                destroy_framebuffer(h);
+                TAV_UNREACHABLE();
             }
         });
 
-        destroy_for(m_resources.buffers, [this](uint64 h) {
-            destroy_buffer(buffer_handle(h));
-        });
+        destroy_for<buffer_handle>(m_resources, [this](auto h) { destroy_buffer(h); });
 
-        destroy_for(m_resources.geometries, [this](uint64 h) {
-            destroy_geometry(geometry_handle(h));
-        });
+        destroy_for<geometry_handle>(m_resources, [this](auto h) { destroy_geometry(h); });
 
-        destroy_for(m_resources.shader_bindings, [this](uint64 h) {
-            destroy_shader_binding(shader_binding_handle(h));
-        });
+        destroy_for<shader_binding_handle>(m_resources, [this](auto h) { destroy_shader_binding(h); });
 
-        destroy_for(m_resources.shaders, [this](uint64 h) {
-            destroy_shader(shader_handle(h));
-        });
+        destroy_for<shader_handle>(m_resources, [this](auto h) { destroy_shader(h); });
 
-        destroy_for(m_resources.render_passes, [this](uint64 h) {
-            destroy_render_pass(render_pass_handle(h));
-        });
+        destroy_for<render_pass_handle>(m_resources, [this](auto h) { destroy_render_pass(h); });
 
-        //// Should be removed in last turn because swapchain owns the OpenGL context
-        destroy_for(m_resources.composers, [this](uint64 h) {
-            destroy_frame_composer(frame_composer_handle(h));
-        });
+        // Should be removed in last turn because swapchain owns the OpenGL context
+        destroy_for<frame_composer_handle>(m_resources, [this](auto h) { destroy_frame_composer(h); });
     }
 
     frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_create_info& info, void* native_handle)
     {
         // Check if frame composer with native handle already created
         bool has_native_handle = false;
-        m_resources.composers.for_each([&](auto h, auto& v) { if (native_handle == v.native_handle) { has_native_handle = true; } });
+
+        auto& pool = m_resources.get_pool<gl_composer>();
+        pool.for_each([&](auto h, auto& v) { if (native_handle == v.native_handle) { has_native_handle = true; } });
         if (has_native_handle) {
             ::logger.error("Failed to create frame composer: native handle {} already exists", native_handle);
             return {};
@@ -226,7 +216,7 @@ namespace tavros::renderer::rhi
         // the first call of frame_composer_opengl::create() will create the context
         init_gl_debug();
 
-        frame_composer_handle handle = {m_resources.create({info, std::move(composer), native_handle})};
+        frame_composer_handle handle = m_resources.create(gl_composer{info, std::move(composer), native_handle});
         ::logger.debug("Frame composer {} created", handle);
         return handle;
     }
@@ -264,7 +254,7 @@ namespace tavros::renderer::rhi
             return shader_handle();
         }
 
-        auto h = m_resources.create({info, shader_obj});
+        auto h = m_resources.create(gl_shader{info, shader_obj});
         ::logger.debug("Shader {} created", h);
         return h;
     }
@@ -310,7 +300,7 @@ namespace tavros::renderer::rhi
             GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE));
         }
 
-        auto h = m_resources.create({info, sampler});
+        auto h = m_resources.create(gl_sampler{info, sampler});
         ::logger.debug("Sampler {} created", h);
         return h;
     }
@@ -554,7 +544,7 @@ namespace tavros::renderer::rhi
 
         GL_CALL(glBindTexture(gl_target, 0));
 
-        auto h = m_resources.create({info, texture_owner.release(), gl_target});
+        auto h = m_resources.create(gl_texture{info, texture_owner.release(), gl_target});
         ::logger.debug("Texture {} created", h);
         return h;
     }
@@ -708,7 +698,7 @@ namespace tavros::renderer::rhi
 
 
         // create pipeline
-        auto h = m_resources.create({info, program_owner.release()});
+        auto h = m_resources.create(gl_pipeline{info, program_owner.release()});
         ::logger.debug("Pipeline {} created", h);
         return h;
     }
@@ -894,7 +884,7 @@ namespace tavros::renderer::rhi
 
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
-        auto h = m_resources.create({info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachment_h});
+        auto h = m_resources.create(gl_framebuffer{info, fbo_owner.release(), false, color_attachments_h, depth_stencil_attachment_h});
         ::logger.debug("Framebuffer {} created", h);
         return h;
     }
@@ -973,7 +963,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glBufferData(gl_target, gl_size, nullptr, gl_usage));
         GL_CALL(glBindBuffer(gl_target, 0));
 
-        auto h = m_resources.create({info, bo_owner.release(), gl_target, gl_usage});
+        auto h = m_resources.create(gl_buffer{info, bo_owner.release(), gl_target, gl_usage});
         ::logger.debug("Buffer {} created", h);
         return h;
     }
@@ -1094,7 +1084,7 @@ namespace tavros::renderer::rhi
 
         GL_CALL(glBindVertexArray(0));
 
-        auto h = m_resources.create({info, vao_owner.release()});
+        auto h = m_resources.create(gl_geometry{info, vao_owner.release()});
         ::logger.debug("Geometry {} created", h);
         return h;
     }
@@ -1201,7 +1191,7 @@ namespace tavros::renderer::rhi
             resolve_attachments_handles.push_back(resolve_textures[i]);
         }
 
-        auto h = m_resources.create({info, resolve_attachments_handles});
+        auto h = m_resources.create(gl_render_pass{info, resolve_attachments_handles});
         ::logger.debug("Render pass {} created", h);
         return h;
     }
@@ -1286,7 +1276,7 @@ namespace tavros::renderer::rhi
             }
         }
 
-        auto h = m_resources.create({info, texture_handles, sampler_handles, buffer_handles});
+        auto h = m_resources.create(gl_shader_binding{info, texture_handles, sampler_handles, buffer_handles});
         ::logger.debug("Shader binding {} created", h);
         return h;
     }

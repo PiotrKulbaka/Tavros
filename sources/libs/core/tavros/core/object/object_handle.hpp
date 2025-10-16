@@ -22,7 +22,7 @@ namespace tavros::core
         object_handle() noexcept = default;
 
         explicit object_handle(id_t handle_id)
-			: id(handle_id)
+            : id(handle_id)
         {
         }
 

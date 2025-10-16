@@ -280,7 +280,6 @@ static tavros::core::logger logger("main");
 
 class auto_resolved_render_target
 {
-
 };
 
 class my_app : public app::render_app_base
@@ -332,15 +331,15 @@ public:
     tavros::renderer::render_target_view create_render_target(uint32 width, uint32 height)
     {
         tavros::renderer::render_target_create_info rt_info;
-		rt_info.target_type = rhi::texture_type::texture_2d;
+        rt_info.target_type = rhi::texture_type::texture_2d;
         rt_info.width = width;
         rt_info.height = height;
         rt_info.depth = 1;
-		rt_info.color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
-		rt_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
+        rt_info.color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
+        rt_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
         rt_info.sample_count = 1;
 
-		auto rt = m_render_system->create_render_target(rt_info);
+        auto rt = m_render_system->create_render_target(rt_info);
         if (!rt) {
             ::logger.fatal("Failed to create render target.");
             exit_fail();
@@ -658,17 +657,17 @@ public:
 
         if (need_resize && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
             if (m_render_target) {
-				m_render_system->release_render_target(m_render_target);
+                m_render_system->release_render_target(m_render_target);
             }
-			m_render_target = create_render_target(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height));
-            
+            m_render_target = create_render_target(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height));
+
             if (m_fullscreen_quad_shader_binding) {
                 m_graphics_device->destroy_shader_binding(m_fullscreen_quad_shader_binding);
-				m_fullscreen_quad_shader_binding = rhi::shader_binding_handle();
+                m_fullscreen_quad_shader_binding = rhi::shader_binding_handle();
             }
 
             rhi::shader_binding_create_info fullscreen_quad_shader_binding_info;
-			fullscreen_quad_shader_binding_info.texture_bindings.push_back({ 0, 0, 0 });
+            fullscreen_quad_shader_binding_info.texture_bindings.push_back({0, 0, 0});
             rhi::texture_handle fullscreen_quad_textures_to_binding[] = {m_render_target->color_attachment(0)};
             rhi::sampler_handle fullscreen_quad_samplers_to_binding[] = {m_sampler};
 
@@ -677,7 +676,7 @@ public:
                 ::logger.fatal("Failed to create fullscreen quad shader binding");
                 exit_fail();
             }
-            
+
             m_composer->resize(m_current_frame_size.width, m_current_frame_size.height);
 
             constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
@@ -789,8 +788,8 @@ public:
 
         cbuf->end_render_pass();
 
-		// Draw to backbuffer
-		cbuf->begin_render_pass(m_main_pass, m_composer->backbuffer());
+        // Draw to backbuffer
+        cbuf->begin_render_pass(m_main_pass, m_composer->backbuffer());
 
         cbuf->bind_pipeline(m_fullscreen_quad_pipeline);
         cbuf->bind_shader_binding(m_fullscreen_quad_shader_binding);

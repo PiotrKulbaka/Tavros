@@ -55,14 +55,15 @@ namespace tavros::renderer::rhi
 
         m_internal_command_list = core::make_unique<command_list_opengl>(device);
 
-        m_backbuffer = m_device->get_resources()->create({backbuffer_info, 0, true});
+        m_backbuffer = m_device->get_resources()->create(gl_framebuffer{backbuffer_info, 0, true});
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
     }
 
     frame_composer_opengl::~frame_composer_opengl()
     {
         // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
-        if (m_device->get_resources()->framebuffers.size() != 0) {
+        auto& pool = m_device->get_resources()->get_pool<gl_framebuffer>();
+        if (pool.size() != 0) {
             if (auto* fb = m_device->get_resources()->try_get(m_backbuffer)) {
                 m_device->get_resources()->remove(m_backbuffer);
                 ::logger.debug("Frame composer framebuffer {} destroyed", m_backbuffer);
