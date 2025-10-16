@@ -1,8 +1,8 @@
 #pragma once
 
 #include <tavros/core/containers/static_vector.hpp>
-#include <tavros/core/containers/sapn.hpp>
 #include <tavros/core/object/object_view.hpp>
+#include <tavros/core/memory/buffer_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/texture_create_info.hpp>
@@ -46,12 +46,12 @@ namespace tavros::renderer
 
         [[nodiscard]] bool has_color_attachments() const noexcept
         {
-            return m_info.color_attachment_formats.size() != 0;
+            return m_color_attachments.size() != 0;
         }
 
         [[nodiscard]] bool has_depth_stencil_attachment() const noexcept
         {
-            return m_info.depth_stencil_attachment_format != rhi::pixel_format::none;
+            return m_depth_stencil_attachment.valid();
         }
 
         [[nodiscard]] uint32 color_attachment_count() const noexcept
@@ -59,27 +59,29 @@ namespace tavros::renderer
             return static_cast<uint32>(m_color_attachments.size());
         }
 
-        rhi::texture_handle color_attachment(uint32 index) const noexcept
+        [[nodiscard]] rhi::texture_handle color_attachment(uint32 index) const noexcept
         {
-            return index < color_attachment_count() ? m_color_attachments[index] : rhi::texture_handle::invalid();
+            TAV_ASSERT(index < color_attachment_count());
+            return m_color_attachments[index];
         }
 
-        rhi::texture_handle depth_stencil_attachment() const noexcept
+        [[nodiscard]] rhi::texture_handle depth_stencil_attachment() const noexcept
         {
+			TAV_ASSERT(has_depth_stencil_attachment());
             return m_depth_stencil_attachment;
         }
 
-        rhi::framebuffer_handle handle() const
+        rhi::framebuffer_handle framebuffer() const
         {
             return m_framebuffer;
         }
 
     private:
         render_target(
-            rhi::framebuffer_handle               framebuffer,
-            const render_target_create_info&      info,
-            core::span<const rhi::texture_handle> coror_attachments,
-            rhi::texture_handle                   depth_stencil_attachment
+            rhi::framebuffer_handle                framebuffer,
+            const render_target_create_info&       info,
+            core::buffer_view<rhi::texture_handle> coror_attachments,
+            rhi::texture_handle                    depth_stencil_attachment
         ) noexcept
             : m_framebuffer(framebuffer)
             , m_info(info)
@@ -92,7 +94,7 @@ namespace tavros::renderer
 
     private:
         using textures_vector = core::static_vector<rhi::texture_handle, rhi::k_max_color_attachments>;
-        rhi::framebuffer_handle   m_framebuffer = rhi::framebuffer_handle::invalid();
+        rhi::framebuffer_handle   m_framebuffer;
         render_target_create_info m_info;
         textures_vector           m_color_attachments;
         rhi::texture_handle       m_depth_stencil_attachment;

@@ -216,7 +216,7 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to bind geometry binding {}: not found", geometry);
             GL_CALL(glBindVertexArray(0));
-            m_current_geometry = geometry_handle::invalid();
+            m_current_geometry = geometry_handle();
         }
     }
 
@@ -288,7 +288,7 @@ namespace tavros::renderer::rhi
 
     void command_list_opengl::begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer)
     {
-        if (m_current_render_pass != render_pass_handle::invalid() || m_current_framebuffer != framebuffer_handle::invalid()) {
+        if (m_current_render_pass || m_current_framebuffer) {
             ::logger.error("Failed to begin render pass {}: previous render pass {} not ended", render_pass, m_current_render_pass);
             return;
         }
@@ -458,7 +458,7 @@ namespace tavros::renderer::rhi
 
     void command_list_opengl::end_render_pass()
     {
-        if (m_current_render_pass == render_pass_handle::invalid() || m_current_framebuffer == framebuffer_handle::invalid()) {
+        if (!m_current_render_pass || !m_current_framebuffer) {
             ::logger.error("Failed to end render pass: render pass not started");
             return;
         }
@@ -479,8 +479,8 @@ namespace tavros::renderer::rhi
             TAV_ASSERT(rp->info.color_attachments[0].store != store_op::resolve);
 
             GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-            m_current_framebuffer = framebuffer_handle::invalid();
-            m_current_render_pass = render_pass_handle::invalid();
+            m_current_framebuffer = framebuffer_handle();
+            m_current_render_pass = render_pass_handle();
             return;
         }
 
@@ -580,17 +580,17 @@ namespace tavros::renderer::rhi
         }
 
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-        m_current_framebuffer = framebuffer_handle::invalid();
-        m_current_render_pass = render_pass_handle::invalid();
+        m_current_framebuffer = framebuffer_handle();
+        m_current_render_pass = render_pass_handle();
         GL_CALL(glBindVertexArray(0));
-        m_current_geometry = geometry_handle::invalid();
+        m_current_geometry = geometry_handle();
     }
 
     void command_list_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)
     {
         auto* p = m_device->get_resources()->try_get(m_current_pipeline);
         if (!p) {
-            if (m_current_pipeline == pipeline_handle::invalid()) {
+            if (!m_current_pipeline) {
                 ::logger.error("Failed to draw: no pipeline is bound");
             } else {
                 ::logger.error("Failed to draw: pipeline {} not found", m_current_pipeline);
@@ -630,7 +630,7 @@ namespace tavros::renderer::rhi
 
         auto* p = m_device->get_resources()->try_get(m_current_pipeline);
         if (!p) {
-            if (m_current_pipeline == pipeline_handle::invalid()) {
+            if (!m_current_pipeline) {
                 ::logger.error("Failed to draw indexed: no pipeline is bound");
             } else {
                 ::logger.error("Failed to draw indexed: pipeline {} not found", m_current_pipeline);
@@ -640,7 +640,7 @@ namespace tavros::renderer::rhi
 
         auto* g = m_device->get_resources()->try_get(m_current_geometry);
         if (!g) {
-            if (m_current_geometry == geometry_handle::invalid()) {
+            if (!m_current_geometry) {
                 ::logger.error("Failed to draw indexed: no geometry binding is bound");
             } else {
                 ::logger.error("Failed to draw indexed: geometry binding {} not found", m_current_geometry);

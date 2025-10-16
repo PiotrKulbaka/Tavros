@@ -33,10 +33,10 @@ namespace tavros::renderer::rhi
 
     private:
         graphics_device_opengl* m_device = nullptr;
-        pipeline_handle         m_current_pipeline = pipeline_handle::invalid();
-        render_pass_handle      m_current_render_pass = render_pass_handle::invalid();
-        framebuffer_handle      m_current_framebuffer = framebuffer_handle::invalid();
-        geometry_handle         m_current_geometry = geometry_handle::invalid();
+        pipeline_handle         m_current_pipeline;
+        render_pass_handle      m_current_render_pass;
+        framebuffer_handle      m_current_framebuffer;
+        geometry_handle         m_current_geometry;
 
         GLuint m_resolve_fbo = 0;
     };

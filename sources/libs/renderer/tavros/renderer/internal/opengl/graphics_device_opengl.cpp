@@ -122,20 +122,16 @@ namespace
     template<class Pool, class Del>
     void destroy_for(Pool& pool, Del deleter)
     {
-        tavros::core::vector<uint32> handles;
+        static_assert(sizeof(Pool::handle_type::id_t) == sizeof(uint64));
+        tavros::core::vector<uint64> handles;
         handles.reserve(pool.size());
         pool.for_each([&](auto h, auto&) {
             handles.push_back(h.id);
         });
 
-        for (auto handle : handles) {
-            deleter({handle});
+        for (auto handle_id : handles) {
+            deleter(handle_id);
         }
-    }
-
-    constexpr bool is_power_of_two(uint32 value)
-    {
-        return value != 0 && (value & (value - 1)) == 0;
     }
 
 } // namespace
@@ -156,54 +152,54 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy()
     {
-        destroy_for(m_resources.samplers, [this](sampler_handle h) {
-            destroy_sampler(h);
+        destroy_for(m_resources.samplers, [this](uint64 h) {
+            destroy_sampler(sampler_handle(h));
         });
 
-        destroy_for(m_resources.textures, [this](texture_handle h) {
-            destroy_texture(h);
+        destroy_for(m_resources.textures, [this](uint64 h) {
+            destroy_texture(texture_handle(h));
         });
 
-        destroy_for(m_resources.pipelines, [this](pipeline_handle h) {
-            destroy_pipeline(h);
+        destroy_for(m_resources.pipelines, [this](uint64 h) {
+            destroy_pipeline(pipeline_handle(h));
         });
 
-        destroy_for(m_resources.framebuffers, [this](framebuffer_handle h) {
-            if (auto* fb = m_resources.try_get(h)) {
+        destroy_for(m_resources.framebuffers, [this](uint64 h) {
+            if (auto* fb = m_resources.try_get(framebuffer_handle(h))) {
                 if (!fb->is_default) {
                     // We only delete non default framebuffers
                     // Default ones should be deleted elsewhere, in frame_composer
-                    destroy_framebuffer(h);
+                    destroy_framebuffer(framebuffer_handle(h));
                 }
             } else {
                 // This shouldn't happen, but just in case, we call a method that will throw an error in the log
-                destroy_framebuffer(h);
+                destroy_framebuffer(framebuffer_handle(h));
             }
         });
 
-        destroy_for(m_resources.buffers, [this](buffer_handle h) {
-            destroy_buffer(h);
+        destroy_for(m_resources.buffers, [this](uint64 h) {
+            destroy_buffer(buffer_handle(h));
         });
 
-        destroy_for(m_resources.geometries, [this](geometry_handle h) {
-            destroy_geometry(h);
+        destroy_for(m_resources.geometries, [this](uint64 h) {
+            destroy_geometry(geometry_handle(h));
         });
 
-        destroy_for(m_resources.shader_bindings, [this](shader_binding_handle h) {
-            destroy_shader_binding(h);
+        destroy_for(m_resources.shader_bindings, [this](uint64 h) {
+            destroy_shader_binding(shader_binding_handle(h));
         });
 
-        destroy_for(m_resources.shaders, [this](shader_handle h) {
-            destroy_shader(h);
+        destroy_for(m_resources.shaders, [this](uint64 h) {
+            destroy_shader(shader_handle(h));
         });
 
-        destroy_for(m_resources.render_passes, [this](render_pass_handle h) {
-            destroy_render_pass(h);
+        destroy_for(m_resources.render_passes, [this](uint64 h) {
+            destroy_render_pass(render_pass_handle(h));
         });
 
         //// Should be removed in last turn because swapchain owns the OpenGL context
-        destroy_for(m_resources.composers, [this](frame_composer_handle h) {
-            destroy_frame_composer(h);
+        destroy_for(m_resources.composers, [this](uint64 h) {
+            destroy_frame_composer(frame_composer_handle(h));
         });
     }
 
@@ -214,7 +210,7 @@ namespace tavros::renderer::rhi
         m_resources.composers.for_each([&](auto h, auto& v) { if (native_handle == v.native_handle) { has_native_handle = true; } });
         if (has_native_handle) {
             ::logger.error("Failed to create frame composer: native handle {} already exists", native_handle);
-            return frame_composer_handle::invalid();
+            return {};
         }
 
         // Create a new frame composer
@@ -223,7 +219,7 @@ namespace tavros::renderer::rhi
         if (!composer) {
             // Detailed info sould be written at frame_composer_opengl
             ::logger.error("Failed to create frame composer");
-            return frame_composer_handle::invalid();
+            return {};
         }
 
         // Initialize debug callback for OpenGL here, because it's not possible to do it in the constructor
@@ -259,13 +255,13 @@ namespace tavros::renderer::rhi
     {
         if (info.entry_point != "main") {
             ::logger.error("Failed to create shader: not supported entry point name {} only 'main' entry point is supported", fmt::styled_name(info.entry_point));
-            return shader_handle::invalid();
+            return shader_handle();
         }
 
         auto shader_obj = compile_shader(info.source_code, to_gl_shader_stage(info.stage));
         if (shader_obj == 0) {
             ::logger.error("Failed to create shader: compilation failed");
-            return shader_handle::invalid();
+            return shader_handle();
         }
 
         auto h = m_resources.create({info, shader_obj});
@@ -340,140 +336,140 @@ namespace tavros::renderer::rhi
         if (info.type == texture_type::texture_2d) {
             if (info.width == 0 || info.height == 0 || info.depth != 1) {
                 ::logger.error("Failed to create `texture_2d`: width and height must be greater than 0, and depth must be 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.array_layers != 1) {
                 ::logger.error("Failed to create `texture_2d`: array layers must be 1");
-                return texture_handle::invalid();
+                return {};
             }
 
-            if (info.sample_count == 0 || !is_power_of_two(info.sample_count)) {
+            if (info.sample_count == 0 || !math::is_power_of_two(info.sample_count)) {
                 ::logger.error("Failed to create `texture_2d`: sample count must be power of two, and at least 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.sample_count == 1 && info.usage.has_flag(texture_usage::resolve_source)) {
                 ::logger.error("Failed to create `texture_2d`: resolve source textures must have sample count > 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.sample_count > 1 && info.usage.has_flag(texture_usage::resolve_destination)) {
                 ::logger.error("Failed to create `texture_2d`: resolve destination textures must have sample_count == 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.sample_count > 1 && info.usage.has_flag(texture_usage::storage)) {
                 ::logger.error("Failed to create `texture_2d`: multisample textures cannot be used as storage");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.sample_count > 1 && info.usage.has_flag(texture_usage::sampled)) {
                 ::logger.error("Failed to create `texture_2d`: multisample textures cannot be used as sampled");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.sample_count > 1 && info.mip_levels > 1) {
                 ::logger.error("Failed to create `texture_2d`: multisample textures cannot have mip levels");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.mip_levels == 0) {
                 ::logger.error("Failed to create `texture_2d`: mip levels must be at least 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             // Resolve source texture must be a render target
             auto is_render_target = info.usage.has_flag(texture_usage::render_target) || info.usage.has_flag(texture_usage::depth_stencil_target);
             if (info.usage.has_flag(texture_usage::resolve_source) && !is_render_target) {
                 ::logger.error("Failed to create texture: resolve source textures must be render targets");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
                 // Depth stencil target texture must be a depth stencil format
                 if (!gl_depth_stencil_format.is_depth_stencil_format) {
                     ::logger.error("Failed to create texture: depth/stencil target must have depth/stencil format");
-                    return texture_handle::invalid();
+                    return {};
                 }
 
                 // Depth stencil target texture cannot be used as sampled
                 if (info.usage.has_flag(texture_usage::sampled)) {
                     ::logger.error("Failed to create texture: depth/stencil target textures cannot be used as sampled");
-                    return texture_handle::invalid();
+                    return {};
                 }
             }
 
         } else if (info.type == texture_type::texture_3d) {
             if (info.width == 0 || info.height == 0 || info.depth == 0) {
                 ::logger.error("Failed to create `texture_3d`: width, height and depth must be greater than 0");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.array_layers != 1) {
                 ::logger.error("Failed to create `texture_3d`: array layers must be 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.sample_count != 1) {
                 ::logger.error("Failed to create `texture_3d`: sample count must be 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::render_target)) {
                 ::logger.error("Failed to create `texture_3d`: usage flag `render_target` is not allowed");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
                 ::logger.error("Failed to create `texture_3d`: usage flags `depth_stencil_target` is not allowed");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::resolve_source)) {
                 ::logger.error("Failed to create `texture_3d`: usage flags `resolve_source` is not allowed");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::resolve_destination)) {
                 ::logger.error("Failed to create `texture_3d`: usage flag `resolve_destination` is not allowed");
-                return texture_handle::invalid();
+                return {};
             }
 
         } else if (info.type == texture_type::texture_cube) {
             if (info.width == 0 || info.height == 0 || info.width != info.height || info.depth != 1) {
                 ::logger.error("Failed to create `texture_cube`: width and height must be equal and greater than 0, depth must be 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.array_layers % 6 != 0 || info.array_layers != 6) {
                 ::logger.error("Failed to create `texture_cube`: array layers must be a multiple of 6 and at least 6");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.sample_count != 1) {
                 ::logger.error("Failed to create `texture_cube`: sample count must be 1");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::depth_stencil_target)) {
                 ::logger.error("Failed to create `texture_cube`: usage flags `depth_stencil_target` is not allowed");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::resolve_source)) {
                 ::logger.error("Failed to create `texture_cube`: usage flags `resolve_source` is not allowed");
-                return texture_handle::invalid();
+                return {};
             }
 
             if (info.usage.has_flag(texture_usage::resolve_destination)) {
                 ::logger.error("Failed to create `texture_cube`: usage flag `resolve_destination` is not allowed");
-                return texture_handle::invalid();
+                return {};
             }
 
         } else {
             ::logger.error("Failed to create texture: unknown texture type");
-            return texture_handle::invalid();
+            return {};
         }
 
 
@@ -581,12 +577,12 @@ namespace tavros::renderer::rhi
     {
         if (info.shaders.size() != 2) {
             ::logger.error("Failed to create pipeline: exactly 2 shaders required (vertex and fragment)");
-            return pipeline_handle::invalid();
+            return {};
         }
 
         if (info.shaders.size() != shaders.size()) {
             ::logger.error("Failed to create pipeline: shaders size mismatch");
-            return pipeline_handle::invalid();
+            return {};
         }
 
         GLuint vs = 0;
@@ -595,39 +591,39 @@ namespace tavros::renderer::rhi
             auto* s = m_resources.try_get(shaders[i]);
             if (!s) {
                 ::logger.error("Failed to create pipeline: shader {} not found", shaders[i]);
-                return pipeline_handle::invalid();
+                return {};
             }
 
             if (s->info.stage != info.shaders[i].stage) {
                 ::logger.error("Failed to create pipeline: shader stage mismatch");
-                return pipeline_handle::invalid();
+                return {};
             }
 
             if (s->info.stage == shader_stage::vertex) {
                 if (vs != 0) {
                     ::logger.error("Failed to create pipeline: multiple vertex shaders provided");
-                    return pipeline_handle::invalid();
+                    return {};
                 }
                 vs = s->shader_obj;
             } else if (s->info.stage == shader_stage::fragment) {
                 if (fs != 0) {
                     ::logger.error("Failed to create pipeline: multiple fragment shaders provided");
-                    return pipeline_handle::invalid();
+                    return {};
                 }
                 fs = s->shader_obj;
             } else {
                 ::logger.error("Failed to create pipeline: unsupported shader stage");
-                return pipeline_handle::invalid();
+                return {};
             }
         }
 
         if (vs == 0) {
             ::logger.error("Failed to create pipeline: missing vertex shader");
-            return pipeline_handle::invalid();
+            return {};
         }
         if (fs == 0) {
             ::logger.error("Failed to create pipeline: missing fragment shader");
-            return pipeline_handle::invalid();
+            return {};
         }
 
         GLuint gl_program = link_program(vs, fs);
@@ -635,7 +631,7 @@ namespace tavros::renderer::rhi
         // Validate program
         if (gl_program == 0) {
             ::logger.error("Failed to create pipeline: failed to link program");
-            return pipeline_handle::invalid();
+            return {};
         }
 
         auto program_owner = core::make_scoped_owner(gl_program, [](GLuint id) {
@@ -651,7 +647,7 @@ namespace tavros::renderer::rhi
             auto it = mapped_attributes.find(attr.location);
             if (it != mapped_attributes.end()) {
                 ::logger.error("Failed to create pipeline: attribute location {} is used multiple times", fmt::styled_param(attr.location));
-                return pipeline_handle::invalid();
+                return {};
             }
             mapped_attributes[attr.location] = attr;
         }
@@ -677,14 +673,14 @@ namespace tavros::renderer::rhi
             auto shader_type = gl_type_to_rhi_type(type);
             if (!shader_type.valid) {
                 ::logger.error("Failed to create pipeline: unsupported attribute type by RHI, for attribute name {}", fmt::styled_text(attrib_name));
-                return pipeline_handle::invalid();
+                return {};
             }
 
             // Check attribute location
             auto it = mapped_attributes.find(static_cast<uint32>(gl_attrib_location));
             if (it == mapped_attributes.end()) {
                 ::logger.error("Failed to create pipeline: attribute location {} not found in provided attributes", fmt::styled_param(gl_attrib_location));
-                return pipeline_handle::invalid();
+                return {};
             }
 
             // Check attribute type and format
@@ -699,7 +695,7 @@ namespace tavros::renderer::rhi
                     it->second.type,
                     it->second.format
                 );
-                return pipeline_handle::invalid();
+                return {};
             }
 
             total_gl_attributes++;
@@ -707,7 +703,7 @@ namespace tavros::renderer::rhi
 
         if (total_gl_attributes != info.attributes.size()) {
             ::logger.error("Failed to create pipeline: mismach attributes size. Provided {}, expected {}", fmt::styled_param(info.attributes.size()), fmt::styled_param(total_gl_attributes));
-            return pipeline_handle::invalid();
+            return {};
         }
 
 
@@ -737,7 +733,7 @@ namespace tavros::renderer::rhi
         // Validate attachments size
         if (color_attachments.size() != info.color_attachment_formats.size()) {
             ::logger.error("Failed to create framebuffer: number of color attachments does not match the framebuffer info");
-            return framebuffer_handle::invalid();
+            return {};
         }
 
         // Validate attachments
@@ -751,41 +747,41 @@ namespace tavros::renderer::rhi
             if (!tex) {
                 // Texture not found, so the framebuffer can't be created
                 ::logger.error("Failed to create framebuffer: color attachment texture {} not found", tex_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Validate size
             if (tex->info.width != info.width || tex->info.height != info.height) {
                 ::logger.error("Failed to create framebuffer: color attachment {} size {}x{} does not match framebuffer size {}x{}", tex_h, fmt::styled_param(tex->info.width), fmt::styled_param(tex->info.height), fmt::styled_param(info.width), fmt::styled_param(info.height));
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Validate formats
             if (!is_color_format(info.color_attachment_formats[i])) {
                 ::logger.error("Failed to create framebuffer: unsupported color attachment format for attachment {}", fmt::styled_param(i));
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             if (!is_color_format(tex->info.format)) {
                 ::logger.error("Failed to create framebuffer: unsupported color attachment format for texture {}", tex_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             if (info.color_attachment_formats[i] != tex->info.format) {
                 ::logger.error("Failed to create framebuffer: color attachment texture {} format mismatch with framebuffer info", tex_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Validate MSAA
             if (info.sample_count != tex->info.sample_count) {
                 ::logger.error("Failed to create framebuffer: color attachment texture {} sample count {} mismatch with framebuffer sample count {}", tex_h, fmt::styled_param(tex->info.sample_count), fmt::styled_param(info.sample_count));
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // All the attachments must be used as color attachments
             if (!tex->info.usage.has_flag(texture_usage::render_target)) {
                 ::logger.error("Failed to create framebuffer: color attachment texture {} is not a render target", tex_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             color_attachment_textures.push_back(tex);
@@ -794,15 +790,15 @@ namespace tavros::renderer::rhi
         // Validate depth/stencil texture
         bool           depth_stencil_enabled = info.depth_stencil_attachment_format != pixel_format::none;
         bool           depth_stencil_provided = depth_stencil_attachment.has_value();
-        texture_handle depth_stencil_attachment_h = texture_handle::invalid();
+        texture_handle depth_stencil_attachment_h = {};
 
         if (depth_stencil_enabled && !depth_stencil_provided) {
             ::logger.error("Failed to create framebuffer: depth/stencil attachment is enabled but not provided");
-            return framebuffer_handle::invalid();
+            return {};
         }
         if (!depth_stencil_enabled && depth_stencil_provided) {
             ::logger.error("Failed to create framebuffer: depth/stencil attachment is provided but not enabled");
-            return framebuffer_handle::invalid();
+            return {};
         }
 
         GLuint fbo;
@@ -833,7 +829,7 @@ namespace tavros::renderer::rhi
             auto gl_format = to_depth_stencil_fromat(info.depth_stencil_attachment_format);
             if (!gl_format.is_depth_stencil_format) {
                 ::logger.error("Failed to create framebuffer: depth/stencil attachment format is invalid");
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Get depth/stencil texture and attach it
@@ -841,31 +837,31 @@ namespace tavros::renderer::rhi
             auto* tex = m_resources.try_get(depth_stencil_attachment_h);
             if (!tex) {
                 ::logger.error("Failed to create framebuffer: depth/stencil texture {} not found", depth_stencil_attachment_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Validate depth/stencil size
             if (tex->info.width != info.width || tex->info.height != info.height) {
                 ::logger.error("Failed to create framebuffer: depth/stencil attachment texture {} size {}x{} does not match framebuffer size {}x{}", depth_stencil_attachment_h, fmt::styled_param(tex->info.width), fmt::styled_param(tex->info.height), fmt::styled_param(info.width), fmt::styled_param(info.height));
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Validate depth/stencil format
             if (tex->info.format != info.depth_stencil_attachment_format) {
                 ::logger.error("Failed to create framebuffer: depth/stencil attachment texture {} format mismatch", depth_stencil_attachment_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Validate depth/stencil usage
             if (!tex->info.usage.has_flag(texture_usage::depth_stencil_target)) {
                 ::logger.error("Failed to create framebuffer: depth/stencil attachment texture {} is not a depth/stencil target", depth_stencil_attachment_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Validate depth/stencil sample count
             if (tex->info.sample_count != info.sample_count) {
                 ::logger.error("Failed to create framebuffer: depth/stencil attachment texture {} sample count mismatch", depth_stencil_attachment_h);
-                return framebuffer_handle::invalid();
+                return {};
             }
 
             // Everything is ok, attach depth/stencil texture
@@ -876,7 +872,7 @@ namespace tavros::renderer::rhi
         // there are no color attachments
         if (draw_buffers.size() == 0 && info.depth_stencil_attachment_format == pixel_format::none) {
             ::logger.error("There are no attachments for framebuffer");
-            return framebuffer_handle::invalid();
+            return {};
         }
 
         // Enable color attachments
@@ -893,7 +889,7 @@ namespace tavros::renderer::rhi
         // Validate framebuffer
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
             ::logger.error("Failed to create framebuffer: framebuffer is not complete");
-            return framebuffer_handle::invalid();
+            return {};
         }
 
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
@@ -926,7 +922,7 @@ namespace tavros::renderer::rhi
         if (info.usage == buffer_usage::stage) {
             if (info.access != buffer_access::cpu_to_gpu) {
                 ::logger.error("Failed to create buffer: stage buffer must have access type `cpu_to_gpu`");
-                return buffer_handle::invalid();
+                return {};
             }
 
             gl_target = GL_COPY_WRITE_BUFFER;
@@ -934,7 +930,7 @@ namespace tavros::renderer::rhi
         } else {
             if (info.access == buffer_access::cpu_to_gpu) {
                 ::logger.error("Failed to create buffer: access type `cpu_to_gpu` must be used only with buffer usage `stage`");
-                return buffer_handle::invalid();
+                return {};
             }
 
             switch (info.usage) {
@@ -1002,7 +998,7 @@ namespace tavros::renderer::rhi
         // Check vertex buffers
         if (vertex_buffers.size() == 0) {
             ::logger.error("Failed to create geometry: no vertex buffers specified");
-            return geometry_handle::invalid();
+            return {};
         }
 
         // Check buffer bindings
@@ -1011,7 +1007,7 @@ namespace tavros::renderer::rhi
             if (buffer_index >= vertex_buffers.size()) {
                 uint32 max_index = static_cast<uint32>(vertex_buffers.size() - 1);
                 ::logger.error("Failed to create geometry: invalid vertex buffer binding index {}, maximum allowed is {}", fmt::styled_param(buffer_index), fmt::styled_param(max_index));
-                return geometry_handle::invalid();
+                return {};
             }
         }
 
@@ -1021,19 +1017,19 @@ namespace tavros::renderer::rhi
             if (buffer_binding_index >= info.buffer_layouts.size()) {
                 uint32 max_index = static_cast<uint32>(info.buffer_layouts.size() - 1);
                 ::logger.error("Failed to create geometry: invalid vertex attribute binding index {}, maximum allowed is {}", fmt::styled_param(buffer_binding_index), fmt::styled_param(max_index));
-                return geometry_handle::invalid();
+                return {};
             }
         }
 
         // Check index buffer
         if (info.has_index_buffer && index_buffer == core::nullopt) {
             ::logger.error("Failed to create geometry: index buffer is missing but required");
-            return geometry_handle::invalid();
+            return {};
         }
 
         if (!info.has_index_buffer && index_buffer != core::nullopt) {
             ::logger.error("Failed to create geometry: index buffer was provided but not enabled");
-            return geometry_handle::invalid();
+            return {};
         }
 
         // Create VAO
@@ -1060,7 +1056,7 @@ namespace tavros::renderer::rhi
             auto* b = m_resources.try_get(vertex_buffer_h);
             if (!b) {
                 ::logger.error("Failed to create geometry: vertex buffer {} not found", vertex_buffer_h);
-                return geometry_handle::invalid();
+                return {};
             }
 
             // Enable the vertex buffer
@@ -1085,11 +1081,11 @@ namespace tavros::renderer::rhi
             auto* b = m_resources.try_get(index_buffer_h);
             if (!b) {
                 ::logger.error("Failed to create geometry: index buffer {} not found", index_buffer_h);
-                return geometry_handle::invalid();
+                return {};
             }
             if (b->info.usage != buffer_usage::index) {
                 ::logger.error("Failed to create geometry: buffer {} is not an index buffer", index_buffer_h);
-                return geometry_handle::invalid();
+                return {};
             }
 
             // Everything is ok, so bind index buffer
@@ -1123,7 +1119,7 @@ namespace tavros::renderer::rhi
         for (const auto& attachment : info.color_attachments) {
             if (!is_color_format(attachment.format)) {
                 ::logger.error("Failed to create render pass: invalid color attachment format");
-                return render_pass_handle::invalid();
+                return {};
             }
         }
 
@@ -1133,13 +1129,13 @@ namespace tavros::renderer::rhi
             auto f = to_depth_stencil_fromat(info.depth_stencil_attachment.format);
             if (!f.is_depth_stencil_format) {
                 ::logger.error("Failed to create render pass: invalid depth/stencil attachment format");
-                return render_pass_handle::invalid();
+                return {};
             }
         }
 
         if (info.color_attachments.size() == 0 && depth_stencil_is_none) {
             ::logger.error("Failed to create render pass: no attachments specified");
-            return render_pass_handle::invalid();
+            return {};
         }
 
         // Validate resolve attachments
@@ -1153,18 +1149,18 @@ namespace tavros::renderer::rhi
                 // First of all, validate that resolve index is valid
                 if (resolve_textures.empty()) {
                     ::logger.error("Failed to create render pass: no resolve textures available, but index {} was requested", fmt::styled_param(resolve_index));
-                    return render_pass_handle::invalid();
+                    return {};
                 }
                 if (resolve_index >= resolve_textures.size()) {
                     uint32 max_index = static_cast<uint32>(resolve_textures.size() - 1);
                     ::logger.error("Failed to create render pass: invalid resolve texture index {}, maximum allowed is {}", fmt::styled_param(resolve_index), fmt::styled_param(max_index));
-                    return render_pass_handle::invalid();
+                    return {};
                 }
 
                 // Check for already used resolve index
                 if (is_used_for_resolve[resolve_index]) {
                     ::logger.error("Failed to create render pass: resolve texture index {} is used more than once", fmt::styled_param(resolve_index));
-                    return render_pass_handle::invalid();
+                    return {};
                 }
 
                 is_used_for_resolve[resolve_index] = true;
@@ -1173,21 +1169,21 @@ namespace tavros::renderer::rhi
                 auto* resolve_tex = m_resources.try_get(resolve_tex_h);
                 if (!resolve_tex) {
                     ::logger.error("Failed to create render pass: resolve texture {} not found", resolve_tex_h);
-                    return render_pass_handle::invalid();
+                    return {};
                 }
 
 
                 if (resolve_tex->info.format != attachment.format) {
                     ::logger.error("Failed to create render pass: mismatched resolve texture format with color attachment {}", fmt::styled_param(resolve_index));
-                    return render_pass_handle::invalid();
+                    return {};
                 }
                 if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
                     ::logger.error("Failed to create render pass: resolve texture {} must have resolve_destination usage flag", resolve_tex_h);
-                    return render_pass_handle::invalid();
+                    return {};
                 }
                 if (resolve_tex->info.sample_count != 1) {
                     ::logger.error("Failed to create render pass: resolve texture {} must be single-sampled", resolve_tex_h);
-                    return render_pass_handle::invalid();
+                    return {};
                 }
 
                 need_resolve_textures_number++;
@@ -1197,7 +1193,7 @@ namespace tavros::renderer::rhi
         // Make sure that all resolve textures are used
         if (resolve_textures.size() != need_resolve_textures_number) {
             ::logger.error("Failed to create render pass: not all resolve textures are used");
-            return render_pass_handle::invalid();
+            return {};
         }
 
         core::static_vector<texture_handle, k_max_color_attachments> resolve_attachments_handles;
@@ -1234,23 +1230,23 @@ namespace tavros::renderer::rhi
             // Textures
             if (textures.empty()) {
                 ::logger.error("Failed to create shader binding: no textures available, but index {} was requested", fmt::styled_param(binding.texture_index));
-                return shader_binding_handle::invalid();
+                return {};
             }
             if (binding.texture_index >= textures.size()) {
                 uint32 max_index = static_cast<uint32>(textures.size() - 1);
                 ::logger.error("Failed to create shader binding: invalid texture binding index {}, maximum allowed is {}", fmt::styled_param(binding.texture_index), fmt::styled_param(max_index));
-                return shader_binding_handle::invalid();
+                return {};
             }
 
             // Samplers
             if (samplers.empty()) {
                 ::logger.error("Failed to create shader binding: no samplers available, but index {} was requested", fmt::styled_param(binding.sampler_index));
-                return shader_binding_handle::invalid();
+                return {};
             }
             if (binding.sampler_index >= samplers.size()) {
                 uint32 max_index = static_cast<uint32>(samplers.size() - 1);
                 ::logger.error("Failed to create shader binding: invalid sampler binding index {}, maximum allowed is {}", fmt::styled_param(binding.sampler_index), fmt::styled_param(max_index));
-                return shader_binding_handle::invalid();
+                return {};
             }
         }
 
@@ -1259,12 +1255,12 @@ namespace tavros::renderer::rhi
             auto& binding = info.buffer_bindings[i];
             if (buffers.empty()) {
                 ::logger.error("Failed to create shader binding: no buffers available, but index {} was requested", fmt::styled_param(binding.buffer_index));
-                return shader_binding_handle::invalid();
+                return {};
             }
             if (binding.buffer_index >= buffers.size()) {
                 auto max_index = static_cast<uint32>(buffers.size()) - 1;
                 ::logger.error("Failed to create shader binding: invalid buffer binding index {}, maximum allowed is {}", fmt::styled_param(binding.buffer_index), fmt::styled_param(max_index));
-                return shader_binding_handle::invalid();
+                return {};
             }
         }
 
@@ -1286,7 +1282,7 @@ namespace tavros::renderer::rhi
             auto* b = m_resources.try_get(buffer_h);
             if (b->info.usage != buffer_usage::uniform) {
                 ::logger.error("Failed to create shader binding: buffer {} is not uniform buffer", buffers[i]);
-                return shader_binding_handle::invalid();
+                return {};
             }
         }
 

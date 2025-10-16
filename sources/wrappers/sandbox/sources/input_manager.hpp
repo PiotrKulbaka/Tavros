@@ -72,6 +72,8 @@ namespace app
         uint64                                 m_last_frame_time_us = 0;    // Time of the previous frame
         std::array<key_state, k_keyboard_size> m_keys;                      // State data per key
         tavros::math::vec2                     m_raw_mouse_delta;
+        uint64                                 m_last_mouse_time_us = 0;
+        uint64                                 m_mouse_time_us = 0;
     };
 
 } // namespace app

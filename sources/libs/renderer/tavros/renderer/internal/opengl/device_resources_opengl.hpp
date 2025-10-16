@@ -43,7 +43,7 @@ namespace tavros::renderer::rhi
         bool                    is_default = false;
 
         core::static_vector<texture_handle, k_max_color_attachments> color_attachments;
-        texture_handle                                               depth_stencil_attachment = texture_handle::invalid();
+        texture_handle                                               depth_stencil_attachment;
     };
 
     struct gl_buffer
@@ -103,154 +103,154 @@ namespace tavros::renderer::rhi
         // --- Create ---
         frame_composer_handle create(gl_composer&& data)
         {
-            return {composers.add(std::move(data)).id};
+            return frame_composer_handle{composers.add(std::move(data)).id};
         }
 
         shader_handle create(gl_shader&& data)
         {
-            return {shaders.add(std::move(data)).id};
+            return shader_handle{shaders.add(std::move(data)).id};
         }
 
         shader_binding_handle create(gl_shader_binding&& data)
         {
-            return {shader_bindings.add(std::move(data)).id};
+            return shader_binding_handle{shader_bindings.add(std::move(data)).id};
         }
 
         sampler_handle create(gl_sampler&& data)
         {
-            return {samplers.add(std::move(data)).id};
+            return sampler_handle{samplers.add(std::move(data)).id};
         }
 
         texture_handle create(gl_texture&& data)
         {
-            return {textures.add(std::move(data)).id};
+            return texture_handle{textures.add(std::move(data)).id};
         }
 
         pipeline_handle create(gl_pipeline&& data)
         {
-            return {pipelines.add(std::move(data)).id};
+            return pipeline_handle{pipelines.add(std::move(data)).id};
         }
 
         framebuffer_handle create(gl_framebuffer&& data)
         {
-            return {framebuffers.add(std::move(data)).id};
+            return framebuffer_handle{framebuffers.add(std::move(data)).id};
         }
 
         buffer_handle create(gl_buffer&& data)
         {
-            return {buffers.add(std::move(data)).id};
+            return buffer_handle{buffers.add(std::move(data)).id};
         }
 
         geometry_handle create(gl_geometry&& data)
         {
-            return {geometries.add(std::move(data)).id};
+            return geometry_handle{geometries.add(std::move(data)).id};
         }
 
         render_pass_handle create(gl_render_pass&& data)
         {
-            return {render_passes.add(std::move(data)).id};
+            return render_pass_handle{render_passes.add(std::move(data)).id};
         }
 
         // --- Remove ---
         void remove(frame_composer_handle handle)
         {
-            composers.erase({handle.id});
+            composers.erase(core::object_handle<gl_composer>(handle.id));
         }
 
         void remove(shader_handle handle)
         {
-            shaders.erase({handle.id});
+            shaders.erase(core::object_handle<gl_shader>(handle.id));
         }
 
         void remove(shader_binding_handle handle)
         {
-            shader_bindings.erase({handle.id});
+            shader_bindings.erase(core::object_handle<gl_shader_binding>(handle.id));
         }
 
         void remove(sampler_handle handle)
         {
-            samplers.erase({handle.id});
+            samplers.erase(core::object_handle<gl_sampler>(handle.id));
         }
 
         void remove(texture_handle handle)
         {
-            textures.erase({handle.id});
+            textures.erase(core::object_handle<gl_texture>(handle.id));
         }
 
         void remove(pipeline_handle handle)
         {
-            pipelines.erase({handle.id});
+            pipelines.erase(core::object_handle<gl_pipeline>(handle.id));
         }
 
         void remove(framebuffer_handle handle)
         {
-            framebuffers.erase({handle.id});
+            framebuffers.erase(core::object_handle<gl_framebuffer>(handle.id));
         }
 
         void remove(buffer_handle handle)
         {
-            buffers.erase({handle.id});
+            buffers.erase(core::object_handle<gl_buffer>(handle.id));
         }
 
         void remove(geometry_handle handle)
         {
-            geometries.erase({handle.id});
+            geometries.erase(core::object_handle<gl_geometry>(handle.id));
         }
 
         void remove(render_pass_handle handle)
         {
-            render_passes.erase({handle.id});
+            render_passes.erase(core::object_handle<gl_render_pass>(handle.id));
         }
 
         // --- Try get ---
         gl_composer* try_get(frame_composer_handle handle)
         {
-            return composers.try_get({handle.id});
+            return composers.try_get(core::object_handle<gl_composer>(handle.id));
         }
 
         gl_shader* try_get(shader_handle handle)
         {
-            return shaders.try_get({handle.id});
+            return shaders.try_get(core::object_handle<gl_shader>(handle.id));
         }
 
         gl_shader_binding* try_get(shader_binding_handle handle)
         {
-            return shader_bindings.try_get({handle.id});
+            return shader_bindings.try_get(core::object_handle<gl_shader_binding>(handle.id));
         }
 
         gl_sampler* try_get(sampler_handle handle)
         {
-            return samplers.try_get({handle.id});
+            return samplers.try_get(core::object_handle<gl_sampler>(handle.id));
         }
 
         gl_texture* try_get(texture_handle handle)
         {
-            return textures.try_get({handle.id});
+            return textures.try_get(core::object_handle<gl_texture>(handle.id));
         }
 
         gl_pipeline* try_get(pipeline_handle handle)
         {
-            return pipelines.try_get({handle.id});
+            return pipelines.try_get(core::object_handle<gl_pipeline>(handle.id));
         }
 
         gl_framebuffer* try_get(framebuffer_handle handle)
         {
-            return framebuffers.try_get({handle.id});
+            return framebuffers.try_get(core::object_handle<gl_framebuffer>(handle.id));
         }
 
         gl_buffer* try_get(buffer_handle handle)
         {
-            return buffers.try_get({handle.id});
+            return buffers.try_get(core::object_handle<gl_buffer>(handle.id));
         }
 
         gl_geometry* try_get(geometry_handle handle)
         {
-            return geometries.try_get({handle.id});
+            return geometries.try_get(core::object_handle<gl_geometry>(handle.id));
         }
 
         gl_render_pass* try_get(render_pass_handle handle)
         {
-            return render_passes.try_get({handle.id});
+            return render_passes.try_get(core::object_handle<gl_render_pass>(handle.id));
         }
 
     public:

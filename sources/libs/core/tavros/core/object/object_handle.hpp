@@ -15,19 +15,29 @@ namespace tavros::core
     template<class ObjectTag>
     struct object_handle
     {
-        uint64 id = 0xffffffffffffffffui64;
+        using id_t = uint64;
 
-        /**
-         * @brief Returns an invalid handle.
-         */
-        static constexpr object_handle invalid() noexcept
+        id_t id = 0xffffffffffffffffui64;
+
+        object_handle() noexcept = default;
+
+        explicit object_handle(id_t handle_id)
+			: id(handle_id)
         {
-            return {0xffffffffffffffffui64};
         }
 
-        bool constexpr is_valid() const noexcept
+        bool constexpr valid() const noexcept
         {
             return id != 0xffffffffffffffffui64;
+        }
+
+        /**
+         * @brief Allows checking validity in boolean context.
+         * @example if (handle) { ... }
+         */
+        explicit operator bool() const noexcept
+        {
+            return valid();
         }
 
         constexpr bool operator==(object_handle other) const noexcept
@@ -56,8 +66,8 @@ struct fmt::formatter<tavros::core::object_handle<ObjectTag>>
     template<typename FormatContext>
     auto format(const tavros::core::object_handle<ObjectTag>& h, FormatContext& ctx) const
     {
-        if (h == tavros::core::object_handle<ObjectTag>::invalid()) {
-            return fmt::format_to(ctx.out(), "{}", fmt::styled_error("(invalid)"));
+        if (!h) {
+            return fmt::format_to(ctx.out(), "{} {}", fmt::styled_error("(invalid)"), fmt::styled_important(tavros::core::uint64_to_base64(h.id)));
         }
         return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint64_to_base64(h.id)));
     }

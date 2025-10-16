@@ -12,14 +12,25 @@ namespace tavros::renderer::rhi
     {
         uint64 id = 0xffffffffffffffffui64;
 
-        static constexpr handle_base invalid() noexcept
+		handle_base() noexcept = default;
+
+        explicit handle_base(uint64 handle_id)
+			: id(handle_id)
         {
-            return {0xffffffffffffffffui64};
         }
 
-        bool constexpr is_valid() const noexcept
+        bool constexpr valid() const noexcept
         {
             return id != 0xffffffffffffffffui64;
+        }
+
+        /**
+         * @brief Allows checking validity in boolean context.
+         * @example if (handle) { ... }
+         */
+        explicit operator bool() const noexcept
+        {
+            return valid();
         }
 
         constexpr bool operator==(handle_base other) const noexcept
@@ -90,8 +101,8 @@ struct fmt::formatter<tavros::renderer::rhi::handle_base<ObjectTag>>
     template<typename FormatContext>
     auto format(const tavros::renderer::rhi::handle_base<ObjectTag>& h, FormatContext& ctx) const
     {
-        if (h == tavros::renderer::rhi::handle_base<ObjectTag>::invalid()) {
-            return fmt::format_to(ctx.out(), "{}", fmt::styled_error("(invalid)"));
+        if (!h) {
+            return fmt::format_to(ctx.out(), "{} {}", fmt::styled_error("(invalid)"), fmt::styled_important(tavros::core::uint64_to_base64(h.id)));
         }
         return fmt::format_to(ctx.out(), "{}", fmt::styled_important(tavros::core::uint64_to_base64(h.id)));
     }

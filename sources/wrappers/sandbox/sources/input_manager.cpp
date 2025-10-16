@@ -25,6 +25,7 @@ namespace app
         m_last_frame_time_us = 0;
         m_current_frame_time_us = 0;
         m_raw_mouse_delta.set(0.0f, 0.0f);
+        m_mouse_time_us = 0;
     }
 
     void input_manager::on_frame_started(uint64 frame_time_us)
@@ -74,6 +75,7 @@ namespace app
         TAV_UNUSED(time_us);
 
         m_raw_mouse_delta += delta;
+        m_mouse_time_us += m_last_mouse_time_us - time_us;
     }
 
     double input_manager::key_pressed_factor(tavros::system::keys key)

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <tavros/core/containers/static_vector.hpp>
-#include <tavros/core/containers/sapn.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 
 namespace tavros::renderer::rhi

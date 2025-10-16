@@ -26,7 +26,7 @@ namespace tavros::core
          */
         explicit object_view() noexcept
             : m_pool(nullptr)
-            , m_handle(object_handle::invalid())
+            , m_handle()
         {
         }
 
@@ -66,6 +66,15 @@ namespace tavros::core
         [[nodiscard]] bool valid() const noexcept
         {
             return m_pool && m_pool->exists(m_handle);
+        }
+
+        /**
+         * @brief Allows checking validity in boolean context.
+         * @example if (view) { ... }
+         */
+        explicit operator bool() const noexcept
+        {
+            return valid();
         }
 
         /**

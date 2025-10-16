@@ -86,6 +86,15 @@ namespace tavros::core
         }
 
         /**
+         * @brief Allows checking validity in boolean context.
+         * @example if (ref) { ... }
+         */
+        explicit operator bool() const noexcept
+        {
+            return valid();
+        }
+
+        /**
          * @brief Returns the handle associated with this reference.
          */
         [[nodiscard]] object_handle handle() const noexcept

@@ -10,9 +10,9 @@ namespace tavros::renderer::rhi
 
 #if TAV_DEBUG
     #define GL_CHECK() tavros::renderer::rhi::gl_check_impl(__FUNCTION__, __FILE__, __LINE__)
-    #define GL_CALL(x)                                          \
-        do {                                                    \
-            x;                                                  \
+    #define GL_CALL(x)                                                    \
+        do {                                                              \
+            x;                                                            \
             tavros::renderer::rhi::gl_check_impl(#x, __FILE__, __LINE__); \
         } while (false)
 #else

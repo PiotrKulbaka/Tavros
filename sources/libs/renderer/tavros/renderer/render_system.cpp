@@ -41,7 +41,7 @@ namespace tavros::renderer
         rhi_info.sample_count = 1;
 
         auto rhi_tex_h = m_gdevice->create_texture(rhi_info);
-        if (rhi_tex_h == rhi::texture_handle::invalid()) {
+        if (!rhi_tex_h) {
             return texture_view();
         }
 
@@ -92,15 +92,15 @@ namespace tavros::renderer
             }
 
             auto color_attachment_h = m_gdevice->create_texture(rhi_color_tex_info);
-            if (color_attachment_h == rhi::texture_handle::invalid()) {
+            if (!color_attachment_h) {
                 return render_target_view();
             }
             color_attachments.push_back(color_attachment_h);
         }
 
-        rhi::texture_handle depth_stencil_attachment = rhi::texture_handle::invalid();
+        rhi::texture_handle depth_stencil_attachment = rhi::texture_handle();
         auto                depth_stencil_attachment_guard = core::make_scope_exit([&]() {
-            if (depth_stencil_attachment != rhi::texture_handle::invalid()) {
+            if (depth_stencil_attachment) {
                 m_gdevice->destroy_texture(depth_stencil_attachment);
             }
         });
@@ -122,7 +122,7 @@ namespace tavros::renderer
             }
 
             auto rhi_depth_stencil_attachment_h = m_gdevice->create_texture(rhi_depth_stencil_tex_info);
-            if (rhi_depth_stencil_attachment_h == rhi::texture_handle::invalid()) {
+            if (!rhi_depth_stencil_attachment_h) {
                 return render_target_view();
             }
             depth_stencil_attachment = rhi_depth_stencil_attachment_h;
@@ -136,11 +136,11 @@ namespace tavros::renderer
         rhi_framebuffer_info.sample_count = info.sample_count;
 
         core::optional<rhi::texture_handle> optional_depth_stencil;
-        if (depth_stencil_attachment != rhi::texture_handle::invalid()) {
+        if (depth_stencil_attachment) {
             optional_depth_stencil = depth_stencil_attachment;
         }
         auto rhi_framebuffer_h = m_gdevice->create_framebuffer(rhi_framebuffer_info, color_attachments, optional_depth_stencil);
-        if (rhi_framebuffer_h == rhi::framebuffer_handle::invalid()) {
+        if (!rhi_framebuffer_h) {
             return render_target_view();
         }
 
@@ -159,7 +159,7 @@ namespace tavros::renderer
             return;
         }
 
-        auto rhi_fb_h = rt->handle();
+        auto rhi_fb_h = rt->framebuffer();
         m_gdevice->destroy_framebuffer(rhi_fb_h);
 
         auto count = rt->color_attachment_count();
@@ -167,7 +167,7 @@ namespace tavros::renderer
             m_gdevice->destroy_texture(rt->color_attachment(i));
         }
 
-        if (rt->depth_stencil_attachment() != rhi::texture_handle::invalid()) {
+        if (rt->has_depth_stencil_attachment()) {
             m_gdevice->destroy_texture(rt->depth_stencil_attachment());
         }
 

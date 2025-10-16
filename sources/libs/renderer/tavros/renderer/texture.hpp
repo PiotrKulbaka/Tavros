@@ -117,7 +117,7 @@ namespace tavros::renderer
         friend class core::object_pool<texture>; // for empalce_add in render_system
 
     private:
-        rhi::texture_handle m_handle = rhi::texture_handle::invalid();
+        rhi::texture_handle m_handle;
         texture_create_info m_info;
     };
 

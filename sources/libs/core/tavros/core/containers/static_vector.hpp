@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/containers/sapn.hpp>
+#include <tavros/core/memory/buffer_view.hpp>
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/verify.hpp>
 
@@ -53,12 +53,12 @@ namespace tavros::core
         }
 
         /**
-         * @brief Constructs the container from a span.
+         * @brief Constructs the container from a buffer_view.
          *
          * @param init Span of elements to copy into the container.
          * @note The number of elements must not exceed `N`.
          */
-        constexpr explicit static_vector(span<const T> init) noexcept
+        constexpr explicit static_vector(buffer_view<T> init) noexcept
         {
             TAV_ASSERT(init.size() <= N);
             for (const auto& value : init) {

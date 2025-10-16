@@ -235,7 +235,7 @@ namespace tavros::core
             TAV_ASSERT(idx != invalid_index);
 
             if (idx == invalid_index) {
-                return handle_type::invalid();
+                return {};
             }
 
             // Should be called before update m_max_idx
@@ -265,7 +265,7 @@ namespace tavros::core
             TAV_ASSERT(idx != invalid_index);
 
             if (idx == invalid_index) {
-                return handle_type::invalid();
+                return {};
             }
 
             // Should be called before update m_max_idx
@@ -401,7 +401,7 @@ namespace tavros::core
         handle_type make_handle(index_type idx) const
         {
             uint64 gen = static_cast<uint64>(current_gen(idx));
-            return {(gen << 32) | idx};
+            return handle_type{(gen << 32) | idx};
         }
 
         uint8 current_gen(index_type idx) const
@@ -416,7 +416,7 @@ namespace tavros::core
 
         static index_type extract_index(uint64 h_id)
         {
-            return h_id & 0xffffffff;
+            return h_id & 0xffffffffu;
         }
 
         static uint8 extract_gen(uint64 h_id)
