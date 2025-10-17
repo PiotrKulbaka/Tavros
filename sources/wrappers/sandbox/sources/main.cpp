@@ -12,7 +12,6 @@
 #include <tavros/renderer/render_system.hpp>
 #include <tavros/renderer/camera/camera.hpp>
 #include <tavros/renderer/render_target.hpp>
-#include <tavros/renderer/render_system.hpp>
 #include <tavros/core/memory/memory.hpp>
 
 #include <tavros/resources/resource_manager.hpp>
@@ -122,7 +121,8 @@ in vec2 v_tex_coord_inside;
 in vec3 v_normal;
 in vec3 v_to_camera;
 
-out vec4 FragColor;
+layout(location = 0) out vec4 out_FragColor;
+layout(location = 1) out vec4 out_depth;
 
 void main()
 {
@@ -137,7 +137,8 @@ void main()
     vec2 texCoord = gl_FrontFacing ? v_tex_coord_outside : v_tex_coord_inside;
     vec3 base_color = texture(uTex, texCoord).rgb;
 
-    FragColor = vec4(base_color * lighting, 1.0);
+    out_FragColor = vec4(base_color * lighting, 1.0);
+    out_depth = vec4(gl_FragCoord.z, gl_FragCoord.z, gl_FragCoord.z, 1.0);
 }
 )";
 
@@ -225,6 +226,9 @@ in float v_view_space_depth;
 
 out vec4 FragColor;
 
+layout(location = 0) out vec4 out_FragColor;   // Albedo
+layout(location = 1) out vec4 out_depth;
+
 void main()
 {
     const vec3 x_axis_color = vec3(0.3, 1.0, 0.3);
@@ -264,7 +268,9 @@ void main()
 
     float final_alpha = dist_factor *  angle_factor * final_mask * 0.8;
 
-    FragColor = vec4(final_color, final_alpha);
+    out_FragColor = vec4(final_color, final_alpha);
+    float d = length(v_cam_pos - v_world_pos) / v_view_space_depth;
+    out_depth = vec4(d, d, d, 1.0);
 }
 )";
 
@@ -278,9 +284,211 @@ static tavros::core::logger logger("main");
     std::exit(-1);
 }
 
-class auto_resolved_render_target
+
+class render_target : tavros::core::noncopyable
 {
+public:
+    render_target(
+        rhi::graphics_device*                        graphics_device,
+        tavros::core::buffer_view<rhi::pixel_format> color_attachment_formats,
+        rhi::pixel_format                            depth_stencil_attachment_format
+    )
+        : m_graphics_device(graphics_device)
+        , m_color_attachment_formats(color_attachment_formats)
+        , m_depth_stencil_attachment_format(depth_stencil_attachment_format)
+    {
+        TAV_ASSERT(m_graphics_device);
+        for (auto fmt : m_color_attachment_formats) {
+            TAV_ASSERT(fmt != rhi::pixel_format::none);
+        }
+    }
+
+    void recreate(uint32 width, uint32 height, uint32 msaa)
+    {
+        destroy();
+
+        constexpr auto resolve_source_usage = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
+        constexpr auto sampled_texture_usage = rhi::texture_usage::sampled | rhi::texture_usage::render_target;
+        constexpr auto resolve_source_depth_stencil_usage = rhi::texture_usage::resolve_source | rhi::texture_usage::depth_stencil_target;
+        constexpr auto sampled_depth_stencil_usage = rhi::texture_usage::depth_stencil_target;
+        constexpr auto resolve_destination_usage = rhi::texture_usage::sampled | rhi::texture_usage::resolve_destination;
+
+        auto texture_usage = msaa > 1 ? resolve_source_usage : sampled_texture_usage;
+        for (auto fmt : m_color_attachment_formats) {
+            auto src_tex = create_texture(width, height, fmt, texture_usage, msaa);
+            m_resolve_source_color_attachments.push_back(src_tex);
+            if (msaa > 1) {
+                auto dst_tex = create_texture(width, height, fmt, resolve_destination_usage, 1);
+                m_resolve_destination_color_attachments.push_back(dst_tex);
+            }
+        }
+
+        auto depth_stencil_usage = msaa > 1 ? resolve_source_depth_stencil_usage : sampled_depth_stencil_usage;
+        m_resolve_source_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, depth_stencil_usage, msaa);
+        if (msaa > 1) {
+            m_resolve_destination_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_destination_usage, 1);
+        }
+
+        m_framebuffer = create_framebuffer(width, height, msaa);
+        m_render_pass = create_render_pass(msaa);
+    }
+
+    void destroy()
+    {
+        for (auto tex : m_resolve_source_color_attachments) {
+            m_graphics_device->destroy_texture(tex);
+        }
+        m_resolve_source_color_attachments.clear();
+
+        for (auto tex : m_resolve_destination_color_attachments) {
+            m_graphics_device->destroy_texture(tex);
+        }
+        m_resolve_destination_color_attachments.clear();
+
+        if (m_resolve_source_depth_stencil_attachment) {
+            m_graphics_device->destroy_texture(m_resolve_source_depth_stencil_attachment);
+            m_resolve_source_depth_stencil_attachment = {};
+        }
+
+        if (m_resolve_destination_depth_stencil_attachment) {
+            m_graphics_device->destroy_texture(m_resolve_destination_depth_stencil_attachment);
+            m_resolve_destination_depth_stencil_attachment = {};
+        }
+
+        if (m_framebuffer) {
+            m_graphics_device->destroy_framebuffer(m_framebuffer);
+            m_framebuffer = {};
+        }
+
+        if (m_render_pass) {
+            m_graphics_device->destroy_render_pass(m_render_pass);
+            m_render_pass = {};
+        }
+    }
+
+    uint32 color_attachment_count() const
+    {
+        return m_color_attachment_formats.size();
+    }
+
+    rhi::texture_handle get_color_attachment(uint32 index) const
+    {
+        if (m_resolve_destination_color_attachments.size()) {
+            return m_resolve_destination_color_attachments[index];
+        }
+        return m_resolve_source_color_attachments[index];
+    }
+
+    rhi::framebuffer_handle framebuffer() const
+    {
+        TAV_ASSERT(m_framebuffer);
+        return m_framebuffer;
+    }
+
+    rhi::render_pass_handle render_pass() const
+    {
+        return m_render_pass;
+    }
+
+private:
+    rhi::framebuffer_handle create_framebuffer(uint32 width, uint32 height, uint32 msaa)
+    {
+        rhi::framebuffer_create_info fb_info;
+        fb_info.width = width;
+        fb_info.height = height;
+        fb_info.color_attachment_formats = m_color_attachment_formats;
+        fb_info.depth_stencil_attachment_format = m_depth_stencil_attachment_format;
+        fb_info.sample_count = msaa;
+
+        auto fb = m_graphics_device->create_framebuffer(fb_info, m_resolve_source_color_attachments, m_resolve_source_depth_stencil_attachment);
+        if (!fb) {
+            ::logger.fatal("Failed to create framebuffer.");
+            exit_fail();
+        }
+        return fb;
+    }
+
+    rhi::texture_handle create_texture(uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa)
+    {
+        rhi::texture_create_info tex_info;
+        tex_info.type = rhi::texture_type::texture_2d;
+        tex_info.format = fmt;
+        tex_info.width = width;
+        tex_info.height = height;
+        tex_info.depth = 1;
+        tex_info.usage = usage;
+        tex_info.mip_levels = 1;
+        tex_info.array_layers = 1;
+        tex_info.sample_count = msaa;
+
+        auto tex = m_graphics_device->create_texture(tex_info);
+        if (!tex) {
+            ::logger.fatal("Failed to create texture.");
+            exit_fail();
+        }
+        return tex;
+    }
+
+    rhi::render_pass_handle create_render_pass(uint32 msaa)
+    {
+        rhi::render_pass_create_info rp_info;
+
+        uint32 resolve_index = 0;
+        for (uint32 index = 0; index < m_color_attachment_formats.size(); ++index) {
+            rhi::color_attachment_info ca_info;
+            ca_info.format = m_color_attachment_formats[index];
+            ca_info.sample_count = msaa;
+            ca_info.load = rhi::load_op::clear;
+            ca_info.store = msaa > 1 ? rhi::store_op::resolve : rhi::store_op::store;
+            ca_info.resolve_texture_index = index;
+            ca_info.clear_value[0] = 0.2f;
+            ca_info.clear_value[1] = 0.2f;
+            ca_info.clear_value[2] = 0.25f;
+            ca_info.clear_value[3] = 1.0f;
+
+            rp_info.color_attachments.push_back(ca_info);
+        }
+
+        rhi::depth_stencil_attachment_info dsca_info;
+        dsca_info.format = m_depth_stencil_attachment_format;
+        dsca_info.depth_load = rhi::load_op::clear;
+        dsca_info.depth_store = msaa > 1 ? rhi::store_op::resolve : rhi::store_op::store;
+        dsca_info.depth_clear_value = 1.0f;
+        dsca_info.stencil_load = rhi::load_op::dont_care;
+        dsca_info.stencil_store = rhi::store_op::dont_care;
+        dsca_info.stencil_clear_value = 0;
+
+        rp_info.depth_stencil_attachment = dsca_info;
+
+        tavros::core::buffer_view<rhi::texture_handle> resolve_textures;
+        if (msaa > 1) {
+            resolve_textures = m_resolve_destination_color_attachments;
+        }
+
+        auto rp = m_graphics_device->create_render_pass(rp_info, resolve_textures);
+        if (!rp) {
+            ::logger.fatal("Failed to create render pass.");
+            exit_fail();
+        }
+
+        return rp;
+    }
+
+private:
+    template<class T>
+    using vector_t = tavros::core::static_vector<T, rhi::k_max_color_attachments>;
+
+    rhi::graphics_device*         m_graphics_device;
+    vector_t<rhi::pixel_format>   m_color_attachment_formats;
+    rhi::pixel_format             m_depth_stencil_attachment_format;
+    vector_t<rhi::texture_handle> m_resolve_source_color_attachments;
+    vector_t<rhi::texture_handle> m_resolve_destination_color_attachments;
+    rhi::texture_handle           m_resolve_source_depth_stencil_attachment;
+    rhi::texture_handle           m_resolve_destination_depth_stencil_attachment;
+    rhi::framebuffer_handle       m_framebuffer;
+    rhi::render_pass_handle       m_render_pass;
 };
+
 
 class my_app : public app::render_app_base
 {
@@ -328,26 +536,6 @@ public:
         return m_image_decoder.decode_image(buffer.data(), buffer.capacity());
     }
 
-    tavros::renderer::render_target_view create_render_target(uint32 width, uint32 height)
-    {
-        tavros::renderer::render_target_create_info rt_info;
-        rt_info.target_type = rhi::texture_type::texture_2d;
-        rt_info.width = width;
-        rt_info.height = height;
-        rt_info.depth = 1;
-        rt_info.color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
-        rt_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
-        rt_info.sample_count = 1;
-
-        auto rt = m_render_system->create_render_target(rt_info);
-        if (!rt) {
-            ::logger.fatal("Failed to create render target.");
-            exit_fail();
-        }
-
-        return rt;
-    }
-
     void init() override
     {
         m_camera.set_orientation({1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f});
@@ -357,12 +545,6 @@ public:
         m_graphics_device = rhi::graphics_device::create(rhi::render_backend_type::opengl);
         if (!m_graphics_device) {
             ::logger.fatal("Failed to create graphics_device.");
-            exit_fail();
-        }
-
-        m_render_system = tavros::core::make_shared<tavros::renderer::render_system>(m_graphics_device.get());
-        if (!m_render_system) {
-            ::logger.fatal("Failed to create render_system.");
             exit_fail();
         }
 
@@ -385,6 +567,12 @@ public:
             ::logger.fatal("Failed to get main frame composer.");
             exit_fail();
         }
+
+        tavros::core::static_vector<rhi::pixel_format, rhi::k_max_color_attachments> color_attachment_formats;
+        color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
+        color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
+        rhi::pixel_format depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
+        m_offscreen_rt = tavros::core::make_unique<render_target>(m_graphics_device.get(), color_attachment_formats, depth_stencil_attachment_format);
 
         auto fullscreen_quad_vertex_shader = m_graphics_device->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
         auto fullscreen_quad_fragment_shader = m_graphics_device->create_shader({fullscreen_quad_fragment_shader_source, rhi::shader_stage::fragment, "main"});
@@ -498,6 +686,7 @@ public:
         mesh_rendering_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
         mesh_rendering_pipeline_info.topology = rhi::primitive_topology::triangles;
         mesh_rendering_pipeline_info.blend_states.push_back({false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
+        mesh_rendering_pipeline_info.blend_states.push_back({false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
         mesh_rendering_pipeline_info.multisample.sample_shading_enabled = false;
         mesh_rendering_pipeline_info.multisample.sample_count = 1;
         mesh_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
@@ -581,6 +770,7 @@ public:
         world_grid_rendering_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
         world_grid_rendering_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
         world_grid_rendering_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
+        world_grid_rendering_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
         world_grid_rendering_pipeline_info.multisample.sample_shading_enabled = false;
         world_grid_rendering_pipeline_info.multisample.sample_count = 1;
         world_grid_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
@@ -606,7 +796,6 @@ public:
 
     void shutdown() override
     {
-        m_render_system = nullptr;
         m_graphics_device = nullptr;
     }
 
@@ -656,10 +845,7 @@ public:
         }
 
         if (need_resize && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
-            if (m_render_target) {
-                m_render_system->release_render_target(m_render_target);
-            }
-            m_render_target = create_render_target(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height));
+            m_offscreen_rt->recreate(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height), 16);
 
             if (m_fullscreen_quad_shader_binding) {
                 m_graphics_device->destroy_shader_binding(m_fullscreen_quad_shader_binding);
@@ -668,7 +854,7 @@ public:
 
             rhi::shader_binding_create_info fullscreen_quad_shader_binding_info;
             fullscreen_quad_shader_binding_info.texture_bindings.push_back({0, 0, 0});
-            rhi::texture_handle fullscreen_quad_textures_to_binding[] = {m_render_target->color_attachment(0)};
+            rhi::texture_handle fullscreen_quad_textures_to_binding[] = {m_offscreen_rt->get_color_attachment(0)};
             rhi::sampler_handle fullscreen_quad_samplers_to_binding[] = {m_sampler};
 
             m_fullscreen_quad_shader_binding = m_graphics_device->create_shader_binding(fullscreen_quad_shader_binding_info, fullscreen_quad_textures_to_binding, fullscreen_quad_samplers_to_binding, {});
@@ -773,7 +959,7 @@ public:
         // Copy m_renderer_frame_data to shader
         cbuf->copy_buffer(m_stage_buffer, m_uniform_buffer, sizeof(m_renderer_frame_data));
 
-        cbuf->begin_render_pass(m_main_pass, m_render_target->framebuffer());
+        cbuf->begin_render_pass(m_offscreen_rt->render_pass(), m_offscreen_rt->framebuffer());
 
         // Draw cube
         cbuf->bind_pipeline(m_mesh_rendering_pipeline);
@@ -805,13 +991,13 @@ public:
     }
 
 private:
-    tavros::core::mallocator                                  m_allocator;
-    tavros::core::unique_ptr<rhi::graphics_device>            m_graphics_device;
-    tavros::core::shared_ptr<tavros::renderer::render_system> m_render_system;
-    tavros::renderer::render_target_view                      m_render_target;
-    rhi::frame_composer*                                      m_composer = nullptr;
+    tavros::core::mallocator                       m_allocator;
+    tavros::core::unique_ptr<rhi::graphics_device> m_graphics_device;
+    rhi::frame_composer*                           m_composer = nullptr;
 
     app::image_decoder m_image_decoder;
+
+    tavros::core::unique_ptr<render_target> m_offscreen_rt;
 
     rhi::pipeline_handle       m_fullscreen_quad_pipeline;
     rhi::pipeline_handle       m_mesh_rendering_pipeline;

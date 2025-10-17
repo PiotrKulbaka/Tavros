@@ -60,7 +60,12 @@ namespace tavros::renderer::rhi
 
         auto& pass_info = pass->info;
         if (pass_info.color_attachments.size() != info.blend_states.size()) {
-            ::logger.error("Failed to bind pipeline {}: mismatch between color attachments in current render pass {} and blend states in pipeline {}", pipeline, fmt::styled_param(pass_info.color_attachments.size()), fmt::styled_param(info.blend_states.size()));
+            ::logger.error(
+                "Failed to bind pipeline {}: mismatch between color attachments in current render pass {} and blend states in pipeline {}",
+                pipeline,
+                fmt::styled_param(pass_info.color_attachments.size()),
+                fmt::styled_param(info.blend_states.size())
+            );
             return;
         }
 
@@ -501,7 +506,6 @@ namespace tavros::renderer::rhi
             if (rp_color_attachment.store == store_op::resolve) {
                 // Resolve attachments
                 auto resolve_texture_index = rp_color_attachment.resolve_texture_index;
-                rp->resolve_attachments.size();
 
                 if (rp->resolve_attachments.size() > resolve_texture_index) {
                     // Find the resolve texture and validate it
@@ -539,6 +543,9 @@ namespace tavros::renderer::rhi
 
             // Check if need to resolve for any attachment
             if (blit_data.size() > 0) {
+                // Always use COLOR_ATTACHMENT0 for drawing
+                GL_CALL(glDrawBuffer(GL_COLOR_ATTACHMENT0));
+
                 for (uint32 i = 0; i < blit_data.size(); ++i) {
                     TAV_ASSERT(blit_data[i].destination->target == GL_TEXTURE_2D);
                     GL_CALL(glFramebufferTexture2D(
@@ -548,12 +555,9 @@ namespace tavros::renderer::rhi
                         blit_data[i].destination->texture_obj,
                         0
                     ));
-                }
 
-                // Resolve color attachments
-                for (uint32 i = 0; i < blit_data.size(); ++i) {
+                    // Resolve color attachments
                     GL_CALL(glReadBuffer(blit_data[i].attachment));
-                    GL_CALL(glDrawBuffer(GL_COLOR_ATTACHMENT0));
                     GL_CALL(glBlitFramebuffer(
                         0, 0, fb->info.width, fb->info.height,
                         0, 0, fb->info.width, fb->info.height,
