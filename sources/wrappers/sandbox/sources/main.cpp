@@ -25,7 +25,7 @@
 namespace rhi = tavros::renderer::rhi;
 
 const char* fullscreen_quad_vertex_shader_source = R"(
-#version 420 core
+#version 430 core
 
 const vec2 quadVerts[4] = vec2[](
     vec2(-1.0, -1.0),
@@ -50,7 +50,7 @@ void main()
 )";
 
 const char* fullscreen_quad_fragment_shader_source = R"(
-#version 420 core
+#version 430 core
 
 in vec2 texCoord;
 out vec4 FragColor;
@@ -65,14 +65,14 @@ void main()
 )";
 
 const char* mesh_renderer_vertex_shader_source = R"(
-#version 420 core
+#version 430 core
 
 layout (location = 0) in vec3 a_pos;
 layout (location = 1) in vec3 a_normal;
 layout (location = 2) in vec2 a_uv_outside;
 layout (location = 3) in vec2 a_uv_inside;
 
-layout (binding = 0) uniform Scene
+layout (std140, binding = 0) uniform Scene
 {
     mat4 u_view;
     mat4 u_perspective_projection;
@@ -117,7 +117,7 @@ void main()
 )";
 
 const char* mesh_renderer_fragment_shader_source = R"(
-#version 420 core
+#version 430 core
 
 layout(binding = 0) uniform sampler2D uTex;
 
@@ -159,7 +159,7 @@ void main()
 )";
 
 const char* world_grid_vertex_shader_source = R"(
-#version 420 core
+#version 430 core
 
 const vec2 xy_plane_verts[4] = vec2[](
     vec2(-1.0, -1.0),
@@ -168,7 +168,7 @@ const vec2 xy_plane_verts[4] = vec2[](
     vec2( 1.0,  1.0)
 );
 
-layout (binding = 0) uniform Scene
+layout (std140, binding = 0) uniform Scene
 {
     mat4 u_view;
     mat4 u_perspective_projection;
@@ -236,7 +236,7 @@ void main()
 )";
 
 const char* world_grid_fragment_shader_source = R"(
-#version 420 core
+#version 430 core
 
 in vec3 v_world_pos;
 in vec3 v_cam_pos;
@@ -681,7 +681,7 @@ public:
             exit_fail();
         }
 
-        rhi::buffer_create_info uniform_buffer_desc{1024, rhi::buffer_usage::uniform, rhi::buffer_access::gpu_only};
+        rhi::buffer_create_info uniform_buffer_desc{1024ull * 1024ull, rhi::buffer_usage::uniform, rhi::buffer_access::gpu_only};
         m_uniform_buffer = m_graphics_device->create_buffer(uniform_buffer_desc);
         if (!m_uniform_buffer) {
             ::logger.fatal("Failed to create uniform buffer");
@@ -1043,7 +1043,7 @@ private:
     app::input_manager       m_input_manager;
     tavros::renderer::camera m_camera;
 
-    struct frame_data
+    struct alignas(16) frame_data
     {
         tavros::math::mat4 view;
         tavros::math::mat4 perspective_projection;

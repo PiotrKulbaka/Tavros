@@ -115,11 +115,18 @@ namespace tavros::renderer::rhi
             return nullptr;
         }
 
-        ::logger.info("Pixel format selected [ColorBits: {}, DepthBits: {}, StencilBits: {}]", fmt::styled_param(pfd.cColorBits), fmt::styled_param(pfd.cColorBits), fmt::styled_param(pfd.cDepthBits), fmt::styled_param(pfd.cStencilBits));
         if (!SetPixelFormat(hDC, pixel_format, &pfd)) {
             ::logger.error("SetPixelFormat failed" /*, last_win_error_str()*/);
             return nullptr;
         }
+
+        ::logger.info(
+            "Pixel format selected [ColorBits: {}, DepthBits: {}, StencilBits: {}]",
+            fmt::styled_param(pfd.cColorBits),
+            fmt::styled_param(pfd.cColorBits),
+            fmt::styled_param(pfd.cDepthBits),
+            fmt::styled_param(pfd.cStencilBits)
+        );
 
         if (!load_wgl_funcs()) {
             return nullptr;
@@ -144,6 +151,15 @@ namespace tavros::renderer::rhi
                 return nullptr;
             }
         }
+
+        const char* vendor = reinterpret_cast<const char*>(glGetString(GL_VENDOR));
+        const char* renderer = reinterpret_cast<const char*>(glGetString(GL_RENDERER));
+        const char* version = reinterpret_cast<const char*>(glGetString(GL_VERSION));
+        const char* glsl_version = reinterpret_cast<const char*>(glGetString(GL_SHADING_LANGUAGE_VERSION));
+        ::logger.info("Vendor:   {}", fmt::styled_info(vendor));
+        ::logger.info("Renderer: {}", fmt::styled_info(renderer));
+        ::logger.info("GL Version: {}", fmt::styled_info(version));
+        ::logger.info("GLSL Version: {}", fmt::styled_info(glsl_version));
 
         return core::make_unique<context_opengl_win32>(hWnd, dc_owner.release(), hGLRC);
     }

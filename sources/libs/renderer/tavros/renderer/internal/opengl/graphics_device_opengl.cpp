@@ -155,6 +155,48 @@ namespace tavros::renderer::rhi
         ::logger.debug("graphics_device_opengl destroyed");
     }
 
+    void graphics_device_opengl::init_limits()
+    {
+        GLint value = 0;
+
+        // Texture limits
+        GL_CALL(glGetIntegerv(GL_MAX_TEXTURE_SIZE, &value));
+        m_limits.max_2d_texture_size = static_cast<uint32>(value);
+
+        glGetIntegerv(GL_MAX_3D_TEXTURE_SIZE, &value);
+        m_limits.max_3d_texture_size = static_cast<uint32>(value);
+
+        glGetIntegerv(GL_MAX_ARRAY_TEXTURE_LAYERS, &value);
+        m_limits.max_array_texture_layers = static_cast<uint32>(value);
+
+        // Uniform / SSBO
+        glGetIntegerv(GL_MAX_UNIFORM_BLOCK_SIZE, &value);
+        m_limits.max_ubo_size = static_cast<uint32>(value);
+
+        glGetIntegerv(GL_MAX_SHADER_STORAGE_BLOCK_SIZE, &value);
+        m_limits.max_ssbo_size = static_cast<uint32>(value);
+
+        // Vertex attributes
+        glGetIntegerv(GL_MAX_VERTEX_ATTRIBS, &value);
+        m_limits.max_vertex_attributes = static_cast<uint32>(value);
+
+        // Framebuffer / Renderbuffer
+        glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &value);
+        m_limits.max_color_attachmants = static_cast<uint32>(value);
+
+        glGetIntegerv(GL_MAX_DRAW_BUFFERS, &value);
+        m_limits.max_draw_buffers = static_cast<uint32>(value);
+
+        glGetIntegerv(GL_MAX_RENDERBUFFER_SIZE, &value);
+        m_limits.max_renderbuffer_size = static_cast<uint32>(value);
+
+        glGetIntegerv(GL_MAX_FRAMEBUFFER_WIDTH, &value);
+        m_limits.max_framebuffer_width = static_cast<uint32>(value);
+
+        glGetIntegerv(GL_MAX_FRAMEBUFFER_HEIGHT, &value);
+        m_limits.max_framebuffer_height = static_cast<uint32>(value);
+    }
+
     void graphics_device_opengl::destroy()
     {
         destroy_for<sampler_handle>(m_resources, [this](auto h) { destroy_sampler(h); });
@@ -215,6 +257,8 @@ namespace tavros::renderer::rhi
         // Initialize debug callback for OpenGL here, because it's not possible to do it in the constructor
         // the first call of frame_composer_opengl::create() will create the context
         init_gl_debug();
+
+        init_limits();
 
         frame_composer_handle handle = m_resources.create(gl_composer{info, std::move(composer), native_handle});
         ::logger.debug("Frame composer {} created", handle);
@@ -331,6 +375,15 @@ namespace tavros::renderer::rhi
                 return {};
             }
 
+            if (info.width > m_limits.max_2d_texture_size || info.height > m_limits.max_2d_texture_size) {
+                ::logger.warning(
+                    "`texture_2d` size {}x{} exceeds device limit {}",
+                    fmt::styled_param(info.width),
+                    fmt::styled_param(info.height),
+                    fmt::styled_param(m_limits.max_2d_texture_size)
+                );
+            }
+
             if (info.array_layers != 1) {
                 ::logger.error("Failed to create `texture_2d`: array layers must be 1");
                 return {};
@@ -396,6 +449,17 @@ namespace tavros::renderer::rhi
                 return {};
             }
 
+            auto size_limit = m_limits.max_3d_texture_size;
+            if (info.width > size_limit || info.height > size_limit || info.depth > size_limit) {
+                ::logger.warning(
+                    "`texture_3d` size {}x{}x{} exceeds device limit {}",
+                    fmt::styled_param(info.width),
+                    fmt::styled_param(info.height),
+                    fmt::styled_param(info.depth),
+                    fmt::styled_param(size_limit)
+                );
+            }
+
             if (info.array_layers != 1) {
                 ::logger.error("Failed to create `texture_3d`: array layers must be 1");
                 return {};
@@ -427,6 +491,16 @@ namespace tavros::renderer::rhi
                 return {};
             }
 
+            auto size_limit = m_limits.max_2d_texture_size;
+            if (info.width > size_limit || info.height > size_limit) {
+                ::logger.warning(
+                    "`texture_cube` size {}x{} exceeds device limit {}",
+                    fmt::styled_param(info.width),
+                    fmt::styled_param(info.height),
+                    fmt::styled_param(size_limit)
+                );
+            }
+
             if (info.array_layers % 6 != 0 || info.array_layers != 6) {
                 ::logger.error("Failed to create `texture_cube`: array layers must be a multiple of 6 and at least 6");
                 return {};
@@ -452,6 +526,15 @@ namespace tavros::renderer::rhi
             return {};
         }
 
+        if (info.array_layers > m_limits.max_array_texture_layers) {
+            ::logger.warning(
+                "`{}` array layers {} exceeds device limit {}",
+                to_string(info.type),
+                fmt::styled_param(info.array_layers),
+                fmt::styled_param(m_limits.max_array_texture_layers)
+            );
+        }
+
         // Checking for renderbuffer creation
         bool need_create_renderbuffer =
             info.usage.has_flag(texture_usage::render_target)
@@ -462,6 +545,16 @@ namespace tavros::renderer::rhi
             // Create a renderbuffer instead of a texture (OpenGL works faster with renderbuffer objects)
 
             TAV_ASSERT(info.type == texture_type::texture_2d);
+
+            if (info.width > m_limits.max_renderbuffer_size || info.height > m_limits.max_renderbuffer_size) {
+                ::logger.warning(
+                    "Renderbuffer size {}x{} exceeds device limit {}x{}",
+                    fmt::styled_param(info.width),
+                    fmt::styled_param(info.height),
+                    fmt::styled_param(m_limits.max_framebuffer_width),
+                    fmt::styled_param(m_limits.max_framebuffer_height)
+                );
+            }
 
             GLuint rbo;
             GL_CALL(glGenRenderbuffers(1, &rbo));
@@ -793,6 +886,16 @@ namespace tavros::renderer::rhi
             return {};
         }
 
+        if (info.width > m_limits.max_framebuffer_width || info.height > m_limits.max_framebuffer_height) {
+            ::logger.warning(
+                "Framebuffer size {}x{} exceeds device limit {}x{}",
+                fmt::styled_param(info.width),
+                fmt::styled_param(info.height),
+                fmt::styled_param(m_limits.max_framebuffer_width),
+                fmt::styled_param(m_limits.max_framebuffer_height)
+            );
+        }
+
         // Validate attachments
         core::static_vector<gl_texture*, k_max_color_attachments>    color_attachment_textures;
         core::static_vector<texture_handle, k_max_color_attachments> color_attachments_h;
@@ -863,6 +966,15 @@ namespace tavros::renderer::rhi
             }
 
             color_attachment_textures.push_back(tex);
+        }
+
+        auto attachments_size = static_cast<uint32>(color_attachment_textures.size());
+        if (attachments_size > m_limits.max_color_attachmants) {
+            ::logger.warning(
+                "Color attachment size {} exceeds device limit {}",
+                fmt::styled_param(attachments_size),
+                fmt::styled_param(m_limits.max_color_attachmants)
+            );
         }
 
         // Validate depth/stencil texture
@@ -1023,6 +1135,13 @@ namespace tavros::renderer::rhi
             GL_CALL(glDrawBuffer(GL_NONE));
             GL_CALL(glReadBuffer(GL_NONE));
         } else {
+            if (static_cast<uint32>(draw_buffers.size()) > m_limits.max_draw_buffers) {
+                ::logger.warning(
+                    "Number of draw buffers {} exceeds device limit {}",
+                    fmt::styled_param(draw_buffers.size()),
+                    fmt::styled_param(m_limits.max_draw_buffers)
+                );
+            }
             // Drawing onto color attachments
             GL_CALL(glDrawBuffers(draw_buffers.size(), draw_buffers.data()));
         }
@@ -1100,13 +1219,18 @@ namespace tavros::renderer::rhi
             }
         }
 
+        if (info.usage == buffer_usage::uniform) {
+            if (info.size > m_limits.max_ubo_size) {
+                ::logger.warning(
+                    "Uniform buffer size {}bytes exceeds device limit {}bytes",
+                    fmt::styled_param(info.size),
+                    fmt::styled_param(m_limits.max_ubo_size)
+                );
+            }
+        }
+
         GLuint bo;
         GL_CALL(glGenBuffers(1, &bo));
-
-        auto bo_owner = core::make_scoped_owner(bo, [gl_target](GLuint id) {
-            GL_CALL(glBindBuffer(gl_target, 0));
-            GL_CALL(glDeleteBuffers(1, &id));
-        });
 
         auto gl_size = static_cast<GLsizeiptr>(info.size);
 
@@ -1114,8 +1238,8 @@ namespace tavros::renderer::rhi
         GL_CALL(glBufferData(gl_target, gl_size, nullptr, gl_usage));
         GL_CALL(glBindBuffer(gl_target, 0));
 
-        auto h = m_resources.create(gl_buffer{info, bo_owner.release(), gl_target, gl_usage});
-        ::logger.debug("Buffer {} created", h);
+        auto h = m_resources.create(gl_buffer{info, bo, gl_target, gl_usage});
+        ::logger.debug("Buffer ({}) {} created", fmt::styled_param(to_string(info.usage)), h);
         return h;
     }
 
@@ -1124,7 +1248,7 @@ namespace tavros::renderer::rhi
         if (auto* b = m_resources.try_get(buffer)) {
             GL_CALL(glDeleteBuffers(1, &b->buffer_obj));
             m_resources.remove(buffer);
-            ::logger.debug("Buffer {} destroyed", buffer);
+            ::logger.debug("Buffer ({}) {} destroyed", fmt::styled_param(to_string(b->info.usage)), buffer);
         } else {
             ::logger.error("Failed to destroy buffer {}: not found", buffer);
         }

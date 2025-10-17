@@ -84,8 +84,33 @@ namespace tavros::renderer::rhi
         device_resources_opengl* get_resources();
 
     private:
+        void init_limits();
+
+        struct gl_limits
+        {
+            // Texture info
+            uint32 max_2d_texture_size = 0;
+            uint32 max_3d_texture_size = 0;
+            uint32 max_array_texture_layers = 0;
+
+            // Buffers info
+            uint32 max_ubo_size = 0;
+            uint32 max_ssbo_size = 0;
+
+            // Vertex attributes info
+            uint32 max_vertex_attributes = 0;
+
+            // Framebuffer renderbuffer info
+            uint32 max_color_attachmants = 0;
+            uint32 max_draw_buffers = 0;
+            uint32 max_renderbuffer_size = 0;
+            uint32 max_framebuffer_width = 0;
+            uint32 max_framebuffer_height = 0;
+        };
+
         core::mallocator        m_internal_allocator;
         device_resources_opengl m_resources;
+        gl_limits               m_limits;
     };
 
 } // namespace tavros::renderer::rhi
