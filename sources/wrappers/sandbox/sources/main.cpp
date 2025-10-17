@@ -72,7 +72,7 @@ layout (location = 1) in vec3 a_normal;
 layout (location = 2) in vec2 a_uv_outside;
 layout (location = 3) in vec2 a_uv_inside;
 
-layout (std140, binding = 0) uniform Scene
+layout (std430, binding = 0) buffer Scene
 {
     mat4 u_view;
     mat4 u_perspective_projection;
@@ -168,7 +168,7 @@ const vec2 xy_plane_verts[4] = vec2[](
     vec2( 1.0,  1.0)
 );
 
-layout (std140, binding = 0) uniform Scene
+layout (std430, binding = 0) buffer Scene
 {
     mat4 u_view;
     mat4 u_perspective_projection;
@@ -681,7 +681,7 @@ public:
             exit_fail();
         }
 
-        rhi::buffer_create_info uniform_buffer_desc{1024ull * 1024ull, rhi::buffer_usage::uniform, rhi::buffer_access::gpu_only};
+        rhi::buffer_create_info uniform_buffer_desc{1024ull * 1024ull, rhi::buffer_usage::storage, rhi::buffer_access::gpu_only};
         m_uniform_buffer = m_graphics_device->create_buffer(uniform_buffer_desc);
         if (!m_uniform_buffer) {
             ::logger.fatal("Failed to create uniform buffer");

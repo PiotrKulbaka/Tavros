@@ -40,8 +40,10 @@ namespace tavros::renderer::rhi
             return "index";
         case buffer_usage::vertex:
             return "vertex";
-        case buffer_usage::uniform:
-            return "uniform";
+        case buffer_usage::constant:
+            return "constant";
+        case buffer_usage::storage:
+            return "storage";
         }
         TAV_UNREACHABLE();
     }

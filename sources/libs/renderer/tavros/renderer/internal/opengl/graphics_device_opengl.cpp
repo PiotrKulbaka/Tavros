@@ -1200,8 +1200,11 @@ namespace tavros::renderer::rhi
             case buffer_usage::index:
                 gl_target = GL_ELEMENT_ARRAY_BUFFER;
                 break;
-            case buffer_usage::uniform:
+            case buffer_usage::constant:
                 gl_target = GL_UNIFORM_BUFFER;
+                break;
+            case buffer_usage::storage:
+                gl_target = GL_SHADER_STORAGE_BUFFER;
                 break;
             default:
                 TAV_UNREACHABLE();
@@ -1219,10 +1222,18 @@ namespace tavros::renderer::rhi
             }
         }
 
-        if (info.usage == buffer_usage::uniform) {
+        if (info.usage == buffer_usage::constant) {
             if (info.size > m_limits.max_ubo_size) {
                 ::logger.warning(
-                    "Uniform buffer size {}bytes exceeds device limit {}bytes",
+                    "Constant (UBO) buffer size {}bytes exceeds device limit {}bytes",
+                    fmt::styled_param(info.size),
+                    fmt::styled_param(m_limits.max_ubo_size)
+                );
+            }
+        } else if (info.usage == buffer_usage::storage) {
+            if (info.size > m_limits.max_ssbo_size) {
+                ::logger.warning(
+                    "Storage (SSBO) buffer size {}bytes exceeds device limit {}bytes",
                     fmt::styled_param(info.size),
                     fmt::styled_param(m_limits.max_ubo_size)
                 );
@@ -1587,8 +1598,12 @@ namespace tavros::renderer::rhi
             auto buffer_h = buffers[i];
             buffer_handles.push_back(buffer_h);
             auto* b = m_resources.try_get(buffer_h);
-            if (b->info.usage != buffer_usage::uniform) {
-                ::logger.error("Failed to create shader binding: buffer {} is not uniform buffer", buffers[i]);
+            if (b->info.usage != buffer_usage::constant && b->info.usage != buffer_usage::storage) {
+                ::logger.error(
+                    "Failed to create shader binding: buffer {} has invalid usage (expected `constant` or `storage`, got {})",
+                    buffer_h,
+                    fmt::styled_param(to_string(b->info.usage))
+                );
                 return {};
             }
         }
@@ -1638,7 +1653,20 @@ namespace tavros::renderer::rhi
         }
 
         if (b->info.access != buffer_access::cpu_to_gpu) {
-            ::logger.error("Failed to map buffer {}: buffer is not CPU-to-GPU", buffer);
+            ::logger.error(
+                "Failed to map buffer {}: buffer has invalid access (expected cpu_to_gpu, got {})",
+                buffer,
+                fmt::styled_param(to_string(b->info.usage))
+            );
+            return nullptr;
+        }
+
+        if (b->info.usage != buffer_usage::stage) {
+            ::logger.error(
+                "Failed to map buffer {}: buffer has invalid usage (expected stage, got {})",
+                buffer,
+                fmt::styled_param(to_string(b->info.usage))
+            );
             return nullptr;
         }
 
@@ -1675,6 +1703,15 @@ namespace tavros::renderer::rhi
         auto* b = m_resources.try_get(buffer);
         if (!b) {
             ::logger.error("Failed to unmap buffer {}: buffer not found", buffer);
+            return;
+        }
+
+        if (b->info.usage != buffer_usage::stage) {
+            ::logger.error(
+                "Failed to unmap buffer {}: buffer has invalid usage (expected stage, got {})",
+                buffer,
+                fmt::styled_param(to_string(b->info.usage))
+            );
             return;
         }
 

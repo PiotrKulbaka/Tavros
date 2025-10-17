@@ -269,7 +269,7 @@ namespace tavros::renderer::rhi
 
             auto buf_h = sb->buffers[binding.buffer_index];
             if (auto* b = m_device->get_resources()->try_get(buf_h)) {
-                TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER);
+                TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER || b->gl_target == GL_SHADER_STORAGE_BUFFER);
 
                 if (binding.size == 0) {
                     // Bind the entire buffer

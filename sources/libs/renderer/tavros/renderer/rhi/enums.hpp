@@ -6,14 +6,15 @@ namespace tavros::renderer::rhi
 {
 
     /**
-     * Describes the usage of a buffer
+     * @brief Specifies how a buffer is intended to be used.
      */
     enum class buffer_usage : uint8
     {
-        stage,   /// Buffer used for data transfer CPU to GPU
-        index,   /// Buffer used for index data (element array)
-        vertex,  /// Buffer used for vertex attributes
-        uniform, /// Buffer used for uniform / constant data
+        stage,    /// Buffer used for data transfer between CPU and GPU
+        index,    /// Buffer used for index data (element array)
+        vertex,   /// Buffer used for vertex attribute data
+        constant, /// Buffer used for constant (read-only) shader data
+        storage,  /// Buffer used for read-write shader data
     };
 
     /**
