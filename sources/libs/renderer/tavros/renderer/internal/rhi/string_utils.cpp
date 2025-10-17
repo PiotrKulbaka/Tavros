@@ -442,8 +442,6 @@ namespace tavros::renderer::rhi
         switch (val) {
         case texture_usage::render_target:
             return "render_target";
-        case texture_usage::depth_stencil_target:
-            return "depth_stencil_target";
         case texture_usage::sampled:
             return "sampled";
         case texture_usage::storage:

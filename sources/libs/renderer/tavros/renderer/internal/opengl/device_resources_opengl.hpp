@@ -28,6 +28,7 @@ namespace tavros::renderer::rhi
         texture_create_info info;
         GLuint              texture_obj = 0;
         GLenum              target = 0;
+        GLuint              renderbuffer_obj = 0;
     };
 
     struct gl_pipeline

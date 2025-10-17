@@ -357,14 +357,9 @@ namespace tavros::renderer::rhi
                     ::logger.error("Failed to begin render pass {}: resolve texture {} not found", render_pass, resolve_texture_h);
                     return;
                 }
-                // Validate that the source attachment texture is multi-sampled
+
                 auto source_texture_h = fb->color_attachments[i];
-                if (auto* tex = m_device->get_resources()->try_get(source_texture_h)) {
-                    if (tex->info.sample_count == 1) {
-                        ::logger.error("Failed to begin render pass {}: source attachment texture {} must be multi-sampled", render_pass, source_texture_h);
-                        return;
-                    }
-                } else {
+                if (auto* tex = m_device->get_resources()->try_get(source_texture_h); !tex) {
                     ::logger.error("Failed to begin render pass {}: source attachment texture {} not found", render_pass, source_texture_h);
                     return;
                 }
@@ -547,17 +542,19 @@ namespace tavros::renderer::rhi
                 GL_CALL(glDrawBuffer(GL_COLOR_ATTACHMENT0));
 
                 for (uint32 i = 0; i < blit_data.size(); ++i) {
-                    TAV_ASSERT(blit_data[i].destination->target == GL_TEXTURE_2D);
+                    auto& blit_info = blit_data[i];
+                    TAV_ASSERT(blit_info.destination->target == GL_TEXTURE_2D);
+
                     GL_CALL(glFramebufferTexture2D(
                         GL_DRAW_FRAMEBUFFER,
                         GL_COLOR_ATTACHMENT0,
-                        blit_data[i].destination->target,
-                        blit_data[i].destination->texture_obj,
+                        blit_info.destination->target,
+                        blit_info.destination->texture_obj,
                         0
                     ));
 
                     // Resolve color attachments
-                    GL_CALL(glReadBuffer(blit_data[i].attachment));
+                    GL_CALL(glReadBuffer(blit_info.attachment));
                     GL_CALL(glBlitFramebuffer(
                         0, 0, fb->info.width, fb->info.height,
                         0, 0, fb->info.width, fb->info.height,
@@ -577,7 +574,6 @@ namespace tavros::renderer::rhi
                     GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
                 ));
             }
-
 
             GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
             GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));

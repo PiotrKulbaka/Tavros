@@ -309,8 +309,7 @@ namespace tavros::renderer::rhi
      */
     enum class texture_usage : uint8
     {
-        render_target = 0x01,        /// Texture can be used as a render target (color attachment in a framebuffer)
-        depth_stencil_target = 0x02, /// Texture can be used as a depth and/or stencil attachment
+        render_target = 0x01,        /// Texture can be used as a render target (color or depth and/or stencil attachment in a framebuffer)
 
         sampled = 0x04,              /// Texture can be sampled in shaders (e.g., as sampler2D)
 

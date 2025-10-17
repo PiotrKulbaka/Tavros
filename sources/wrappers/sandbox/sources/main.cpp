@@ -94,9 +94,14 @@ out vec2 v_tex_coord_outside;
 out vec2 v_tex_coord_inside;
 out vec3 v_normal;
 out vec3 v_to_camera;
+out float v_near;
+out float v_far;
 
 void main()
 {
+    v_near = u_near_plane;
+    v_far = u_far_plane;
+
     vec4 world_pos = vec4(a_pos, 1.0); // u_model * vec4(a_pos, 1.0);
 
     v_normal = a_normal; // mat3(u_model) * a_normal;
@@ -120,9 +125,17 @@ in vec2 v_tex_coord_outside;
 in vec2 v_tex_coord_inside;
 in vec3 v_normal;
 in vec3 v_to_camera;
+in float v_near;
+in float v_far;
 
-layout(location = 0) out vec4 out_FragColor;
+layout(location = 0) out vec4 out_color;
 layout(location = 1) out vec4 out_depth;
+
+float linear_depth01(float z_buffer, float near, float far)
+{
+    float z_eye = (2.0 * near * far) / (far + near - z_buffer * (far - near));
+    return (z_eye - near) / (far - near);
+}
 
 void main()
 {
@@ -137,8 +150,11 @@ void main()
     vec2 texCoord = gl_FrontFacing ? v_tex_coord_outside : v_tex_coord_inside;
     vec3 base_color = texture(uTex, texCoord).rgb;
 
-    out_FragColor = vec4(base_color * lighting, 1.0);
-    out_depth = vec4(gl_FragCoord.z, gl_FragCoord.z, gl_FragCoord.z, 1.0);
+    out_color = vec4(base_color * lighting, 1.0);
+
+    float linear_depth = linear_depth01(gl_FragCoord.z, v_near, v_far);
+
+    out_depth = vec4(vec3(linear_depth), 1.0);
 }
 )";
 
@@ -176,9 +192,14 @@ out float v_minor_grid_step;
 out float v_major_grid_step;
 out float v_line_width;
 out float v_view_space_depth;
+out float v_near;
+out float v_far;
 
 void main()
 {
+    v_near = u_near_plane;
+    v_far = u_far_plane;
+
     const float SQRT2 = 1.4142135623730951;
 
     float plane_scale = (u_view_space_depth) * SQRT2;
@@ -223,11 +244,19 @@ in float v_minor_grid_step;
 in float v_major_grid_step;
 in float v_line_width;
 in float v_view_space_depth;
+in float v_near;
+in float v_far;
 
 out vec4 FragColor;
 
-layout(location = 0) out vec4 out_FragColor;   // Albedo
+layout(location = 0) out vec4 out_color;
 layout(location = 1) out vec4 out_depth;
+
+float linear_depth01(float z_buffer, float near, float far)
+{
+    float z_eye = (2.0 * near * far) / (far + near - z_buffer * (far - near));
+    return (z_eye - near) / (far - near);
+}
 
 void main()
 {
@@ -268,9 +297,11 @@ void main()
 
     float final_alpha = dist_factor *  angle_factor * final_mask * 0.8;
 
-    out_FragColor = vec4(final_color, final_alpha);
-    float d = length(v_cam_pos - v_world_pos) / v_view_space_depth;
-    out_depth = vec4(d, d, d, 1.0);
+    out_color = vec4(final_color, final_alpha);
+
+    float linear_depth = linear_depth01(gl_FragCoord.z, v_near, v_far);
+
+    out_depth = vec4(vec3(linear_depth), 1.0);
 }
 )";
 
@@ -308,29 +339,21 @@ public:
         destroy();
 
         constexpr auto resolve_source_usage = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
-        constexpr auto sampled_texture_usage = rhi::texture_usage::sampled | rhi::texture_usage::render_target;
-        constexpr auto resolve_source_depth_stencil_usage = rhi::texture_usage::resolve_source | rhi::texture_usage::depth_stencil_target;
-        constexpr auto sampled_depth_stencil_usage = rhi::texture_usage::depth_stencil_target;
-        constexpr auto resolve_destination_usage = rhi::texture_usage::sampled | rhi::texture_usage::resolve_destination;
+        constexpr auto resolve_destination_usage = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled;
 
-        auto texture_usage = msaa > 1 ? resolve_source_usage : sampled_texture_usage;
         for (auto fmt : m_color_attachment_formats) {
-            auto src_tex = create_texture(width, height, fmt, texture_usage, msaa);
+            auto src_tex = create_texture(width, height, fmt, resolve_source_usage, msaa);
             m_resolve_source_color_attachments.push_back(src_tex);
-            if (msaa > 1) {
-                auto dst_tex = create_texture(width, height, fmt, resolve_destination_usage, 1);
-                m_resolve_destination_color_attachments.push_back(dst_tex);
-            }
+
+            auto dst_tex = create_texture(width, height, fmt, resolve_destination_usage, 1);
+            m_resolve_destination_color_attachments.push_back(dst_tex);
         }
 
-        auto depth_stencil_usage = msaa > 1 ? resolve_source_depth_stencil_usage : sampled_depth_stencil_usage;
-        m_resolve_source_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, depth_stencil_usage, msaa);
-        if (msaa > 1) {
-            m_resolve_destination_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_destination_usage, 1);
-        }
+        m_resolve_source_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_source_usage, msaa);
+        m_resolve_destination_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_destination_usage, 1);
 
         m_framebuffer = create_framebuffer(width, height, msaa);
-        m_render_pass = create_render_pass(msaa);
+        m_render_pass = create_render_pass(msaa, true);
     }
 
     void destroy()
@@ -429,7 +452,7 @@ private:
         return tex;
     }
 
-    rhi::render_pass_handle create_render_pass(uint32 msaa)
+    rhi::render_pass_handle create_render_pass(uint32 msaa, bool need_resolve)
     {
         rhi::render_pass_create_info rp_info;
 
@@ -439,7 +462,7 @@ private:
             ca_info.format = m_color_attachment_formats[index];
             ca_info.sample_count = msaa;
             ca_info.load = rhi::load_op::clear;
-            ca_info.store = msaa > 1 ? rhi::store_op::resolve : rhi::store_op::store;
+            ca_info.store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
             ca_info.resolve_texture_index = index;
             ca_info.clear_value[0] = 0.2f;
             ca_info.clear_value[1] = 0.2f;
@@ -452,7 +475,7 @@ private:
         rhi::depth_stencil_attachment_info dsca_info;
         dsca_info.format = m_depth_stencil_attachment_format;
         dsca_info.depth_load = rhi::load_op::clear;
-        dsca_info.depth_store = msaa > 1 ? rhi::store_op::resolve : rhi::store_op::store;
+        dsca_info.depth_store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
         dsca_info.depth_clear_value = 1.0f;
         dsca_info.stencil_load = rhi::load_op::dont_care;
         dsca_info.stencil_store = rhi::store_op::dont_care;
@@ -461,7 +484,7 @@ private:
         rp_info.depth_stencil_attachment = dsca_info;
 
         tavros::core::buffer_view<rhi::texture_handle> resolve_textures;
-        if (msaa > 1) {
+        if (need_resolve) {
             resolve_textures = m_resolve_destination_color_attachments;
         }
 
@@ -845,7 +868,7 @@ public:
         }
 
         if (need_resize && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
-            m_offscreen_rt->recreate(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height), 16);
+            m_offscreen_rt->recreate(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height), 32);
 
             if (m_fullscreen_quad_shader_binding) {
                 m_graphics_device->destroy_shader_binding(m_fullscreen_quad_shader_binding);

@@ -112,7 +112,7 @@ namespace tavros::renderer
             rhi_depth_stencil_tex_info.width = info.width;
             rhi_depth_stencil_tex_info.height = info.height;
             rhi_depth_stencil_tex_info.depth = info.depth;
-            rhi_depth_stencil_tex_info.usage = rhi::texture_usage::depth_stencil_target;
+            rhi_depth_stencil_tex_info.usage = rhi::texture_usage::render_target;
             rhi_depth_stencil_tex_info.mip_levels = 1;
             rhi_depth_stencil_tex_info.array_layers = 1;
             rhi_depth_stencil_tex_info.sample_count = info.sample_count;
