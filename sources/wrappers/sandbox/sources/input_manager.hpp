@@ -53,6 +53,8 @@ namespace app
 
         bool is_key_pressed(tavros::system::keys key);
 
+        bool is_key_released(tavros::system::keys key);
+
         tavros::math::vec2 get_raw_mouse_delta();
 
         tavros::math::vec2 get_smooth_mouse_delta();
@@ -66,6 +68,7 @@ namespace app
             uint64 release_time_us = 0; // Time when key was last released
             uint64 accumulated_us = 0;  // Time accumulated during the current frame
             bool   is_pressed = false;  // Whether the key is currently pressed
+            bool   is_released = false; // Whether the key was released during the last frame
         };
 
         uint64                                 m_current_frame_time_us = 0; // Time of the current frame

@@ -1723,11 +1723,11 @@ namespace tavros::renderer::rhi
             return nullptr;
         }
 
-        if (b->info.access != buffer_access::cpu_to_gpu) {
+        if (!(b->info.access == buffer_access::cpu_to_gpu || b->info.access == buffer_access::gpu_to_cpu)) {
             ::logger.error(
                 "Failed to map buffer {}: buffer has invalid access (expected cpu_to_gpu, got {})",
                 buffer,
-                b->info.usage
+                b->info.access
             );
             return nullptr;
         }
@@ -1741,9 +1741,9 @@ namespace tavros::renderer::rhi
             return nullptr;
         }
 
-        TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER);
+        TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER || b->gl_target == GL_COPY_READ_BUFFER);
 
-        auto target = b->gl_target;
+        GLenum target = b->gl_target;
 
         // Get buffer range
         GL_CALL(glBindBuffer(target, b->buffer_obj));
@@ -1751,16 +1751,18 @@ namespace tavros::renderer::rhi
         void* ptr = nullptr;
 
         if (size == 0) {
+            GLenum access = (b->info.access == buffer_access::cpu_to_gpu) ? GL_WRITE_ONLY : GL_READ_ONLY;
             ptr = glMapBuffer(
                 target,
-                GL_WRITE_ONLY // available GL_READ_ONLY, GL_WRITE_ONLY, or GL_READ_WRITE
+                access // available GL_READ_ONLY, GL_WRITE_ONLY, or GL_READ_WRITE
             );
         } else {
+            GLenum access = (b->info.access == buffer_access::cpu_to_gpu) ? GL_MAP_WRITE_BIT : GL_MAP_READ_BIT;
             ptr = glMapBufferRange(
                 target,
                 static_cast<GLintptr>(offset),
                 static_cast<GLsizeiptr>(size),
-                GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT
+                access | GL_MAP_INVALIDATE_RANGE_BIT //| GL_MAP_UNSYNCHRONIZED_BIT
             );
         }
 

@@ -6,9 +6,9 @@
 namespace app
 {
 
-    image_decoder::image_info image_decoder::decode_image_info(const uint8* data, size_t size) const
+    image_decoder::image_info image_decoder::decode_image_info(tavros::core::buffer_view<uint8> packed_pixels) const
     {
-        if (!data || size == 0) {
+        if (packed_pixels.empty()) {
             tavros::core::logger::print(
                 tavros::core::severity_level::error,
                 "image_decoder",
@@ -18,7 +18,7 @@ namespace app
         }
 
         int x = 0, y = 0, channels_in_file = 0;
-        if (!stbi_info_from_memory(data, size, &x, &y, &channels_in_file)) {
+        if (!stbi_info_from_memory(packed_pixels.data(), packed_pixels.size(), &x, &y, &channels_in_file)) {
             tavros::core::logger::print(
                 tavros::core::severity_level::error,
                 "image_decoder",
@@ -34,11 +34,11 @@ namespace app
         return info;
     }
 
-    image_decoder::pixels_view image_decoder::decode_image(const uint8* data, size_t size, uint32 required_channels)
+    image_decoder::pixels_view image_decoder::decode_image(tavros::core::buffer_view<uint8> packed_pixels, uint32 required_channels)
     {
         static uint8_t white_pixel[4] = {255, 255, 255, 255};
 
-        auto info = decode_image_info(data, size);
+        auto info = decode_image_info(packed_pixels);
         if (info.width == 0 || info.height == 0) {
             tavros::core::logger::print(
                 tavros::core::severity_level::error,
@@ -55,7 +55,7 @@ namespace app
         // stbi_set_flip_vertically_on_load(true);
 
         int    x = 0, y = 0, channels_in_file = 0;
-        uint8* pixels = stbi_load_from_memory(data, size, &x, &y, &channels_in_file, desired_channels);
+        uint8* pixels = stbi_load_from_memory(packed_pixels.data(), packed_pixels.size(), &x, &y, &channels_in_file, desired_channels);
 
         TAV_ASSERT(x == info.width);
         TAV_ASSERT(y == info.height);

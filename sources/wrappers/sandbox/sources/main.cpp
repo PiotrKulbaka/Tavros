@@ -22,6 +22,8 @@
 
 #include <algorithm>
 
+#include <stb/stb_image_write.h>
+
 namespace rhi = tavros::renderer::rhi;
 
 const char* fullscreen_quad_vertex_shader_source = R"(
@@ -339,7 +341,7 @@ public:
         destroy();
 
         constexpr auto resolve_source_usage = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
-        constexpr auto resolve_destination_usage = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled;
+        constexpr auto resolve_destination_usage = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
 
         for (auto fmt : m_color_attachment_formats) {
             auto src_tex = create_texture(width, height, fmt, resolve_source_usage, msaa);
@@ -527,12 +529,12 @@ public:
     {
     }
 
-    rhi::buffer_handle create_stage_buffer(size_t size)
+    rhi::buffer_handle create_stage_buffer(size_t size, rhi::buffer_access access)
     {
         rhi::buffer_create_info info;
         info.size = size;
         info.usage = rhi::buffer_usage::stage;
-        info.access = rhi::buffer_access::cpu_to_gpu;
+        info.access = access;
         auto buffer = m_graphics_device->create_buffer(info);
         if (!buffer) {
             ::logger.fatal("Failed to create stage buffer.");
@@ -556,7 +558,7 @@ public:
         }
 
         // buffer.data() can be nullptr; decode_image will return fallback with white pixel
-        return m_image_decoder.decode_image(buffer.data(), buffer.capacity());
+        return m_image_decoder.decode_image(buffer);
     }
 
     void init() override
@@ -613,7 +615,9 @@ public:
         rhi::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
         m_fullscreen_quad_pipeline = m_graphics_device->create_pipeline(fullscreen_quad_pipeline_info, fullscreen_quad_shaders);
 
-        m_stage_buffer = create_stage_buffer(1024 * 1024 * 16);
+        m_stage_buffer = create_stage_buffer(1024 * 1024 * 16, rhi::buffer_access::cpu_to_gpu);
+
+        m_stage_upload_buffer = create_stage_buffer(1024 * 1024 * 32, rhi::buffer_access::gpu_to_cpu);
 
         auto im_view = load_image("textures/cube_test.png");
 
@@ -866,7 +870,21 @@ public:
             }
         }
 
-        if (need_resize && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
+        bool need_buffer_switch = false;
+
+        if (m_input_manager.is_key_released(tavros::system::keys::k_F1)) {
+            if (m_current_buffer_output_index != 0) {
+                m_current_buffer_output_index = 0;
+                need_buffer_switch = true;
+            }
+        } else if (m_input_manager.is_key_released(tavros::system::keys::k_F2)) {
+            if (m_current_buffer_output_index != 1) {
+                m_current_buffer_output_index = 1;
+                need_buffer_switch = true;
+            }
+        }
+
+        if ((need_resize || need_buffer_switch) && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
             m_offscreen_rt->recreate(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height), 32);
 
             if (m_fullscreen_quad_shader_binding) {
@@ -876,7 +894,7 @@ public:
 
             rhi::shader_binding_create_info fullscreen_quad_shader_binding_info;
             fullscreen_quad_shader_binding_info.texture_bindings.push_back({0, 0, 0});
-            rhi::texture_handle fullscreen_quad_textures_to_binding[] = {m_offscreen_rt->get_color_attachment(0)};
+            rhi::texture_handle fullscreen_quad_textures_to_binding[] = {m_offscreen_rt->get_color_attachment(m_current_buffer_output_index)};
             rhi::sampler_handle fullscreen_quad_samplers_to_binding[] = {m_sampler};
 
             m_fullscreen_quad_shader_binding = m_graphics_device->create_shader_binding(fullscreen_quad_shader_binding_info, fullscreen_quad_textures_to_binding, fullscreen_quad_samplers_to_binding, {});
@@ -889,7 +907,7 @@ public:
 
             constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
             float           aspect_ratio = static_cast<float>(m_current_frame_size.width) / static_cast<float>(m_current_frame_size.height);
-            m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 1000.0f);
+            m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 100.0f);
         }
 
         // Update camera
@@ -969,6 +987,8 @@ public:
 
         update_scene();
 
+        auto is_f10_released = m_input_manager.is_key_released(tavros::system::keys::k_F10);
+
         // update
         auto uniform_buffer_data_map = m_graphics_device->map_buffer(m_stage_buffer, 0, sizeof(m_renderer_frame_data));
         memcpy(uniform_buffer_data_map.data(), &m_renderer_frame_data, sizeof(m_renderer_frame_data));
@@ -996,6 +1016,13 @@ public:
 
         cbuf->end_render_pass();
 
+        if (is_f10_released) {
+            auto image_size = m_current_frame_size.width * m_current_frame_size.height * 4;
+            auto depth_image_size = m_current_frame_size.width * m_current_frame_size.height;
+            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(0), m_stage_upload_buffer, 0, image_size, 0, 0);
+            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(1), m_stage_upload_buffer, 0, depth_image_size, image_size, 0);
+        }
+
         // Draw to backbuffer
         cbuf->begin_render_pass(m_main_pass, m_composer->backbuffer());
 
@@ -1008,6 +1035,20 @@ public:
         m_composer->submit_command_list(cbuf);
         m_composer->end_frame();
         m_composer->present();
+
+        if (is_f10_released) {
+            auto screenshot_pixels = m_graphics_device->map_buffer(m_stage_upload_buffer);
+
+            // Save screenshot
+            int width = static_cast<int>(m_current_frame_size.width);
+            int height = static_cast<int>(m_current_frame_size.height);
+            int channels = 4;
+            stbi_flip_vertically_on_write(true);
+            stbi_write_png("C:/Users/Piotr/Desktop/screenshots/image.png", width, height, channels, screenshot_pixels.data(), width * channels);
+            stbi_write_png("C:/Users/Piotr/Desktop/screenshots/depth.png", width, height, 4, screenshot_pixels.data() + width * height * channels, width * channels);
+
+            m_graphics_device->unmap_buffer(m_stage_upload_buffer);
+        }
 
         // std::this_thread::sleep_for(std::chrono::milliseconds(330));
     }
@@ -1031,9 +1072,12 @@ private:
     rhi::shader_binding_handle m_fullscreen_quad_shader_binding;
     rhi::texture_handle        m_texture;
     rhi::buffer_handle         m_stage_buffer;
+    rhi::buffer_handle         m_stage_upload_buffer;
     rhi::sampler_handle        m_sampler;
     rhi::buffer_handle         m_uniform_buffer;
     rhi::geometry_handle       m_mesh_geometry;
+
+    uint32 m_current_buffer_output_index = 0;
 
     tavros::math::ivec2 m_current_frame_size;
 

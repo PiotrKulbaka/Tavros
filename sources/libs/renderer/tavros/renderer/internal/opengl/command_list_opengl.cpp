@@ -893,4 +893,98 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
 
+    void command_list_opengl::copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset, uint32 row_stride)
+    {
+        TAV_UNUSED(size);
+
+        auto* tex = m_device->get_resources()->try_get(src_texture);
+        if (!tex) {
+            ::logger.error("Failed to copy texture {} to buffer {}: source texture not found", src_texture, dst_buffer);
+            return;
+        }
+
+        auto* b = m_device->get_resources()->try_get(dst_buffer);
+        if (!b) {
+            ::logger.error("Failed to copy texture {} to buffer {}: destination buffer not found", src_texture, dst_buffer);
+            return;
+        }
+
+        auto& tinfo = tex->info;
+
+        if (b->info.usage != buffer_usage::stage) {
+            ::logger.error("Failed to copy texture {} to buffer {}: invalid destination buffer usage type, expected `stage` got {}", src_texture, dst_buffer, b->info.usage);
+            return;
+        }
+
+        if (b->info.access != buffer_access::gpu_to_cpu) {
+            ::logger.error("Failed to copy texture {} to buffer {}: invalid destination buffer access type, expected `gpu_to_cpu` got {}", src_texture, dst_buffer, b->info.access);
+            return;
+        }
+
+        if (!tinfo.usage.has_flag(texture_usage::transfer_source)) {
+            ::logger.error("Failed to copy texture {} to buffer {}: source texture does not have `transfer_source` usage flag", src_texture, dst_buffer);
+            return;
+        }
+
+        /*if (!is_color_format(tinfo.format)) {
+            ::logger.error("Failed to copy texture {} to buffer {}: texture format is not a color format", src_texture, dst_buffer);
+            return;
+        }*/
+
+        auto gl_pixel_format = to_gl_pixel_format(tinfo.format);
+        if (row_stride % gl_pixel_format.bytes != 0) {
+            ::logger.error("Failed to copy texture {} to buffer {}: row stride {} must be aligned to pixel size {}", src_texture, dst_buffer, fmt::styled_param(row_stride), fmt::styled_param(gl_pixel_format.bytes));
+            return;
+        }
+
+        uint32 real_row_bytes = tinfo.width * gl_pixel_format.bytes;
+        if (row_stride > 0 && row_stride < real_row_bytes) {
+            ::logger.error("Failed to copy texture {} to buffer {}: row stride {} less than required row size {}", src_texture, dst_buffer, fmt::styled_param(row_stride), fmt::styled_param(real_row_bytes));
+            return;
+        }
+
+        size_t stride_bytes = static_cast<size_t>(row_stride > 0 ? row_stride : real_row_bytes);
+        size_t need_bytes = stride_bytes * tinfo.height * tinfo.depth - (stride_bytes - real_row_bytes);
+
+        if (dst_offset + need_bytes > b->info.size) {
+            ::logger.error("Failed to copy texture {} to buffer {}: buffer is too small. Required {} bytes, available {}", src_texture, dst_buffer, fmt::styled_param(dst_offset + need_bytes), fmt::styled_param(b->info.size));
+            return;
+        }
+
+        GL_CALL(glBindBuffer(GL_PIXEL_PACK_BUFFER, b->buffer_obj));
+        GL_CALL(glBindTexture(tex->target, tex->texture_obj));
+
+        auto row_length_in_pixels = static_cast<GLint>(row_stride / gl_pixel_format.bytes);
+        GL_CALL(glPixelStorei(GL_PACK_ROW_LENGTH, row_length_in_pixels));
+        GL_CALL(glPixelStorei(GL_PACK_ALIGNMENT, 1));
+
+        auto* gl_buffer_offset = reinterpret_cast<void*>(dst_offset);
+
+        if (tinfo.type == texture_type::texture_2d) {
+            GL_CALL(glGetTexImage(GL_TEXTURE_2D, 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+        } else if (tinfo.type == texture_type::texture_3d) {
+            GL_CALL(glGetTexImage(GL_TEXTURE_3D, 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+        } else if (tinfo.type == texture_type::texture_cube) {
+            static constexpr GLenum faces[6] = {
+                GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+                GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+                GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+                GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+                GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+                GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+            };
+
+            GL_CALL(glGetTexImage(faces[layer_index % 6], 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+        } else {
+            TAV_UNREACHABLE();
+        }
+
+        GL_CALL(glPixelStorei(GL_PACK_ALIGNMENT, 4));
+        GL_CALL(glPixelStorei(GL_PACK_ROW_LENGTH, 0));
+
+        GL_CALL(glBindTexture(tex->target, 0));
+        GL_CALL(glBindBuffer(GL_PIXEL_PACK_BUFFER, 0));
+    }
+
+
 } // namespace tavros::renderer::rhi

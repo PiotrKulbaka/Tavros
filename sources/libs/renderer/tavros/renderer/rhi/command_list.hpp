@@ -127,6 +127,8 @@ namespace tavros::renderer::rhi
          * @param row_stride  Row stride in bytes (0 = use texture width).
          */
         virtual void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset = 0, uint32 row_stride = 0) = 0;
+
+        virtual void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset = 0, uint32 row_stride = 0) = 0;
     };
 
 } // namespace tavros::renderer::rhi

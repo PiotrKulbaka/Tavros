@@ -3,6 +3,7 @@
 #include <tavros/resources/resource.hpp>
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/memory/dynamic_buffer.hpp>
+#include <tavros/core/memory/buffer_view.hpp>
 
 namespace app
 {
@@ -34,9 +35,9 @@ namespace app
 
         ~image_decoder() = default;
 
-        image_info decode_image_info(const uint8* data, size_t size) const;
+        image_info decode_image_info(tavros::core::buffer_view<uint8> packed_pixels) const;
 
-        pixels_view decode_image(const uint8* data, size_t size, uint32 required_channels = 4);
+        pixels_view decode_image(tavros::core::buffer_view<uint8> packed_pixels, uint32 required_channels = 4);
 
     private:
         tavros::core::dynamic_buffer<uint8> m_buffer;

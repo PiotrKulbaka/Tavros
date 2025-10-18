@@ -38,6 +38,7 @@ namespace app
 
         for (auto& state : m_keys) {
             state.accumulated_us = 0;
+            state.is_released = false;
         }
 
         m_raw_mouse_delta.set(0.0f, 0.0f);
@@ -71,6 +72,8 @@ namespace app
                 uint64 duration = std::min(time_us, m_current_frame_time_us) - s.press_time_us;
                 s.accumulated_us += duration;
             }
+
+            s.is_released = true;
         }
     }
 
@@ -116,6 +119,14 @@ namespace app
         TAV_ASSERT(idx < k_keyboard_size);
 
         return m_keys[idx].is_pressed;
+    }
+
+    bool input_manager::is_key_released(tavros::system::keys key)
+    {
+        const size_t idx = static_cast<size_t>(key);
+        TAV_ASSERT(idx < k_keyboard_size);
+
+        return m_keys[idx].is_released;
     }
 
     tavros::math::vec2 input_manager::get_raw_mouse_delta()
