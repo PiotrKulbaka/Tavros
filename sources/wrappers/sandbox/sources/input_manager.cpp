@@ -5,6 +5,8 @@
 #include <algorithm>
 #include <tavros/core/debug/assert.hpp>
 
+#include <tavros/core/logger/logger.hpp>
+
 namespace app
 {
 
@@ -25,6 +27,7 @@ namespace app
         m_last_frame_time_us = 0;
         m_current_frame_time_us = 0;
         m_raw_mouse_delta.set(0.0f, 0.0f);
+        m_smooth_mouse_delta.set(0.0f, 0.0f);
         m_mouse_time_us = 0;
     }
 
@@ -38,6 +41,7 @@ namespace app
         }
 
         m_raw_mouse_delta.set(0.0f, 0.0f);
+        m_smooth_mouse_delta.set(0.0f, 0.0f);
     }
 
     void input_manager::on_key_press(tavros::system::keys key, uint64 time_us)
@@ -75,6 +79,10 @@ namespace app
         TAV_UNUSED(time_us);
 
         m_raw_mouse_delta += delta;
+
+        auto accel = std::sqrt(tavros::math::length(delta)) * 0.0025f;
+        m_smooth_mouse_delta += delta * accel;
+
         m_mouse_time_us += m_last_mouse_time_us - time_us;
     }
 
@@ -117,9 +125,7 @@ namespace app
 
     tavros::math::vec2 input_manager::get_smooth_mouse_delta()
     {
-        auto  speed = tavros::math::length(m_raw_mouse_delta);
-        float accel = std::clamp(std::pow(speed * 0.03f, 1.25f), 0.35f, 8.0f);
-        return m_raw_mouse_delta * accel;
+        return m_smooth_mouse_delta;
     }
 
 } // namespace app

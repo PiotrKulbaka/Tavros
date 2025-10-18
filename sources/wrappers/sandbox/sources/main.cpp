@@ -561,9 +561,8 @@ public:
 
     void init() override
     {
-        m_camera.set_orientation({1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, 1.0f});
-
-        m_camera.set_position({0.0f, 0.0f, 0.0f});
+        m_camera.set_orientation({1.0f, 1.0f, -0.25f}, {0.0f, 0.0f, 1.0f});
+        m_camera.set_position({-8.0f, -8.0f, 5.0f});
 
         m_graphics_device = rhi::graphics_device::create(rhi::render_backend_type::opengl);
         if (!m_graphics_device) {
@@ -923,7 +922,7 @@ public:
 
         if (tavros::math::squared_length(mouse_delta) > 0.0f) {
             constexpr float base_sensitivity = 0.5f;
-            auto            scaled_mouse_delta = mouse_delta * base_sensitivity * static_cast<float>(delta_time);
+            auto            scaled_mouse_delta = mouse_delta * base_sensitivity;
 
             auto world_up = m_camera.world_up();
 
@@ -1010,7 +1009,7 @@ public:
         m_composer->end_frame();
         m_composer->present();
 
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(330));
     }
 
 private:
@@ -1070,10 +1069,16 @@ int main()
         printf("%s\n", msg.data());
     });
 
+    ::logger.info("Starting TavrosEngine application...");
+
     auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
 
     auto app = std::make_unique<my_app>(resource_manager);
-    return app->run();
+    auto exit_code = app->run();
+
+    ::logger.info("TavrosEngine application exited with exit code {}", exit_code);
+
+    return exit_code;
 }
