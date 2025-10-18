@@ -127,6 +127,32 @@ namespace tavros::renderer::rhi
         }
     }
 
+    gl_wnd_fb_info to_gl_wnd_fb_info(pixel_format format)
+    {
+        switch (format) {
+        case pixel_format::rgb8un:
+            return {true, 24, 0, 0};
+        case pixel_format::rgba8un:
+            return {true, 32, 0, 0};
+
+        case pixel_format::depth16:
+            return {true, 0, 16, 0};
+        case pixel_format::depth24:
+            return {true, 0, 24, 0};
+        case pixel_format::depth32f:
+            return {true, 0, 32, 0};
+        case pixel_format::stencil8:
+            return {true, 0, 0, 8};
+        case pixel_format::depth24_stencil8:
+            return {true, 0, 24, 8};
+        case pixel_format::depth32f_stencil8:
+            return {true, 0, 32, 8};
+
+        default:
+            return {false, 0, 0, 0};
+        }
+    }
+
     gl_filter to_gl_filter(sampler_filter filter)
     {
         gl_filter result = {};

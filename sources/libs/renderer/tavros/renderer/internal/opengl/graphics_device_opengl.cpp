@@ -580,7 +580,7 @@ namespace tavros::renderer::rhi
             }
 
             auto h = m_resources.create(gl_texture{info, 0, GL_RENDERBUFFER, rbo});
-            ::logger.debug("Texture ({}) {} created", fmt::styled_param("renderbuffer"), h);
+            ::logger.debug("Texture ({}) {} created as {}", info.type, h, fmt::styled_param("renderbuffer"));
             return h;
 
         } else {
@@ -681,7 +681,7 @@ namespace tavros::renderer::rhi
             GL_CALL(glBindTexture(gl_target, 0));
 
             auto h = m_resources.create(gl_texture{info, tex, gl_target, 0});
-            ::logger.debug("Texture ({}) {} created", fmt::styled_param(to_string(info.type)), h);
+            ::logger.debug("Texture ({}) {} created", info.type, h);
             return h;
         }
     }
@@ -701,9 +701,9 @@ namespace tavros::renderer::rhi
 
             m_resources.remove(texture);
             if (is_texture) {
-                ::logger.debug("Texture ({}) {} destroyed", fmt::styled_param(to_string(tex->info.type)), texture);
+                ::logger.debug("Texture ({}) {} destroyed", tex->info.type, texture);
             } else {
-                ::logger.debug("Texture ({}) {} destroyed", fmt::styled_param("renderbuffer"), texture);
+                ::logger.debug("Texture ({}) {} destroyed as {}", tex->info.type, texture, fmt::styled_param("renderbuffer"));
             }
         } else {
             ::logger.error("Failed to destroy texture {}: not found", texture);
@@ -942,8 +942,8 @@ namespace tavros::renderer::rhi
                 ::logger.error(
                     "Failed to create framebuffer: color attachment texture {} format mismatch (provided {}, expected {})",
                     tex_h,
-                    fmt::styled_param(to_string(tex->info.format)),
-                    fmt::styled_param(to_string(info.color_attachment_formats[i]))
+                    tex->info.format,
+                    info.color_attachment_formats[i]
                 );
                 return {};
             }
@@ -1070,8 +1070,8 @@ namespace tavros::renderer::rhi
                 ::logger.error(
                     "Failed to create framebuffer: depth/stencil attachment texture {} format mismatch (provided {}, expected {})",
                     depth_stencil_attachment_h,
-                    fmt::styled_param(to_string(tex->info.format)),
-                    fmt::styled_param(to_string(info.depth_stencil_attachment_format))
+                    tex->info.format,
+                    info.depth_stencil_attachment_format
                 );
                 return {};
             }
@@ -1173,53 +1173,124 @@ namespace tavros::renderer::rhi
     buffer_handle graphics_device_opengl::create_buffer(const buffer_create_info& info)
     {
         if (info.size == 0) {
-            ::logger.warning("Creating buffer with size 0: OpenGL will allocate an empty buffer");
+            ::logger.error("Creating a buffer ({}) of size 0 is not allowed", info.usage);
+            return {};
         }
 
         GLenum gl_target = 0;
         GLenum gl_usage = 0;
 
-        if (info.usage == buffer_usage::stage) {
-            if (info.access != buffer_access::cpu_to_gpu) {
-                ::logger.error("Failed to create buffer: stage buffer must have access type `cpu_to_gpu`");
-                return {};
-            }
-
-            gl_target = GL_COPY_WRITE_BUFFER;
-            gl_usage = GL_STREAM_DRAW;
-        } else {
-            if (info.access == buffer_access::cpu_to_gpu) {
-                ::logger.error("Failed to create buffer: access type `cpu_to_gpu` must be used only with buffer usage `stage`");
-                return {};
-            }
-
-            switch (info.usage) {
-            case buffer_usage::vertex:
-                gl_target = GL_ARRAY_BUFFER;
-                break;
-            case buffer_usage::index:
-                gl_target = GL_ELEMENT_ARRAY_BUFFER;
-                break;
-            case buffer_usage::constant:
-                gl_target = GL_UNIFORM_BUFFER;
-                break;
-            case buffer_usage::storage:
-                gl_target = GL_SHADER_STORAGE_BUFFER;
-                break;
-            default:
-                TAV_UNREACHABLE();
-            }
+        switch (info.usage) {
+        case buffer_usage::stage:
 
             switch (info.access) {
+            case buffer_access::cpu_to_gpu:
+                gl_target = GL_COPY_WRITE_BUFFER;
+                gl_usage = GL_STREAM_DRAW;
+                break;
+
             case buffer_access::gpu_only:
-                gl_usage = GL_STREAM_COPY; // GL_STATIC_DRAW, GL_STATIC_COPY, GL_STREAM_COPY - is also possible
+                gl_target = GL_COPY_WRITE_BUFFER;
+                gl_usage = GL_STREAM_COPY;
+                break;
+
+            case buffer_access::gpu_to_cpu:
+                gl_target = GL_COPY_READ_BUFFER;
+                gl_usage = GL_STREAM_READ;
+                break;
+
+            default:
+                TAV_UNREACHABLE();
+                break;
+            }
+            break;
+
+        case buffer_usage::index:
+
+            switch (info.access) {
+            case buffer_access::cpu_to_gpu:
+                gl_target = GL_ELEMENT_ARRAY_BUFFER;
+                gl_usage = GL_DYNAMIC_DRAW;
+                break;
+
+            case buffer_access::gpu_only:
+                gl_target = GL_ELEMENT_ARRAY_BUFFER;
+                gl_usage = GL_STREAM_COPY; // GL_STREAM_COPY, GL_STATIC_COPY, GL_STATIC_DRAW - is also possible
+                break;
+
+            case buffer_access::gpu_to_cpu:
+                ::logger.error("Failed to create buffer: {} can't be {}", info.usage, info.access);
+                return {};
+            default:
+                TAV_UNREACHABLE();
+                break;
+            }
+            break;
+
+        case buffer_usage::vertex:
+
+            switch (info.access) {
+            case buffer_access::cpu_to_gpu:
+                gl_target = GL_ARRAY_BUFFER;
+                gl_usage = GL_DYNAMIC_DRAW;
+                break;
+            case buffer_access::gpu_only:
+                gl_target = GL_ARRAY_BUFFER;
+                gl_usage = GL_STREAM_COPY;
                 break;
             case buffer_access::gpu_to_cpu:
+                ::logger.error("Failed to create buffer: {} can't be {}", info.usage, info.access);
+                return {};
+            default:
+                TAV_UNREACHABLE();
+                break;
+            }
+            break;
+
+        case buffer_usage::constant:
+
+            switch (info.access) {
+            case buffer_access::cpu_to_gpu:
+                gl_target = GL_UNIFORM_BUFFER;
+                gl_usage = GL_DYNAMIC_DRAW;
+                break;
+            case buffer_access::gpu_only:
+                gl_target = GL_UNIFORM_BUFFER;
+                gl_usage = GL_STATIC_DRAW;
+                break;
+            case buffer_access::gpu_to_cpu:
+                ::logger.error("Failed to create buffer: {} can't be {}", info.usage, info.access);
+                return {};
+            default:
+                TAV_UNREACHABLE();
+                break;
+            }
+            break;
+
+        case buffer_usage::storage:
+
+            switch (info.access) {
+            case buffer_access::cpu_to_gpu:
+                gl_target = GL_SHADER_STORAGE_BUFFER;
+                gl_usage = GL_DYNAMIC_DRAW;
+                break;
+            case buffer_access::gpu_only:
+                gl_target = GL_SHADER_STORAGE_BUFFER;
+                gl_usage = GL_STATIC_DRAW;
+                break;
+            case buffer_access::gpu_to_cpu:
+                gl_target = GL_SHADER_STORAGE_BUFFER;
                 gl_usage = GL_DYNAMIC_READ;
                 break;
             default:
                 TAV_UNREACHABLE();
+                break;
             }
+            break;
+
+        default:
+            TAV_UNREACHABLE();
+            break;
         }
 
         if (info.usage == buffer_usage::constant) {
@@ -1250,7 +1321,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(gl_target, 0));
 
         auto h = m_resources.create(gl_buffer{info, bo, gl_target, gl_usage});
-        ::logger.debug("Buffer ({}) {} created", fmt::styled_param(to_string(info.usage)), h);
+        ::logger.debug("Buffer ({}) {} created", info.usage, h);
         return h;
     }
 
@@ -1259,7 +1330,7 @@ namespace tavros::renderer::rhi
         if (auto* b = m_resources.try_get(buffer)) {
             GL_CALL(glDeleteBuffers(1, &b->buffer_obj));
             m_resources.remove(buffer);
-            ::logger.debug("Buffer ({}) {} destroyed", fmt::styled_param(to_string(b->info.usage)), buffer);
+            ::logger.debug("Buffer ({}) {} destroyed", b->info.usage, buffer);
         } else {
             ::logger.error("Failed to destroy buffer {}: not found", buffer);
         }
@@ -1602,7 +1673,7 @@ namespace tavros::renderer::rhi
                 ::logger.error(
                     "Failed to create shader binding: buffer {} has invalid usage (expected `constant` or `storage`, got {})",
                     buffer_h,
-                    fmt::styled_param(to_string(b->info.usage))
+                    b->info.usage
                 );
                 return {};
             }
@@ -1656,7 +1727,7 @@ namespace tavros::renderer::rhi
             ::logger.error(
                 "Failed to map buffer {}: buffer has invalid access (expected cpu_to_gpu, got {})",
                 buffer,
-                fmt::styled_param(to_string(b->info.usage))
+                b->info.usage
             );
             return nullptr;
         }
@@ -1665,7 +1736,7 @@ namespace tavros::renderer::rhi
             ::logger.error(
                 "Failed to map buffer {}: buffer has invalid usage (expected stage, got {})",
                 buffer,
-                fmt::styled_param(to_string(b->info.usage))
+                b->info.usage
             );
             return nullptr;
         }
@@ -1710,7 +1781,7 @@ namespace tavros::renderer::rhi
             ::logger.error(
                 "Failed to unmap buffer {}: buffer has invalid usage (expected stage, got {})",
                 buffer,
-                fmt::styled_param(to_string(b->info.usage))
+                b->info.usage
             );
             return;
         }

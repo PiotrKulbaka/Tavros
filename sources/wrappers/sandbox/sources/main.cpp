@@ -577,7 +577,7 @@ public:
         main_composer_info.buffer_count = 3;
         main_composer_info.vsync = true;
         main_composer_info.color_attachment_format = rhi::pixel_format::rgba8un;
-        main_composer_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
+        main_composer_info.depth_stencil_attachment_format = rhi::pixel_format::depth32f_stencil8;
 
         auto main_composer_handle = m_graphics_device->create_frame_composer(main_composer_info, native_window_handle());
         if (!main_composer_handle) {
@@ -594,7 +594,7 @@ public:
         tavros::core::static_vector<rhi::pixel_format, rhi::k_max_color_attachments> color_attachment_formats;
         color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
         color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
-        rhi::pixel_format depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
+        rhi::pixel_format depth_stencil_attachment_format = rhi::pixel_format::depth32f_stencil8;
         m_offscreen_rt = tavros::core::make_unique<render_target>(m_graphics_device.get(), color_attachment_formats, depth_stencil_attachment_format);
 
         auto fullscreen_quad_vertex_shader = m_graphics_device->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
@@ -658,7 +658,7 @@ public:
 
         rhi::render_pass_create_info main_render_pass;
         main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, 1, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.2f, 0.2f, 0.25f, 1.0f}});
-        main_render_pass.depth_stencil_attachment.format = rhi::pixel_format::depth24_stencil8;
+        main_render_pass.depth_stencil_attachment.format = rhi::pixel_format::depth32f_stencil8;
         main_render_pass.depth_stencil_attachment.depth_load = rhi::load_op::clear;
         main_render_pass.depth_stencil_attachment.depth_store = rhi::store_op::store;
         main_render_pass.depth_stencil_attachment.depth_clear_value = 1.0f;

@@ -19,6 +19,14 @@ namespace tavros::renderer::rhi
         GLint  bytes;  // number of bytes per pixel
     };
 
+    struct gl_wnd_fb_info
+    {
+        bool   supported;
+        uint32 color_bits;
+        uint32 depth_bits;
+        uint32 stencil_bits;
+    };
+
     struct gl_filter
     {
         GLenum min_filter;
@@ -61,6 +69,8 @@ namespace tavros::renderer::rhi
 
 
     gl_pixel_format to_gl_pixel_format(pixel_format format);
+
+    gl_wnd_fb_info to_gl_wnd_fb_info(pixel_format format);
 
     gl_filter to_gl_filter(sampler_filter filter);
 

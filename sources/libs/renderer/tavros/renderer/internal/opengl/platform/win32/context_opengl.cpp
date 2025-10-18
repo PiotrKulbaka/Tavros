@@ -1,5 +1,8 @@
 #include <tavros/renderer/internal/opengl/platform/win32/context_opengl.hpp>
 
+#include <tavros/renderer/internal/opengl/type_conversions.hpp>
+#include <tavros/renderer/rhi/string_utils.hpp>
+
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/unreachable.hpp>
@@ -74,14 +77,17 @@ namespace tavros::renderer::rhi
         }
 
         // Validate color attachment
-        if (info.color_attachment_format != pixel_format::rgba8un) {
-            ::logger.error("Swapchain color attachment format must be rgba8un.");
+        auto color_info = to_gl_wnd_fb_info(info.color_attachment_format);
+        if (!(color_info.supported && color_info.color_bits > 0)) {
+            ::logger.error("Swapchain color format {} is not supported", info.color_attachment_format);
             return nullptr;
         }
 
         // Validate depth/stencil attachment
-        if (info.depth_stencil_attachment_format != pixel_format::depth24_stencil8 && info.depth_stencil_attachment_format != pixel_format::none) {
-            ::logger.error("Swapchain depth/stencil attachment format must be depth24stencil8 or none.");
+        auto depth_stencil_info = to_gl_wnd_fb_info(info.depth_stencil_attachment_format);
+        auto is_supported_depth_stencil = depth_stencil_info.supported && (depth_stencil_info.depth_bits > 0 || depth_stencil_info.stencil_bits > 0);
+        if (!(is_supported_depth_stencil || info.depth_stencil_attachment_format == rhi::pixel_format::none)) {
+            ::logger.error("Swapchain depth/stencil format {} is not supported", info.depth_stencil_attachment_format);
             return nullptr;
         }
 
@@ -104,9 +110,9 @@ namespace tavros::renderer::rhi
         pfd.nVersion = 1;
         pfd.dwFlags = PFD_DOUBLEBUFFER | PFD_DRAW_TO_WINDOW | PFD_SUPPORT_OPENGL;
         pfd.iPixelType = PFD_TYPE_RGBA;
-        pfd.cColorBits = 32;
-        pfd.cDepthBits = info.depth_stencil_attachment_format == pixel_format::depth24_stencil8 ? 24 : 0;
-        pfd.cStencilBits = info.depth_stencil_attachment_format == pixel_format::depth24_stencil8 ? 8 : 0;
+        pfd.cColorBits = static_cast<BYTE>(color_info.color_bits);
+        pfd.cDepthBits = static_cast<BYTE>(depth_stencil_info.depth_bits);
+        pfd.cStencilBits = static_cast<BYTE>(depth_stencil_info.stencil_bits);
         pfd.iLayerType = PFD_MAIN_PLANE;
 
         int32 pixel_format = ChoosePixelFormat(hDC, &pfd);
