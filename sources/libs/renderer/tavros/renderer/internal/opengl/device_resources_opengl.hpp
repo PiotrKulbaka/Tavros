@@ -14,7 +14,6 @@ namespace tavros::renderer::rhi
     {
         frame_composer_create_info       info;
         core::unique_ptr<frame_composer> composer_ptr;
-        void*                            native_handle = nullptr;
     };
 
     struct gl_sampler

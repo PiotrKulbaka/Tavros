@@ -15,11 +15,8 @@ namespace tavros::renderer::rhi
 
         void destroy();
 
-        frame_composer_handle create_frame_composer(
-            const frame_composer_create_info& info,
-            void*                             native_handle
-        ) override;
-        void destroy_frame_composer(frame_composer_handle composer) override;
+        frame_composer_handle create_frame_composer(const frame_composer_create_info& info) override;
+        void                  destroy_frame_composer(frame_composer_handle composer) override;
 
         frame_composer* get_frame_composer_ptr(frame_composer_handle composer) override;
 

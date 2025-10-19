@@ -27,6 +27,9 @@ namespace tavros::renderer::rhi
 
         /// Number of back buffers to create (usually 2 for double-buffering or 3 for triple-buffering)
         uint32 buffer_count = 3;
+
+        /// Native handle associated with the frame composer (e.g., platform-specific window or surface)
+        void* native_handle = nullptr;
     };
 
 } // namespace tavros::renderer::rhi

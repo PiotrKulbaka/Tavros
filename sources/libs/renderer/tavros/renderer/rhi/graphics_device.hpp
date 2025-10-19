@@ -52,10 +52,7 @@ namespace tavros::renderer::rhi
          * @param native_handle Optional native handle (e.g., platform-specific window or surface).
          * @return Handle to the created frame composer.
          */
-        virtual frame_composer_handle create_frame_composer(
-            const frame_composer_create_info& info,
-            void*                             native_handle
-        ) = 0;
+        virtual frame_composer_handle create_frame_composer(const frame_composer_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created frame composer.
@@ -93,9 +90,7 @@ namespace tavros::renderer::rhi
          * @param info Sampler creation parameters.
          * @return Handle to the created sampler.
          */
-        virtual sampler_handle create_sampler(
-            const sampler_create_info& info
-        ) = 0;
+        virtual sampler_handle create_sampler(const sampler_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created sampler.
@@ -110,9 +105,7 @@ namespace tavros::renderer::rhi
          * @param info Texture creation parameters.
          * @return Handle to the created texture.
          */
-        virtual texture_handle create_texture(
-            const texture_create_info& info
-        ) = 0;
+        virtual texture_handle create_texture(const texture_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created texture.

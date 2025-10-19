@@ -233,20 +233,20 @@ namespace tavros::renderer::rhi
         destroy_for<frame_composer_handle>(m_resources, [this](auto h) { destroy_frame_composer(h); });
     }
 
-    frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_create_info& info, void* native_handle)
+    frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_create_info& info)
     {
         // Check if frame composer with native handle already created
         bool has_native_handle = false;
 
         auto& pool = m_resources.get_pool<gl_composer>();
-        pool.for_each([&](auto h, auto& v) { if (native_handle == v.native_handle) { has_native_handle = true; } });
+        pool.for_each([&](auto h, auto& v) { if (info.native_handle == v.info.native_handle) { has_native_handle = true; } });
         if (has_native_handle) {
-            ::logger.error("Failed to create frame composer: native handle {} already exists", native_handle);
+            ::logger.error("Failed to create frame composer: native handle {} already exists", info.native_handle);
             return {};
         }
 
         // Create a new frame composer
-        auto composer = frame_composer_opengl::create(this, info, native_handle);
+        auto composer = frame_composer_opengl::create(this, info, info.native_handle);
 
         if (!composer) {
             // Detailed info sould be written at frame_composer_opengl
@@ -260,7 +260,7 @@ namespace tavros::renderer::rhi
 
         init_limits();
 
-        frame_composer_handle handle = m_resources.create(gl_composer{info, std::move(composer), native_handle});
+        frame_composer_handle handle = m_resources.create(gl_composer{info, std::move(composer)});
         ::logger.debug("Frame composer {} created", handle);
         return handle;
     }
