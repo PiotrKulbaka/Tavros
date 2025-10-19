@@ -3,6 +3,7 @@
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/enums.hpp>
+#include <tavros/renderer/rhi/handle.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -10,10 +11,10 @@ namespace tavros::renderer::rhi
     /**
      * Describes how a single vertex buffer is bound to the GPU
      */
-    struct buffer_layout
+    struct vertex_buffer_layout
     {
-        /// Index of the vertex buffer (as provided when creating the geometry binding)
-        uint32 buffer_index = 0;
+        /// Vertex buffer handle
+        buffer_handle buffer_h;
 
         /// Offset in bytes from the start of the GPU buffer to the beginning of the vertex data
         uint32 base_offset = 0;
@@ -28,7 +29,7 @@ namespace tavros::renderer::rhi
     struct attribute_binding
     {
         /// Index of the buffer binding that contains this attribute (refers to geometry_info::buffer_layouts)
-        uint32 buffer_layout_index = 0;
+        uint32 vertex_buffer_layout_index = 0;
 
         /// Offset in bytes from the start of the vertex to this attribute
         uint32 offset = 0;
@@ -49,8 +50,8 @@ namespace tavros::renderer::rhi
      */
     struct geometry_create_info
     {
-        /// /// Array of buffer bindings describing physical vertex buffers
-        core::static_vector<buffer_layout, k_max_vertex_buffers> buffer_layouts;
+        /// Array of buffer bindings describing physical vertex buffers
+        core::static_vector<vertex_buffer_layout, k_max_vertex_buffers> vertex_buffer_layouts;
 
         /// Array of attribute bindings describing how vertex attributes are read from buffers
         core::static_vector<attribute_binding, k_max_vertex_attributes> attribute_bindings;
@@ -60,6 +61,9 @@ namespace tavros::renderer::rhi
 
         /// Format of the index buffer, if present
         index_buffer_format index_format = index_buffer_format::u16;
+
+        /// Handle to the index buffer, if present
+        buffer_handle index_buffer_h;
     };
 
 } // namespace tavros::renderer::rhi

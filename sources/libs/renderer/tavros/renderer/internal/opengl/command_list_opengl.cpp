@@ -263,7 +263,7 @@ namespace tavros::renderer::rhi
             }
         }
 
-        // Bind buffers (UBO buffers)
+        // Bind buffers (UBO or SSBO buffers)
         for (uint32 i = 0; i < info.buffer_bindings.size(); ++i) {
             auto& binding = info.buffer_bindings[i];
 

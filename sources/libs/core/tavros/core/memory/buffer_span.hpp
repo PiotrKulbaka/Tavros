@@ -40,8 +40,8 @@ namespace tavros::core
          * @brief Constructs a span over a single object.
          * @param single_obj Reference to a single object.
          */
-        constexpr buffer_span(const T* single_obj) noexcept
-            : m_data(single_obj)
+        constexpr buffer_span(T& single_obj) noexcept
+            : m_data(&single_obj)
             , m_size(1)
         {
         }
@@ -107,6 +107,21 @@ namespace tavros::core
         [[nodiscard]] constexpr bool empty() const noexcept
         {
             return m_size == 0;
+        }
+
+        /**
+         * @brief Copies elements from the source array into the buffer span.
+         *
+         * @param src Pointer to the source data.
+         * @param count Number of elements to copy.
+         * @param offset Starting offset in the destination buffer (in elements).
+         * @return The number of elements actually copied.
+         */
+        size_t copy_from(const T* src, size_t count, size_t offset = 0)
+        {
+            TAV_ASSERT(offset + count <= m_size);
+            std::memcpy(m_data + offset, src, count * sizeof(T));
+            return count;
         }
 
         /**

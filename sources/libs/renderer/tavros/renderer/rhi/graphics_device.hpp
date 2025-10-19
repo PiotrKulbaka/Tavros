@@ -180,15 +180,9 @@ namespace tavros::renderer::rhi
          * @brief Create a geometry resource (vertex and index buffers).
          *
          * @param info Geometry creation parameters.
-         * @param vertex_buffers List of vertex buffers.
-         * @param index_buffer Optional index buffer.
          * @return Handle to the created geometry.
          */
-        virtual geometry_handle create_geometry(
-            const geometry_create_info&      info,
-            core::buffer_view<buffer_handle> vertex_buffers,
-            core::optional<buffer_handle>    index_buffer = core::nullopt
-        ) = 0;
+        virtual geometry_handle create_geometry(const geometry_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created geometry.
