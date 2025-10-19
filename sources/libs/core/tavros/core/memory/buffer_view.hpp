@@ -35,6 +35,16 @@ namespace tavros::core
         }
 
         /**
+         * @brief Constructs a view over a single object.
+         * @param single_obj Reference to a single object.
+         */
+        constexpr buffer_view(const T& single_obj) noexcept
+            : m_data(&single_obj)
+            , m_size(1)
+        {
+        }
+
+        /**
          * @brief Constructs a view from a pointer and number of elements.
          * @param data Pointer to the first element (can be nullptr if size is zero).
          * @param size Number of elements in the buffer.
@@ -121,6 +131,14 @@ namespace tavros::core
         {
             TAV_ASSERT(index < m_size);
             return m_data[index];
+        }
+
+        /**
+         * @brief Allows checking for empty.
+         */
+        explicit operator bool() const noexcept
+        {
+            return m_size != 0;
         }
 
         [[nodiscard]] constexpr const T* begin() const noexcept

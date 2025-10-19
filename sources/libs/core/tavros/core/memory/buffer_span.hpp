@@ -36,6 +36,15 @@ namespace tavros::core
         {
         }
 
+        /**
+         * @brief Constructs a span over a single object.
+         * @param single_obj Reference to a single object.
+         */
+        constexpr buffer_span(const T* single_obj) noexcept
+            : m_data(single_obj)
+            , m_size(1)
+        {
+        }
 
         /**
          * @brief Constructs a span from a pointer and a size.
@@ -134,6 +143,14 @@ namespace tavros::core
         {
             TAV_ASSERT(index < m_size);
             return m_data[index];
+        }
+
+        /**
+         * @brief Allows checking for empty.
+         */
+        explicit operator bool() const noexcept
+        {
+            return m_size != 0;
         }
 
         [[nodiscard]] constexpr T* begin() noexcept
