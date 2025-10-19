@@ -710,63 +710,50 @@ namespace tavros::renderer::rhi
         }
     }
 
-    pipeline_handle graphics_device_opengl::create_pipeline(
-        const pipeline_create_info&      info,
-        core::buffer_view<shader_handle> shaders
-    )
+    pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_create_info& info)
     {
         if (info.shaders.size() != 2) {
             ::logger.error("Failed to create pipeline: exactly 2 shaders required (vertex and fragment)");
             return {};
         }
 
-        if (info.shaders.size() != shaders.size()) {
-            ::logger.error("Failed to create pipeline: shaders size mismatch");
-            return {};
-        }
-
-        GLuint vs = 0;
-        GLuint fs = 0;
-        for (auto i = 0; i < info.shaders.size(); ++i) {
-            auto* s = m_resources.try_get(shaders[i]);
+        gl_shader* vs = nullptr;
+        gl_shader* fs = nullptr;
+        for (size_t i = 0; i < info.shaders.size(); ++i) {
+            auto* s = m_resources.try_get(info.shaders[i]);
             if (!s) {
-                ::logger.error("Failed to create pipeline: shader {} not found", shaders[i]);
-                return {};
-            }
-
-            if (s->info.stage != info.shaders[i].stage) {
-                ::logger.error("Failed to create pipeline: shader stage mismatch");
+                ::logger.error("Failed to create pipeline: shader {} not found", info.shaders[i]);
                 return {};
             }
 
             if (s->info.stage == shader_stage::vertex) {
-                if (vs != 0) {
+                if (vs) {
                     ::logger.error("Failed to create pipeline: multiple vertex shaders provided");
                     return {};
                 }
-                vs = s->shader_obj;
+                vs = s;
             } else if (s->info.stage == shader_stage::fragment) {
-                if (fs != 0) {
+                if (fs) {
                     ::logger.error("Failed to create pipeline: multiple fragment shaders provided");
                     return {};
                 }
-                fs = s->shader_obj;
+                fs = s;
             } else {
                 ::logger.error("Failed to create pipeline: unsupported shader stage");
                 return {};
             }
         }
 
-        if (vs == 0) {
+        if (!vs) {
             ::logger.error("Failed to create pipeline: missing vertex shader");
             return {};
         }
-        if (fs == 0) {
+        if (!fs) {
             ::logger.error("Failed to create pipeline: missing fragment shader");
             return {};
         }
 
-        GLuint gl_program = link_program(vs, fs);
+        GLuint gl_program = link_program(vs->shader_obj, fs->shader_obj);
 
         // Validate program
         if (gl_program == 0) {

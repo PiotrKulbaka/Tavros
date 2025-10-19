@@ -21,24 +21,16 @@ namespace tavros::renderer::rhi
         frame_composer* get_frame_composer_ptr(frame_composer_handle composer) override;
 
         shader_handle create_shader(const shader_create_info& info) override;
+        void          destroy_shader(shader_handle shader) override;
 
-        void destroy_shader(shader_handle shader) override;
+        sampler_handle create_sampler(const sampler_create_info& info) override;
+        void           destroy_sampler(sampler_handle handle) override;
 
-        sampler_handle create_sampler(
-            const sampler_create_info& info
-        ) override;
-        void destroy_sampler(sampler_handle handle) override;
+        texture_handle create_texture(const texture_create_info& info) override;
+        void           destroy_texture(texture_handle handle) override;
 
-        texture_handle create_texture(
-            const texture_create_info& info
-        ) override;
-        void destroy_texture(texture_handle handle) override;
-
-        pipeline_handle create_pipeline(
-            const pipeline_create_info&      info,
-            core::buffer_view<shader_handle> shaders
-        ) override;
-        void destroy_pipeline(pipeline_handle pipeline) override;
+        pipeline_handle create_pipeline(const pipeline_create_info& info) override;
+        void            destroy_pipeline(pipeline_handle pipeline) override;
 
         framebuffer_handle create_framebuffer(
             const framebuffer_create_info&    info,

@@ -5,21 +5,10 @@
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/vertex_attribute.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
+#include <tavros/renderer/rhi/handle.hpp>
 
 namespace tavros::renderer::rhi
 {
-
-    /**
-     * Contains shader include info for the pipeline.
-     */
-    struct pipeline_shader
-    {
-        /// Shader should be compiled for this stage
-        shader_stage stage = shader_stage::vertex;
-
-        /// Source code for the shader
-        core::string_view entry_point = "main";
-    };
 
     constexpr core::flags<color_mask> operator|(color_mask lhs, color_mask rhs) noexcept
     {
@@ -180,7 +169,7 @@ namespace tavros::renderer::rhi
     struct pipeline_create_info
     {
         /// List with descriptions of shaders to be used in the pipeline
-        core::static_vector<pipeline_shader, k_max_pipeline_shaders> shaders;
+        core::static_vector<shader_handle, k_max_pipeline_shaders> shaders;
 
         /// List of vertex attributes
         core::static_vector<vertex_attribute, k_max_vertex_attributes> attributes;

@@ -49,7 +49,6 @@ namespace tavros::renderer::rhi
          * @brief Create a frame composer used to manage per-frame rendering.
          *
          * @param info Creation parameters for the frame composer.
-         * @param native_handle Optional native handle (e.g., platform-specific window or surface).
          * @return Handle to the created frame composer.
          */
         virtual frame_composer_handle create_frame_composer(const frame_composer_create_info& info) = 0;
@@ -118,13 +117,9 @@ namespace tavros::renderer::rhi
          * @brief Create a graphics pipeline.
          *
          * @param info Pipeline creation parameters.
-         * @param shaders List of shader handles used by the pipeline.
          * @return Handle to the created pipeline.
          */
-        virtual pipeline_handle create_pipeline(
-            const pipeline_create_info&      info,
-            core::buffer_view<shader_handle> shaders
-        ) = 0;
+        virtual pipeline_handle create_pipeline(const pipeline_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created pipeline.
