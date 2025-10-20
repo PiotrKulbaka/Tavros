@@ -389,24 +389,21 @@ namespace tavros::renderer::rhi
         for (size_t i = 0; i < rp->info.color_attachments.size(); ++i) {
             auto& attachment = rp->info.color_attachments[i];
             if (attachment.store == store_op::resolve) {
-                auto resolve_attachment_index = attachment.resolve_texture_index;
-
                 // Validate that the resolve target attachment texture is single-sampled
-                auto resolve_texture_h = rp->resolve_attachments[resolve_attachment_index];
-                if (auto* dst_tex = m_device->get_resources()->try_get(resolve_texture_h)) {
+                auto resolve_h = attachment.resolve_target;
+                if (auto* dst_tex = m_device->get_resources()->try_get(resolve_h)) {
                     if (dst_tex->info.sample_count != 1) {
-                        ::logger.error("Failed to begin render pass {}: resolve texture {} must be single-sampled", render_pass, resolve_texture_h);
+                        ::logger.error("Failed to begin render pass {}: resolve texture {} must be single-sampled", render_pass, resolve_h);
                         return;
                     }
                 } else {
-                    ::logger.error("Failed to begin render pass {}: resolve texture {} not found", render_pass, resolve_texture_h);
+                    ::logger.error("Failed to begin render pass {}: resolve texture {} not found", render_pass, resolve_h);
                     return;
                 }
 
                 auto source_texture_h = fb->info.color_attachments[i];
                 if (auto* tex = m_device->get_resources()->try_get(source_texture_h)) {
-                    auto rp_color_format = rp->info.color_attachments[i].format;
-                    if (rp_color_format != tex->info.format) {
+                    if (attachment.format != tex->info.format) {
                         ::logger.error("Failed to begin render pass {}: color attachment format mismatch with framebuffer {}", render_pass, framebuffer);
                         return;
                     }
@@ -532,42 +529,26 @@ namespace tavros::renderer::rhi
             gl_texture* destination = nullptr;
         };
         core::static_vector<blit_info, k_max_color_attachments> blit_data;
-        GLuint                                                  attachment_index = 0;
         for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
-            auto& rp_color_attachment = rp->info.color_attachments[i];
+            auto& rp_attachment = rp->info.color_attachments[i];
 
-            if (store_op::resolve == rp_color_attachment.store) {
-                // Resolve attachments
-                auto resolve_texture_index = rp_color_attachment.resolve_texture_index;
+            if (store_op::resolve == rp_attachment.store) {
+                // Find resolve source and resolve destination textures
+                auto* src = m_device->get_resources()->try_get(fb->info.color_attachments[i]);
+                TAV_ASSERT(src);
+                auto* dst = m_device->get_resources()->try_get(rp->info.color_attachments[i].resolve_target);
+                TAV_ASSERT(dst);
 
-                if (rp->resolve_attachments.size() > resolve_texture_index) {
-                    // Find the resolve texture and validate it
-                    auto  resolve_attachment_h = rp->resolve_attachments[resolve_texture_index];
-                    auto* resolve_tex = m_device->get_resources()->try_get(resolve_attachment_h);
-                    if (resolve_tex == nullptr) {
-                        ::logger.error("Failed to end render pass {}: resolve attachment texture {} not found", m_current_render_pass, fmt::styled_param(resolve_texture_index));
-                        return;
-                    }
-
-                    auto* source_tex = m_device->get_resources()->try_get(fb->info.color_attachments[i]);
-                    TAV_ASSERT(source_tex);
-
-                    // everything is ok, add to the list
-                    blit_data.push_back({GL_COLOR_ATTACHMENT0 + attachment_index, source_tex, resolve_tex});
-                    attachment_index++;
-                } else {
-                    ::logger.error("Failed to end render pass {}: invalid resolve attachment index {}", m_current_render_pass, fmt::styled_param(resolve_texture_index));
-                    return;
-                }
+                blit_data.push_back({GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i), src, dst});
             }
         }
 
         // Blit mask for depth/stencil attachment
         GLbitfield depth_stencil_blit_mask = 0;
-        if (rp->info.depth_stencil_attachment.depth_store == store_op::resolve) {
+        if (store_op::resolve == rp->info.depth_stencil_attachment.depth_store) {
             depth_stencil_blit_mask |= GL_DEPTH_BUFFER_BIT;
         }
-        if (rp->info.depth_stencil_attachment.stencil_store == store_op::resolve) {
+        if (store_op::resolve == rp->info.depth_stencil_attachment.stencil_store) {
             depth_stencil_blit_mask |= GL_STENCIL_BUFFER_BIT;
         }
 

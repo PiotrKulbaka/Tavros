@@ -177,13 +177,9 @@ namespace tavros::renderer::rhi
          * @brief Create a render pass.
          *
          * @param info Render pass creation parameters.
-         * @param resolve_textures Optional list of resolve textures.
          * @return Handle to the created render pass.
          */
-        virtual render_pass_handle create_render_pass(
-            const render_pass_create_info&    info,
-            core::buffer_view<texture_handle> resolve_textures = core::buffer_view<texture_handle>()
-        ) = 0;
+        virtual render_pass_handle create_render_pass(const render_pass_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created render pass.

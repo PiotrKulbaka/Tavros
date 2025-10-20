@@ -61,8 +61,7 @@ namespace tavros::renderer::rhi
 
     struct gl_render_pass
     {
-        render_pass_create_info                                      info;
-        core::static_vector<texture_handle, k_max_color_attachments> resolve_attachments;
+        render_pass_create_info info;
     };
 
     struct gl_shader_binding

@@ -3,6 +3,7 @@
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/enums.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
+#include <tavros/renderer/rhi/handle.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -21,8 +22,8 @@ namespace tavros::renderer::rhi
         /// Store operation performed at the end of the render pass
         store_op store = store_op::dont_care;
 
-        // Index of the resolve target attachment, used when store_op is set to `resolve`
-        uint32 resolve_texture_index = 0;
+        // Resolve texture target attachment, used when store_op is set to `resolve`
+        texture_handle resolve_target;
 
         /// Clear color value used when load_op is set to `clear`
         float clear_value[4] = {0.0f, 0.0f, 0.0f, 0.0f};

@@ -463,7 +463,7 @@ private:
             ca_info.format = m_color_attachment_formats[index];
             ca_info.load = rhi::load_op::clear;
             ca_info.store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
-            ca_info.resolve_texture_index = index;
+            ca_info.resolve_target = need_resolve ? m_resolve_destination_color_attachments[index] : rhi::texture_handle();
             ca_info.clear_value[0] = 0.2f;
             ca_info.clear_value[1] = 0.2f;
             ca_info.clear_value[2] = 0.25f;
@@ -483,12 +483,7 @@ private:
 
         rp_info.depth_stencil_attachment = dsca_info;
 
-        tavros::core::buffer_view<rhi::texture_handle> resolve_textures;
-        if (need_resolve) {
-            resolve_textures = m_resolve_destination_color_attachments;
-        }
-
-        auto rp = m_graphics_device->create_render_pass(rp_info, resolve_textures);
+        auto rp = m_graphics_device->create_render_pass(rp_info);
         if (!rp) {
             ::logger.fatal("Failed to create render pass.");
             exit_fail();
@@ -661,7 +656,7 @@ public:
         }
 
         rhi::render_pass_create_info main_render_pass;
-        main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.2f, 0.2f, 0.25f, 1.0f}});
+        main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::load_op::clear, rhi::store_op::dont_care, {}, {0.2f, 0.2f, 0.25f, 1.0f}});
         main_render_pass.depth_stencil_attachment.format = rhi::pixel_format::depth32f_stencil8;
         main_render_pass.depth_stencil_attachment.depth_load = rhi::load_op::clear;
         main_render_pass.depth_stencil_attachment.depth_store = rhi::store_op::store;

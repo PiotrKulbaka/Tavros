@@ -1414,10 +1414,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    render_pass_handle graphics_device_opengl::create_render_pass(
-        const render_pass_create_info&    info,
-        core::buffer_view<texture_handle> resolve_textures
-    )
+    render_pass_handle graphics_device_opengl::create_render_pass(const render_pass_create_info& info)
     {
         // Validate attachments
         for (const auto& attachment : info.color_attachments) {
@@ -1443,82 +1440,54 @@ namespace tavros::renderer::rhi
         }
 
         // Validate resolve attachments
-        bool   is_used_for_resolve[k_max_color_attachments] = {false};
         uint32 need_resolve_textures_number = 0;
         for (auto i = 0; i < info.color_attachments.size(); ++i) {
             auto& attachment = info.color_attachments[i];
-            if (attachment.store == store_op::resolve) {
-                auto resolve_index = attachment.resolve_texture_index;
-
-                // First of all, validate that resolve index is valid
-                if (resolve_textures.empty()) {
-                    ::logger.error(
-                        "Failed to create render pass: no resolve textures available, but index {} was requested",
-                        fmt::styled_param(resolve_index)
-                    );
-                    return {};
-                }
-                if (resolve_index >= resolve_textures.size()) {
-                    uint32 max_index = static_cast<uint32>(resolve_textures.size() - 1);
-                    ::logger.error(
-                        "Failed to create render pass: invalid resolve texture index {}, maximum allowed is {}",
-                        fmt::styled_param(resolve_index),
-                        fmt::styled_param(max_index)
-                    );
-                    return {};
-                }
-
-                // Check for already used resolve index
-                if (is_used_for_resolve[resolve_index]) {
-                    ::logger.error(
-                        "Failed to create render pass: resolve texture index {} is used more than once",
-                        fmt::styled_param(resolve_index)
-                    );
-                    return {};
-                }
-
-                is_used_for_resolve[resolve_index] = true;
-
-                auto& resolve_tex_h = resolve_textures[resolve_index];
-                auto* resolve_tex = m_resources.try_get(resolve_tex_h);
+            if (store_op::resolve == attachment.store) {
+                auto* resolve_tex = m_resources.try_get(attachment.resolve_target);
                 if (!resolve_tex) {
-                    ::logger.error("Failed to create render pass: resolve texture {} not found", resolve_tex_h);
+                    ::logger.error(
+                        "Failed to create render pass: resolve attachment {} texture {} not found",
+                        fmt::styled_param(i),
+                        attachment.resolve_target
+                    );
                     return {};
                 }
-
 
                 if (resolve_tex->info.format != attachment.format) {
                     ::logger.error(
-                        "Failed to create render pass: mismatched resolve texture format with color attachment {}",
-                        fmt::styled_param(resolve_index)
+                        "Failed to create render pass: mismatched resolve attachment {} texture format {} with color attachment format {}",
+                        fmt::styled_param(i),
+                        fmt::styled_param(resolve_tex->info.format),
+                        fmt::styled_param(attachment.format)
                     );
                     return {};
                 }
                 if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
-                    ::logger.error("Failed to create render pass: resolve texture {} must have resolve_destination usage flag", resolve_tex_h);
+                    ::logger.error(
+                        "Failed to create render pass: resolve attachment {} texture {} must have resolve_destination usage flag",
+                        fmt::styled_param(i),
+                        attachment.resolve_target
+                    );
                     return {};
                 }
                 if (resolve_tex->info.sample_count != 1) {
-                    ::logger.error("Failed to create render pass: resolve texture {} must be single-sampled", resolve_tex_h);
+                    ::logger.error(
+                        "Failed to create render pass: resolve attachment {} texture {} must be single-sampled",
+                        fmt::styled_param(i),
+                        attachment.resolve_target
+                    );
                     return {};
                 }
-
-                need_resolve_textures_number++;
+            } else if (attachment.resolve_target.valid()) {
+                ::logger.warning(
+                    "Render pass creation: resolve attachment {} is provided but its store operation is not set to `resolve`",
+                    fmt::styled_param(i)
+                );
             }
         }
 
-        // Make sure that all resolve textures are used
-        if (resolve_textures.size() != need_resolve_textures_number) {
-            ::logger.error("Failed to create render pass: not all resolve textures are used");
-            return {};
-        }
-
-        core::static_vector<texture_handle, k_max_color_attachments> resolve_attachments_handles;
-        for (auto i = 0; i < resolve_textures.size(); ++i) {
-            resolve_attachments_handles.push_back(resolve_textures[i]);
-        }
-
-        auto h = m_resources.create(gl_render_pass{info, resolve_attachments_handles});
+        auto h = m_resources.create(gl_render_pass{info});
         ::logger.debug("Render pass {} created", h);
         return h;
     }
