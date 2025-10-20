@@ -240,25 +240,23 @@ namespace tavros::renderer::rhi
             auto& binding = info.texture_bindings[i];
 
             // Bind texture
-            auto tex_h = sb->textures[binding.texture_index];
-            if (auto* t = m_device->get_resources()->try_get(tex_h)) {
+            if (auto* t = m_device->get_resources()->try_get(binding.texture)) {
                 if (!t->info.usage.has_flag(texture_usage::sampled)) {
-                    ::logger.error("Failed to bind shader binding {}: texture {} is not sampled", shader_binding, tex_h);
+                    ::logger.error("Failed to bind shader binding {}: texture {} is not sampled", shader_binding, binding.texture);
                     return;
                 }
                 GL_CALL(glActiveTexture(GL_TEXTURE0 + binding.binding));
                 GL_CALL(glBindTexture(t->target, t->texture_obj));
             } else {
-                ::logger.error("Failed to bind shader binding {}: texture {} not found", shader_binding, tex_h);
+                ::logger.error("Failed to bind shader binding {}: texture {} not found", shader_binding, binding.texture);
                 return;
             }
 
             // Bind sampler
-            auto sampler_h = sb->samplers[binding.sampler_index];
-            if (auto* s = m_device->get_resources()->try_get(sampler_h)) {
+            if (auto* s = m_device->get_resources()->try_get(binding.sampler)) {
                 GL_CALL(glBindSampler(binding.binding, s->sampler_obj));
             } else {
-                ::logger.error("Failed to bind shader binding {}: sampler {} not found", shader_binding, sampler_h);
+                ::logger.error("Failed to bind shader binding {}: sampler {} not found", shader_binding, binding.sampler);
                 return;
             }
         }
@@ -267,7 +265,7 @@ namespace tavros::renderer::rhi
         for (uint32 i = 0; i < info.buffer_bindings.size(); ++i) {
             auto& binding = info.buffer_bindings[i];
 
-            auto buf_h = sb->buffers[binding.buffer_index];
+            auto buf_h = binding.buffer;
             if (auto* b = m_device->get_resources()->try_get(buf_h)) {
                 TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER || b->gl_target == GL_SHADER_STORAGE_BUFFER);
 

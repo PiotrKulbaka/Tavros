@@ -192,17 +192,9 @@ namespace tavros::renderer::rhi
          * @brief Create a shader binding set (descriptor set / resource group).
          *
          * @param info Shader binding creation parameters.
-         * @param textures List of bound textures.
-         * @param samplers List of bound samplers.
-         * @param buffers  List of bound buffers.
          * @return Handle to the created shader binding.
          */
-        virtual shader_binding_handle create_shader_binding(
-            const shader_binding_create_info& info,
-            core::buffer_view<texture_handle> textures,
-            core::buffer_view<sampler_handle> samplers,
-            core::buffer_view<buffer_handle>  buffers
-        ) = 0;
+        virtual shader_binding_handle create_shader_binding(const shader_binding_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created shader binding.

@@ -1502,102 +1502,59 @@ namespace tavros::renderer::rhi
         }
     }
 
-    shader_binding_handle graphics_device_opengl::create_shader_binding(
-        const shader_binding_create_info& info,
-        core::buffer_view<texture_handle> textures,
-        core::buffer_view<sampler_handle> samplers,
-        core::buffer_view<buffer_handle>  buffers
-    )
+    shader_binding_handle graphics_device_opengl::create_shader_binding(const shader_binding_create_info& info)
     {
-        // Validate texture bindings
-        for (auto i = 0; i < info.texture_bindings.size(); ++i) {
+        // Validate texture and sampler bindings
+        for (size_t i = 0; i < info.texture_bindings.size(); ++i) {
             auto& binding = info.texture_bindings[i];
 
-            // Textures
-            if (textures.empty()) {
+            auto* tex = m_resources.try_get(binding.texture);
+            if (!tex) {
                 ::logger.error(
-                    "Failed to create shader binding: no textures available, but index {} was requested",
-                    fmt::styled_param(binding.texture_index)
-                );
-                return {};
-            }
-            if (binding.texture_index >= textures.size()) {
-                uint32 max_index = static_cast<uint32>(textures.size() - 1);
-                ::logger.error(
-                    "Failed to create shader binding: invalid texture binding index {}, maximum allowed is {}",
-                    fmt::styled_param(binding.texture_index),
-                    fmt::styled_param(max_index)
+                    "Failed to create shader binding: texture {} binding {} not found",
+                    binding.texture,
+                    fmt::styled_param(i)
                 );
                 return {};
             }
 
-            // Samplers
-            if (samplers.empty()) {
+            auto* smp = m_resources.try_get(binding.sampler);
+            if (!smp) {
                 ::logger.error(
-                    "Failed to create shader binding: no samplers available, but index {} was requested",
-                    fmt::styled_param(binding.sampler_index)
-                );
-                return {};
-            }
-            if (binding.sampler_index >= samplers.size()) {
-                uint32 max_index = static_cast<uint32>(samplers.size() - 1);
-                ::logger.error(
-                    "Failed to create shader binding: invalid sampler binding index {}, maximum allowed is {}",
-                    fmt::styled_param(binding.sampler_index),
-                    fmt::styled_param(max_index)
+                    "Failed to create shader binding: sampler {} binding {} not found",
+                    binding.sampler,
+                    fmt::styled_param(i)
                 );
                 return {};
             }
         }
 
-        // Validate buffer bindings
-        for (auto i = 0; i < info.buffer_bindings.size(); ++i) {
+        // Validate buffers
+        for (size_t i = 0; i < info.buffer_bindings.size(); ++i) {
             auto& binding = info.buffer_bindings[i];
-            if (buffers.empty()) {
+
+            auto* b = m_resources.try_get(binding.buffer);
+            if (!b) {
                 ::logger.error(
-                    "Failed to create shader binding: no buffers available, but index {} was requested",
-                    fmt::styled_param(binding.buffer_index)
+                    "Failed to create shader binding: buffer {} binding {} not found",
+                    binding.buffer,
+                    fmt::styled_param(i)
                 );
                 return {};
             }
-            if (binding.buffer_index >= buffers.size()) {
-                auto max_index = static_cast<uint32>(buffers.size()) - 1;
-                ::logger.error(
-                    "Failed to create shader binding: invalid buffer binding index {}, maximum allowed is {}",
-                    fmt::styled_param(binding.buffer_index),
-                    fmt::styled_param(max_index)
-                );
-                return {};
-            }
-        }
 
-        core::static_vector<texture_handle, k_max_shader_textures> texture_handles;
-        core::static_vector<sampler_handle, k_max_shader_textures> sampler_handles;
-        core::static_vector<buffer_handle, k_max_shader_buffers>   buffer_handles;
-
-        for (auto i = 0; i < textures.size(); ++i) {
-            texture_handles.push_back(textures[i]);
-        }
-
-        for (auto i = 0; i < samplers.size(); ++i) {
-            sampler_handles.push_back(samplers[i]);
-        }
-
-        for (auto i = 0; i < buffers.size(); ++i) {
-            auto buffer_h = buffers[i];
-            buffer_handles.push_back(buffer_h);
-            auto* b = m_resources.try_get(buffer_h);
             if (b->info.usage != buffer_usage::constant && b->info.usage != buffer_usage::storage) {
                 ::logger.error(
-                    "Failed to create shader binding: buffer {} has invalid usage (expected `constant` or `storage`, got {})",
-                    buffer_h,
+                    "Failed to create shader binding: buffer {} binding {} has invalid usage (expected `constant` or `storage`, got {})",
+                    binding.buffer,
+                    fmt::styled_param(i),
                     b->info.usage
                 );
                 return {};
             }
         }
 
-        auto h = m_resources.create(gl_shader_binding{info, texture_handles, sampler_handles, buffer_handles});
+        auto h = m_resources.create(gl_shader_binding{info});
         ::logger.debug("Shader binding {} created", h);
         return h;
     }

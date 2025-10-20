@@ -671,10 +671,8 @@ public:
         }
 
         rhi::shader_binding_create_info shader_binding_info;
-        shader_binding_info.texture_bindings.push_back({0, 0, 0});
-        rhi::texture_handle textures_to_binding_main[] = {m_texture};
-        rhi::sampler_handle samplers_to_binding_main[] = {m_sampler};
-        m_shader_binding = m_graphics_device->create_shader_binding(shader_binding_info, textures_to_binding_main, samplers_to_binding_main, {});
+        shader_binding_info.texture_bindings.push_back({m_texture, m_sampler, 0});
+        m_shader_binding = m_graphics_device->create_shader_binding(shader_binding_info);
         if (!m_shader_binding) {
             ::logger.fatal("Failed to create render pass");
             exit_fail();
@@ -765,14 +763,10 @@ public:
         m_composer->submit_command_list(cbuf);
 
         rhi::shader_binding_create_info mesh_shader_binding_info;
-        mesh_shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(frame_data), 0});
-        mesh_shader_binding_info.texture_bindings.push_back({0, 0, 0});
+        mesh_shader_binding_info.buffer_bindings.push_back({m_uniform_buffer, 0, sizeof(frame_data), 0});
+        mesh_shader_binding_info.texture_bindings.push_back({m_texture, m_sampler, 0});
 
-        rhi::texture_handle mesh_textures_to_binding[] = {m_texture};
-        rhi::sampler_handle mesh_samplers_to_binding[] = {m_sampler};
-        rhi::buffer_handle  mesh_ubo_buffers_to_binding[] = {m_uniform_buffer};
-
-        m_mesh_shader_binding = m_graphics_device->create_shader_binding(mesh_shader_binding_info, mesh_textures_to_binding, mesh_samplers_to_binding, mesh_ubo_buffers_to_binding);
+        m_mesh_shader_binding = m_graphics_device->create_shader_binding(mesh_shader_binding_info);
         if (!m_mesh_shader_binding) {
             ::logger.fatal("Failed to create shader binding");
             exit_fail();
@@ -810,10 +804,9 @@ public:
 
 
         rhi::shader_binding_create_info world_grid_shader_binding_info;
-        world_grid_shader_binding_info.buffer_bindings.push_back({0, 0, sizeof(frame_data), 0});
-        rhi::buffer_handle world_grid_ubo_buffers_to_binding[] = {m_uniform_buffer};
+        world_grid_shader_binding_info.buffer_bindings.push_back({m_uniform_buffer, 0, sizeof(frame_data), 0});
 
-        m_world_grid_shader_binding = m_graphics_device->create_shader_binding(world_grid_shader_binding_info, {}, {}, world_grid_ubo_buffers_to_binding);
+        m_world_grid_shader_binding = m_graphics_device->create_shader_binding(world_grid_shader_binding_info);
         if (!m_world_grid_shader_binding) {
             ::logger.fatal("Failed to create world grid shader binding");
             exit_fail();
@@ -893,11 +886,11 @@ public:
             }
 
             rhi::shader_binding_create_info fullscreen_quad_shader_binding_info;
-            fullscreen_quad_shader_binding_info.texture_bindings.push_back({0, 0, 0});
+            fullscreen_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_color_attachment(m_current_buffer_output_index), m_sampler, 0});
             rhi::texture_handle fullscreen_quad_textures_to_binding[] = {m_offscreen_rt->get_color_attachment(m_current_buffer_output_index)};
             rhi::sampler_handle fullscreen_quad_samplers_to_binding[] = {m_sampler};
 
-            m_fullscreen_quad_shader_binding = m_graphics_device->create_shader_binding(fullscreen_quad_shader_binding_info, fullscreen_quad_textures_to_binding, fullscreen_quad_samplers_to_binding, {});
+            m_fullscreen_quad_shader_binding = m_graphics_device->create_shader_binding(fullscreen_quad_shader_binding_info);
             if (!m_fullscreen_quad_shader_binding) {
                 ::logger.fatal("Failed to create fullscreen quad shader binding");
                 exit_fail();

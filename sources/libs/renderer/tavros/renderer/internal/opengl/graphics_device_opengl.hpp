@@ -44,13 +44,8 @@ namespace tavros::renderer::rhi
         render_pass_handle create_render_pass(const render_pass_create_info& info) override;
         void               destroy_render_pass(render_pass_handle render_pass) override;
 
-        shader_binding_handle create_shader_binding(
-            const shader_binding_create_info& info,
-            core::buffer_view<texture_handle> textures,
-            core::buffer_view<sampler_handle> samplers,
-            core::buffer_view<buffer_handle>  buffers
-        ) override;
-        void destroy_shader_binding(shader_binding_handle shader_binding) override;
+        shader_binding_handle create_shader_binding(const shader_binding_create_info& info) override;
+        void                  destroy_shader_binding(shader_binding_handle shader_binding) override;
 
         core::buffer_span<uint8> map_buffer(
             buffer_handle buffer,

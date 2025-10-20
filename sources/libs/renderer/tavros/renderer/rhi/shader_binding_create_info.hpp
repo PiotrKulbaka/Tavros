@@ -2,6 +2,7 @@
 
 #include <tavros/core/containers/static_vector.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
+#include <tavros/renderer/rhi/handle.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -11,28 +12,28 @@ namespace tavros::renderer::rhi
      */
     struct texture_binding
     {
-        /// Index into the texture handle array passed to create_shader_binding
-        uint32 texture_index = 0;
+        /// Handle to the texture resource to bind
+        texture_handle texture;
 
-        /// Index into the sampler handle array passed to create_shader_binding
-        uint32 sampler_index = 0;
+        /// Handle to the sampler resource to bind
+        sampler_handle sampler;
 
         /// Binding slot in the shader (matches `layout(binding=X)` in GLSL/HLSL)
         uint32 binding = 0;
     };
 
     /**
-     * Describes a buffer or subbuffer binding to a shader stage
+     * Describes a binding of a buffer or subrange of a buffer to a shader stage
      */
     struct buffer_binding
     {
-        /// Index into the buffer handle array passed to create_shader_binding
-        uint32 buffer_index = 0;
+        /// Handle to the buffer resource to bind
+        buffer_handle buffer;
 
-        /// Byte offset into the buffer (for dynamic offsets)
+        /// Byte offset from the start of the buffer (used for dynamic or subrange bindings)
         uint32 offset = 0;
 
-        /// Size in bytes (0 means bind the entire buffer)
+        /// Size of the bound range in bytes (0 means the entire buffer is bound)
         uint32 size = 0;
 
         /// Binding slot in the shader (matches `layout(binding=X)`)
