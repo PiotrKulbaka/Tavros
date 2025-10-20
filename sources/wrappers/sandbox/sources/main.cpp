@@ -9,10 +9,8 @@
 #include <tavros/core/memory/mallocator.hpp>
 #include <tavros/renderer/rhi/command_list.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
-#include <tavros/renderer/render_system.hpp>
 #include <tavros/renderer/camera/camera.hpp>
 #include <tavros/renderer/render_target.hpp>
-#include <tavros/core/memory/memory.hpp>
 
 #include <tavros/resources/resource_manager.hpp>
 #include <tavros/resources/providers/filesystem_provider.hpp>
@@ -579,8 +577,9 @@ public:
         main_composer_info.vsync = true;
         main_composer_info.color_attachment_format = rhi::pixel_format::rgba8un;
         main_composer_info.depth_stencil_attachment_format = rhi::pixel_format::depth32f_stencil8;
+        main_composer_info.native_handle = native_window_handle();
 
-        auto main_composer_handle = m_graphics_device->create_frame_composer(main_composer_info, native_window_handle());
+        auto main_composer_handle = m_graphics_device->create_frame_composer(main_composer_info);
         if (!main_composer_handle) {
             ::logger.fatal("Failed to create main frame composer.");
             exit_fail();
@@ -602,8 +601,8 @@ public:
         auto fullscreen_quad_fragment_shader = m_graphics_device->create_shader({fullscreen_quad_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info fullscreen_quad_pipeline_info;
-        fullscreen_quad_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
-        fullscreen_quad_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
+        fullscreen_quad_pipeline_info.shaders.push_back(fullscreen_quad_vertex_shader);
+        fullscreen_quad_pipeline_info.shaders.push_back(fullscreen_quad_fragment_shader);
         fullscreen_quad_pipeline_info.depth_stencil.depth_test_enable = false;
         fullscreen_quad_pipeline_info.depth_stencil.depth_write_enable = false;
         fullscreen_quad_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
@@ -612,8 +611,10 @@ public:
         fullscreen_quad_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
         fullscreen_quad_pipeline_info.blend_states.push_back({false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
 
-        rhi::shader_handle fullscreen_quad_shaders[] = {fullscreen_quad_vertex_shader, fullscreen_quad_fragment_shader};
-        m_fullscreen_quad_pipeline = m_graphics_device->create_pipeline(fullscreen_quad_pipeline_info, fullscreen_quad_shaders);
+        m_fullscreen_quad_pipeline = m_graphics_device->create_pipeline(fullscreen_quad_pipeline_info);
+
+        m_graphics_device->destroy_shader(fullscreen_quad_vertex_shader);
+        m_graphics_device->destroy_shader(fullscreen_quad_fragment_shader);
 
         m_stage_buffer = create_stage_buffer(1024 * 1024 * 16, rhi::buffer_access::cpu_to_gpu);
 
@@ -702,8 +703,8 @@ public:
         mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
         mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 3});
 
-        mesh_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
-        mesh_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
+        mesh_rendering_pipeline_info.shaders.push_back(mesh_rendering_vertex_shader);
+        mesh_rendering_pipeline_info.shaders.push_back(mesh_rendering_fragment_shader);
         mesh_rendering_pipeline_info.depth_stencil.depth_test_enable = true;
         mesh_rendering_pipeline_info.depth_stencil.depth_write_enable = true;
         mesh_rendering_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
@@ -717,12 +718,14 @@ public:
         mesh_rendering_pipeline_info.multisample.sample_count = 1;
         mesh_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
 
-        rhi::shader_handle mesh_rendering_shaders[] = {mesh_rendering_vertex_shader, mesh_rendering_fragment_shader};
-        m_mesh_rendering_pipeline = m_graphics_device->create_pipeline(mesh_rendering_pipeline_info, mesh_rendering_shaders);
+        m_mesh_rendering_pipeline = m_graphics_device->create_pipeline(mesh_rendering_pipeline_info);
         if (!m_mesh_rendering_pipeline) {
             ::logger.fatal("Failed to create mesh rendering pipeline");
             exit_fail();
         }
+
+        m_graphics_device->destroy_shader(mesh_rendering_vertex_shader);
+        m_graphics_device->destroy_shader(mesh_rendering_fragment_shader);
 
 
         rhi::buffer_create_info mesh_vertices_buffer_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
@@ -740,16 +743,16 @@ public:
         }
 
         rhi::geometry_create_info mesh_geometry_info;
-        mesh_geometry_info.buffer_layouts.push_back({0, 0, sizeof(app::vertex_type)});
+        mesh_geometry_info.vertex_buffer_layouts.push_back({mesh_vertices_buffer, 0, sizeof(app::vertex_type)});
         mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::pos), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
         mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::normal), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
         mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::uv_outside), 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
         mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::uv_inside), 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 3});
         mesh_geometry_info.has_index_buffer = true;
         mesh_geometry_info.index_format = rhi::index_buffer_format::u32;
+        mesh_geometry_info.index_buffer_h = mesh_indices_buffer;
 
-        rhi::buffer_handle buffers_to_binding[] = {mesh_vertices_buffer};
-        m_mesh_geometry = m_graphics_device->create_geometry(mesh_geometry_info, buffers_to_binding, mesh_indices_buffer);
+        m_mesh_geometry = m_graphics_device->create_geometry(mesh_geometry_info);
         if (!m_mesh_geometry) {
             ::logger.fatal("Failed to create mesh geometry");
             exit_fail();
@@ -786,8 +789,8 @@ public:
         auto world_grid_rendering_fragment_shader = m_graphics_device->create_shader({world_grid_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info world_grid_rendering_pipeline_info;
-        world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::vertex, "main"});
-        world_grid_rendering_pipeline_info.shaders.push_back({rhi::shader_stage::fragment, "main"});
+        world_grid_rendering_pipeline_info.shaders.push_back(world_grid_rendering_vertex_shader);
+        world_grid_rendering_pipeline_info.shaders.push_back(world_grid_rendering_fragment_shader);
         world_grid_rendering_pipeline_info.depth_stencil.depth_test_enable = true;
         world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = true;
         world_grid_rendering_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
@@ -801,12 +804,14 @@ public:
         world_grid_rendering_pipeline_info.multisample.sample_count = 1;
         world_grid_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
 
-        rhi::shader_handle world_grid_rendering_shaders[] = {world_grid_rendering_vertex_shader, world_grid_rendering_fragment_shader};
-        m_world_grid_rendering_pipeline = m_graphics_device->create_pipeline(world_grid_rendering_pipeline_info, world_grid_rendering_shaders);
+        m_world_grid_rendering_pipeline = m_graphics_device->create_pipeline(world_grid_rendering_pipeline_info);
         if (!m_world_grid_rendering_pipeline) {
             ::logger.fatal("Failed to create world grid rendering pipeline");
             exit_fail();
         }
+
+        m_graphics_device->destroy_shader(world_grid_rendering_vertex_shader);
+        m_graphics_device->destroy_shader(world_grid_rendering_fragment_shader);
 
 
         rhi::shader_binding_create_info world_grid_shader_binding_info;
