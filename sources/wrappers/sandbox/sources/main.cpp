@@ -352,8 +352,8 @@ public:
         m_resolve_source_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_source_usage, msaa);
         m_resolve_destination_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_destination_usage, 1);
 
-        m_framebuffer = create_framebuffer(width, height, msaa);
-        m_render_pass = create_render_pass(msaa, true);
+        m_framebuffer = create_fb(width, height, msaa);
+        m_render_pass = create_rp(true);
     }
 
     void destroy()
@@ -414,7 +414,7 @@ public:
     }
 
 private:
-    rhi::framebuffer_handle create_framebuffer(uint32 width, uint32 height, uint32 msaa)
+    rhi::framebuffer_handle create_fb(uint32 width, uint32 height, uint32 msaa)
     {
         rhi::framebuffer_create_info fb_info;
         fb_info.width = width;
@@ -452,7 +452,7 @@ private:
         return tex;
     }
 
-    rhi::render_pass_handle create_render_pass(uint32 msaa, bool need_resolve)
+    rhi::render_pass_handle create_rp(bool need_resolve)
     {
         rhi::render_pass_create_info rp_info;
 
@@ -460,7 +460,6 @@ private:
         for (uint32 index = 0; index < m_color_attachment_formats.size(); ++index) {
             rhi::color_attachment_info ca_info;
             ca_info.format = m_color_attachment_formats[index];
-            ca_info.sample_count = msaa;
             ca_info.load = rhi::load_op::clear;
             ca_info.store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
             ca_info.resolve_texture_index = index;
@@ -661,7 +660,7 @@ public:
         }
 
         rhi::render_pass_create_info main_render_pass;
-        main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, 1, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.2f, 0.2f, 0.25f, 1.0f}});
+        main_render_pass.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::load_op::clear, rhi::store_op::dont_care, 0, {0.2f, 0.2f, 0.25f, 1.0f}});
         main_render_pass.depth_stencil_attachment.format = rhi::pixel_format::depth32f_stencil8;
         main_render_pass.depth_stencil_attachment.depth_load = rhi::load_op::clear;
         main_render_pass.depth_stencil_attachment.depth_store = rhi::store_op::store;

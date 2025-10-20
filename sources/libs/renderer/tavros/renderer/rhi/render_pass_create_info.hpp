@@ -15,9 +15,6 @@ namespace tavros::renderer::rhi
         /// Format of the attachment. Must be a color format
         pixel_format format = pixel_format::none;
 
-        /// Number of samples per pixel should be 1 (no MSAA), 2, 4, 8, or 16. Must match the framebuffer sample count
-        uint32 sample_count = 1;
-
         /// Load operation performed at the beginning of the render pass
         load_op load = load_op::dont_care;
 

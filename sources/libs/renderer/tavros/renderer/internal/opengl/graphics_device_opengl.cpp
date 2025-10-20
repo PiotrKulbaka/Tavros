@@ -302,7 +302,7 @@ namespace tavros::renderer::rhi
         }
 
         auto h = m_resources.create(gl_shader{info, shader_obj});
-        ::logger.debug("Shader {} created", h);
+        ::logger.debug("Shader ({}) {} created", info.stage, h);
         return h;
     }
 
@@ -312,7 +312,7 @@ namespace tavros::renderer::rhi
             GL_CALL(glDeleteShader(s->shader_obj));
             s->shader_obj = 0;
             m_resources.remove(shader);
-            ::logger.debug("Shader {} destroyed", shader);
+            ::logger.debug("Shader ({}) {} destroyed", s->info.stage, shader);
         } else {
             ::logger.error("Failed to destroy shader {}: not found", shader);
         }
@@ -377,7 +377,7 @@ namespace tavros::renderer::rhi
 
             if (info.width > m_limits.max_2d_texture_size || info.height > m_limits.max_2d_texture_size) {
                 ::logger.warning(
-                    "`texture_2d` size {}x{} exceeds device limit {}",
+                    "Texture creation `texture_2d`: size {}x{} exceeds device limit {}",
                     fmt::styled_param(info.width),
                     fmt::styled_param(info.height),
                     fmt::styled_param(m_limits.max_2d_texture_size)
@@ -452,7 +452,7 @@ namespace tavros::renderer::rhi
             auto size_limit = m_limits.max_3d_texture_size;
             if (info.width > size_limit || info.height > size_limit || info.depth > size_limit) {
                 ::logger.warning(
-                    "`texture_3d` size {}x{}x{} exceeds device limit {}",
+                    "Texture creation `texture_3d`: size {}x{}x{} exceeds device limit {}",
                     fmt::styled_param(info.width),
                     fmt::styled_param(info.height),
                     fmt::styled_param(info.depth),
@@ -494,7 +494,7 @@ namespace tavros::renderer::rhi
             auto size_limit = m_limits.max_2d_texture_size;
             if (info.width > size_limit || info.height > size_limit) {
                 ::logger.warning(
-                    "`texture_cube` size {}x{} exceeds device limit {}",
+                    "Texture creation `texture_cube`: size {}x{} exceeds device limit {}",
                     fmt::styled_param(info.width),
                     fmt::styled_param(info.height),
                     fmt::styled_param(size_limit)
@@ -528,7 +528,7 @@ namespace tavros::renderer::rhi
 
         if (info.array_layers > m_limits.max_array_texture_layers) {
             ::logger.warning(
-                "`{}` array layers {} exceeds device limit {}",
+                "Texture creation `{}`: array layers {} exceeds device limit {}",
                 to_string(info.type),
                 fmt::styled_param(info.array_layers),
                 fmt::styled_param(m_limits.max_array_texture_layers)
@@ -548,7 +548,7 @@ namespace tavros::renderer::rhi
 
             if (info.width > m_limits.max_renderbuffer_size || info.height > m_limits.max_renderbuffer_size) {
                 ::logger.warning(
-                    "Renderbuffer size {}x{} exceeds device limit {}x{}",
+                    "Texture creation: renderbuffer size {}x{} exceeds device limit {}x{}",
                     fmt::styled_param(info.width),
                     fmt::styled_param(info.height),
                     fmt::styled_param(m_limits.max_framebuffer_width),
@@ -875,7 +875,7 @@ namespace tavros::renderer::rhi
 
         if (info.width > m_limits.max_framebuffer_width || info.height > m_limits.max_framebuffer_height) {
             ::logger.warning(
-                "Framebuffer size {}x{} exceeds device limit {}x{}",
+                "Framebuffer creation: framebuffer size {}x{} exceeds device limit {}x{}",
                 fmt::styled_param(info.width),
                 fmt::styled_param(info.height),
                 fmt::styled_param(m_limits.max_framebuffer_width),
@@ -958,7 +958,7 @@ namespace tavros::renderer::rhi
         auto attachments_size = static_cast<uint32>(color_attachment_textures.size());
         if (attachments_size > m_limits.max_color_attachmants) {
             ::logger.warning(
-                "Color attachment size {} exceeds device limit {}",
+                "Framebuffer creation: color attachment size {} exceeds device limit {}",
                 fmt::styled_param(attachments_size),
                 fmt::styled_param(m_limits.max_color_attachmants)
             );
@@ -1124,7 +1124,7 @@ namespace tavros::renderer::rhi
         } else {
             if (static_cast<uint32>(draw_buffers.size()) > m_limits.max_draw_buffers) {
                 ::logger.warning(
-                    "Number of draw buffers {} exceeds device limit {}",
+                    "Framebuffer creation: number of draw buffers {} exceeds device limit {}",
                     fmt::styled_param(draw_buffers.size()),
                     fmt::styled_param(m_limits.max_draw_buffers)
                 );
@@ -1160,7 +1160,7 @@ namespace tavros::renderer::rhi
     buffer_handle graphics_device_opengl::create_buffer(const buffer_create_info& info)
     {
         if (info.size == 0) {
-            ::logger.error("Creating a buffer ({}) of size 0 is not allowed", info.usage);
+            ::logger.error("Buffer creation: ({}) of size 0 is not allowed", info.usage);
             return {};
         }
 
@@ -1283,7 +1283,7 @@ namespace tavros::renderer::rhi
         if (info.usage == buffer_usage::constant) {
             if (info.size > m_limits.max_ubo_size) {
                 ::logger.warning(
-                    "Constant (UBO) buffer size {}bytes exceeds device limit {}bytes",
+                    "Buffer creation: constant (UBO) buffer size {}bytes exceeds device limit {}bytes",
                     fmt::styled_param(info.size),
                     fmt::styled_param(m_limits.max_ubo_size)
                 );
@@ -1291,7 +1291,7 @@ namespace tavros::renderer::rhi
         } else if (info.usage == buffer_usage::storage) {
             if (info.size > m_limits.max_ssbo_size) {
                 ::logger.warning(
-                    "Storage (SSBO) buffer size {}bytes exceeds device limit {}bytes",
+                    "Buffer creation: storage (SSBO) buffer size {}bytes exceeds device limit {}bytes",
                     fmt::styled_param(info.size),
                     fmt::styled_param(m_limits.max_ubo_size)
                 );
@@ -1378,6 +1378,8 @@ namespace tavros::renderer::rhi
             }
 
             ind_buf = ib;
+        } else if (info.index_buffer_h.valid()) {
+            ::logger.warning("Geometry creation: index buffer {} is provided but not enabled", info.index_buffer_h);
         }
 
         // Check attribute bindings

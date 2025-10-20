@@ -324,10 +324,6 @@ namespace tavros::renderer::rhi
                 ::logger.error("Failed to begin render pass {}: color attachment format mismatch with framebuffer {}", render_pass, framebuffer);
                 return;
             }
-            if (rp->info.color_attachments[i].sample_count != fb->info.sample_count) {
-                ::logger.error("Failed to begin render pass {}: color attachment sample count mismatch with framebuffer {}", render_pass, framebuffer);
-                return;
-            }
         }
 
         // Validate resolve attachments
