@@ -419,11 +419,12 @@ private:
         rhi::framebuffer_create_info fb_info;
         fb_info.width = width;
         fb_info.height = height;
-        fb_info.color_attachment_formats = m_color_attachment_formats;
-        fb_info.depth_stencil_attachment_format = m_depth_stencil_attachment_format;
+        fb_info.color_attachments = m_resolve_source_color_attachments;
+        fb_info.has_depth_stencil_attachment = true;
+        fb_info.depth_stencil_attachment = m_resolve_source_depth_stencil_attachment;
         fb_info.sample_count = msaa;
 
-        auto fb = m_graphics_device->create_framebuffer(fb_info, m_resolve_source_color_attachments, m_resolve_source_depth_stencil_attachment);
+        auto fb = m_graphics_device->create_framebuffer(fb_info);
         if (!fb) {
             ::logger.fatal("Failed to create framebuffer.");
             exit_fail();

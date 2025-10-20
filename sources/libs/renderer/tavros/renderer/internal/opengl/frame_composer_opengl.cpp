@@ -49,13 +49,12 @@ namespace tavros::renderer::rhi
         framebuffer_create_info backbuffer_info;
         backbuffer_info.width = info.width;
         backbuffer_info.height = info.height;
-        backbuffer_info.color_attachment_formats.push_back(info.color_attachment_format);
-        backbuffer_info.depth_stencil_attachment_format = info.depth_stencil_attachment_format;
+        backbuffer_info.has_depth_stencil_attachment = info.depth_stencil_attachment_format != pixel_format::none;
         backbuffer_info.sample_count = 1; // For backbuffer, sample count must be 1
 
         m_internal_command_list = core::make_unique<command_list_opengl>(device);
 
-        m_backbuffer = m_device->get_resources()->create(gl_framebuffer{backbuffer_info, 0, true});
+        m_backbuffer = m_device->get_resources()->create(gl_framebuffer{backbuffer_info, 0, true, info.color_attachment_format, info.depth_stencil_attachment_format});
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
     }
 

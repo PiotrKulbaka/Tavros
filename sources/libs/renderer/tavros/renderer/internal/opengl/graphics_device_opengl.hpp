@@ -32,12 +32,8 @@ namespace tavros::renderer::rhi
         pipeline_handle create_pipeline(const pipeline_create_info& info) override;
         void            destroy_pipeline(pipeline_handle pipeline) override;
 
-        framebuffer_handle create_framebuffer(
-            const framebuffer_create_info&    info,
-            core::buffer_view<texture_handle> color_attachments,
-            core::optional<texture_handle>    depth_stencil_attachment = core::nullopt
-        ) override;
-        void destroy_framebuffer(framebuffer_handle framebuffer) override;
+        framebuffer_handle create_framebuffer(const framebuffer_create_info& info) override;
+        void               destroy_framebuffer(framebuffer_handle framebuffer) override;
 
         buffer_handle create_buffer(const buffer_create_info& info) override;
         void          destroy_buffer(buffer_handle buffer) override;

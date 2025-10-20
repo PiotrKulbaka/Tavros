@@ -132,15 +132,9 @@ namespace tavros::renderer::rhi
          * @brief Create a framebuffer for rendering output.
          *
          * @param info Framebuffer creation parameters.
-         * @param color_attachments List of color attachments.
-         * @param depth_stencil_attachment Optional depth-stencil attachment.
          * @return Handle to the created framebuffer.
          */
-        virtual framebuffer_handle create_framebuffer(
-            const framebuffer_create_info&    info,
-            core::buffer_view<texture_handle> color_attachments,
-            core::optional<texture_handle>    depth_stencil_attachment = core::nullopt
-        ) = 0;
+        virtual framebuffer_handle create_framebuffer(const framebuffer_create_info& info) = 0;
 
         /**
          * @brief Destroy a previously created framebuffer.

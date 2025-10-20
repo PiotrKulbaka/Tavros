@@ -41,9 +41,8 @@ namespace tavros::renderer::rhi
         framebuffer_create_info info;
         GLuint                  framebuffer_obj = 0;
         bool                    is_default = false;
-
-        core::static_vector<texture_handle, k_max_color_attachments> color_attachments;
-        texture_handle                                               depth_stencil_attachment;
+        pixel_format            default_fb_color_format = pixel_format::none;
+        pixel_format            default_fb_ds_format = pixel_format::none;
     };
 
     struct gl_buffer
