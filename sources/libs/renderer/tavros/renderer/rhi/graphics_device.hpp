@@ -203,6 +203,36 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_shader_binding(shader_binding_handle shader_binding) = 0;
 
+        /**
+         * @brief Create a GPU fence object used for synchronization.
+         *
+         * @return Handle to the created fence.
+         */
+        virtual fence_handle create_fence() = 0;
+
+        /**
+         * @brief Destroy a previously created fence.
+         *
+         * @param fence Handle to the fence to destroy.
+         */
+        virtual void destroy_fence(fence_handle fence) = 0;
+
+        /**
+         * @brief Check if the fence has been signaled by the GPU.
+         *
+         * @param fence Handle to the fence to query.
+         * @return True if the fence is signaled, false otherwise.
+         */
+        virtual bool is_fence_signaled(fence_handle fence) = 0;
+
+        /**
+         * @brief Wait for the fence to be signaled by the GPU.
+         *
+         * @param fence Handle to the fence to wait on.
+         * @param timeout_ns Maximum time to wait in nanoseconds. Defaults to maximum value (infinite wait).
+         * @return True if the fence was signaled within the timeout, false if the timeout expired.
+         */
+        virtual bool wait_for_fence(fence_handle fence, uint64 timeout_ns = 0xffffffffffffffffui64) = 0;
 
         /**
          * @brief Map a CPU-visible buffer for read or write access.

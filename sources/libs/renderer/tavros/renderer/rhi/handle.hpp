@@ -74,6 +74,9 @@ namespace tavros::renderer::rhi
     struct shader_tag
     {
     };
+    struct fence_tag
+    {
+    };
 
     using frame_composer_handle = handle_base<frame_composer_tag>;
     using sampler_handle = handle_base<sampler_tag>;
@@ -85,6 +88,7 @@ namespace tavros::renderer::rhi
     using render_pass_handle = handle_base<render_pass_tag>;
     using shader_binding_handle = handle_base<shader_binding_tag>;
     using shader_handle = handle_base<shader_tag>;
+    using fence_handle = handle_base<fence_tag>;
 
 } // namespace tavros::renderer::rhi
 

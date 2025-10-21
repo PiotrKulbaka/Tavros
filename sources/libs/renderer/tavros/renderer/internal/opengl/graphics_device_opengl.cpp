@@ -1569,6 +1569,60 @@ namespace tavros::renderer::rhi
         }
     }
 
+    fence_handle graphics_device_opengl::create_fence()
+    {
+        auto h = m_resources.create(gl_fence{});
+        ::logger.debug("Fence {} created", h);
+        return h;
+    }
+
+    void graphics_device_opengl::destroy_fence(fence_handle fence)
+    {
+        if (auto* f = m_resources.try_get(fence)) {
+            if (f->fence_obj) {
+                GL_CALL(glDeleteSync(f->fence_obj));
+            }
+            m_resources.remove(fence);
+            ::logger.debug("Fence {} destroyed", fence);
+        } else {
+            ::logger.error("Failed to destroy fence {}: not found", fence);
+        }
+    }
+
+    bool graphics_device_opengl::is_fence_signaled(fence_handle fence)
+    {
+        auto* f = m_resources.try_get(fence);
+        if (!f) {
+            ::logger.error("Failed to get fence status {}: fence not found", fence);
+            return false;
+        }
+
+        if (!f->fence_obj) {
+            return false;
+        }
+
+        GLint status = 0;
+        GL_CALL(glGetSynciv(f->fence_obj, GL_SYNC_STATUS, sizeof(status), nullptr, &status));
+        return status == GL_SIGNALED;
+    }
+
+    bool graphics_device_opengl::wait_for_fence(fence_handle fence, uint64 timeout_ns)
+    {
+        auto* f = m_resources.try_get(fence);
+        if (!f) {
+            ::logger.error("Failed to wait for fence {}: fence not found", fence);
+            return false;
+        }
+
+        if (!f->fence_obj) {
+            return false;
+        }
+
+        GLenum result = 0;
+        GL_CALL(result = glClientWaitSync(f->fence_obj, GL_SYNC_FLUSH_COMMANDS_BIT, timeout_ns));
+        return result == GL_CONDITION_SATISFIED || result == GL_ALREADY_SIGNALED;
+    }
+
     core::buffer_span<uint8> graphics_device_opengl::map_buffer(buffer_handle buffer, size_t offset, size_t size)
     {
         auto* b = m_resources.try_get(buffer);
@@ -1612,8 +1666,9 @@ namespace tavros::renderer::rhi
             size = b->info.size;
         }
 
-        bool   is_write = b->info.access == buffer_access::cpu_to_gpu;
-        GLenum access = (is_write ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT : GL_MAP_READ_BIT); // | GL_MAP_UNSYNCHRONIZED_BIT;
+        GLenum access = b->info.access == buffer_access::cpu_to_gpu
+                          ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT
+                          : GL_MAP_READ_BIT;
         GLenum target = b->gl_target;
 
         GL_CALL(glBindBuffer(target, b->buffer_obj));

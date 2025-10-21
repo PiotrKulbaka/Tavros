@@ -701,6 +701,37 @@ namespace tavros::renderer::rhi
         }
     }
 
+    void command_queue_opengl::signal_fence(fence_handle fence)
+    {
+        auto* f = m_device->get_resources()->try_get(fence);
+        if (!f) {
+            ::logger.error("Failed to signal fence {}: fence not found", fence);
+            return;
+        }
+
+        if (f->fence_obj) {
+            GL_CALL(glDeleteSync(f->fence_obj));
+        }
+
+        GL_CALL(f->fence_obj = glFenceSync(GL_SYNC_GPU_COMMANDS_COMPLETE, 0));
+    }
+
+    void command_queue_opengl::wait_for_fence(fence_handle fence)
+    {
+        auto* f = m_device->get_resources()->try_get(fence);
+        if (!f) {
+            ::logger.error("Failed to wait for fence {}: fence not found", fence);
+            return;
+        }
+
+        if (!f->fence_obj) {
+            ::logger.error("Failed to wait for fence {}: fence not created", fence);
+            return;
+        }
+
+        GL_CALL(glWaitSync(f->fence_obj, 0, GL_TIMEOUT_IGNORED));
+    }
+
     void command_queue_opengl::copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset, size_t dst_offset)
     {
         // Get dst and src buffers

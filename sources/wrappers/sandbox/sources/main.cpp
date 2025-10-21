@@ -615,11 +615,17 @@ public:
 
         m_stage_upload_buffer = create_stage_buffer(1024 * 1024 * 32, rhi::buffer_access::gpu_to_cpu);
 
+        m_fence = m_graphics_device->create_fence();
+        if (!m_fence) {
+            ::logger.fatal("Failed to create fence");
+            exit_fail();
+        }
+
         auto im_view = load_image("textures/cube_test.png");
 
         size_t tex_size = im_view.width * im_view.height * im_view.channels;
         auto   dst = m_graphics_device->map_buffer(m_stage_buffer);
-        memcpy(dst.data(), im_view.data, tex_size);
+        dst.copy_from(im_view.data, tex_size);
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
         rhi::texture_create_info tex_create_info;
@@ -642,6 +648,7 @@ public:
 
         auto* cbuf = m_composer->create_command_queue();
         cbuf->copy_buffer_to_texture(m_stage_buffer, m_texture, 0, tex_size, 0);
+        cbuf->signal_fence(m_fence);
         m_composer->submit_command_queue(cbuf);
 
         rhi::sampler_create_info sampler_info;
@@ -752,14 +759,16 @@ public:
         }
 
         auto stage_map = m_graphics_device->map_buffer(m_stage_buffer);
-        memcpy(stage_map.data(), app::cube_vertices, sizeof(app::cube_vertices));
-        memcpy(stage_map.data() + sizeof(app::cube_vertices), app::cube_indices, sizeof(app::cube_indices));
+        stage_map.copy_from(app::cube_vertices, sizeof(app::cube_vertices));
+        stage_map.copy_from(app::cube_indices, sizeof(app::cube_indices), sizeof(app::cube_vertices));
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
 
         cbuf = m_composer->create_command_queue();
+        cbuf->wait_for_fence(m_fence);
         cbuf->copy_buffer(m_stage_buffer, mesh_vertices_buffer, sizeof(app::cube_vertices), 0, 0);
         cbuf->copy_buffer(m_stage_buffer, mesh_indices_buffer, sizeof(app::cube_indices), sizeof(app::cube_vertices), 0);
+        cbuf->signal_fence(m_fence);
         m_composer->submit_command_queue(cbuf);
 
         rhi::shader_binding_create_info mesh_shader_binding_info;
@@ -811,6 +820,8 @@ public:
             ::logger.fatal("Failed to create world grid shader binding");
             exit_fail();
         }
+
+        m_graphics_device->wait_for_fence(m_fence);
     }
 
     void shutdown() override
@@ -900,7 +911,7 @@ public:
 
             constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
             float           aspect_ratio = static_cast<float>(m_current_frame_size.width) / static_cast<float>(m_current_frame_size.height);
-            m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 100.0f);
+            m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 1000.0f);
         }
 
         // Update camera
@@ -984,7 +995,7 @@ public:
 
         // update
         auto uniform_buffer_data_map = m_graphics_device->map_buffer(m_stage_buffer, 0, sizeof(m_renderer_frame_data));
-        memcpy(uniform_buffer_data_map.data(), &m_renderer_frame_data, sizeof(m_renderer_frame_data));
+        uniform_buffer_data_map.copy_from(&m_renderer_frame_data, sizeof(m_renderer_frame_data));
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
 
@@ -1027,6 +1038,7 @@ public:
 
         m_composer->submit_command_queue(cbuf);
         m_composer->end_frame();
+        m_composer->wait_for_frame_complete();
         m_composer->present();
 
         if (is_f10_released) {
@@ -1069,6 +1081,7 @@ private:
     rhi::sampler_handle        m_sampler;
     rhi::buffer_handle         m_uniform_buffer;
     rhi::geometry_handle       m_mesh_geometry;
+    rhi::fence_handle          m_fence;
 
     uint32 m_current_buffer_output_index = 0;
 

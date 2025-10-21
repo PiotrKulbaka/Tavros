@@ -99,6 +99,20 @@ namespace tavros::renderer::rhi
          */
         virtual void draw_indexed(uint32 index_count, uint32 first_index = 0, uint32 vertex_offset = 0, uint32 instance_count = 1, uint32 first_instance = 0) = 0;
 
+        /**
+         * @brief Signal a fence from the GPU, marking it as completed when reached in the command queue.
+         *
+         * @param fence Handle to the fence to signal.
+         */
+        virtual void signal_fence(fence_handle fence) = 0;
+
+        /**
+         * @brief Insert a wait on a fence into the GPU command queue. The GPU will pause execution
+         *        until the specified fence is signaled.
+         *
+         * @param fence Handle to the fence to wait for.
+         */
+        virtual void wait_for_fence(fence_handle fence) = 0;
 
         /**
          * @brief Copy data between two buffers.

@@ -47,6 +47,12 @@ namespace tavros::renderer::rhi
         shader_binding_handle create_shader_binding(const shader_binding_create_info& info) override;
         void                  destroy_shader_binding(shader_binding_handle shader_binding) override;
 
+        fence_handle create_fence() override;
+        void         destroy_fence(fence_handle fence) override;
+
+        bool is_fence_signaled(fence_handle fence) override;
+        bool wait_for_fence(fence_handle fence, uint64 timeout_ns = 0xffffffffffffffffui64) override;
+
         core::buffer_span<uint8> map_buffer(
             buffer_handle buffer,
             size_t        offset = 0,

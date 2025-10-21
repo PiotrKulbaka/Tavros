@@ -48,6 +48,7 @@ namespace tavros::renderer::rhi
         core::unique_ptr<context_opengl> m_context;
         frame_composer_create_info       m_info;
         framebuffer_handle               m_backbuffer;
+        fence_handle                     m_fence;
 
         bool m_frame_started = false;
 

@@ -117,7 +117,7 @@ namespace tavros::core
          * @param offset Starting offset in the destination buffer (in elements).
          * @return The number of elements actually copied.
          */
-        size_t copy_from(const T* src, size_t count, size_t offset = 0)
+        size_t copy_from(const void* src, size_t count, size_t offset = 0)
         {
             TAV_ASSERT(offset + count <= m_size);
             std::memcpy(m_data + offset, src, count * sizeof(T));

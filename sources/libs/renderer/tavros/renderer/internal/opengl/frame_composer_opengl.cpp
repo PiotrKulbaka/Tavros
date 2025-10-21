@@ -56,10 +56,14 @@ namespace tavros::renderer::rhi
 
         m_backbuffer = m_device->get_resources()->create(gl_framebuffer{backbuffer_info, 0, true, info.color_attachment_format, info.depth_stencil_attachment_format});
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
+
+        m_fence = m_device->create_fence();
     }
 
     frame_composer_opengl::~frame_composer_opengl()
     {
+        m_device->destroy_fence(m_fence);
+
         // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
         auto& pool = m_device->get_resources()->get_pool<gl_framebuffer>();
         if (pool.size() != 0) {
@@ -141,16 +145,17 @@ namespace tavros::renderer::rhi
     void frame_composer_opengl::submit_command_queue(command_queue* queue)
     {
         TAV_UNUSED(queue);
+        queue->signal_fence(m_fence);
     }
 
     bool frame_composer_opengl::is_frame_complete()
     {
-        return !m_frame_started;
+        return !m_frame_started && m_device->is_fence_signaled(m_fence);
     }
 
     void frame_composer_opengl::wait_for_frame_complete()
     {
-        // Do nothing for now
+        m_device->wait_for_fence(m_fence);
     }
 
 } // namespace tavros::renderer::rhi

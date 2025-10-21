@@ -83,6 +83,11 @@ namespace tavros::renderer::rhi
         GLuint shader_obj = 0;
     };
 
+    struct gl_fence
+    {
+        GLsync fence_obj = nullptr;
+    };
+
 
     class device_resources_opengl
     {
@@ -107,6 +112,7 @@ namespace tavros::renderer::rhi
             , m_buffers(alc)
             , m_geometries(alc)
             , m_render_passes(alc)
+            , m_fences(alc)
         {
         }
 
@@ -147,6 +153,7 @@ namespace tavros::renderer::rhi
         core::object_pool<gl_buffer>         m_buffers;
         core::object_pool<gl_geometry>       m_geometries;
         core::object_pool<gl_render_pass>    m_render_passes;
+        core::object_pool<gl_fence>          m_fences;
     };
 
     // clang-format off
@@ -160,6 +167,7 @@ namespace tavros::renderer::rhi
     template<> struct device_resources_opengl::data_type_traits<buffer_handle> { using type = gl_buffer; };
     template<> struct device_resources_opengl::data_type_traits<geometry_handle> { using type = gl_geometry; };
     template<> struct device_resources_opengl::data_type_traits<render_pass_handle> { using type = gl_render_pass; };
+    template<> struct device_resources_opengl::data_type_traits<fence_handle> { using type = gl_fence; };
 
     template<> struct device_resources_opengl::handle_type_traits<gl_composer> { using type = frame_composer_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_shader> { using type = shader_handle; };
@@ -171,6 +179,7 @@ namespace tavros::renderer::rhi
     template<> struct device_resources_opengl::handle_type_traits<gl_buffer> { using type = buffer_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_geometry> { using type = geometry_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_render_pass> { using type = render_pass_handle; };
+    template<> struct device_resources_opengl::handle_type_traits<gl_fence> { using type = fence_handle; };
 
     template<> inline core::object_pool<gl_composer>& device_resources_opengl::get_pool<gl_composer>() { return m_composers; }
     template<> inline core::object_pool<gl_shader>& device_resources_opengl::get_pool<gl_shader>() { return m_shaders; }
@@ -182,6 +191,7 @@ namespace tavros::renderer::rhi
     template<> inline core::object_pool<gl_buffer>& device_resources_opengl::get_pool<gl_buffer>() { return m_buffers; }
     template<> inline core::object_pool<gl_geometry>& device_resources_opengl::get_pool<gl_geometry>() { return m_geometries; }
     template<> inline core::object_pool<gl_render_pass>& device_resources_opengl::get_pool<gl_render_pass>() { return m_render_passes; }
+    template<> inline core::object_pool<gl_fence>& device_resources_opengl::get_pool<gl_fence>() { return m_fences; }
     // clang-format on
 
 } // namespace tavros::renderer::rhi
