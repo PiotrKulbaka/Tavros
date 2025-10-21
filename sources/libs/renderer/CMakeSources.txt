@@ -13,8 +13,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_list_opengl.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_list_opengl.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_queue_opengl.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_queue_opengl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/context_opengl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/device_resources_opengl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/frame_composer_opengl.cpp
@@ -30,7 +30,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/string_utils.cpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_create_info.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/command_list.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/command_queue.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/enums.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/frame_composer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/frame_composer_create_info.hpp

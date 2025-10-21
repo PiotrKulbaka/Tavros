@@ -7,7 +7,7 @@
 
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/memory/mallocator.hpp>
-#include <tavros/renderer/rhi/command_list.hpp>
+#include <tavros/renderer/rhi/command_queue.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/camera/camera.hpp>
 #include <tavros/renderer/render_target.hpp>
@@ -640,9 +640,9 @@ public:
         }
 
 
-        auto* cbuf = m_composer->create_command_list();
+        auto* cbuf = m_composer->create_command_queue();
         cbuf->copy_buffer_to_texture(m_stage_buffer, m_texture, 0, tex_size, 0);
-        m_composer->submit_command_list(cbuf);
+        m_composer->submit_command_queue(cbuf);
 
         rhi::sampler_create_info sampler_info;
         sampler_info.filter.mipmap_filter = rhi::mipmap_filter_mode::off;
@@ -757,10 +757,10 @@ public:
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
 
-        cbuf = m_composer->create_command_list();
+        cbuf = m_composer->create_command_queue();
         cbuf->copy_buffer(m_stage_buffer, mesh_vertices_buffer, sizeof(app::cube_vertices), 0, 0);
         cbuf->copy_buffer(m_stage_buffer, mesh_indices_buffer, sizeof(app::cube_indices), sizeof(app::cube_vertices), 0);
-        m_composer->submit_command_list(cbuf);
+        m_composer->submit_command_queue(cbuf);
 
         rhi::shader_binding_create_info mesh_shader_binding_info;
         mesh_shader_binding_info.buffer_bindings.push_back({m_uniform_buffer, 0, sizeof(frame_data), 0});
@@ -988,7 +988,7 @@ public:
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
 
-        auto* cbuf = m_composer->create_command_list();
+        auto* cbuf = m_composer->create_command_queue();
         m_composer->begin_frame();
 
         // Copy m_renderer_frame_data to shader
@@ -1025,7 +1025,7 @@ public:
 
         cbuf->end_render_pass();
 
-        m_composer->submit_command_list(cbuf);
+        m_composer->submit_command_queue(cbuf);
         m_composer->end_frame();
         m_composer->present();
 

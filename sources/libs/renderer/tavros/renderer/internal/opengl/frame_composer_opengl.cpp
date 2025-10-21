@@ -52,7 +52,7 @@ namespace tavros::renderer::rhi
         backbuffer_info.has_depth_stencil_attachment = info.depth_stencil_attachment_format != pixel_format::none;
         backbuffer_info.sample_count = 1; // For backbuffer, sample count must be 1
 
-        m_internal_command_list = core::make_unique<command_list_opengl>(device);
+        m_internal_command_queue = core::make_unique<command_queue_opengl>(device);
 
         m_backbuffer = m_device->get_resources()->create(gl_framebuffer{backbuffer_info, 0, true, info.color_attachment_format, info.depth_stencil_attachment_format});
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
@@ -71,7 +71,7 @@ namespace tavros::renderer::rhi
             }
         }
 
-        m_internal_command_list = nullptr;
+        m_internal_command_queue = nullptr;
 
         m_context.reset();
     }
@@ -133,14 +133,14 @@ namespace tavros::renderer::rhi
         m_frame_started = false;
     }
 
-    command_list* frame_composer_opengl::create_command_list()
+    command_queue* frame_composer_opengl::create_command_queue()
     {
-        return m_internal_command_list.get();
+        return m_internal_command_queue.get();
     }
 
-    void frame_composer_opengl::submit_command_list(command_list* list)
+    void frame_composer_opengl::submit_command_queue(command_queue* queue)
     {
-        TAV_UNUSED(list);
+        TAV_UNUSED(queue);
     }
 
     bool frame_composer_opengl::is_frame_complete()

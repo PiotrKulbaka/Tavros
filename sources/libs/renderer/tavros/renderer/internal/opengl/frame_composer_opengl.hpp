@@ -4,7 +4,7 @@
 
 #include <tavros/renderer/internal/opengl/context_opengl.hpp>
 
-#include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
+#include <tavros/renderer/internal/opengl/command_queue_opengl.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -35,9 +35,9 @@ namespace tavros::renderer::rhi
 
         virtual void end_frame() override;
 
-        virtual command_list* create_command_list() override;
+        virtual command_queue* create_command_queue() override;
 
-        virtual void submit_command_list(command_list* list) override;
+        virtual void submit_command_queue(command_queue* queue) override;
 
         virtual bool is_frame_complete() override;
 
@@ -51,7 +51,7 @@ namespace tavros::renderer::rhi
 
         bool m_frame_started = false;
 
-        core::unique_ptr<command_list_opengl> m_internal_command_list; // Temporary object, will be deleted soon
+        core::unique_ptr<command_queue_opengl> m_internal_command_queue; // Temporary object, will be deleted soon
     };
 
 } // namespace tavros::renderer::rhi

@@ -1,17 +1,17 @@
 #pragma once
 
-#include <tavros/renderer/rhi/command_list.hpp>
+#include <tavros/renderer/rhi/command_queue.hpp>
 #include <tavros/renderer/internal/opengl/graphics_device_opengl.hpp>
 
 namespace tavros::renderer::rhi
 {
 
-    class command_list_opengl final : public command_list
+    class command_queue_opengl final : public command_queue
     {
     public:
-        command_list_opengl(graphics_device_opengl* device);
+        command_queue_opengl(graphics_device_opengl* device);
 
-        ~command_list_opengl() override;
+        ~command_queue_opengl() override;
 
         void bind_pipeline(pipeline_handle pipeline) override;
 

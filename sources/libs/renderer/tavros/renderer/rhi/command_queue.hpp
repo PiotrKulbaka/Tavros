@@ -8,23 +8,23 @@ namespace tavros::renderer::rhi
     /**
      * @brief Low-level abstraction for recording GPU commands.
      *
-     * This interface represents a command list — a sequence of GPU operations such as
+     * This interface represents a command queue — a sequence of GPU operations such as
      * binding resources, performing draw calls, and executing data transfers.
-     * Command lists are designed to be recorded on multiple threads and submitted
+     * Command queues are designed to be recorded on multiple threads and submitted
      * later for execution through a frame_composer.
      *
-     * Each command list encapsulates its own GPU state and does not execute commands
-     * immediately; instead, commands are queued until the list is submitted.
+     * Each command queue encapsulates its own GPU state and does not execute commands
+     * immediately; instead, commands are queued until the queue is submitted.
      */
-    class command_list
+    class command_queue
     {
     public:
-        virtual ~command_list() = default;
+        virtual ~command_queue() = default;
 
         /**
          * @brief Bind a graphics pipeline.
          *
-         * Associates the given pipeline state object with the command list.
+         * Associates the given pipeline state object with the command queue.
          * All subsequent draw commands will use this pipeline until another one is bound.
          *
          * @param pipeline Pipeline handle to bind.

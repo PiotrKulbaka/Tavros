@@ -1,4 +1,4 @@
-#include <tavros/renderer/internal/opengl/command_list_opengl.hpp>
+#include <tavros/renderer/internal/opengl/command_queue_opengl.hpp>
 
 #include <tavros/renderer/internal/opengl/type_conversions.hpp>
 #include <tavros/renderer/rhi/string_utils.hpp>
@@ -13,7 +13,7 @@ using namespace tavros::renderer::rhi;
 
 namespace
 {
-    tavros::core::logger logger("command_list_opengl");
+    tavros::core::logger logger("command_queue_opengl");
 
     GLboolean to_gl_bool(bool value) noexcept
     {
@@ -24,22 +24,22 @@ namespace
 namespace tavros::renderer::rhi
 {
 
-    command_list_opengl::command_list_opengl(graphics_device_opengl* device)
+    command_queue_opengl::command_queue_opengl(graphics_device_opengl* device)
         : m_device(device)
     {
-        ::logger.debug("command_list_opengl created");
+        ::logger.debug("command_queue_opengl created");
 
         GL_CALL(glGenFramebuffers(1, &m_resolve_fbo));
     }
 
-    command_list_opengl::~command_list_opengl()
+    command_queue_opengl::~command_queue_opengl()
     {
         GL_CALL(glDeleteFramebuffers(1, &m_resolve_fbo));
 
-        ::logger.debug("command_list_opengl destroyed");
+        ::logger.debug("command_queue_opengl destroyed");
     }
 
-    void command_list_opengl::bind_pipeline(pipeline_handle pipeline)
+    void command_queue_opengl::bind_pipeline(pipeline_handle pipeline)
     {
         auto* p = m_device->get_resources()->try_get(pipeline);
         if (!p) {
@@ -213,7 +213,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glUseProgram(p->program_obj));
     }
 
-    void command_list_opengl::bind_geometry(geometry_handle geometry)
+    void command_queue_opengl::bind_geometry(geometry_handle geometry)
     {
         if (auto* g = m_device->get_resources()->try_get(geometry)) {
             GL_CALL(glBindVertexArray(g->vao_obj));
@@ -225,7 +225,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_list_opengl::bind_shader_binding(shader_binding_handle shader_binding)
+    void command_queue_opengl::bind_shader_binding(shader_binding_handle shader_binding)
     {
         auto* sb = m_device->get_resources()->try_get(shader_binding);
         if (!sb) {
@@ -289,7 +289,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_list_opengl::begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer)
+    void command_queue_opengl::begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer)
     {
         if (m_current_render_pass || m_current_framebuffer) {
             ::logger.error("Failed to begin render pass {}: previous render pass {} not ended", render_pass, m_current_render_pass);
@@ -488,7 +488,7 @@ namespace tavros::renderer::rhi
         m_current_render_pass = render_pass;
     }
 
-    void command_list_opengl::end_render_pass()
+    void command_queue_opengl::end_render_pass()
     {
         if (!m_current_render_pass || !m_current_framebuffer) {
             ::logger.error("Failed to end render pass: render pass not started");
@@ -606,7 +606,7 @@ namespace tavros::renderer::rhi
         m_current_geometry = geometry_handle();
     }
 
-    void command_list_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)
+    void command_queue_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)
     {
         auto* p = m_device->get_resources()->try_get(m_current_pipeline);
         if (!p) {
@@ -643,7 +643,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_list_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
+    void command_queue_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
     {
         // TODO: unused vertex_offset
         TAV_UNUSED(vertex_offset);
@@ -701,7 +701,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_list_opengl::copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset, size_t dst_offset)
+    void command_queue_opengl::copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset, size_t dst_offset)
     {
         // Get dst and src buffers
         auto* src = m_device->get_resources()->try_get(src_buffer);
@@ -771,7 +771,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_COPY_WRITE_BUFFER, 0));
     }
 
-    void command_list_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset, uint32 row_stride)
+    void command_queue_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset, uint32 row_stride)
     {
         // TODO: unused size
         TAV_UNUSED(size);
@@ -913,7 +913,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
 
-    void command_list_opengl::copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset, uint32 row_stride)
+    void command_queue_opengl::copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset, uint32 row_stride)
     {
         TAV_UNUSED(size);
 
