@@ -128,6 +128,20 @@ namespace tavros::renderer::rhi
          */
         virtual void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset = 0, uint32 row_stride = 0) = 0;
 
+        /**
+         * @brief Copies pixel data from a texture to a buffer.
+         *
+         * This operation transfers image data from a specified texture (or one of its array layers)
+         * into a destination buffer. It can be used for readback operations, such as saving rendered
+         * images or performing CPU-side image processing.
+         *
+         * @param src_texture   Handle to the source texture.
+         * @param dst_buffer    Handle to the destination buffer.
+         * @param layer_index   Index of the texture layer to copy (for array or 3D textures).
+         * @param size          Number of bytes to copy.
+         * @param dst_offset    Byte offset in the destination buffer where data will be written.
+         * @param row_stride    Optional row stride (in bytes). If zero, data is assumed to be tightly packed.
+         */
         virtual void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset = 0, uint32 row_stride = 0) = 0;
     };
 

@@ -14,7 +14,7 @@ namespace tavros::renderer::rhi
     struct vertex_buffer_layout
     {
         /// Vertex buffer handle
-        buffer_handle buffer_h;
+        buffer_handle buffer;
 
         /// Offset in bytes from the start of the GPU buffer to the beginning of the vertex data
         uint32 base_offset = 0;
@@ -63,7 +63,7 @@ namespace tavros::renderer::rhi
         index_buffer_format index_format = index_buffer_format::u16;
 
         /// Handle to the index buffer, if present
-        buffer_handle index_buffer_h;
+        buffer_handle index_buffer;
     };
 
 } // namespace tavros::renderer::rhi

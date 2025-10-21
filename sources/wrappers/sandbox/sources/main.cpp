@@ -743,7 +743,7 @@ public:
         mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::uv_inside), 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 3});
         mesh_geometry_info.has_index_buffer = true;
         mesh_geometry_info.index_format = rhi::index_buffer_format::u32;
-        mesh_geometry_info.index_buffer_h = mesh_indices_buffer;
+        mesh_geometry_info.index_buffer = mesh_indices_buffer;
 
         m_mesh_geometry = m_graphics_device->create_geometry(mesh_geometry_info);
         if (!m_mesh_geometry) {

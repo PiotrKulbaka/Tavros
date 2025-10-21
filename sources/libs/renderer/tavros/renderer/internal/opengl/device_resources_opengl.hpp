@@ -19,44 +19,51 @@ namespace tavros::renderer::rhi
     struct gl_sampler
     {
         sampler_create_info info;
-        GLuint              sampler_obj = 0;
+
+        GLuint sampler_obj = 0;
     };
 
     struct gl_texture
     {
         texture_create_info info;
-        GLuint              texture_obj = 0;
-        GLenum              target = 0;
-        GLuint              renderbuffer_obj = 0;
+
+        GLuint texture_obj = 0;
+        GLenum target = 0;
+        GLuint renderbuffer_obj = 0;
     };
 
     struct gl_pipeline
     {
         pipeline_create_info info;
-        GLuint               program_obj = 0;
+
+        GLuint program_obj = 0;
     };
 
     struct gl_framebuffer
     {
         framebuffer_create_info info;
-        GLuint                  framebuffer_obj = 0;
-        bool                    is_default = false;
-        pixel_format            default_fb_color_format = pixel_format::none;
-        pixel_format            default_fb_ds_format = pixel_format::none;
+
+        GLuint       framebuffer_obj = 0;
+        bool         is_default = false;
+        pixel_format default_fb_color_format = pixel_format::none;
+        pixel_format default_fb_ds_format = pixel_format::none;
     };
 
     struct gl_buffer
     {
         buffer_create_info info;
-        GLuint             buffer_obj = 0;
-        GLenum             gl_target = 0;
-        GLenum             gl_usage = 0;
+
+        GLuint buffer_obj = 0;
+        GLenum gl_target = 0;
+        GLenum gl_usage = 0;
+        bool   is_mapped = false;
     };
 
     struct gl_geometry
     {
         geometry_create_info info;
-        GLuint               vao_obj = 0;
+
+        GLuint vao_obj = 0;
     };
 
     struct gl_render_pass
@@ -72,7 +79,8 @@ namespace tavros::renderer::rhi
     struct gl_shader
     {
         shader_create_info info;
-        GLuint             shader_obj = 0;
+
+        GLuint shader_obj = 0;
     };
 
 

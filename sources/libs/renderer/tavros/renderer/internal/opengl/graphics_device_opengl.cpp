@@ -1301,11 +1301,11 @@ namespace tavros::renderer::rhi
         for (size_t i = 0; i < info.vertex_buffer_layouts.size(); ++i) {
             auto& layout = info.vertex_buffer_layouts[i];
 
-            auto* vb = m_resources.try_get(layout.buffer_h);
+            auto* vb = m_resources.try_get(layout.buffer);
             if (!vb) {
                 ::logger.error(
                     "Failed to create geometry: vertex buffer {} at layout index {} not found",
-                    layout.buffer_h,
+                    layout.buffer,
                     fmt::styled_param(i)
                 );
                 return {};
@@ -1314,7 +1314,7 @@ namespace tavros::renderer::rhi
             if (vb->info.usage != buffer_usage::vertex) {
                 ::logger.error(
                     "Failed to create geometry: buffer {} at layout index {} has invalid usage (expected 'vertex', got '{}')",
-                    layout.buffer_h,
+                    layout.buffer,
                     fmt::styled_param(i),
                     vb->info.usage
                 );
@@ -1327,24 +1327,24 @@ namespace tavros::renderer::rhi
         // Gather index buffer
         gl_buffer* ind_buf = nullptr;
         if (info.has_index_buffer) {
-            auto* ib = m_resources.try_get(info.index_buffer_h);
+            auto* ib = m_resources.try_get(info.index_buffer);
             if (!ib) {
-                ::logger.error("Failed to create geometry: index buffer {} not found", info.index_buffer_h);
+                ::logger.error("Failed to create geometry: index buffer {} not found", info.index_buffer);
                 return {};
             }
 
             if (ib->info.usage != buffer_usage::index) {
                 ::logger.error(
                     "Failed to create geometry: buffer {} has invalid usage (expected 'index', got '{}')",
-                    info.index_buffer_h,
+                    info.index_buffer,
                     ib->info.usage
                 );
                 return {};
             }
 
             ind_buf = ib;
-        } else if (info.index_buffer_h.valid()) {
-            ::logger.warning("Geometry creation: index buffer {} is provided but not enabled", info.index_buffer_h);
+        } else if (info.index_buffer.valid()) {
+            ::logger.warning("Geometry creation: index buffer {} is provided but not enabled", info.index_buffer);
         }
 
         // Check attribute bindings
@@ -1607,43 +1607,23 @@ namespace tavros::renderer::rhi
             return nullptr;
         }
 
-        /*if (b->info.usage != buffer_usage::stage) {
-            ::logger.error(
-                "Failed to map buffer {}: buffer has invalid usage (expected stage, got {})",
-                buffer,
-                b->info.usage
-            );
-            return nullptr;
-        }*/
-
-        // TAV_ASSERT(b->gl_target == GL_COPY_WRITE_BUFFER || b->gl_target == GL_COPY_READ_BUFFER);
-
-        GLenum target = b->gl_target;
-
-        // Get buffer range
-        GL_CALL(glBindBuffer(target, b->buffer_obj));
-
-        void* ptr = nullptr;
-
         if (size == 0) {
-            GLenum access = (b->info.access == buffer_access::cpu_to_gpu) ? GL_WRITE_ONLY : GL_READ_ONLY;
-            ptr = glMapBuffer(
-                target,
-                access // available GL_READ_ONLY, GL_WRITE_ONLY, or GL_READ_WRITE
-            );
-
+            TAV_ASSERT(offset == 0);
             size = b->info.size;
-        } else {
-            GLenum access = (b->info.access == buffer_access::cpu_to_gpu) ? GL_MAP_WRITE_BIT : GL_MAP_READ_BIT;
-            ptr = glMapBufferRange(
-                target,
-                static_cast<GLintptr>(offset),
-                static_cast<GLsizeiptr>(size),
-                access | GL_MAP_INVALIDATE_RANGE_BIT //| GL_MAP_UNSYNCHRONIZED_BIT
-            );
         }
 
+        bool   is_write = b->info.access == buffer_access::cpu_to_gpu;
+        GLenum access = (is_write ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT : GL_MAP_READ_BIT); // | GL_MAP_UNSYNCHRONIZED_BIT;
+        GLenum target = b->gl_target;
+
+        GL_CALL(glBindBuffer(target, b->buffer_obj));
+        void* ptr = glMapBufferRange(target, static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size), access);
         GL_CALL(glBindBuffer(target, 0));
+
+        if (!ptr) {
+            ::logger.error("Failed to map buffer {}: glMapBufferRange returned nullptr", buffer);
+            return nullptr;
+        }
 
         return core::buffer_span<uint8>(reinterpret_cast<uint8*>(ptr), size);
     }
@@ -1656,20 +1636,9 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        /*if (b->info.usage != buffer_usage::stage) {
-            ::logger.error(
-                "Failed to unmap buffer {}: buffer has invalid usage (expected stage, got {})",
-                buffer,
-                b->info.usage
-            );
-            return;
-        }*/
-
         auto target = b->gl_target;
         GL_CALL(glBindBuffer(target, b->buffer_obj));
-
         GL_CALL(glUnmapBuffer(target));
-
         GL_CALL(glBindBuffer(target, 0));
     }
 
