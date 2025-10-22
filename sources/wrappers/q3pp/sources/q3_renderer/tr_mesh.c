@@ -227,7 +227,7 @@ void R_AddMD3Surfaces(trRefEntity_t* ent)
         || (ent->e.frame < 0)
         || (ent->e.oldframe >= tr.currentModel->md3[0]->numFrames)
         || (ent->e.oldframe < 0)) {
-        logger.debug("R_AddMD3Surfaces: no such frame %d to %d for '%s'", ent->e.oldframe, ent->e.frame, tr.currentModel->name);
+        logger.debug("R_AddMD3Surfaces: no such frame {} to {} for '{}'", ent->e.oldframe, ent->e.frame, tr.currentModel->name);
         ent->e.frame = 0;
         ent->e.oldframe = 0;
     }
@@ -283,9 +283,9 @@ void R_AddMD3Surfaces(trRefEntity_t* ent)
                 }
             }
             if (shader == tr.defaultShader) {
-                logger.debug("WARNING: no shader for surface %s in skin %s", surface->name, skin->name);
+                logger.debug("WARNING: no shader for surface {} in skin {}", surface->name, skin->name);
             } else if (shader->defaultShader) {
-                logger.debug("WARNING: shader %s in skin %s not found", shader->name, skin->name);
+                logger.debug("WARNING: shader {} in skin {} not found", shader->name, skin->name);
             }
         } else if (surface->numShaders <= 0) {
             shader = tr.defaultShader;

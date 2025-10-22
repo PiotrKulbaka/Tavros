@@ -329,7 +329,7 @@ void target_laser_start(gentity_t* self)
     if (self->target) {
         ent = G_Find(NULL, FOFS(targetname), self->target);
         if (!ent) {
-            logger.info("%s at %s: %s is a bad target", self->classname, vtos(self->s.origin), self->target);
+            logger.info("{} at {}: {} is a bad target", self->classname, vtos(self->s.origin), self->target);
         }
         self->enemy = ent;
     } else {
@@ -382,7 +382,7 @@ The activator will be teleported away.
 void SP_target_teleporter(gentity_t* self)
 {
     if (!self->targetname) {
-        logger.info("untargeted %s at %s", self->classname, vtos(self->s.origin));
+        logger.info("untargeted {} at {}", self->classname, vtos(self->s.origin));
     }
 
     self->use = target_teleporter_use;

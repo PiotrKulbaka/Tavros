@@ -367,7 +367,7 @@ void player_die(gentity_t* self, gentity_t* inflictor, gentity_t* attacker, int3
         obit = modNames[meansOfDeath];
     }
 
-    logger.debug("Kill: %i %i %i: %s killed %s by %s", killer, self->s.number, meansOfDeath, killerName, self->client->pers.netname, obit);
+    logger.debug("Kill: {} {} {}: {} killed {} by {}", killer, self->s.number, meansOfDeath, killerName, self->client->pers.netname, obit);
 
     // broadcast the death event to everyone
     ent = G_TempEntity(self->r.currentOrigin, EV_OBITUARY);
@@ -747,7 +747,7 @@ void G_Damage(gentity_t* targ, gentity_t* inflictor, gentity_t* attacker, vec3_t
     take -= asave;
 
     if (g_debugDamage->integer) {
-        logger.debug("%i: client:%i health:%i damage:%i armor:%i\n", level.time, targ->s.number, targ->health, take, asave);
+        logger.debug("{}: client:{} health:{} damage:{} armor:{}\n", level.time, targ->s.number, targ->health, take, asave);
     }
 
     // add to the damage inflicted on a player this frame

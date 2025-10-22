@@ -202,7 +202,7 @@ static void R_LoadLightmaps(lump_t* l)
     }
 
     if (r_lightmap->integer == 2) {
-        logger.info("Brightest lightmap value: %d", (int32) (maxIntensity * 255));
+        logger.info("Brightest lightmap value: {}", (int32) (maxIntensity * 255));
     }
 }
 
@@ -294,7 +294,7 @@ static void ParseFace(dsurface_t* ds, drawVert_t* verts, msurface_t* surf, int32
 
     numPoints = (ds->numVerts);
     if (numPoints > MAX_FACE_POINTS) {
-        logger.warning("MAX_FACE_POINTS exceeded: %i", numPoints);
+        logger.warning("MAX_FACE_POINTS exceeded: {}", numPoints);
         numPoints = MAX_FACE_POINTS;
         surf->shader = tr.defaultShader;
     }
@@ -1338,7 +1338,7 @@ void R_StitchAllPatches()
             numstitches += R_TryStitchingPatch(i);
         }
     } while (stitched);
-    logger.info("Stitched %d LoD cracks", numstitches);
+    logger.info("Stitched {} LoD cracks", numstitches);
 }
 
 /*
@@ -1443,7 +1443,7 @@ static void R_LoadSurfaces(lump_t* surfs, lump_t* verts, lump_t* indexLump)
     R_FixSharedVertexLodError();
     R_MovePatchSurfacesToHunk();
 
-    logger.info("...loaded %d faces, %i meshes, %i trisurfs, %i flares", numFaces, numMeshes, numTriSurfs, numFlares);
+    logger.info("...loaded {} faces, {} meshes, {} trisurfs, {} flares", numFaces, numMeshes, numTriSurfs, numFlares);
 }
 
 
@@ -1885,7 +1885,7 @@ void R_LoadEntities(lump_t* l)
         if (!Q_strncmp(keyname, s, strlen(s))) {
             s = strchr(value, ';');
             if (!s) {
-                logger.warning("No semi colon in vertexshaderremap '%s'", value);
+                logger.warning("No semi colon in vertexshaderremap '{}'", value);
                 break;
             }
             *s++ = 0;
@@ -1896,7 +1896,7 @@ void R_LoadEntities(lump_t* l)
         if (!Q_strncmp(keyname, s, strlen(s))) {
             s = strchr(value, ';');
             if (!s) {
-                logger.warning("No semi colon in shaderremap '%s'", value);
+                logger.warning("No semi colon in shaderremap '{}'", value);
                 break;
             }
             *s++ = 0;

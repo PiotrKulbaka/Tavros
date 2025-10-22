@@ -184,7 +184,7 @@ void CL_AdjustTimeDelta()
     }
 
     if (cl_showTimeDelta->integer) {
-        logger.info("%s%i ", info, cl.serverTimeDelta);
+        logger.info("{}{} ", info, cl.serverTimeDelta);
     }
 }
 

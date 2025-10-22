@@ -339,17 +339,17 @@ bool S_LoadSound(sfx_t* sfx)
 
     info = GetWavinfo(sfx->soundName, data, size);
     if (info.channels != 1) {
-        logger.info("%s is a stereo wav file", sfx->soundName);
+        logger.info("{} is a stereo wav file", sfx->soundName);
         FS_FreeFile(data);
         return false;
     }
 
     if (info.width == 1) {
-        logger.debug("%s is a 8 bit wav file", sfx->soundName);
+        logger.debug("{} is a 8 bit wav file", sfx->soundName);
     }
 
     if (info.rate != 22050) {
-        logger.debug("%s is not a 22kHz wav file\n", sfx->soundName);
+        logger.debug("{} is not a 22kHz wav file\n", sfx->soundName);
     }
 
     samples = (int16*) Hunk_AllocateTempMemory(info.samples * sizeof(int16) * 2);
@@ -382,5 +382,5 @@ bool S_LoadSound(sfx_t* sfx)
 
 void S_DisplayFreeMemory()
 {
-    logger.info("%d bytes free sound buffer memory, %d total used", inUse, totalInUse);
+    logger.info("{} bytes free sound buffer memory, {} total used", inUse, totalInUse);
 }

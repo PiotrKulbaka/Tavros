@@ -50,7 +50,7 @@ Debugging command to print the current position
 */
 static void CG_Viewpos_f()
 {
-    logger.info("(%i %i %i) : %i", (int32) cg.refdef.vieworg[0], (int32) cg.refdef.vieworg[1], (int32) cg.refdef.vieworg[2], (int32) cg.refdefViewAngles[YAW]);
+    logger.info("({} {} {}) : {}", (int32) cg.refdef.vieworg[0], (int32) cg.refdef.vieworg[1], (int32) cg.refdef.vieworg[2], (int32) cg.refdefViewAngles[YAW]);
 }
 
 
@@ -212,7 +212,7 @@ bool CG_ConsoleCommand()
 
     for (i = 0; i < sizeof(commands) / sizeof(commands[0]); i++) {
         if (!Q_stricmp(cmd, commands[i].cmd)) {
-            logger.debug("Execute command: '%s'", cmd);
+            logger.debug("Execute command: '{}'", cmd);
             commands[i].function();
             return true;
         }

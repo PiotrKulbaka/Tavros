@@ -363,7 +363,7 @@ void SV_SpawnServer(char* server, bool killBots)
     SV_ShutdownGameProgs();
 
     logger.info("------ Server Initialization ------");
-    logger.info("Server: %s", server);
+    logger.info("Server: {}", server);
 
     // if not running a dedicated server CL_MapLoading will connect the client to the server
     // also print some status stuff

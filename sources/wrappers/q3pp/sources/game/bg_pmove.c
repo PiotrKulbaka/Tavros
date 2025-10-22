@@ -967,7 +967,7 @@ static int32 PM_CorrectAllSolid(trace_t* trace)
     int32  i, j, k;
     vec3_t point;
 
-    logger.debug("%i:allsolid", c_pmove);
+    logger.debug("{}:allsolid", c_pmove);
 
     // jitter around
     for (i = -1; i <= 1; i++) {
@@ -1013,7 +1013,7 @@ static void PM_GroundTraceMissed()
 
     if (pm->ps->groundEntityNum != ENTITYNUM_NONE) {
         // we just transitioned into freefall
-        logger.debug("%i:lift", c_pmove);
+        logger.debug("{}:lift", c_pmove);
 
         // if they aren't in a jumping animation and the ground is a ways away, force into it
         // if we didn't do the trace, the player would be backflipping down staircases
@@ -1072,7 +1072,7 @@ static void PM_GroundTrace()
 
     // check if getting thrown off the ground
     if (pm->ps->velocity[2] > 0 && DotProduct(pm->ps->velocity, trace.plane.normal) > 10) {
-        logger.debug("%i:kickoff", c_pmove);
+        logger.debug("{}:kickoff", c_pmove);
         // go into jump animation
         if (pm->cmd.forwardmove >= 0) {
             PM_ForceLegsAnim(LEGS_JUMP);
@@ -1090,7 +1090,7 @@ static void PM_GroundTrace()
 
     // slopes that are too steep will not be considered onground
     if (trace.plane.normal[2] < MIN_WALK_NORMAL) {
-        logger.debug("%i:steep", c_pmove);
+        logger.debug("{}:steep", c_pmove);
         // FIXME: if they can't slide down the slope, let them
         // walk (sharp crevices)
         pm->ps->groundEntityNum = ENTITYNUM_NONE;
@@ -1110,7 +1110,7 @@ static void PM_GroundTrace()
 
     if (pm->ps->groundEntityNum == ENTITYNUM_NONE) {
         // just hit the ground
-        logger.debug("%i:Land", c_pmove);
+        logger.debug("{}:Land", c_pmove);
 
         PM_CrashLand();
 

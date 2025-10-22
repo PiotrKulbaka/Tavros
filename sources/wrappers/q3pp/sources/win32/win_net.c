@@ -315,7 +315,7 @@ bool Sys_GetPacket(netadr_t* net_from, msg_t* net_message)
             if (err == WSAEWOULDBLOCK || err == WSAECONNRESET) {
                 continue;
             }
-            logger.info("NET_GetPacket: %s", NET_ErrorString());
+            logger.info("NET_GetPacket: {}", NET_ErrorString());
             continue;
         }
 
@@ -340,7 +340,7 @@ bool Sys_GetPacket(netadr_t* net_from, msg_t* net_message)
         }
 
         if (ret == net_message->maxsize) {
-            logger.info("Oversize packet from %s", NET_AdrToString(*net_from));
+            logger.info("Oversize packet from {}", NET_AdrToString(*net_from));
             continue;
         }
 
@@ -410,7 +410,7 @@ void Sys_SendPacket(int32 length, const void* data, netadr_t to)
             return;
         }
 
-        logger.info("NET_SendPacket: %s", NET_ErrorString());
+        logger.info("NET_SendPacket: {}", NET_ErrorString());
     }
 }
 
@@ -495,7 +495,7 @@ void Sys_ShowIP()
     int32 i;
 
     for (i = 0; i < numIP; i++) {
-        logger.info("IP: %i.%i.%i.%i", localIP[i][0], localIP[i][1], localIP[i][2], localIP[i][3]);
+        logger.info("IP: {}.{}.{}.{}", localIP[i][0], localIP[i][1], localIP[i][2], localIP[i][3]);
     }
 }
 
@@ -517,28 +517,28 @@ int32 NET_IPSocket(char* net_interface, int32 port)
     int32              err;
 
     if (net_interface) {
-        logger.info("Opening IP socket: %s:%i", net_interface, port);
+        logger.info("Opening IP socket: {}:{}", net_interface, port);
     } else {
-        logger.info("Opening IP socket: localhost:%i", port);
+        logger.info("Opening IP socket: localhost:{}", port);
     }
 
     if ((newsocket = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
         err = WSAGetLastError();
         if (err != WSAEAFNOSUPPORT) {
-            logger.warning("UDP_OpenSocket: socket: %s", NET_ErrorString());
+            logger.warning("UDP_OpenSocket: socket: {}", NET_ErrorString());
         }
         return 0;
     }
 
     // make it non-blocking
     if (ioctlsocket(newsocket, FIONBIO, (u_long*) &_true) == SOCKET_ERROR) {
-        logger.warning("UDP_OpenSocket: ioctl FIONBIO: %s", NET_ErrorString());
+        logger.warning("UDP_OpenSocket: ioctl FIONBIO: {}", NET_ErrorString());
         return 0;
     }
 
     // make it broadcast capable
     if (setsockopt(newsocket, SOL_SOCKET, SO_BROADCAST, (char*) &i, sizeof(i)) == SOCKET_ERROR) {
-        logger.warning("UDP_OpenSocket: setsockopt SO_BROADCAST: %s", NET_ErrorString());
+        logger.warning("UDP_OpenSocket: setsockopt SO_BROADCAST: {}", NET_ErrorString());
         return 0;
     }
 
@@ -557,7 +557,7 @@ int32 NET_IPSocket(char* net_interface, int32 port)
     address.sin_family = AF_INET;
 
     if (bind(newsocket, (const struct sockaddr*) &address, sizeof(address)) == SOCKET_ERROR) {
-        logger.warning("UDP_OpenSocket: bind: %s", NET_ErrorString());
+        logger.warning("UDP_OpenSocket: bind: {}", NET_ErrorString());
         closesocket(newsocket);
         return 0;
     }
@@ -586,14 +586,14 @@ void NET_OpenSocks(int32 port)
 
     if ((socks_socket = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP)) == INVALID_SOCKET) {
         err = WSAGetLastError();
-        logger.warning("NET_OpenSocks: socket: %s", NET_ErrorString());
+        logger.warning("NET_OpenSocks: socket: {}", NET_ErrorString());
         return;
     }
 
     h = gethostbyname(net_socksServer->string);
     if (h == NULL) {
         err = WSAGetLastError();
-        logger.warning("NET_OpenSocks: gethostbyname: %s", NET_ErrorString());
+        logger.warning("NET_OpenSocks: gethostbyname: {}", NET_ErrorString());
         return;
     }
     if (h->h_addrtype != AF_INET) {
@@ -606,7 +606,7 @@ void NET_OpenSocks(int32 port)
 
     if (connect(socks_socket, (struct sockaddr*) &address, sizeof(address)) == SOCKET_ERROR) {
         err = WSAGetLastError();
-        logger.info("NET_OpenSocks: connect: %s", NET_ErrorString());
+        logger.info("NET_OpenSocks: connect: {}", NET_ErrorString());
         return;
     }
 
@@ -632,7 +632,7 @@ void NET_OpenSocks(int32 port)
     }
     if (send(socks_socket, (const char*) buf, len, 0) == SOCKET_ERROR) {
         err = WSAGetLastError();
-        logger.info("NET_OpenSocks: send: %s", NET_ErrorString());
+        logger.info("NET_OpenSocks: send: {}", NET_ErrorString());
         return;
     }
 
@@ -640,7 +640,7 @@ void NET_OpenSocks(int32 port)
     len = recv(socks_socket, (char*) buf, 64, 0);
     if (len == SOCKET_ERROR) {
         err = WSAGetLastError();
-        logger.info("NET_OpenSocks: recv: %s", NET_ErrorString());
+        logger.info("NET_OpenSocks: recv: {}", NET_ErrorString());
         return;
     }
     if (len != 2 || buf[0] != 5) {
@@ -679,7 +679,7 @@ void NET_OpenSocks(int32 port)
         // send it
         if (send(socks_socket, (const char*) buf, 3 + ulen + plen, 0) == SOCKET_ERROR) {
             err = WSAGetLastError();
-            logger.info("NET_OpenSocks: send: %s", NET_ErrorString());
+            logger.info("NET_OpenSocks: send: {}", NET_ErrorString());
             return;
         }
 
@@ -687,7 +687,7 @@ void NET_OpenSocks(int32 port)
         len = recv(socks_socket, (char*) buf, 64, 0);
         if (len == SOCKET_ERROR) {
             err = WSAGetLastError();
-            logger.info("NET_OpenSocks: recv: %s", NET_ErrorString());
+            logger.info("NET_OpenSocks: recv: {}", NET_ErrorString());
             return;
         }
         if (len != 2 || buf[0] != 1) {
@@ -709,7 +709,7 @@ void NET_OpenSocks(int32 port)
     *(int16*) &buf[8] = htons((int16) port); // port
     if (send(socks_socket, (char*) buf, 10, 0) == SOCKET_ERROR) {
         err = WSAGetLastError();
-        logger.info("NET_OpenSocks: send: %s", NET_ErrorString());
+        logger.info("NET_OpenSocks: send: {}", NET_ErrorString());
         return;
     }
 
@@ -717,7 +717,7 @@ void NET_OpenSocks(int32 port)
     len = recv(socks_socket, (char*) buf, 64, 0);
     if (len == SOCKET_ERROR) {
         err = WSAGetLastError();
-        logger.info("NET_OpenSocks: recv: %s", NET_ErrorString());
+        logger.info("NET_OpenSocks: recv: {}", NET_ErrorString());
         return;
     }
     if (len < 2 || buf[0] != 5) {
@@ -726,11 +726,11 @@ void NET_OpenSocks(int32 port)
     }
     // check completion code
     if (buf[1] != 0) {
-        logger.info("NET_OpenSocks: request denied: %i", buf[1]);
+        logger.info("NET_OpenSocks: request denied: {}", buf[1]);
         return;
     }
     if (buf[3] != 1) {
-        logger.info("NET_OpenSocks: relay address is not IPV4: %i", buf[3]);
+        logger.info("NET_OpenSocks: relay address is not IPV4: {}", buf[3]);
         return;
     }
     ((struct sockaddr_in*) &socksRelayAddr)->sin_family = AF_INET;
@@ -767,10 +767,10 @@ void NET_GetLocalAddress()
         return;
     }
 
-    logger.info("Hostname: %s", hostInfo->h_name);
+    logger.info("Hostname: {}", hostInfo->h_name);
     n = 0;
     while ((p = hostInfo->h_aliases[n++]) != NULL) {
-        logger.info("Alias: %s", p);
+        logger.info("Alias: {}", p);
     }
 
     if (hostInfo->h_addrtype != AF_INET) {
@@ -784,7 +784,7 @@ void NET_GetLocalAddress()
         localIP[numIP][1] = p[1];
         localIP[numIP][2] = p[2];
         localIP[numIP][3] = p[3];
-        logger.info("IP: %i.%i.%i.%i", (ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff);
+        logger.info("IP: {}.{}.{}.{}", (ip >> 24) & 0xff, (ip >> 16) & 0xff, (ip >> 8) & 0xff, ip & 0xff);
         numIP++;
     }
 }
@@ -836,20 +836,20 @@ int32 NET_IPXSocket(int32 port)
     if ((newsocket = socket(AF_IPX, SOCK_DGRAM, NSPROTO_IPX)) == INVALID_SOCKET) {
         err = WSAGetLastError();
         if (err != WSAEAFNOSUPPORT) {
-            logger.warning("IPX_Socket: socket: %s", NET_ErrorString());
+            logger.warning("IPX_Socket: socket: {}", NET_ErrorString());
         }
         return 0;
     }
 
     // make it non-blocking
     if (ioctlsocket(newsocket, FIONBIO, (u_long*) &_true) == SOCKET_ERROR) {
-        logger.warning("IPX_Socket: ioctl FIONBIO: %s", NET_ErrorString());
+        logger.warning("IPX_Socket: ioctl FIONBIO: {}", NET_ErrorString());
         return 0;
     }
 
     // make it broadcast capable
     if (setsockopt(newsocket, SOL_SOCKET, SO_BROADCAST, (char*) &_true, sizeof(_true)) == SOCKET_ERROR) {
-        logger.warning("IPX_Socket: setsockopt SO_BROADCAST: %s", NET_ErrorString());
+        logger.warning("IPX_Socket: setsockopt SO_BROADCAST: {}", NET_ErrorString());
         return 0;
     }
 
@@ -863,7 +863,7 @@ int32 NET_IPXSocket(int32 port)
     }
 
     if (bind(newsocket, (const struct sockaddr*) &address, sizeof(address)) == SOCKET_ERROR) {
-        logger.warning("IPX_Socket: bind: %s", NET_ErrorString());
+        logger.warning("IPX_Socket: bind: {}", NET_ErrorString());
         closesocket(newsocket);
         return 0;
     }
@@ -1022,7 +1022,7 @@ void NET_Init()
 
     r = WSAStartup(MAKEWORD(1, 1), &winsockdata);
     if (r) {
-        logger.warning("Winsock initialization failed, returned %d", r);
+        logger.warning("Winsock initialization failed, returned {}", r);
         return;
     }
 

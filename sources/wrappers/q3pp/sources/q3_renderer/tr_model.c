@@ -116,7 +116,7 @@ qhandle_t RE_RegisterModel(const char* name)
     // allocate a new model_t
 
     if ((mod = R_AllocModel()) == NULL) {
-        logger.warning("RE_RegisterModel: R_AllocModel() failed for '%s'", name);
+        logger.warning("RE_RegisterModel: R_AllocModel() failed for '{}'", name);
         return 0;
     }
 
@@ -157,7 +157,7 @@ qhandle_t RE_RegisterModel(const char* name)
             loaded = R_LoadMD4(mod, buf, name);
         } else {
             if (ident != MD3_IDENT) {
-                logger.warning("RE_RegisterModel: unknown fileid for %s", name);
+                logger.warning("RE_RegisterModel: unknown fileid for {}", name);
                 goto fail;
             }
 
@@ -187,7 +187,7 @@ qhandle_t RE_RegisterModel(const char* name)
 
         return mod->index;
     } else {
-        logger.warning("RE_RegisterModel: couldn't load %s", name);
+        logger.warning("RE_RegisterModel: couldn't load {}", name);
     }
 
 fail:
@@ -219,7 +219,7 @@ static bool R_LoadMD3(model_t* mod, int32 lod, void* buffer, const char* mod_nam
 
     version = (pinmodel->version);
     if (version != MD3_VERSION) {
-        logger.warning("R_LoadMD3: %s has wrong version (%i should be %i)", mod_name, version, MD3_VERSION);
+        logger.warning("R_LoadMD3: {} has wrong version ({} should be {})", mod_name, version, MD3_VERSION);
         return false;
     }
 
@@ -231,7 +231,7 @@ static bool R_LoadMD3(model_t* mod, int32 lod, void* buffer, const char* mod_nam
     Com_Memcpy(mod->md3[lod], buffer, (pinmodel->ofsEnd));
 
     if (mod->md3[lod]->numFrames < 1) {
-        logger.warning("R_LoadMD3: %s has no frames", mod_name);
+        logger.warning("R_LoadMD3: {} has no frames", mod_name);
         return false;
     }
 
@@ -323,7 +323,7 @@ static bool R_LoadMD4(model_t* mod, void* buffer, const char* mod_name)
 
     version = (pinmodel->version);
     if (version != MD4_VERSION) {
-        logger.warning("R_LoadMD4: %s has wrong version (%i should be %i)", mod_name, version, MD4_VERSION);
+        logger.warning("R_LoadMD4: {} has wrong version ({} should be {})", mod_name, version, MD4_VERSION);
         return false;
     }
 
@@ -335,7 +335,7 @@ static bool R_LoadMD4(model_t* mod, void* buffer, const char* mod_name)
     Com_Memcpy(md4, buffer, (pinmodel->ofsEnd));
 
     if (md4->numFrames < 1) {
-        logger.warning("R_LoadMD4: %s has no frames", mod_name);
+        logger.warning("R_LoadMD4: {} has no frames", mod_name);
         return false;
     }
 
@@ -484,7 +484,7 @@ void R_Modellist_f()
                 lods++;
             }
         }
-        logger.info("%8i : (%i) %s", mod->dataSize, lods, mod->name);
+        logger.info("%8i : ({}) {}", mod->dataSize, lods, mod->name);
         total += mod->dataSize;
     }
     logger.info("%8i : Total models", total);

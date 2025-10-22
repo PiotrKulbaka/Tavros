@@ -195,7 +195,7 @@ static void CG_Obituary(entityState_t* ent)
     }
 
     if (message) {
-        logger.info("%s %s.", targetName, message);
+        logger.info("{} {}.", targetName, message);
         return;
     }
 
@@ -285,13 +285,13 @@ static void CG_Obituary(entityState_t* ent)
         }
 
         if (message) {
-            logger.info("%s %s %s%s", targetName, message, attackerName, message2);
+            logger.info("{} {} {}{}", targetName, message, attackerName, message2);
             return;
         }
     }
 
     // we don't know what it was
-    logger.info("%s died.", targetName);
+    logger.info("{} died.", targetName);
 }
 
 //==========================================================================
@@ -901,8 +901,7 @@ void CG_EntityEvent(centity_t* cent, vec3_t position)
         break;
 
     default:
-        ::logger.error("Unknown event: %i", event);
-        // CG_Error("Unknown event: %i", event);
+        ::logger.error("Unknown event: {}", event);
         break;
     }
 }

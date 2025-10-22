@@ -8,6 +8,10 @@
 #include <tavros/core/math/vec3.hpp>
 #include <tavros/core/math/vec4.hpp>
 
+#ifdef max
+    #undef max
+#endif
+
 namespace tavros::math
 {
 

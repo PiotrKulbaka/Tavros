@@ -646,8 +646,7 @@ void CG_Init(int32 serverMessageNum, int32 serverCommandSequence, int32 clientNu
     // check version
     s = CG_ConfigString(CS_GAME_VERSION);
     if (strcmp(s, GAME_VERSION)) {
-        logger.error("Client/Server game mismatch: %s/%s", GAME_VERSION, s);
-        // CG_Error("Client/Server game mismatch: %s/%s", GAME_VERSION, s);
+        logger.error("Client/Server game mismatch: {}/{}", GAME_VERSION, s);
     }
 
     s = CG_ConfigString(CS_LEVEL_START_TIME);

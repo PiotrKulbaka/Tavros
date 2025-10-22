@@ -281,8 +281,8 @@ public:
     {
         m_wnd = tavros::system::interfaces::window::create(title);
 
-        g_wv.hWnd = (HWND) m_wnd->get_handle();
-        m_swapchain = std::make_unique<opengl_swapchain>(m_wnd->get_handle());
+        g_wv.hWnd = (HWND) m_wnd->native_handle();
+        m_swapchain = std::make_unique<opengl_swapchain>(m_wnd->native_handle());
         if (!m_swapchain->init()) {
             ::logger.error("Failed to initialize swapchain.");
         }
@@ -411,8 +411,8 @@ void GLimp_Init()
 {
     logger.info("Initializing OpenGL subsystem");
 
-    int32 width = 1366;
-    int32 height = 768;
+    int32 width = 1366 * 2;
+    int32 height = 768 * 2;
 
     if (!s_main_window) {
         glConfig.vidWidth = width;
@@ -894,6 +894,22 @@ void Sys_Init()
 
 FILE* log_f = nullptr;
 
+void enable_virtual_terminal()
+{
+    HANDLE h_out = GetStdHandle(STD_OUTPUT_HANDLE);
+    if (h_out == INVALID_HANDLE_VALUE) {
+        return;
+    }
+
+    DWORD mode = 0;
+    if (!GetConsoleMode(h_out, &mode)) {
+        return;
+    }
+
+    // Добавляем поддержку виртуальных управляющих последовательностей
+    mode |= ENABLE_VIRTUAL_TERMINAL_PROCESSING;
+    SetConsoleMode(h_out, mode);
+}
 
 /* WinMain */
 int32 WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int32 nCmdShow)
@@ -903,9 +919,18 @@ int32 WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
         return 0;
     }
 
+    AllocConsole();
+    enable_virtual_terminal();
+
+    FILE* fp;
+    freopen_s(&fp, "CONOUT$", "w", stdout);
+    freopen_s(&fp, "CONOUT$", "w", stderr);
+    freopen_s(&fp, "CONIN$", "r", stdin);
+
     log_f = fopen("qlog.log", "w");
     tavros::core::logger::add_consumer([](tavros::core::severity_level, tavros::core::string_view tag, tavros::core::string_view msg) {
         fprintf(log_f, "%s\n", msg.data());
+        printf("%s\n", msg.data());
         fflush(log_f);
     });
 

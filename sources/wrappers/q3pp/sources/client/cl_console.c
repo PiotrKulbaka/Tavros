@@ -177,7 +177,7 @@ void Con_Dump_f()
         return;
     }
 
-    logger.info("Dumped console text to %s.", Cmd_Argv(1));
+    logger.info("Dumped console text to {}.", Cmd_Argv(1));
 
     f = FS_FOpenFileWrite(Cmd_Argv(1));
     if (!f) {

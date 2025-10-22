@@ -94,23 +94,23 @@ void QDECL BotAI_Print(int32 type, const char* fmt, ...)
 
     switch (type) {
     case PRT_MESSAGE: {
-        logger.info("%s", str);
+        logger.info("{}", str);
         break;
     }
     case PRT_WARNING: {
-        logger.warning("%s", str);
+        logger.warning("{}", str);
         break;
     }
     case PRT_ERROR: {
-        logger.error("%s", str);
+        logger.error("{}", str);
         break;
     }
     case PRT_FATAL: {
-        logger.error("Fatal: %s", str);
+        logger.error("Fatal: {}", str);
         break;
     }
     case PRT_EXIT: {
-        logger.error("Exit: %s", str);
+        logger.error("Exit: {}", str);
         break;
     }
     default: {

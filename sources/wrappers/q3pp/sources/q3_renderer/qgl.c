@@ -380,7 +380,7 @@ static void* GetGLLibProcAddress(const char* func_name)
     if (s_opengl_lib.is_open()) {
         void* func = s_opengl_lib.get_symbol(func_name);
         if (func == NULL) {
-            logger.info("...GetGLLibProcAddress() failed: function '%s' was not found.", func_name);
+            logger.info("...GetGLLibProcAddress() failed: function '{}' was not found.", func_name);
         }
         return func;
     } else {
@@ -432,7 +432,7 @@ static void* OpenGL_GetProcAddress(const char* func_name)
         func = GetGLLibProcAddress(func_name);
     }
     if (func == NULL) {
-        logger.info("...OpenGL_GetProcAddress() failed: function '%s' was not found.", func_name);
+        logger.info("...OpenGL_GetProcAddress() failed: function '{}' was not found.", func_name);
     }
     return func;
 }

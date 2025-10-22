@@ -224,7 +224,7 @@ gentity_t* G_PickTarget(char* targetname)
     }
 
     if (!num_choices) {
-        logger.info("G_PickTarget: target %s not found", targetname);
+        logger.info("G_PickTarget: target {} not found", targetname);
         return NULL;
     }
 
@@ -407,7 +407,7 @@ gentity_t* G_Spawn()
     }
     if (i == ENTITYNUM_MAX_NORMAL) {
         for (i = 0; i < MAX_GENTITIES; i++) {
-            logger.info("%4i: %s", i, g_entities[i].classname);
+            logger.info("%4i: {}", i, g_entities[i].classname);
         }
         G_Error("G_Spawn: no free entities");
     }
@@ -545,7 +545,7 @@ void G_AddEvent(gentity_t* ent, int32 event, int32 eventParm)
     int32 bits;
 
     if (!event) {
-        logger.info("G_AddEvent: zero event added for entity %i", ent->s.number);
+        logger.info("G_AddEvent: zero event added for entity {}", ent->s.number);
         return;
     }
 

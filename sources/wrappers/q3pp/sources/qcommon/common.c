@@ -144,7 +144,7 @@ void QDECL Com_Error(int32 code, const char* fmt, ...)
         com_errorEntered = false;
         longjmp(abortframe, -1);
     } else if (code == ERR_DROP || code == ERR_DISCONNECT) {
-        logger.info("********************\nERROR: %s\n********************\n", com_errorMessage);
+        logger.info("********************\nERROR: {}\n********************\n", com_errorMessage);
         SV_Shutdown(va("Server crashed: %s\n", com_errorMessage));
         CL_Disconnect(true);
         CL_FlushMemory();
@@ -513,7 +513,7 @@ static void Z_Init()
 
 void* Z_TagMalloc(int32 size, const char* tag)
 {
-    return zallocator->allocate(size, tag);
+    return zallocator->allocate(size, 8, tag);
 }
 
 void Z_Free(void* ptr)
@@ -642,7 +642,7 @@ void* Hunk_Alloc(int32 size, ha_pref preference)
     if (hallocator == nullptr) {
         Com_Error(ERR_FATAL, "Hunk_Alloc: Hunk memory system not initialized");
     }
-    return hallocator->allocate(size);
+    return hallocator->allocate(size, 8);
 }
 
 /*
@@ -653,9 +653,9 @@ Hunk_AllocateTempMemory
 void* Hunk_AllocateTempMemory(int32 size)
 {
     if (hallocator_temp) {
-        return hallocator_temp->allocate(size);
+        return hallocator_temp->allocate(size, 8);
     }
-    return zallocator->allocate(size);
+    return zallocator->allocate(size, 8);
 }
 
 /*
@@ -785,7 +785,7 @@ void Com_RunAndTimeServerPacket(netadr_t* evFrom, msg_t* buf)
         t2 = Sys_Milliseconds();
         msec = t2 - t1;
         if (com_speeds->integer == 3) {
-            logger.info("SV_PacketEvent time: %i", msec);
+            logger.info("SV_PacketEvent time: {}", msec);
         }
     }
 }
@@ -970,7 +970,7 @@ void Com_Init(char* commandLine)
 {
     char* s;
 
-    logger.info("%s %s", Q3_VERSION, __DATE__);
+    logger.info("{} {}", Q3_VERSION, __DATE__);
 
     if (setjmp(abortframe)) {
         Sys_Error("Error during initialization");
@@ -1092,7 +1092,7 @@ void Com_WriteConfigToFile(const char* filename)
 
     f = FS_FOpenFileWrite(filename);
     if (!f) {
-        logger.info("Couldn't write %s.", filename);
+        logger.info("Couldn't write {}.", filename);
         return;
     }
 
@@ -1145,7 +1145,7 @@ void Com_WriteConfig_f()
 
     Q_strncpyz(filename, Cmd_Argv(1), sizeof(filename));
     COM_DefaultExtension(filename, sizeof(filename), ".cfg");
-    logger.info("Writing %s.", filename);
+    logger.info("Writing {}.", filename);
     Com_WriteConfigToFile(filename);
 }
 
@@ -1179,7 +1179,7 @@ int32 Com_ModifyMsec(int32 msec)
         // period, because it would mess up all the client's views
         // of time.
         if (msec > 500) {
-            logger.info("Hitch warning: %i msec frame time", msec);
+            logger.info("Hitch warning: {} msec frame time", msec);
         }
         clampTime = 5000;
     } else if (!com_sv_running->integer) {
@@ -1330,7 +1330,7 @@ void Com_Frame()
         sv -= time_game;
         cl -= time_frontend + time_backend;
 
-        logger.info("frame:%i all:%3i sv:%3i ev:%3i cl:%3i gm:%3i rf:%3i bk:%3i", com_frameNumber, all, sv, ev, cl, time_game, time_frontend, time_backend);
+        logger.info("frame:{} all:%3i sv:%3i ev:%3i cl:%3i gm:%3i rf:%3i bk:%3i", com_frameNumber, all, sv, ev, cl, time_game, time_frontend, time_backend);
     }
 
     //
@@ -1455,7 +1455,7 @@ PrintMatches
 static void PrintMatches(const char* s)
 {
     if (!Q_stricmpn(s, shortestMatch, strlen(shortestMatch))) {
-        logger.info("    %s", s);
+        logger.info("    {}", s);
     }
 }
 
@@ -1547,7 +1547,7 @@ void Field_CompleteCommand(field_t* field)
     completionField->cursor = strlen(completionField->buffer);
     ConcatRemaining(temp.buffer, completionString);
 
-    logger.info("]%s", completionField->buffer);
+    logger.info("]{}", completionField->buffer);
 
     // run through again, printing matches
     Cmd_CommandCompletion(PrintMatches);

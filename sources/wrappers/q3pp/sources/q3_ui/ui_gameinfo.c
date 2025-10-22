@@ -52,7 +52,7 @@ UI_Alloc
 */
 static void* UI_Alloc(int32 size)
 {
-    return s_allocator->allocate(size);
+    return s_allocator->allocate(size, 8);
 }
 
 /*
@@ -89,7 +89,7 @@ int32 UI_ParseInfos(char* buf, int32 max, char* infos[])
             break;
         }
         if (strcmp(token, "{")) {
-            logger.warning("Missing { in info file");
+            logger.warning("Missing {{ in info file");
             break;
         }
 
@@ -139,11 +139,11 @@ static void UI_LoadArenasFromFile(const char* filename)
 
     len = FS_FOpenFileByMode(filename, &f, FS_READ);
     if (!f) {
-        logger.error("File not found: %s", filename);
+        logger.error("File not found: {}", filename);
         return;
     }
     if (len >= MAX_ARENAS_TEXT) {
-        logger.error("File too large: %s is %i, max allowed is %i", filename, len, MAX_ARENAS_TEXT);
+        logger.error("File too large: {} is {}, max allowed is {}", filename, len, MAX_ARENAS_TEXT);
         FS_FCloseFile(f);
         return;
     }
@@ -185,7 +185,7 @@ static void UI_LoadArenas()
         strcat(filename, dirptr);
         UI_LoadArenasFromFile(filename);
     }
-    logger.info("%i arenas parsed", ui_numArenas);
+    logger.info("{} arenas parsed", ui_numArenas);
 
     // set initial numbers
     for (n = 0; n < ui_numArenas; n++) {
@@ -219,7 +219,7 @@ static void UI_LoadArenas()
     n = ui_numSinglePlayerArenas % ARENAS_PER_TIER;
     if (n != 0) {
         ui_numSinglePlayerArenas -= n;
-        logger.error("%i arenas ignored to make count divisible by %i", n, ARENAS_PER_TIER);
+        logger.error("{} arenas ignored to make count divisible by {}", n, ARENAS_PER_TIER);
     }
 
     // go through once more and assign number to the levels
@@ -260,7 +260,7 @@ const char* UI_GetArenaInfoByNumber(int32 num)
     char* value;
 
     if (num < 0 || num >= ui_numArenas) {
-        logger.error("Invalid arena number: %i", num);
+        logger.error("Invalid arena number: {}", num);
         return NULL;
     }
 
@@ -325,11 +325,11 @@ static void UI_LoadBotsFromFile(const char* filename)
 
     len = FS_FOpenFileByMode(filename, &f, FS_READ);
     if (!f) {
-        logger.error("File not found: %s", filename);
+        logger.error("File not found: {}", filename);
         return;
     }
     if (len >= MAX_BOTS_TEXT) {
-        logger.error("file too large: %s is %i, max allowed is %i", filename, len, MAX_BOTS_TEXT);
+        logger.error("file too large: {} is {}, max allowed is {}", filename, len, MAX_BOTS_TEXT);
         FS_FCloseFile(f);
         return;
     }
@@ -368,7 +368,7 @@ static void UI_LoadBots()
         strcat(filename, dirptr);
         UI_LoadBotsFromFile(filename);
     }
-    logger.info("%i bots parsed", ui_numBots);
+    logger.info("{} bots parsed", ui_numBots);
 }
 
 
@@ -380,7 +380,7 @@ UI_GetBotInfoByNumber
 char* UI_GetBotInfoByNumber(int32 num)
 {
     if (num < 0 || num >= ui_numBots) {
-        logger.error("Invalid bot number: %i", num);
+        logger.error("Invalid bot number: {}", num);
         return NULL;
     }
     return ui_botInfos[num];
@@ -517,7 +517,7 @@ void UI_LogAwardData(int32 award, int32 data)
     }
 
     if (award > AWARD_PERFECT) {
-        logger.error("Bad award %i in UI_LogAwardData", award);
+        logger.error("Bad award {} in UI_LogAwardData", award);
         return;
     }
 

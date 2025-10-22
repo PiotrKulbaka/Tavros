@@ -87,7 +87,7 @@ bool CL_GetSnapshot(int32 snapshotNumber, snapshot_t* snapshot)
     snapshot->ps = clSnap->ps;
     count = clSnap->numEntities;
     if (count > MAX_ENTITIES_IN_SNAPSHOT) {
-        logger.debug("CL_GetSnapshot: truncated %i entities to %i", count, MAX_ENTITIES_IN_SNAPSHOT);
+        logger.debug("CL_GetSnapshot: truncated {} entities to {}", count, MAX_ENTITIES_IN_SNAPSHOT);
         count = MAX_ENTITIES_IN_SNAPSHOT;
     }
     snapshot->numEntities = count;
@@ -196,7 +196,7 @@ bool CL_GetServerCommand(int32 serverCommandNumber)
     s = clc.serverCommands[serverCommandNumber & (MAX_RELIABLE_COMMANDS - 1)];
     clc.lastExecutedServerCommand = serverCommandNumber;
 
-    logger.debug("serverCommand: %i : %s", serverCommandNumber, s);
+    logger.debug("serverCommand: {} : {}", serverCommandNumber, s);
 
 rescan:
     Cmd_TokenizeString(s);

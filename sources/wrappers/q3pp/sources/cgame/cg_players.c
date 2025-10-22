@@ -109,7 +109,7 @@ static bool CG_ParseAnimationFile(const char* filename, clientInfo_t* ci)
         return false;
     }
     if (len >= sizeof(text) - 1) {
-        logger.error("File %s too long", filename);
+        logger.error("File {} too long", filename);
         return false;
     }
     FS_Read2(text, len, f);
@@ -149,7 +149,7 @@ static bool CG_ParseAnimationFile(const char* filename, clientInfo_t* ci)
             } else if (!Q_stricmp(token, "energy")) {
                 ci->footsteps = FOOTSTEP_ENERGY;
             } else {
-                logger.info("Bad footsteps parm in %s: %s", filename, token);
+                logger.info("Bad footsteps parm in {}: {}", filename, token);
             }
             continue;
         } else if (!Q_stricmp(token, "headoffset")) {
@@ -187,7 +187,7 @@ static bool CG_ParseAnimationFile(const char* filename, clientInfo_t* ci)
             text_p = prev; // unget the token
             break;
         }
-        logger.warning("unknown token '%s' is %s", token, filename);
+        logger.warning("unknown token '{}' is {}", token, filename);
     }
 
     // read information for each frame
@@ -248,7 +248,7 @@ static bool CG_ParseAnimationFile(const char* filename, clientInfo_t* ci)
     }
 
     if (i != MAX_ANIMATIONS) {
-        logger.error("Error parsing animation file: %s", filename);
+        logger.error("Error parsing animation file: {}", filename);
         return false;
     }
 
@@ -461,21 +461,21 @@ static bool CG_RegisterClientSkin(clientInfo_t* ci, const char* teamName, const 
         ci->legsSkin = RE_RegisterSkin(filename);
     }
     if (!ci->legsSkin) {
-        logger.warning("Leg skin load failure: %s", filename);
+        logger.warning("Leg skin load failure: {}", filename);
     }
 
     if (CG_FindClientModelFile(filename, sizeof(filename), ci, teamName, modelName, skinName, "upper", "skin")) {
         ci->torsoSkin = RE_RegisterSkin(filename);
     }
     if (!ci->torsoSkin) {
-        logger.warning("Torso skin load failure: %s", filename);
+        logger.warning("Torso skin load failure: {}", filename);
     }
 
     if (CG_FindClientHeadFile(filename, sizeof(filename), ci, teamName, headModelName, headSkinName, "head", "skin")) {
         ci->headSkin = RE_RegisterSkin(filename);
     }
     if (!ci->headSkin) {
-        logger.warning("Head skin load failure: %s", filename);
+        logger.warning("Head skin load failure: {}", filename);
     }
 
     // if any skins failed to load
@@ -507,7 +507,7 @@ static bool CG_RegisterClientModelname(clientInfo_t* ci, const char* modelName, 
         Com_sprintf(filename, sizeof(filename), "models/players/characters/%s/lower.md3", modelName);
         ci->legsModel = RE_RegisterModel(filename);
         if (!ci->legsModel) {
-            logger.warning("Failed to load model file %s", filename);
+            logger.warning("Failed to load model file {}", filename);
             return false;
         }
     }
@@ -518,7 +518,7 @@ static bool CG_RegisterClientModelname(clientInfo_t* ci, const char* modelName, 
         Com_sprintf(filename, sizeof(filename), "models/players/characters/%s/upper.md3", modelName);
         ci->torsoModel = RE_RegisterModel(filename);
         if (!ci->torsoModel) {
-            logger.warning("Failed to load model file %s", filename);
+            logger.warning("Failed to load model file {}", filename);
             return false;
         }
     }
@@ -535,25 +535,25 @@ static bool CG_RegisterClientModelname(clientInfo_t* ci, const char* modelName, 
         ci->headModel = RE_RegisterModel(filename);
     }
     if (!ci->headModel) {
-        logger.warning("Failed to load model file %s", filename);
+        logger.warning("Failed to load model file {}", filename);
         return false;
     }
 
     // if any skins failed to load, return failure
     if (!CG_RegisterClientSkin(ci, teamName, modelName, skinName, headName, headSkinName)) {
         if (teamName && *teamName) {
-            logger.warning("Failed to load skin file: %s : %s : %s, %s : %s", teamName, modelName, skinName, headName, headSkinName);
+            logger.warning("Failed to load skin file: {} : {} : {}, {} : {}", teamName, modelName, skinName, headName, headSkinName);
             if (ci->team == TEAM_BLUE) {
                 Com_sprintf(newTeamName, sizeof(newTeamName), "%s/", DEFAULT_BLUETEAM_NAME);
             } else {
                 Com_sprintf(newTeamName, sizeof(newTeamName), "%s/", DEFAULT_REDTEAM_NAME);
             }
             if (!CG_RegisterClientSkin(ci, newTeamName, modelName, skinName, headName, headSkinName)) {
-                logger.warning("Failed to load skin file: %s : %s : %s, %s : %s", newTeamName, modelName, skinName, headName, headSkinName);
+                logger.warning("Failed to load skin file: {} : {} : {}, {} : {}", newTeamName, modelName, skinName, headName, headSkinName);
                 return false;
             }
         } else {
-            logger.warning("Failed to load skin file: %s : %s, %s : %s", modelName, skinName, headName, headSkinName);
+            logger.warning("Failed to load skin file: {} : {}, {} : {}", modelName, skinName, headName, headSkinName);
             return false;
         }
     }
@@ -563,7 +563,7 @@ static bool CG_RegisterClientModelname(clientInfo_t* ci, const char* modelName, 
     if (!CG_ParseAnimationFile(filename, ci)) {
         Com_sprintf(filename, sizeof(filename), "models/players/characters/%s/animation.cfg", modelName);
         if (!CG_ParseAnimationFile(filename, ci)) {
-            logger.warning("Failed to load animation file %s", filename);
+            logger.warning("Failed to load animation file {}", filename);
             return false;
         }
     }

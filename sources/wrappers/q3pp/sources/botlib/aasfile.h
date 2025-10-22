@@ -21,7 +21,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 */
 #pragma once
 
-#include <tavros/core/prelude.hpp>
 #include <game/q_shared.h>
 
 #define AASID                      (('S' << 24) + ('A' << 16) + ('A' << 8) + 'E')

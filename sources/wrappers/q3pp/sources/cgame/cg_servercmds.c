@@ -393,7 +393,7 @@ static void CG_ServerCommand()
     }
 
     if (!strcmp(cmd, "print")) {
-        logger.info("%s", CG_Argv(1));
+        logger.info("{}", CG_Argv(1));
         return;
     }
 
@@ -401,7 +401,7 @@ static void CG_ServerCommand()
         S_StartLocalSound(cgs.media.talkSound, CHAN_LOCAL_SOUND);
         Q_strncpyz(text, CG_Argv(1), MAX_SAY_TEXT);
         CG_RemoveChatEscapeChar(text);
-        logger.info("%s", text);
+        logger.info("{}", text);
         return;
     }
 
@@ -409,7 +409,7 @@ static void CG_ServerCommand()
         S_StartLocalSound(cgs.media.talkSound, CHAN_LOCAL_SOUND);
         Q_strncpyz(text, CG_Argv(1), MAX_SAY_TEXT);
         CG_RemoveChatEscapeChar(text);
-        logger.info("%s", text);
+        logger.info("{}", text);
         return;
     }
     if (!strcmp(cmd, "vchat")) {
@@ -451,7 +451,7 @@ static void CG_ServerCommand()
         return;
     }
 
-    logger.info("Unknown client game command: %s", cmd);
+    logger.info("Unknown client game command: {}", cmd);
 }
 
 

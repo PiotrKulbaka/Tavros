@@ -75,7 +75,7 @@ int32 G_ParseInfos(char* buf, int32 max, char* infos[])
             break;
         }
         if (strcmp(token, "{")) {
-            logger.warning("Missing { in info file");
+            logger.warning("Missing {{ in info file");
             break;
         }
 
@@ -125,11 +125,11 @@ static void G_LoadArenasFromFile(const char* filename)
 
     len = FS_FOpenFileByMode(filename, &f, FS_READ);
     if (!f) {
-        logger.error("File not found: %s", filename);
+        logger.error("File not found: {}", filename);
         return;
     }
     if (len >= MAX_ARENAS_TEXT) {
-        logger.error("File too large: %s is %i, max allowed is %i", filename, len, MAX_ARENAS_TEXT);
+        logger.error("File too large: {} is {}, max allowed is {}", filename, len, MAX_ARENAS_TEXT);
         FS_FCloseFile(f);
         return;
     }
@@ -168,7 +168,7 @@ static void G_LoadArenas()
         strcat(filename, dirptr);
         G_LoadArenasFromFile(filename);
     }
-    logger.info("%i arenas parsed", g_numArenas);
+    logger.info("{} arenas parsed", g_numArenas);
 
     for (n = 0; n < g_numArenas; n++) {
         Info_SetValueForKey(g_arenaInfos[n], "num", va("%i", n));
@@ -584,7 +584,7 @@ static void G_AddBot(const char* name, float skill, const char* team, int32 dela
     // get the botinfo from bots.txt
     botinfo = G_GetBotInfoByName(name);
     if (!botinfo) {
-        logger.error("Bot '%s' not defined", name);
+        logger.error("Bot '{}' not defined", name);
         return;
     }
 
@@ -866,11 +866,11 @@ static void G_LoadBotsFromFile(const char* filename)
 
     len = FS_FOpenFileByMode(filename, &f, FS_READ);
     if (!f) {
-        logger.error("File not found: %s", filename);
+        logger.error("File not found: {}", filename);
         return;
     }
     if (len >= MAX_BOTS_TEXT) {
-        logger.error("File too large: %s is %i, max allowed is %i", filename, len, MAX_BOTS_TEXT);
+        logger.error("File too large: {} is {}, max allowed is {}", filename, len, MAX_BOTS_TEXT);
         FS_FCloseFile(f);
         return;
     }
@@ -913,7 +913,7 @@ static void G_LoadBots()
         strcat(filename, dirptr);
         G_LoadBotsFromFile(filename);
     }
-    logger.info("%i bots parsed", g_numBots);
+    logger.info("{} bots parsed", g_numBots);
 }
 
 /*

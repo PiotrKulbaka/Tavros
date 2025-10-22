@@ -60,7 +60,7 @@ static void InitOpenGL()
 
         int32 tex_size = qglGetInteger(GL_MAX_TEXTURE_SIZE);
         if (tex_size < 2048) {
-            logger.error("Small texture size: %d", tex_size);
+            logger.error("Small texture size: {}", tex_size);
         }
         glIsInitialized = true;
     }
@@ -171,7 +171,7 @@ void R_ScreenShotJPEG_f()
     R_TakeScreenshotJPEG(0, 0, glConfig.vidWidth, glConfig.vidHeight, name);
 
     if (!silent) {
-        logger.info("Wrote %s", name);
+        logger.info("Wrote {}", name);
     }
 }
 
@@ -216,10 +216,10 @@ GfxInfo_f
 */
 void GfxInfo_f()
 {
-    logger.info("GL_VENDOR: %s", qglGetString(GL_VENDOR));
-    logger.info("GL_RENDERER: %s", qglGetString(GL_RENDERER));
-    logger.info("GL_VERSION: %s", qglGetString(GL_VERSION));
-    logger.info("GL_MAX_TEXTURE_SIZE: %d", qglGetInteger(GL_MAX_TEXTURE_SIZE));
+    logger.info("GL_VENDOR: {}", (const char*) qglGetString(GL_VENDOR));
+    logger.info("GL_RENDERER: {}", (const char*) qglGetString(GL_RENDERER));
+    logger.info("GL_VERSION: {}", (const char*) qglGetString(GL_VERSION));
+    logger.info("GL_MAX_TEXTURE_SIZE: {}", (GLint) qglGetInteger(GL_MAX_TEXTURE_SIZE));
 }
 
 /*
@@ -338,7 +338,7 @@ RE_Shutdown
 */
 void RE_Shutdown(bool destroyWindow)
 {
-    logger.info("RE_Shutdown( %i )", destroyWindow);
+    logger.info("RE_Shutdown( {} )", destroyWindow);
 
     Cmd_RemoveCommand("modellist");
     Cmd_RemoveCommand("screenshot");

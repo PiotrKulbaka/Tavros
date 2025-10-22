@@ -624,7 +624,7 @@ void MSG_ReportChangeVectors_f()
     int32 i;
     for (i = 0; i < 256; i++) {
         if (pcount[i]) {
-            logger.info("%d used %d", i, pcount[i]);
+            logger.info("{} used {}", i, pcount[i]);
         }
     }
 }
@@ -900,13 +900,13 @@ void MSG_ReadDeltaEntity(msg_t* msg, entityState_t* from, entityState_t* to, int
                         trunc -= FLOAT_INT_BIAS;
                         *(float*) toF = trunc;
                         if (print) {
-                            logger.info("%s:%i", field->name, trunc);
+                            logger.info("{}:{}", field->name, trunc);
                         }
                     } else {
                         // full floating point value
                         *toF = MSG_ReadBits(msg, 32);
                         if (print) {
-                            logger.info("%s:%f", field->name, *(float*) toF);
+                            logger.info("{}:{}", field->name, *(float*) toF);
                         }
                     }
                 }
@@ -917,7 +917,7 @@ void MSG_ReadDeltaEntity(msg_t* msg, entityState_t* from, entityState_t* to, int
                     // integer
                     *toF = MSG_ReadBits(msg, field->bits);
                     if (print) {
-                        logger.info("%s:%i", field->name, *toF);
+                        logger.info("{}:{}", field->name, *toF);
                     }
                 }
             }
@@ -937,7 +937,7 @@ void MSG_ReadDeltaEntity(msg_t* msg, entityState_t* from, entityState_t* to, int
         } else {
             endBit = (msg->readcount - 1) * 8 + msg->bit - GENTITYNUM_BITS;
         }
-        logger.info(" (%i bits)", endBit - startBit);
+        logger.info(" ({} bits)", endBit - startBit);
     }
 }
 
@@ -1228,20 +1228,20 @@ void MSG_ReadDeltaPlayerstate(msg_t* msg, playerState_t* from, playerState_t* to
                     trunc -= FLOAT_INT_BIAS;
                     *(float*) toF = trunc;
                     if (print) {
-                        logger.info("%s:%i ", field->name, trunc);
+                        logger.info("{}:{} ", field->name, trunc);
                     }
                 } else {
                     // full floating point value
                     *toF = MSG_ReadBits(msg, 32);
                     if (print) {
-                        logger.info("%s:%f ", field->name, *(float*) toF);
+                        logger.info("{}:{} ", field->name, *(float*) toF);
                     }
                 }
             } else {
                 // integer
                 *toF = MSG_ReadBits(msg, field->bits);
                 if (print) {
-                    logger.info("%s:%i ", field->name, *toF);
+                    logger.info("{}:{} ", field->name, *toF);
                 }
             }
         }
@@ -1307,7 +1307,7 @@ void MSG_ReadDeltaPlayerstate(msg_t* msg, playerState_t* from, playerState_t* to
         } else {
             endBit = (msg->readcount - 1) * 8 + msg->bit - GENTITYNUM_BITS;
         }
-        logger.info(" (%i bits)", endBit - startBit);
+        logger.info(" ({} bits)", endBit - startBit);
     }
 }
 

@@ -112,9 +112,9 @@ void SV_AddServerCommand(client_t* client, const char* cmd)
     if (client->reliableSequence - client->reliableAcknowledge == MAX_RELIABLE_COMMANDS + 1) {
         logger.info("===== pending server commands =====");
         for (i = client->reliableAcknowledge + 1; i <= client->reliableSequence; i++) {
-            logger.info("cmd %5d: %s", i, client->reliableCommands[i & (MAX_RELIABLE_COMMANDS - 1)]);
+            logger.info("cmd %5d: {}", i, client->reliableCommands[i & (MAX_RELIABLE_COMMANDS - 1)]);
         }
-        logger.info("cmd %5d: %s", i, cmd);
+        logger.info("cmd %5d: {}", i, cmd);
         SV_DropClient(client, "Server command overflow");
         return;
     }
@@ -150,7 +150,7 @@ void QDECL SV_SendServerCommand(client_t* cl, const char* fmt, ...)
 
     // hack to echo broadcast prints to console
     if (com_dedicated->integer && !strncmp((char*) message, "print", 5)) {
-        logger.info("broadcast: %s", SV_ExpandNewlines((char*) message));
+        logger.info("broadcast: {}", SV_ExpandNewlines((char*) message));
     }
 
     // send the data to all relevent clients
@@ -213,11 +213,11 @@ void SV_MasterHeartbeat()
         if (sv_master[i]->modified) {
             sv_master[i]->modified = false;
 
-            logger.info("Resolving %s", sv_master[i]->string);
+            logger.info("Resolving {}", sv_master[i]->string);
             if (!NET_StringToAdr(sv_master[i]->string, &adr[i])) {
                 // if the address failed to resolve, clear it
                 // so we don't take repeated dns hits
-                logger.info("Couldn't resolve address: %s", sv_master[i]->string);
+                logger.info("Couldn't resolve address: {}", sv_master[i]->string);
                 Cvar_Set(sv_master[i]->name, "");
                 sv_master[i]->modified = false;
                 continue;
@@ -225,11 +225,11 @@ void SV_MasterHeartbeat()
             if (!strstr(":", sv_master[i]->string)) {
                 adr[i].port = BigShort(PORT_MASTER);
             }
-            logger.info("%s resolved to %i.%i.%i.%i:%i", sv_master[i]->string, adr[i].ip[0], adr[i].ip[1], adr[i].ip[2], adr[i].ip[3], BigShort(adr[i].port));
+            logger.info("{} resolved to {}.{}.{}.{}:{}", sv_master[i]->string, adr[i].ip[0], adr[i].ip[1], adr[i].ip[2], adr[i].ip[3], BigShort(adr[i].port));
         }
 
 
-        logger.info("Sending heartbeat to %s", sv_master[i]->string);
+        logger.info("Sending heartbeat to {}", sv_master[i]->string);
         // this command should be changed if the server info / status format
         // ever incompatably changes
         NET_OutOfBandPrint(NS_SERVER, adr[i], "heartbeat %s\n", HEARTBEAT_GAME);
@@ -412,10 +412,10 @@ void SVC_RemoteCommand(netadr_t from, msg_t* msg)
 
     if (!strlen(sv_rconPassword->string) || strcmp(Cmd_Argv(1), sv_rconPassword->string)) {
         valid = false;
-        logger.info("Bad rcon from %s:\n%s", NET_AdrToString(from), Cmd_Argv(2));
+        logger.info("Bad rcon from {}:\n{}", NET_AdrToString(from), Cmd_Argv(2));
     } else {
         valid = true;
-        logger.info("Rcon from %s:\n%s", NET_AdrToString(from), Cmd_Argv(2));
+        logger.info("Rcon from {}:\n{}", NET_AdrToString(from), Cmd_Argv(2));
     }
 
     // start redirecting all print outputs to the packet
@@ -478,7 +478,7 @@ void SV_ConnectionlessPacket(netadr_t from, msg_t* msg)
     Cmd_TokenizeString(s);
 
     c = Cmd_Argv(0);
-    logger.debug("SV packet %s : %s", NET_AdrToString(from), c);
+    logger.debug("SV packet {} : {}", NET_AdrToString(from), c);
 
     if (!Q_stricmp(c, "getstatus")) {
         SVC_Status(from);
@@ -497,7 +497,7 @@ void SV_ConnectionlessPacket(netadr_t from, msg_t* msg)
         // server disconnect messages when their new server sees our final
         // sequenced messages to the old client
     } else {
-        logger.debug("bad connectionless packet from %s:\n%s", NET_AdrToString(from), s);
+        logger.debug("bad connectionless packet from {}:\n{}", NET_AdrToString(from), s);
     }
 }
 
@@ -654,7 +654,7 @@ void SV_CheckTimeouts()
         if (cl->state == CS_ZOMBIE
             && cl->lastPacketTime < zombiepoint) {
             // using the client id cause the cl->name is empty at this point
-            logger.debug("Going from CS_ZOMBIE to CS_FREE for client %d", i);
+            logger.debug("Going from CS_ZOMBIE to CS_FREE for client {}", i);
             cl->state = CS_FREE; // can now be reused
             continue;
         }

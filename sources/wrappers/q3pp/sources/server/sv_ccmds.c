@@ -76,7 +76,7 @@ static client_t* SV_GetPlayerByName()
         }
     }
 
-    logger.info("Player %s is not on the server", s);
+    logger.info("Player {} is not on the server", s);
 
     return NULL;
 }
@@ -109,19 +109,19 @@ static client_t* SV_GetPlayerByNum()
 
     for (i = 0; s[i]; i++) {
         if (s[i] < '0' || s[i] > '9') {
-            logger.info("Bad slot number: %s", s);
+            logger.info("Bad slot number: {}", s);
             return NULL;
         }
     }
     idnum = atoi(s);
     if (idnum < 0 || idnum >= sv_maxclients->integer) {
-        logger.info("Bad client slot: %i", idnum);
+        logger.info("Bad client slot: {}", idnum);
         return NULL;
     }
 
     cl = &svs.clients[idnum];
     if (!cl->state) {
-        logger.info("Client %i is not active", idnum);
+        logger.info("Client {} is not active", idnum);
         return NULL;
     }
     return cl;
@@ -156,7 +156,7 @@ static void SV_Map_f()
     // a typo at the server console won't end the game
     Com_sprintf(expanded, sizeof(expanded), "maps/%s.bsp", map);
     if (FS_ReadFile(expanded, NULL) == -1) {
-        logger.info("Can't find map %s", expanded);
+        logger.info("Can't find map {}", expanded);
         return;
     }
 
@@ -310,7 +310,7 @@ static void SV_MapRestart_f()
             // this generally shouldn't happen, because the client
             // was connected before the level change
             SV_DropClient(client, denied);
-            logger.info("SV_MapRestart_f(%d): dropped client %i - denied!", delay, i); // bk010125
+            logger.info("SV_MapRestart_f({}): dropped client {} - denied!", delay, i); // bk010125
             continue;
         }
 
@@ -421,19 +421,19 @@ static void SV_Ban_f()
 
     // look up the authorize server's IP
     if (!svs.authorizeAddress.ip[0] && svs.authorizeAddress.type != NA_BAD) {
-        logger.info("Resolving %s", AUTHORIZE_SERVER_NAME);
+        logger.info("Resolving {}", AUTHORIZE_SERVER_NAME);
         if (!NET_StringToAdr(AUTHORIZE_SERVER_NAME, &svs.authorizeAddress)) {
             logger.info("Couldn't resolve address");
             return;
         }
         svs.authorizeAddress.port = BigShort(PORT_AUTHORIZE);
-        logger.info("%s resolved to %i.%i.%i.%i:%i", AUTHORIZE_SERVER_NAME, svs.authorizeAddress.ip[0], svs.authorizeAddress.ip[1], svs.authorizeAddress.ip[2], svs.authorizeAddress.ip[3], BigShort(svs.authorizeAddress.port));
+        logger.info("{} resolved to {}.{}.{}.{}:{}", AUTHORIZE_SERVER_NAME, svs.authorizeAddress.ip[0], svs.authorizeAddress.ip[1], svs.authorizeAddress.ip[2], svs.authorizeAddress.ip[3], BigShort(svs.authorizeAddress.port));
     }
 
     // otherwise send their ip to the authorize server
     if (svs.authorizeAddress.type != NA_BAD) {
         NET_OutOfBandPrint(NS_SERVER, svs.authorizeAddress, "banUser %i.%i.%i.%i", cl->netchan.remoteAddress.ip[0], cl->netchan.remoteAddress.ip[1], cl->netchan.remoteAddress.ip[2], cl->netchan.remoteAddress.ip[3]);
-        logger.info("%s was banned from coming back", cl->name);
+        logger.info("{} was banned from coming back", cl->name);
     }
 }
 
@@ -471,19 +471,19 @@ static void SV_BanNum_f()
 
     // look up the authorize server's IP
     if (!svs.authorizeAddress.ip[0] && svs.authorizeAddress.type != NA_BAD) {
-        logger.info("Resolving %s", AUTHORIZE_SERVER_NAME);
+        logger.info("Resolving {}", AUTHORIZE_SERVER_NAME);
         if (!NET_StringToAdr(AUTHORIZE_SERVER_NAME, &svs.authorizeAddress)) {
             logger.info("Couldn't resolve address");
             return;
         }
         svs.authorizeAddress.port = BigShort(PORT_AUTHORIZE);
-        logger.info("%s resolved to %i.%i.%i.%i:%i", AUTHORIZE_SERVER_NAME, svs.authorizeAddress.ip[0], svs.authorizeAddress.ip[1], svs.authorizeAddress.ip[2], svs.authorizeAddress.ip[3], BigShort(svs.authorizeAddress.port));
+        logger.info("{} resolved to {}.{}.{}.{}:{}", AUTHORIZE_SERVER_NAME, svs.authorizeAddress.ip[0], svs.authorizeAddress.ip[1], svs.authorizeAddress.ip[2], svs.authorizeAddress.ip[3], BigShort(svs.authorizeAddress.port));
     }
 
     // otherwise send their ip to the authorize server
     if (svs.authorizeAddress.type != NA_BAD) {
         NET_OutOfBandPrint(NS_SERVER, svs.authorizeAddress, "banUser %i.%i.%i.%i", cl->netchan.remoteAddress.ip[0], cl->netchan.remoteAddress.ip[1], cl->netchan.remoteAddress.ip[2], cl->netchan.remoteAddress.ip[3]);
-        logger.info("%s was banned from coming back", cl->name);
+        logger.info("{} was banned from coming back", cl->name);
     }
 }
 
@@ -542,7 +542,7 @@ static void SV_Status_f()
         return;
     }
 
-    logger.info("map: %s", sv_mapname->string);
+    logger.info("map: {}", sv_mapname->string);
 
     logger.info("num score ping name            lastmsg address               qport rate");
     logger.info("--- ----- ---- --------------- ------- --------------------- ----- -----");
@@ -578,7 +578,7 @@ static void SV_Status_f()
         }
 
         len += sprintf(buf + len, "%5i %5i", cl->netchan.qport, cl->rate);
-        logger.info("%s", buf);
+        logger.info("{}", buf);
     }
 }
 
@@ -638,7 +638,7 @@ Examine the serverinfo string
 */
 static void SV_Serverinfo_f()
 {
-    logger.info("Server info settings: %s", Cvar_InfoString(CVAR_SERVERINFO));
+    logger.info("Server info settings: {}", Cvar_InfoString(CVAR_SERVERINFO));
 }
 
 
@@ -651,7 +651,7 @@ Examine or change the serverinfo string
 */
 static void SV_Systeminfo_f()
 {
-    logger.info("System info settings: %s", Cvar_InfoString(CVAR_SYSTEMINFO));
+    logger.info("System info settings: {}", Cvar_InfoString(CVAR_SYSTEMINFO));
 }
 
 
@@ -682,7 +682,7 @@ static void SV_DumpUser_f()
         return;
     }
 
-    logger.info("Userinfo: %s", cl->userinfo);
+    logger.info("Userinfo: {}", cl->userinfo);
 }
 
 

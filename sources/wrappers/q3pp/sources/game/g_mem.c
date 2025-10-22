@@ -39,11 +39,11 @@ void* G_Alloc(int32 size)
     char* p;
 
     if (g_debugAlloc->integer) {
-        logger.debug("G_Alloc of %i bytes (%i left)", size, POOLSIZE - allocPoint - ((size + 31) & ~31));
+        logger.debug("G_Alloc of {} bytes ({} left)", size, POOLSIZE - allocPoint - ((size + 31) & ~31));
     }
 
     if (allocPoint + size > POOLSIZE) {
-        logger.debug("G_Alloc: failed on allocation of %i bytes", size);
+        logger.debug("G_Alloc: failed on allocation of {} bytes", size);
         return NULL;
     }
 
@@ -61,5 +61,5 @@ void G_InitMemory()
 
 void Svcmd_GameMem_f()
 {
-    logger.info("Game memory status: %i out of %i bytes allocated", allocPoint, POOLSIZE);
+    logger.info("Game memory status: {} out of {} bytes allocated", allocPoint, POOLSIZE);
 }

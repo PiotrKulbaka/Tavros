@@ -47,7 +47,7 @@ namespace
 } // namespace
 
 
-opengl_swapchain::opengl_swapchain(handle hWnd)
+opengl_swapchain::opengl_swapchain(void* hWnd)
 {
     m_hWnd = static_cast<HWND>(hWnd);
     assert(hWnd != nullptr);
@@ -57,7 +57,7 @@ opengl_swapchain::~opengl_swapchain()
 {
     if (m_hGLRC) {
         if (!_wglDeleteContext(m_hGLRC)) {
-            ::logger.error("Detete OpenGL context failed: %s", tavros::system::last_win_error_str());
+            ::logger.error("Detete OpenGL context failed: {}", tavros::system::last_win_error_str());
         }
         m_hGLRC = nullptr;
     }
@@ -92,12 +92,12 @@ bool opengl_swapchain::init()
 
     int32 pixel_format = ChoosePixelFormat(m_hDC, &pfd);
     if (!pixel_format) {
-        ::logger.error("ChoosePixelFormat: %s", tavros::system::last_win_error_str());
+        ::logger.error("ChoosePixelFormat: {}", tavros::system::last_win_error_str());
         return false;
     }
-    ::logger.info("Pixel format selected [ColorBits: %d, DepthBits: %d, StencilBits: %d]", pfd.cColorBits, pfd.cDepthBits, pfd.cStencilBits);
+    ::logger.info("Pixel format selected [ColorBits: {}, DepthBits: {}, StencilBits: {}]", pfd.cColorBits, pfd.cDepthBits, pfd.cStencilBits);
     if (!SetPixelFormat(m_hDC, pixel_format, &pfd)) {
-        ::logger.error("SetPixelFormat failed: %s", tavros::system::last_win_error_str());
+        ::logger.error("SetPixelFormat failed: {}", tavros::system::last_win_error_str());
         return false;
     }
 
@@ -107,7 +107,7 @@ bool opengl_swapchain::init()
 
     m_hGLRC = _wglCreateContext(m_hDC);
     if (!m_hGLRC) {
-        ::logger.error("Create OpenGL context failed: %s", tavros::system::last_win_error_str());
+        ::logger.error("Create OpenGL context failed: {}", tavros::system::last_win_error_str());
         return false;
     }
 
@@ -118,20 +118,20 @@ bool opengl_swapchain::init()
 void opengl_swapchain::present()
 {
     if (!SwapBuffers(m_hDC)) {
-        ::logger.error("OpenGL swap buffers failed: %s", tavros::system::last_win_error_str());
+        ::logger.error("OpenGL swap buffers failed: {}", tavros::system::last_win_error_str());
     }
 }
 
 void opengl_swapchain::activate()
 {
     if (!_wglMakeCurrent(m_hDC, m_hGLRC)) {
-        ::logger.error("OpenGL activate context failed: %s", tavros::system::last_win_error_str());
+        ::logger.error("OpenGL activate context failed: {}", tavros::system::last_win_error_str());
     }
 }
 
 void opengl_swapchain::deactivate()
 {
     if (!_wglMakeCurrent(nullptr, nullptr)) {
-        ::logger.error("OpenGL deactivate context failed: %s", tavros::system::last_win_error_str());
+        ::logger.error("OpenGL deactivate context failed: {}", tavros::system::last_win_error_str());
     }
 }

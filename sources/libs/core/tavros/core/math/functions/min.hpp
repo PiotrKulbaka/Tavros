@@ -8,6 +8,10 @@
 #include <tavros/core/math/vec3.hpp>
 #include <tavros/core/math/vec4.hpp>
 
+#ifdef min
+    #undef min
+#endif
+
 namespace tavros::math
 {
 

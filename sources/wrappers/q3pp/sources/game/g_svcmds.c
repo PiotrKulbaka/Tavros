@@ -100,7 +100,7 @@ static bool StringToFilter(char* s, ipFilter_t* f)
                 s++;
                 continue;
             }
-            logger.info("Bad filter address: %s", s);
+            logger.info("Bad filter address: {}", s);
             return false;
         }
 
@@ -310,7 +310,7 @@ void Svcmd_RemoveIP_f()
         }
     }
 
-    logger.info("Didn't find %s.", str);
+    logger.info("Didn't find {}.", str);
 }
 
 /*
@@ -371,7 +371,7 @@ void Svcmd_EntityList_f()
             break;
         }
 
-        logger.info("%3i: [%3i]%s %s", e, check->s.eType, info, (check->classname ? check->classname : ""));
+        logger.info("%3i: [%3i]{} {}", e, check->s.eType, info, (check->classname ? check->classname : ""));
     }
 }
 
@@ -385,13 +385,13 @@ gclient_t* ClientForString(const char* s)
     if (s[0] >= '0' && s[0] <= '9') {
         idnum = atoi(s);
         if (idnum < 0 || idnum >= level.maxclients) {
-            logger.info("Bad client slot: %i", idnum);
+            logger.info("Bad client slot: {}", idnum);
             return NULL;
         }
 
         cl = &level.clients[idnum];
         if (cl->pers.connected == CON_DISCONNECTED) {
-            logger.info("Client %i is not connected", idnum);
+            logger.info("Client {} is not connected", idnum);
             return NULL;
         }
         return cl;
@@ -408,7 +408,7 @@ gclient_t* ClientForString(const char* s)
         }
     }
 
-    logger.info("User %s is not on the server", s);
+    logger.info("User {} is not on the server", s);
 
     return NULL;
 }
@@ -451,7 +451,7 @@ bool ConsoleCommand()
 
     Cmd_ArgvBuffer(0, cmd, sizeof(cmd));
 
-    logger.debug("Execute command: '%s'", cmd);
+    logger.debug("Execute command: '{}'", cmd);
 
     if (Q_stricmp(cmd, "entitylist") == 0) {
         Svcmd_EntityList_f();

@@ -7,7 +7,7 @@
 class opengl_swapchain
 {
 public:
-    opengl_swapchain(handle hWnd);
+    opengl_swapchain(void* hWnd);
     ~opengl_swapchain();
 
     bool init();

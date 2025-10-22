@@ -485,7 +485,7 @@ static void FS_CopyFile(char* fromOSPath, char* toOSPath)
     int32  len;
     uint8* buf;
 
-    logger.info("copy %s to %s", fromOSPath, toOSPath);
+    logger.info("copy {} to {}", fromOSPath, toOSPath);
 
     f = fopen(fromOSPath, "rb");
     if (!f) {
@@ -600,14 +600,14 @@ fileHandle_t FS_SV_FOpenFileWrite(const char* filename)
     fsh[f].zipFile = false;
 
     if (fs_debug->integer) {
-        logger.info("FS_SV_FOpenFileWrite: %s", ospath);
+        logger.info("FS_SV_FOpenFileWrite: {}", ospath);
     }
 
     if (FS_CreatePath(ospath)) {
         return 0;
     }
 
-    logger.debug("writing to: %s", ospath);
+    logger.debug("writing to: {}", ospath);
     fsh[f].handleFiles.file.o = fopen(ospath, "wb");
 
     Q_strncpyz(fsh[f].name, filename, sizeof(fsh[f].name));
@@ -649,7 +649,7 @@ int32 FS_SV_FOpenFileRead(const char* filename, fileHandle_t* fp)
     ospath[strlen(ospath) - 1] = '\0';
 
     if (fs_debug->integer) {
-        logger.info("FS_SV_FOpenFileRead (fs_homepath): %s", ospath);
+        logger.info("FS_SV_FOpenFileRead (fs_homepath): {}", ospath);
     }
 
     fsh[f].handleFiles.file.o = fopen(ospath, "rb");
@@ -662,7 +662,7 @@ int32 FS_SV_FOpenFileRead(const char* filename, fileHandle_t* fp)
             ospath[strlen(ospath) - 1] = '\0';
 
             if (fs_debug->integer) {
-                logger.info("FS_SV_FOpenFileRead (fs_basepath): %s", ospath);
+                logger.info("FS_SV_FOpenFileRead (fs_basepath): {}", ospath);
             }
 
             fsh[f].handleFiles.file.o = fopen(ospath, "rb");
@@ -680,7 +680,7 @@ int32 FS_SV_FOpenFileRead(const char* filename, fileHandle_t* fp)
         ospath[strlen(ospath) - 1] = '\0';
 
         if (fs_debug->integer) {
-            logger.info("FS_SV_FOpenFileRead (fs_cdpath) : %s", ospath);
+            logger.info("FS_SV_FOpenFileRead (fs_cdpath) : {}", ospath);
         }
 
         fsh[f].handleFiles.file.o = fopen(ospath, "rb");
@@ -722,7 +722,7 @@ void FS_SV_Rename(const char* from, const char* to)
     to_ospath[strlen(to_ospath) - 1] = '\0';
 
     if (fs_debug->integer) {
-        logger.info("FS_SV_Rename: %s --> %s", from_ospath, to_ospath);
+        logger.info("FS_SV_Rename: {} --> {}", from_ospath, to_ospath);
     }
 
     if (rename(from_ospath, to_ospath)) {
@@ -785,7 +785,7 @@ fileHandle_t FS_FOpenFileWrite(const char* filename)
     ospath = FS_BuildOSPath(fs_homepath->string, fs_gamedir, filename);
 
     if (fs_debug->integer) {
-        logger.info("FS_FOpenFileWrite: %s", ospath);
+        logger.info("FS_FOpenFileWrite: {}", ospath);
     }
 
     if (FS_CreatePath(ospath)) {
@@ -831,7 +831,7 @@ fileHandle_t FS_FOpenFileAppend(const char* filename)
     ospath = FS_BuildOSPath(fs_homepath->string, fs_gamedir, filename);
 
     if (fs_debug->integer) {
-        logger.info("FS_FOpenFileAppend: %s", ospath);
+        logger.info("FS_FOpenFileAppend: {}", ospath);
     }
 
     if (FS_CreatePath(ospath)) {
@@ -1061,7 +1061,7 @@ int32 FS_FOpenFileRead(const char* filename, fileHandle_t* file, bool uniqueFILE
                     fsh[*file].zipFilePos = pakFile->pos;
 
                     if (fs_debug->integer) {
-                        logger.info("FS_FOpenFileRead: %s (found in '%s')", filename, pak->pakFilename);
+                        logger.info("FS_FOpenFileRead: {} (found in '{}')", filename, pak->pakFilename);
                     }
                     return zfi->cur_file_info.uncompressed_size;
                 }
@@ -1103,7 +1103,7 @@ int32 FS_FOpenFileRead(const char* filename, fileHandle_t* file, bool uniqueFILE
             Q_strncpyz(fsh[*file].name, filename, sizeof(fsh[*file].name));
             fsh[*file].zipFile = false;
             if (fs_debug->integer) {
-                logger.info("FS_FOpenFileRead: %s (found in '%s/%s')", filename, dir->path, dir->gamedir);
+                logger.info("FS_FOpenFileRead: {} (found in '{}/{}')", filename, dir->path, dir->gamedir);
             }
 
             // if we are getting it from the cdpath, optionally copy it
@@ -1119,7 +1119,7 @@ int32 FS_FOpenFileRead(const char* filename, fileHandle_t* file, bool uniqueFILE
         }
     }
 
-    logger.info("Can't find %s", filename);
+    logger.info("Can't find {}", filename);
     *file = 0;
     return -1;
 }
@@ -1482,7 +1482,7 @@ void FS_WriteFile(const char* qpath, const void* buffer, int32 size)
 
     f = FS_FOpenFileWrite(qpath);
     if (!f) {
-        logger.info("Failed to open %s", qpath);
+        logger.info("Failed to open {}", qpath);
         return;
     }
 
@@ -2090,12 +2090,12 @@ void FS_Dir_f()
         extension = Cmd_Argv(2);
     }
 
-    logger.info("Directory of %s %s", path, extension);
+    logger.info("Directory of {} {}", path, extension);
 
     dirnames = FS_ListFiles(path, extension, &ndirs);
 
     for (i = 0; i < ndirs; i++) {
-        logger.info("%s", dirnames[i]);
+        logger.info("{}", dirnames[i]);
     }
     FS_FreeFileList(dirnames);
 }
@@ -2210,9 +2210,9 @@ void FS_NewDir_f()
 
     for (i = 0; i < ndirs; i++) {
         FS_ConvertPath(dirnames[i]);
-        logger.info("%s", dirnames[i]);
+        logger.info("{}", dirnames[i]);
     }
-    logger.info("%d files listed", ndirs);
+    logger.info("{} files listed", ndirs);
     FS_FreeFileList(dirnames);
 }
 
@@ -2230,7 +2230,7 @@ void FS_Path_f()
     logger.info("Current search path:");
     for (s = fs_searchpaths; s; s = s->next) {
         if (s->pack) {
-            logger.info("%s (%i files)", s->pack->pakFilename, s->pack->numfiles);
+            logger.info("{} ({} files)", s->pack->pakFilename, s->pack->numfiles);
             if (fs_numServerPaks) {
                 if (!FS_PakIsPure(s->pack)) {
                     logger.info("    not on the pure list");
@@ -2239,13 +2239,13 @@ void FS_Path_f()
                 }
             }
         } else {
-            logger.info("%s/%s", s->dir->path, s->dir->gamedir);
+            logger.info("{}/{}", s->dir->path, s->dir->gamedir);
         }
     }
 
     for (i = 1; i < MAX_FILE_HANDLES; i++) {
         if (fsh[i].handleFiles.file.o) {
-            logger.info("handle %i: %s", i, fsh[i].name);
+            logger.info("handle {}: {}", i, fsh[i].name);
         }
     }
 }
@@ -2637,7 +2637,7 @@ static void FS_Startup(const char* gameName)
 
     fs_gamedirvar->modified = false; // We just loaded, it's not modified
 
-    logger.info("%d files in pk3 files", fs_packFiles);
+    logger.info("{} files in pk3 files", fs_packFiles);
 }
 
 /*

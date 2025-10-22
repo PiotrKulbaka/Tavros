@@ -36,7 +36,10 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 #include <limits.h>
 
 
-#include <tavros/core/prelude.hpp>
+#include <tavros/core/logger/logger.hpp>
+#include <tavros/core/memory/mallocator.hpp>
+#include <tavros/core/memory/zone_allocator.hpp>
+#include <tavros/core/memory/memory.hpp>
 #include <tavros/core/math.hpp>
 
 #define QDECL __cdecl

@@ -710,7 +710,7 @@ void ClientUserinfoChanged(int32 clientNum)
     trap_SetConfigstring(CS_PLAYERS + clientNum, s);
 
     // this is not the userinfo, more like the configstring actually
-    logger.info("ClientUserinfoChanged: %i %s", clientNum, s);
+    logger.info("ClientUserinfoChanged: {} {}", clientNum, s);
 }
 
 
@@ -790,7 +790,7 @@ const char* ClientConnect(int32 clientNum, bool firstTime, bool isBot)
     }
 
     // get and distribute relevent paramters
-    logger.info("ClientConnect: %i", clientNum);
+    logger.info("ClientConnect: {}", clientNum);
     ClientUserinfoChanged(clientNum);
 
     // don't do the "xxx connected" messages if they were caried over from previous level
@@ -861,7 +861,7 @@ void ClientBegin(int32 clientNum)
             trap_SendServerCommand(-1, va("print \"%s" S_COLOR_WHITE " entered the game\n\"", client->pers.netname));
         }
     }
-    logger.info("ClientBegin: %i", clientNum);
+    logger.info("ClientBegin: {}", clientNum);
 
     // count current clients and rank for scoreboard
     CalculateRanks();
@@ -1138,7 +1138,7 @@ void ClientDisconnect(int32 clientNum)
         TossClientItems(ent);
     }
 
-    logger.info("ClientDisconnect: %i", clientNum);
+    logger.info("ClientDisconnect: {}", clientNum);
 
     // if we are playing in tourney mode and losing, give a win to the other player
     if ((g_gametype->integer == GT_TOURNAMENT)

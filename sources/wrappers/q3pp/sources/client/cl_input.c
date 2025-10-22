@@ -543,7 +543,7 @@ void CL_MouseMove(usercmd_t* cmd)
     accelSensitivity *= cl.cgameSensitivity;
 
     if (rate && cl_showMouseRate->integer) {
-        logger.info("%f : %f", rate, accelSensitivity);
+        logger.info("{} : {}", rate, accelSensitivity);
     }
 
     mx *= accelSensitivity;
@@ -842,7 +842,7 @@ void CL_WritePacket()
     }
     if (count >= 1) {
         if (cl_showSend->integer) {
-            logger.info("(%i)", count);
+            logger.info("({})", count);
         }
 
         // begin a client move command
@@ -882,7 +882,7 @@ void CL_WritePacket()
     clc.lastPacketSentTime = cls.realtime;
 
     if (cl_showSend->integer) {
-        logger.info("%i ", buf.cursize);
+        logger.info("{} ", buf.cursize);
     }
 
     CL_Netchan_Transmit(&clc.netchan, &buf);

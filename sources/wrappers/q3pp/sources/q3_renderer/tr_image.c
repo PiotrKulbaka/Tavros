@@ -57,7 +57,7 @@ void clear_textures()
 texture_type create_texture(tavros::core::string_view name, int32_t width, int32_t height, const uint8_t* pixels)
 {
     if (s_storage.size() >= max_textures) {
-        ::logger.error("max_textures hit %s", name.data());
+        ::logger.error("max_textures hit {}", name.data());
         return 0;
     }
 
@@ -537,7 +537,7 @@ qhandle_t RE_RegisterSkin(const char* name)
 
     // allocate a new skin
     if (tr.numSkins == MAX_SKINS) {
-        logger.warning("RE_RegisterSkin('%s') MAX_SKINS hit", name);
+        logger.warning("RE_RegisterSkin('{}') MAX_SKINS hit", name);
         return 0;
     }
     tr.numSkins++;

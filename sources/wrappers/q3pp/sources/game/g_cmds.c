@@ -819,12 +819,12 @@ void G_Say(gentity_t* ent, gentity_t* target, int32 mode, const char* chatText)
     switch (mode) {
     default:
     case SAY_ALL:
-        logger.debug("say: %s: %s", ent->client->pers.netname, chatText);
+        logger.debug("say: {}: {}", ent->client->pers.netname, chatText);
         Com_sprintf(name, sizeof(name), "%s%c%c" EC ": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE);
         color = COLOR_GREEN;
         break;
     case SAY_TEAM:
-        logger.debug("sayteam: %s: %s", ent->client->pers.netname, chatText);
+        logger.debug("sayteam: {}: {}", ent->client->pers.netname, chatText);
         if (Team_GetLocationMsg(ent, location, sizeof(location))) {
             Com_sprintf(name, sizeof(name), EC "(%s%c%c" EC ") (%s)" EC ": ", ent->client->pers.netname, Q_COLOR_ESCAPE, COLOR_WHITE, location);
         } else {
@@ -851,7 +851,7 @@ void G_Say(gentity_t* ent, gentity_t* target, int32 mode, const char* chatText)
 
     // echo the text to the console
     if (g_dedicated->integer) {
-        logger.info("%s%s", name, text);
+        logger.info("{}{}", name, text);
     }
 
     // send it to all the apropriate clients
@@ -913,7 +913,7 @@ static void Cmd_Tell_f(gentity_t* ent)
 
     p = ConcatArgs(2);
 
-    logger.debug("tell: %s to %s: %s\n", ent->client->pers.netname, target->client->pers.netname, p);
+    logger.debug("tell: {} to {}: {}\n", ent->client->pers.netname, target->client->pers.netname, p);
     G_Say(ent, target, SAY_TELL, p);
     // don't tell to the player self if it was already directed to this player
     // also don't send the chat back to a bot
@@ -975,7 +975,7 @@ void G_Voice(gentity_t* ent, gentity_t* target, int32 mode, const char* id, bool
 
     // echo the text to the console
     if (g_dedicated->integer) {
-        logger.info("voice: %s %s", ent->client->pers.netname, id);
+        logger.info("voice: {} {}", ent->client->pers.netname, id);
     }
 
     // send it to all the apropriate clients
@@ -1036,7 +1036,7 @@ static void Cmd_VoiceTell_f(gentity_t* ent, bool voiceonly)
 
     id = ConcatArgs(2);
 
-    logger.debug("vtell: %s to %s: %s", ent->client->pers.netname, target->client->pers.netname, id);
+    logger.debug("vtell: {} to {}: {}", ent->client->pers.netname, target->client->pers.netname, id);
     G_Voice(ent, target, SAY_TELL, id, voiceonly);
     // don't tell to the player self if it was already directed to this player
     // also don't send the chat back to a bot

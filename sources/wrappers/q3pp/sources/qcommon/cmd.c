@@ -255,10 +255,10 @@ void Cmd_Exec_f()
     COM_DefaultExtension(filename, sizeof(filename), ".cfg");
     len = FS_ReadFile(filename, (void**) &f);
     if (!f) {
-        logger.info("couldn't exec %s", Cmd_Argv(1));
+        logger.info("couldn't exec {}", Cmd_Argv(1));
         return;
     }
-    logger.info("execing %s", Cmd_Argv(1));
+    logger.info("execing {}", Cmd_Argv(1));
 
     Cbuf_InsertText(f);
 
@@ -299,7 +299,7 @@ void Cmd_Echo_f()
     int32 i;
 
     for (i = 1; i < Cmd_Argc(); i++) {
-        logger.info("%s ", Cmd_Argv(i));
+        logger.info("{} ", Cmd_Argv(i));
     }
 }
 
@@ -563,13 +563,13 @@ void Cmd_AddCommand(const char* cmd_name, xcommand_t function)
         if (!strcmp(cmd_name, cmd->name)) {
             // allow completion-only commands to be silently doubled
             if (function != NULL) {
-                logger.info("Cmd_AddCommand: %s already defined", cmd_name);
+                logger.info("Cmd_AddCommand: {} already defined", cmd_name);
             }
             return;
         }
     }
 
-    logger.debug("Cmd_AddCommand: %s", cmd_name);
+    logger.debug("Cmd_AddCommand: {}", cmd_name);
 
     // use a small malloc to avoid zone fragmentation
     cmd = (cmd_function_t*) Z_Malloc(sizeof(cmd_function_t));
@@ -655,7 +655,7 @@ void Cmd_ExecuteString(const char* text)
                 // let the cgame or game handle it
                 break;
             } else {
-                logger.debug("Execute command: '%s'", cmd->name);
+                logger.debug("Execute command: '{}'", cmd->name);
                 cmd->function();
             }
             return;
@@ -710,10 +710,10 @@ void Cmd_List_f()
             continue;
         }
 
-        logger.info("%s", cmd->name);
+        logger.info("{}", cmd->name);
         i++;
     }
-    logger.info("%i commands", i);
+    logger.info("{} commands", i);
 }
 
 /*

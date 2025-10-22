@@ -139,7 +139,7 @@ void G_FindTeams()
         }
     }
 
-    logger.info("%i teams with %i entities", c, c2);
+    logger.info("{} teams with {} entities", c, c2);
 }
 
 /*
@@ -211,7 +211,7 @@ void G_RegisterCvars()
 
     // check some things
     if (g_gametype->integer < 0 || g_gametype->integer >= GT_MAX_GAME_TYPE) {
-        logger.info("g_gametype %i is out of range, defaulting to 0", g_gametype->integer);
+        logger.info("g_gametype {} is out of range, defaulting to 0", g_gametype->integer);
         Cvar_Set("g_gametype", "0");
     }
 }
@@ -228,8 +228,8 @@ void G_InitGame(int32 levelTime, int32 randomSeed, int32 restart)
     int32 i;
 
     logger.info("------- Game Initialization -------");
-    logger.info("gamename: %s", GAMEVERSION);
-    logger.info("gamedate: %s", __DATE__);
+    logger.info("gamename: {}", GAMEVERSION);
+    logger.info("gamedate: {}", __DATE__);
 
     s_game_is_init = true;
     srand(randomSeed);
@@ -819,7 +819,7 @@ void LogExit(const char* string)
     int32      i, numSorted;
     gclient_t* cl;
 
-    logger.info("Exit: %s", string);
+    logger.info("Exit: {}", string);
 
     level.intermissionQueued = level.time;
 
@@ -834,7 +834,7 @@ void LogExit(const char* string)
     }
 
     if (g_gametype->integer >= GT_TEAM) {
-        logger.info("red:%i  blue:%i\n", level.teamScores[TEAM_RED], level.teamScores[TEAM_BLUE]);
+        logger.info("red:{}  blue:{}\n", level.teamScores[TEAM_RED], level.teamScores[TEAM_BLUE]);
     }
 
     for (i = 0; i < numSorted; i++) {
@@ -851,7 +851,7 @@ void LogExit(const char* string)
 
         ping = cl->ps.ping < 999 ? cl->ps.ping : 999;
 
-        logger.info("score: %i  ping: %i  client: %i %s", cl->ps.persistant[PERS_SCORE], ping, level.sortedClients[i], cl->pers.netname);
+        logger.info("score: {}  ping: {}  client: {} {}", cl->ps.persistant[PERS_SCORE], ping, level.sortedClients[i], cl->pers.netname);
     }
 }
 
@@ -1485,7 +1485,7 @@ void G_RunFrame(int32 levelTime)
 
     if (g_listEntity->integer) {
         for (i = 0; i < MAX_GENTITIES; i++) {
-            logger.info("%4i: %s", i, g_entities[i].classname);
+            logger.info("%4i: {}", i, g_entities[i].classname);
         }
         Cvar_Set("g_listEntity", "0");
     }

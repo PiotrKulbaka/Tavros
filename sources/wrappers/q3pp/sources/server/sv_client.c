@@ -93,13 +93,13 @@ void SV_GetChallenge(netadr_t from)
 
     // look up the authorize server's IP
     if (!svs.authorizeAddress.ip[0] && svs.authorizeAddress.type != NA_BAD) {
-        logger.info("Resolving %s", AUTHORIZE_SERVER_NAME);
+        logger.info("Resolving {}", AUTHORIZE_SERVER_NAME);
         if (!NET_StringToAdr(AUTHORIZE_SERVER_NAME, &svs.authorizeAddress)) {
             logger.info("Couldn't resolve address");
             return;
         }
         svs.authorizeAddress.port = BigShort(PORT_AUTHORIZE);
-        logger.info("%s resolved to %i.%i.%i.%i:%i", AUTHORIZE_SERVER_NAME, svs.authorizeAddress.ip[0], svs.authorizeAddress.ip[1], svs.authorizeAddress.ip[2], svs.authorizeAddress.ip[3], BigShort(svs.authorizeAddress.port));
+        logger.info("{} resolved to {}.{}.{}.{}:{}", AUTHORIZE_SERVER_NAME, svs.authorizeAddress.ip[0], svs.authorizeAddress.ip[1], svs.authorizeAddress.ip[2], svs.authorizeAddress.ip[3], BigShort(svs.authorizeAddress.port));
     }
 
     // if they have been challenging for a long time and we
@@ -118,7 +118,7 @@ void SV_GetChallenge(netadr_t from)
         cvar_t* fs;
         char    game[1024];
 
-        logger.debug("sending getIpAuthorize for %s", NET_AdrToString(from));
+        logger.debug("sending getIpAuthorize for {}", NET_AdrToString(from));
 
         strcpy(game, BASEGAME);
         fs = Cvar_Get("fs_game", "", CVAR_INIT | CVAR_SYSTEMINFO);
@@ -235,7 +235,7 @@ void SV_DirectConnect(netadr_t from)
     version = atoi(Info_ValueForKey(userinfo, "protocol"));
     if (version != PROTOCOL_VERSION) {
         NET_OutOfBandPrint(NS_SERVER, from, "print\nServer uses protocol version %i.\n", PROTOCOL_VERSION);
-        logger.debug("    rejected connect from version %i", version);
+        logger.debug("    rejected connect from version {}", version);
         return;
     }
 
@@ -252,7 +252,7 @@ void SV_DirectConnect(netadr_t from)
                 || from.port == cl->netchan.remoteAddress.port)) {
             if ((svs.time - cl->lastConnectTime)
                 < (sv_reconnectlimit->integer * 1000)) {
-                logger.debug("%s:reconnect rejected : too soon", NET_AdrToString(from));
+                logger.debug("{}:reconnect rejected : too soon", NET_AdrToString(from));
                 return;
             }
             break;
@@ -278,7 +278,7 @@ void SV_DirectConnect(netadr_t from)
         Info_SetValueForKey(userinfo, "ip", NET_AdrToString(from));
 
         ping = svs.time - svs.challenges[i].pingTime;
-        logger.info("Client %i connecting with %i challenge ping", i, ping);
+        logger.info("Client {} connecting with {} challenge ping", i, ping);
         svs.challenges[i].connected = true;
 
         // never reject a LAN client based on ping
@@ -286,7 +286,7 @@ void SV_DirectConnect(netadr_t from)
             if (sv_minPing->value && ping < sv_minPing->value) {
                 // don't let them keep trying until they get a big delay
                 NET_OutOfBandPrint(NS_SERVER, from, "print\nServer is for high pings only\n");
-                logger.debug("Client %i rejected on a too low ping", i);
+                logger.debug("Client {} rejected on a too low ping", i);
                 // reset the address otherwise their ping will keep increasing
                 // with each connect message and they'd eventually be able to connect
                 svs.challenges[i].adr.port = 0;
@@ -294,7 +294,7 @@ void SV_DirectConnect(netadr_t from)
             }
             if (sv_maxPing->value && ping > sv_maxPing->value) {
                 NET_OutOfBandPrint(NS_SERVER, from, "print\nServer is for low pings only\n");
-                logger.debug("Client %i rejected on a too high ping", i);
+                logger.debug("Client {} rejected on a too high ping", i);
                 return;
             }
         }
@@ -314,7 +314,7 @@ void SV_DirectConnect(netadr_t from)
         if (NET_CompareBaseAdr(from, cl->netchan.remoteAddress)
             && (cl->netchan.qport == qport
                 || from.port == cl->netchan.remoteAddress.port)) {
-            logger.info("%s:reconnect", NET_AdrToString(from));
+            logger.info("{}:reconnect", NET_AdrToString(from));
             newcl = cl;
 
             goto gotnewcl;
@@ -401,7 +401,7 @@ gotnewcl:
     denied = (char*) ClientConnect(clientNum, true, false); // firstTime = true
     if (denied) {
         NET_OutOfBandPrint(NS_SERVER, from, "print\n%s\n", denied);
-        logger.debug("Game rejected a connection: %s.", denied);
+        logger.debug("Game rejected a connection: {}.", denied);
         return;
     }
 
@@ -410,7 +410,7 @@ gotnewcl:
     // send the connect packet to the client
     NET_OutOfBandPrint(NS_SERVER, from, "connectResponse");
 
-    logger.debug("Going from CS_FREE to CS_CONNECTED for %s", newcl->name);
+    logger.debug("Going from CS_FREE to CS_CONNECTED for {}", newcl->name);
 
     newcl->state = CS_CONNECTED;
     newcl->nextSnapshotTime = svs.time;
@@ -472,7 +472,7 @@ void SV_DropClient(client_t* drop, const char* reason)
     // tell everyone why they got dropped
     SV_SendServerCommand(NULL, "print \"%s" S_COLOR_WHITE " %s\n\"", drop->name, reason);
 
-    logger.debug("Going to CS_ZOMBIE for %s", drop->name);
+    logger.debug("Going to CS_ZOMBIE for {}", drop->name);
     drop->state = CS_ZOMBIE; // become free in a few seconds
 
     if (drop->download) {
@@ -526,8 +526,8 @@ void SV_SendClientGameState(client_t* client)
     msg_t          msg;
     uint8          msgBuffer[MAX_MSGLEN];
 
-    logger.debug("SV_SendClientGameState() for %s", client->name);
-    logger.debug("Going from CS_CONNECTED to CS_PRIMED for %s", client->name);
+    logger.debug("SV_SendClientGameState() for {}", client->name);
+    logger.debug("Going from CS_CONNECTED to CS_PRIMED for {}", client->name);
     client->state = CS_PRIMED;
     client->pureAuthentic = 0;
     client->gotCP = false;
@@ -595,7 +595,7 @@ void SV_ClientEnterWorld(client_t* client, usercmd_t* cmd)
     int32           clientNum;
     sharedEntity_t* ent;
 
-    logger.debug("Going from CS_PRIMED to CS_ACTIVE for %s", client->name);
+    logger.debug("Going from CS_PRIMED to CS_ACTIVE for {}", client->name);
     client->state = CS_ACTIVE;
 
     // set up the entity for the client
@@ -657,7 +657,7 @@ Abort a download if in progress
 void SV_StopDownload_f(client_t* cl)
 {
     if (*cl->downloadName) {
-        logger.debug("clientDownload: %d : file \"%s\" aborted", cl - svs.clients, cl->downloadName);
+        logger.debug("clientDownload: {} : file \"%s\" aborted", cl - svs.clients, cl->downloadName);
     }
 
     SV_CloseDownload(cl);
@@ -672,7 +672,7 @@ Downloads are finished
 */
 void SV_DoneDownload_f(client_t* cl)
 {
-    logger.debug("clientDownload: %s Done", cl->name);
+    logger.debug("clientDownload: {} Done", cl->name);
     // resend the game state to update any clients that entered during the download
     SV_SendClientGameState(cl);
 }
@@ -690,11 +690,11 @@ void SV_NextDownload_f(client_t* cl)
     int32 block = atoi(Cmd_Argv(1));
 
     if (block == cl->downloadClientBlock) {
-        logger.debug("clientDownload: %d : client acknowledge of block %d", cl - svs.clients, block);
+        logger.debug("clientDownload: {} : client acknowledge of block {}", cl - svs.clients, block);
 
         // Find out if we are done.  A zero-length block indicates EOF
         if (cl->downloadBlockSize[cl->downloadClientBlock % MAX_DOWNLOAD_WINDOW] == 0) {
-            logger.info("clientDownload: %d : file \"%s\" completed", cl - svs.clients, cl->downloadName);
+            logger.info("clientDownload: {} : file \"%s\" completed", cl - svs.clients, cl->downloadName);
             SV_CloseDownload(cl);
             return;
         }
@@ -747,17 +747,17 @@ void SV_WriteDownloadToClient(client_t* cl, msg_t* msg)
     if (!cl->download) {
         // We open the file here
 
-        logger.info("clientDownload: %d : begining \"%s\"", cl - svs.clients, cl->downloadName);
+        logger.info("clientDownload: {} : begining \"%s\"", cl - svs.clients, cl->downloadName);
 
         idPack = FS_idPak(cl->downloadName, "baseq3");
 
         if (!sv_allowDownload->integer || idPack || (cl->downloadSize = FS_SV_FOpenFileRead(cl->downloadName, &cl->download)) <= 0) {
             // cannot auto-download file
             if (idPack) {
-                logger.info("clientDownload: %d : \"%s\" cannot download id pk3 files", cl - svs.clients, cl->downloadName);
+                logger.info("clientDownload: {} : \"%s\" cannot download id pk3 files", cl - svs.clients, cl->downloadName);
                 Com_sprintf(errorMessage, sizeof(errorMessage), "Cannot autodownload id pk3 file \"%s\"", cl->downloadName);
             } else if (!sv_allowDownload->integer) {
-                logger.info("clientDownload: %d : \"%s\" download disabled", cl - svs.clients, cl->downloadName);
+                logger.info("clientDownload: {} : \"%s\" download disabled", cl - svs.clients, cl->downloadName);
                 if (sv_pure->integer) {
                     Com_sprintf(errorMessage, sizeof(errorMessage),
                                 "Could not download \"%s\" because autodownloading is disabled on the server.\n\n"
@@ -775,7 +775,7 @@ void SV_WriteDownloadToClient(client_t* cl, msg_t* msg)
             } else {
                 // NOTE TTimo this is NOT supposed to happen unless bug in our filesystem scheme?
                 //   if the pk3 is referenced, it must have been found somewhere in the filesystem
-                logger.info("clientDownload: %d : \"%s\" file not found on server", cl - svs.clients, cl->downloadName);
+                logger.info("clientDownload: {} : \"%s\" file not found on server", cl - svs.clients, cl->downloadName);
                 Com_sprintf(errorMessage, sizeof(errorMessage), "File \"%s\" not found on server for autodownloading.\n", cl->downloadName);
             }
             MSG_WriteByte(msg, svc_download);
@@ -886,7 +886,7 @@ void SV_WriteDownloadToClient(client_t* cl, msg_t* msg)
             MSG_WriteData(msg, cl->downloadBlocks[curindex], cl->downloadBlockSize[curindex]);
         }
 
-        logger.debug("clientDownload: %d : writing block %d", cl - svs.clients, cl->downloadXmitBlock);
+        logger.debug("clientDownload: {} : writing block {}", cl - svs.clients, cl->downloadXmitBlock);
 
         // Move on to the next block
         // It will get sent with next snap shot.  The rate will keep us in line.
@@ -1074,7 +1074,7 @@ void SV_ExecuteClientCommand(client_t* cl, const char* s, bool clientOK)
             ClientCommand(cl - svs.clients);
         }
     } else if (!bProcessed) {
-        logger.debug("client text ignored for %s: %s", cl->name, Cmd_Argv(0));
+        logger.debug("client text ignored for {}: {}", cl->name, Cmd_Argv(0));
     }
 }
 
@@ -1097,11 +1097,11 @@ static bool SV_ClientCommand(client_t* cl, msg_t* msg)
         return true;
     }
 
-    logger.debug("clientCommand: %s : %i : %s", cl->name, seq, s);
+    logger.debug("clientCommand: {} : {} : {}", cl->name, seq, s);
 
     // drop the connection if we have somehow lost commands
     if (seq > cl->lastClientCommand + 1) {
-        logger.info("Client %s lost %i clientCommands", cl->name, seq - cl->lastClientCommand + 1);
+        logger.info("Client {} lost {} clientCommands", cl->name, seq - cl->lastClientCommand + 1);
         SV_DropClient(cl, "Lost reliable commands");
         return false;
     }
@@ -1215,7 +1215,7 @@ static void SV_UserMove(client_t* cl, msg_t* msg, bool delta)
     if (sv_pure->integer != 0 && cl->pureAuthentic == 0 && !cl->gotCP) {
         if (cl->state == CS_ACTIVE) {
             // we didn't get a cp yet, don't assume anything and just send the gamestate all over again
-            logger.debug("%s: didn't get cp command, resending gamestate", cl->name, cl->state);
+            logger.debug("{}: didn't get cp command, resending gamestate {}", cl->name, (uint32) cl->state);
             SV_SendClientGameState(cl);
         }
         return;
@@ -1319,13 +1319,13 @@ void SV_ExecuteClientMessage(client_t* cl, msg_t* msg)
     if (serverId != sv.serverId && !*cl->downloadName && !strstr(cl->lastClientCommandString, "nextdl")) {
         if (serverId >= sv.restartedServerId && serverId < sv.serverId) { // TTimo - use a comparison here to catch multiple map_restart
             // they just haven't caught the map_restart yet
-            logger.debug("%s : ignoring pre map_restart / outdated client message", cl->name);
+            logger.debug("{} : ignoring pre map_restart / outdated client message", cl->name);
             return;
         }
         // if we can tell that the client has dropped the last
         // gamestate we sent them, resend it
         if (cl->messageAcknowledge > cl->gamestateMessageNum) {
-            logger.debug("%s : dropped gamestate, resending", cl->name);
+            logger.debug("{} : dropped gamestate, resending", cl->name);
             SV_SendClientGameState(cl);
         }
         return;
@@ -1354,6 +1354,6 @@ void SV_ExecuteClientMessage(client_t* cl, msg_t* msg)
     } else if (c == clc_moveNoDelta) {
         SV_UserMove(cl, msg, false);
     } else if (c != clc_EOF) {
-        logger.warning("bad command uint8 for client %i", cl - svs.clients);
+        logger.warning("bad command uint8 for client {}", cl - svs.clients);
     }
 }

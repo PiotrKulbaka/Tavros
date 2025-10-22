@@ -754,7 +754,7 @@ void UI_SetActiveMenu(uiMenuCommand_t menu)
     case UIMENU_TEAM:
     case UIMENU_POSTGAME:
     default:
-        logger.debug("UI_SetActiveMenu: bad enum %d", menu);
+        logger.debug("UI_SetActiveMenu: bad enum {}", (uint32) menu);
         break;
     }
 }
@@ -915,7 +915,7 @@ bool UI_ConsoleCommand(int32 realTime)
 
     cmd = UI_Argv(0);
 
-    logger.debug("Execute command: '%s'", cmd);
+    logger.debug("Execute command: '{}'", cmd);
 
     // ensure minimum menu data is available
     Menu_Cache();

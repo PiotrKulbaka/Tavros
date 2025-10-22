@@ -134,7 +134,7 @@ void Netchan_TransmitNextFragment(netchan_t* chan)
     NET_SendPacket(chan->sock, send.cursize, send.data, chan->remoteAddress);
 
     if (showpackets->integer) {
-        logger.info("%s send %4i : s=%i fragment=%i,%i", netsrcString[chan->sock], send.cursize, chan->outgoingSequence, chan->unsentFragmentStart, fragmentLength);
+        logger.info("{} send %4i : s={} fragment={},{}", netsrcString[chan->sock], send.cursize, chan->outgoingSequence, chan->unsentFragmentStart, fragmentLength);
     }
 
     chan->unsentFragmentStart += fragmentLength;
@@ -197,7 +197,7 @@ void Netchan_Transmit(netchan_t* chan, int32 length, const uint8* data)
     NET_SendPacket(chan->sock, send.cursize, send.data, chan->remoteAddress);
 
     if (showpackets->integer) {
-        logger.info("%s send %4i : s=%i ack=%i", netsrcString[chan->sock], send.cursize, chan->outgoingSequence - 1, chan->incomingSequence);
+        logger.info("{} send %4i : s={} ack={}", netsrcString[chan->sock], send.cursize, chan->outgoingSequence - 1, chan->incomingSequence);
     }
 }
 
@@ -251,9 +251,9 @@ bool Netchan_Process(netchan_t* chan, msg_t* msg)
 
     if (showpackets->integer) {
         if (fragmented) {
-            logger.info("%s recv %4i : s=%i fragment=%i,%i", netsrcString[chan->sock], msg->cursize, sequence, fragmentStart, fragmentLength);
+            logger.info("{} recv %4i : s={} fragment={},{}", netsrcString[chan->sock], msg->cursize, sequence, fragmentStart, fragmentLength);
         } else {
-            logger.info("%s recv %4i : s=%i", netsrcString[chan->sock], msg->cursize, sequence);
+            logger.info("{} recv %4i : s={}", netsrcString[chan->sock], msg->cursize, sequence);
         }
     }
 
@@ -262,7 +262,7 @@ bool Netchan_Process(netchan_t* chan, msg_t* msg)
     //
     if (sequence <= chan->incomingSequence) {
         if (showdrop->integer || showpackets->integer) {
-            logger.info("%s:Out of order packet %i at %i", NET_AdrToString(chan->remoteAddress), sequence, chan->incomingSequence);
+            logger.info("{}:Out of order packet {} at {}", NET_AdrToString(chan->remoteAddress), sequence, chan->incomingSequence);
         }
         return false;
     }
@@ -273,7 +273,7 @@ bool Netchan_Process(netchan_t* chan, msg_t* msg)
     chan->dropped = sequence - (chan->incomingSequence + 1);
     if (chan->dropped > 0) {
         if (showdrop->integer || showpackets->integer) {
-            logger.info("%s:Dropped %i packets at %i", NET_AdrToString(chan->remoteAddress), chan->dropped, sequence);
+            logger.info("{}:Dropped {} packets at {}", NET_AdrToString(chan->remoteAddress), chan->dropped, sequence);
         }
     }
 
@@ -295,7 +295,7 @@ bool Netchan_Process(netchan_t* chan, msg_t* msg)
         // if we missed a fragment, dump the message
         if (fragmentStart != chan->fragmentLength) {
             if (showdrop->integer || showpackets->integer) {
-                logger.info("%s:Dropped a message fragment", NET_AdrToString(chan->remoteAddress), sequence);
+                logger.info("{}:Dropped a message fragment", NET_AdrToString(chan->remoteAddress), sequence);
             }
             // we can still keep the part that we have so far,
             // so we don't need to clear chan->fragmentLength
@@ -305,7 +305,7 @@ bool Netchan_Process(netchan_t* chan, msg_t* msg)
         // copy the fragment to the fragment buffer
         if (fragmentLength < 0 || msg->readcount + fragmentLength > msg->cursize || chan->fragmentLength + fragmentLength > sizeof(chan->fragmentBuffer)) {
             if (showdrop->integer || showpackets->integer) {
-                logger.info("%s:illegal fragment length", NET_AdrToString(chan->remoteAddress));
+                logger.info("{}:illegal fragment length", NET_AdrToString(chan->remoteAddress));
             }
             return false;
         }
@@ -320,7 +320,7 @@ bool Netchan_Process(netchan_t* chan, msg_t* msg)
         }
 
         if (chan->fragmentLength > msg->maxsize) {
-            logger.info("%s:fragmentLength %i > msg->maxsize", NET_AdrToString(chan->remoteAddress), chan->fragmentLength);
+            logger.info("{}:fragmentLength {} > msg->maxsize", NET_AdrToString(chan->remoteAddress), chan->fragmentLength);
             return false;
         }
 

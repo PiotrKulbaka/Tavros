@@ -107,14 +107,14 @@ void S_SoundInfo_f()
             logger.info("sound system is muted");
         }
 
-        logger.info("%5d stereo", dma.channels - 1);
-        logger.info("%5d samples", dma.samples);
-        logger.info("%5d samplebits", dma.samplebits);
-        logger.info("%5d submission_chunk", dma.submission_chunk);
-        logger.info("%5d speed", dma.speed);
-        logger.info("0x%x dma buffer", dma.buffer);
+        logger.info("{:05d} stereo", dma.channels - 1);
+        logger.info("{:05d} samples", dma.samples);
+        logger.info("{:05d} samplebits", dma.samplebits);
+        logger.info("{:05d} submission_chunk", dma.submission_chunk);
+        logger.info("{:05d} speed", dma.speed);
+        logger.info("{} dma buffer", (void*) dma.buffer);
         if (s_backgroundFile) {
-            logger.info("Background file: %s", s_backgroundLoop);
+            logger.info("Background file: {}", s_backgroundLoop);
         } else {
             logger.info("No background file.");
         }
@@ -392,7 +392,7 @@ sfxHandle_t S_RegisterSound(const char* name, bool compressed)
     sfx = S_FindName(name);
     if (sfx->soundData) {
         if (sfx->defaultSound) {
-            logger.warning("Could not find %s - using default", sfx->soundName);
+            logger.warning("Could not find {} - using default", sfx->soundName);
             return 0;
         }
         return sfx - s_knownSfx;
@@ -404,7 +404,7 @@ sfxHandle_t S_RegisterSound(const char* name, bool compressed)
     S_memoryLoad(sfx);
 
     if (sfx->defaultSound) {
-        logger.warning("Could not find %s - using default", sfx->soundName);
+        logger.warning("Could not find {} - using default", sfx->soundName);
         return 0;
     }
 
@@ -512,7 +512,7 @@ void S_StartSound(vec3_t origin, int32 entityNum, int32 entchannel, sfxHandle_t 
     }
 
     if (sfxHandle < 0 || sfxHandle >= s_numSfx) {
-        logger.info("S_StartSound: handle %i out of range", sfxHandle);
+        logger.info("S_StartSound: handle {} out of range", sfxHandle);
         return;
     }
 
@@ -523,7 +523,7 @@ void S_StartSound(vec3_t origin, int32 entityNum, int32 entchannel, sfxHandle_t 
     }
 
     if (s_show->integer == 1) {
-        logger.info("%i : %s", s_paintedtime, sfx->soundName);
+        logger.info("{} : {}", s_paintedtime, sfx->soundName);
     }
 
     time = Com_Milliseconds();
@@ -619,7 +619,7 @@ void S_StartLocalSound(sfxHandle_t sfxHandle, int32 channelNum)
     }
 
     if (sfxHandle < 0 || sfxHandle >= s_numSfx) {
-        logger.info("S_StartLocalSound: handle %i out of range", sfxHandle);
+        logger.info("S_StartLocalSound: handle {} out of range", sfxHandle);
         return;
     }
 
@@ -735,7 +735,7 @@ void S_AddLoopingSound(int32 entityNum, const vec3_t origin, const vec3_t veloci
     }
 
     if (sfxHandle < 0 || sfxHandle >= s_numSfx) {
-        logger.info("S_AddLoopingSound: handle %i out of range", sfxHandle);
+        logger.info("S_AddLoopingSound: handle {} out of range", sfxHandle);
         return;
     }
 
@@ -797,7 +797,7 @@ void S_AddRealLoopingSound(int32 entityNum, const vec3_t origin, const vec3_t ve
     }
 
     if (sfxHandle < 0 || sfxHandle >= s_numSfx) {
-        logger.info("S_AddRealLoopingSound: handle %i out of range", sfxHandle);
+        logger.info("S_AddRealLoopingSound: handle {} out of range", sfxHandle);
         return;
     }
 
@@ -951,7 +951,7 @@ void S_RawSamples(int32 samples, int32 rate, int32 width, int32 s_channels, cons
     intVolume = 256 * volume;
 
     if (s_rawend < s_soundtime) {
-        logger.debug("S_RawSamples: resetting minimum: %i < %i", s_rawend, s_soundtime);
+        logger.debug("S_RawSamples: resetting minimum: {} < {}", s_rawend, s_soundtime);
         s_rawend = s_soundtime;
     }
 
@@ -1017,7 +1017,7 @@ void S_RawSamples(int32 samples, int32 rate, int32 width, int32 s_channels, cons
     }
 
     if (s_rawend > s_soundtime + MAX_RAW_SAMPLES) {
-        logger.debug("S_RawSamples: overflowed %i > %i", s_rawend, s_soundtime);
+        logger.debug("S_RawSamples: overflowed {} > {}", s_rawend, s_soundtime);
     }
 }
 
@@ -1152,12 +1152,12 @@ void S_Update()
         ch = s_channels;
         for (i = 0; i < MAX_CHANNELS; i++, ch++) {
             if (ch->thesfx && (ch->leftvol || ch->rightvol)) {
-                logger.debug("%f %f %s", ch->leftvol, ch->rightvol, ch->thesfx->soundName);
+                logger.debug("{} {} {}", ch->leftvol, ch->rightvol, ch->thesfx->soundName);
                 total++;
             }
         }
 
-        logger.debug("----(%i)---- painted: %i", total, s_paintedtime);
+        logger.debug("----({})---- painted: {}", total, s_paintedtime);
     }
 
     // add raw data from streamed samples
@@ -1326,9 +1326,9 @@ void S_SoundList_f()
     for (sfx = s_knownSfx, i = 0; i < s_numSfx; i++, sfx++) {
         size = sfx->soundLength;
         total += size;
-        logger.info("%6i[%s] : %s[%s]", size, type[sfx->soundCompressionMethod], sfx->soundName, mem[sfx->inMemory]);
+        logger.info("%6i[{}] : {}[{}]", size, type[sfx->soundCompressionMethod], sfx->soundName, mem[sfx->inMemory]);
     }
-    logger.info("Total resident: %i", total);
+    logger.info("Total resident: {}", total);
     S_DisplayFreeMemory();
 }
 
@@ -1419,7 +1419,7 @@ void S_StartBackgroundTrack(const char* intro, const char* loop)
     if (!loop || !loop[0]) {
         loop = intro;
     }
-    logger.debug("S_StartBackgroundTrack( %s, %s )", intro, loop);
+    logger.debug("S_StartBackgroundTrack( {}, {} )", intro, loop);
 
     Q_strncpyz(name, intro, sizeof(name) - 4);
     COM_DefaultExtension(name, sizeof(name), ".wav");
@@ -1442,7 +1442,7 @@ void S_StartBackgroundTrack(const char* intro, const char* loop)
     //
     FS_FOpenFileRead(name, &s_backgroundFile, true);
     if (!s_backgroundFile) {
-        logger.warning("couldn't open music file %s", name);
+        logger.warning("couldn't open music file {}", name);
         return;
     }
 
@@ -1451,7 +1451,7 @@ void S_StartBackgroundTrack(const char* intro, const char* loop)
     FS_Read(dump, 12, s_backgroundFile);
 
     if (!S_FindWavChunk(s_backgroundFile, "fmt ")) {
-        logger.info("No fmt chunk in %s", name);
+        logger.info("No fmt chunk in {}", name);
         FS_FCloseFile(s_backgroundFile);
         s_backgroundFile = 0;
         return;
@@ -1468,18 +1468,18 @@ void S_StartBackgroundTrack(const char* intro, const char* loop)
     if (s_backgroundInfo.format != WAV_FORMAT_PCM) {
         FS_FCloseFile(s_backgroundFile);
         s_backgroundFile = 0;
-        logger.info("Not a microsoft PCM format wav: %s", name);
+        logger.info("Not a microsoft PCM format wav: {}", name);
         return;
     }
 
     if (s_backgroundInfo.channels != 2 || s_backgroundInfo.rate != 22050) {
-        logger.warning("Music file %s is not 22k stereo", name);
+        logger.warning("Music file {} is not 22k stereo", name);
     }
 
     if ((len = S_FindWavChunk(s_backgroundFile, "data")) == 0) {
         FS_FCloseFile(s_backgroundFile);
         s_backgroundFile = 0;
-        logger.info("No data chunk in %s", name);
+        logger.info("No data chunk in {}", name);
         return;
     }
 
@@ -1594,7 +1594,7 @@ void S_FreeOldestSound()
 
     sfx = &s_knownSfx[used];
 
-    logger.debug("S_FreeOldestSound: freeing sound %s", sfx->soundName);
+    logger.debug("S_FreeOldestSound: freeing sound {}", sfx->soundName);
 
     buffer = sfx->soundData;
     while (buffer != NULL) {

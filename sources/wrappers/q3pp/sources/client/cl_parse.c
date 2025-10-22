@@ -40,7 +40,7 @@ const char* svc_strings[256] = {
 void SHOWNET(const msg_t* msg, const char* s)
 {
     if (cl_shownet->integer >= 2) {
-        logger.info("%3i:%s", msg->readcount - 1, s);
+        logger.info("%3i:{}", msg->readcount - 1, s);
     }
 }
 
@@ -126,7 +126,7 @@ void CL_ParsePacketEntities(msg_t* msg, clSnapshot_t* oldframe, clSnapshot_t* ne
         while (oldnum < newnum) {
             // one or more entities from the old packet are unchanged
             if (cl_shownet->integer == 3) {
-                logger.info("%3i:  unchanged: %i", msg->readcount, oldnum);
+                logger.info("%3i:  unchanged: {}", msg->readcount, oldnum);
             }
             CL_DeltaEntity(msg, newframe, oldnum, oldstate, true);
 
@@ -142,7 +142,7 @@ void CL_ParsePacketEntities(msg_t* msg, clSnapshot_t* oldframe, clSnapshot_t* ne
         if (oldnum == newnum) {
             // delta from previous state
             if (cl_shownet->integer == 3) {
-                logger.info("%3i:  delta: %i", msg->readcount, newnum);
+                logger.info("%3i:  delta: {}", msg->readcount, newnum);
             }
             CL_DeltaEntity(msg, newframe, newnum, oldstate, false);
 
@@ -160,7 +160,7 @@ void CL_ParsePacketEntities(msg_t* msg, clSnapshot_t* oldframe, clSnapshot_t* ne
         if (oldnum > newnum) {
             // delta from baseline
             if (cl_shownet->integer == 3) {
-                logger.info("%3i:  baseline: %i", msg->readcount, newnum);
+                logger.info("%3i:  baseline: {}", msg->readcount, newnum);
             }
             CL_DeltaEntity(msg, newframe, newnum, &cl.entityBaselines[newnum], false);
             continue;
@@ -171,7 +171,7 @@ void CL_ParsePacketEntities(msg_t* msg, clSnapshot_t* oldframe, clSnapshot_t* ne
     while (oldnum != 99999) {
         // one or more entities from the old packet are unchanged
         if (cl_shownet->integer == 3) {
-            logger.info("%3i:  unchanged: %i", msg->readcount, oldnum);
+            logger.info("%3i:  unchanged: {}", msg->readcount, oldnum);
         }
         CL_DeltaEntity(msg, newframe, oldnum, oldstate, true);
 
@@ -304,7 +304,7 @@ void CL_ParseSnapshot(msg_t* msg)
     cl.snapshots[cl.snap.messageNum & PACKET_MASK] = cl.snap;
 
     if (cl_shownet->integer == 3) {
-        logger.info("   snapshot:%i  delta:%i  ping:%i", cl.snap.messageNum, cl.snap.deltaNum, cl.snap.ping);
+        logger.info("   snapshot:{}  delta:{}  ping:{}", cl.snap.messageNum, cl.snap.deltaNum, cl.snap.ping);
     }
 
     cl.newSnapshots = true;
@@ -495,7 +495,7 @@ void CL_ParseDownload(msg_t* msg)
     }
 
     if (clc.downloadBlock != block) {
-        logger.debug("CL_ParseDownload: Expected block %d, got %d", clc.downloadBlock, block);
+        logger.debug("CL_ParseDownload: Expected block {}, got {}", clc.downloadBlock, block);
         return;
     }
 
@@ -510,7 +510,7 @@ void CL_ParseDownload(msg_t* msg)
         clc.download = FS_SV_FOpenFileWrite(clc.downloadTempName);
 
         if (!clc.download) {
-            logger.info("Could not create %s\n", clc.downloadTempName);
+            logger.info("Could not create {}\n", clc.downloadTempName);
             CL_AddReliableCommand("stopdl");
             CL_NextDownload();
             return;
@@ -591,7 +591,7 @@ void CL_ParseServerMessage(msg_t* msg)
     int32 cmd;
 
     if (cl_shownet->integer == 1) {
-        logger.info("%i ", msg->cursize);
+        logger.info("{} ", msg->cursize);
     } else if (cl_shownet->integer >= 2) {
         logger.info("------------------");
     }
@@ -623,7 +623,7 @@ void CL_ParseServerMessage(msg_t* msg)
 
         if (cl_shownet->integer >= 2) {
             if (!svc_strings[cmd]) {
-                logger.info("%3i:BAD CMD %i", msg->readcount - 1, cmd);
+                logger.info("%3i:BAD CMD {}", msg->readcount - 1, cmd);
             } else {
                 SHOWNET(msg, svc_strings[cmd]);
             }

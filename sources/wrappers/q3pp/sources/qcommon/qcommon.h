@@ -24,7 +24,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 // qcommon.h -- definitions common between client and server, but not game.orient ref modules
 #include "../qcommon/cm_public.h"
 
-#include <tavros/core/prelude.hpp>
 #include <game/q_shared.h>
 
 //============================================================================

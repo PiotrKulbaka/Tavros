@@ -846,7 +846,7 @@ bool BG_CanItemBeGrabbed(int32 gametype, const entityState_t* ent, const playerS
     case IT_BAD:
         Com_Error(ERR_DROP, "BG_CanItemBeGrabbed: IT_BAD");
     default:
-        logger.info("BG_CanItemBeGrabbed: unknown enum %d", item->giType);
+        logger.info("BG_CanItemBeGrabbed: unknown enum {}", (uint32) item->giType);
         break;
     }
 

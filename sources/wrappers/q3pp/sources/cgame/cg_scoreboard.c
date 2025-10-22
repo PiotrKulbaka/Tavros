@@ -86,7 +86,7 @@ static void CG_DrawClientScore(int32 y, score_t* score, tavros::math::vec4 color
     int32         iconx, headx;
 
     if (score->client < 0 || score->client >= cgs.maxclients) {
-        logger.info("Bad score->client: %i", score->client);
+        logger.info("Bad score->client: {}", score->client);
         return;
     }
 

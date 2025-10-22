@@ -96,7 +96,7 @@ void SV_SectorList_f()
         for (ent = sec->entities; ent; ent = ent->nextEntityInWorldSector) {
             c++;
         }
-        logger.info("sector %i: %i entities", i, c);
+        logger.info("sector {}: {} entities", i, c);
     }
 }
 
@@ -316,7 +316,7 @@ void SV_LinkEntity(sharedEntity_t* gEnt)
             // but nothing should evern need more than that
             if (ent->areanum != -1 && ent->areanum != area) {
                 if (ent->areanum2 != -1 && ent->areanum2 != area && sv.state == SS_LOADING) {
-                    logger.debug("Object %i touching 3 areas at %f %f %f", gEnt->s.number, gEnt->r.absmin[0], gEnt->r.absmin[1], gEnt->r.absmin[2]);
+                    logger.debug("Object {} touching 3 areas at {} {} {}", gEnt->s.number, gEnt->r.absmin[0], gEnt->r.absmin[1], gEnt->r.absmin[2]);
                 }
                 ent->areanum2 = area;
             } else {

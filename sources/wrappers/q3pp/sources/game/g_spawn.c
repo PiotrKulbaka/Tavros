@@ -295,7 +295,7 @@ bool G_CallSpawn(gentity_t* ent)
             return true;
         }
     }
-    logger.info("%s doesn't have a spawn function", ent->classname);
+    logger.info("{} doesn't have a spawn function", ent->classname);
     return false;
 }
 

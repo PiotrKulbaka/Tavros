@@ -460,7 +460,7 @@ void Console_Key(int32 key)
             g_consoleField.cursor++;
         }
 
-        logger.info("]%s", g_consoleField.buffer);
+        logger.info("]{}", g_consoleField.buffer);
 
         // leading slash is an explicit command
         if (g_consoleField.buffer[0] == '\\' || g_consoleField.buffer[0] == '/') {
@@ -802,7 +802,7 @@ void Key_Unbind_f()
 
     b = Key_StringToKeynum(Cmd_Argv(1));
     if (b == -1) {
-        logger.info("'%s' isn't a valid key", Cmd_Argv(1));
+        logger.info("'{}' isn't a valid key", Cmd_Argv(1));
         return;
     }
 
@@ -844,15 +844,15 @@ void Key_Bind_f()
     }
     b = Key_StringToKeynum(Cmd_Argv(1));
     if (b == -1) {
-        logger.info("'%s' isn't a valid key", Cmd_Argv(1));
+        logger.info("'{}' isn't a valid key", Cmd_Argv(1));
         return;
     }
 
     if (c == 2) {
         if (keys[b].binding) {
-            logger.info("'%s' = '%s'", Cmd_Argv(1), keys[b].binding);
+            logger.info("'{}' = '{}'", Cmd_Argv(1), keys[b].binding);
         } else {
-            logger.info("'%s' is not bound", Cmd_Argv(1));
+            logger.info("'{}' is not bound", Cmd_Argv(1));
         }
         return;
     }
@@ -902,7 +902,7 @@ void Key_Bindlist_f()
 
     for (i = 0; i < 256; i++) {
         if (keys[i].binding && keys[i].binding[0]) {
-            logger.info("%s '%s'", Key_KeynumToString(i), keys[i].binding);
+            logger.info("{} '{}'", Key_KeynumToString(i), keys[i].binding);
         }
     }
 }
@@ -1080,7 +1080,7 @@ void CL_KeyEvent(int32 key, bool down, uint32 time)
         kb = keys[key].binding;
         if (!kb) {
             if (key >= 200) {
-                logger.info("%s is unbound, use controls menu to set.", Key_KeynumToString(key));
+                logger.info("{} is unbound, use controls menu to set.", Key_KeynumToString(key));
             }
         } else if (kb[0] == '+') {
             int32 i;

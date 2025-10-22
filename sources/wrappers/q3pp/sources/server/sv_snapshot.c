@@ -138,7 +138,7 @@ static void SV_WriteSnapshotToClient(client_t* client, msg_t* msg)
     } else if (client->netchan.outgoingSequence - client->deltaMessage
                >= (PACKET_BACKUP - 3)) {
         // client hasn't gotten a good message through in a long time
-        logger.debug("%s: Delta request from out of date packet.", client->name);
+        logger.debug("{}: Delta request from out of date packet.", client->name);
         oldframe = NULL;
         lastframe = 0;
     } else {
@@ -148,7 +148,7 @@ static void SV_WriteSnapshotToClient(client_t* client, msg_t* msg)
 
         // the snapshot's entities may still have rolled off the buffer, though
         if (oldframe->first_entity <= svs.nextSnapshotEntities - svs.numSnapshotEntities) {
-            logger.debug("%s: Delta request from out of date entities.", client->name);
+            logger.debug("{}: Delta request from out of date entities.", client->name);
             oldframe = NULL;
             lastframe = 0;
         }
@@ -647,7 +647,7 @@ void SV_SendClientSnapshot(client_t* client)
 
     // check for overflow
     if (msg.overflowed) {
-        logger.warning("msg overflowed for %s", client->name);
+        logger.warning("msg overflowed for {}", client->name);
         MSG_Clear(&msg);
     }
 

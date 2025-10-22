@@ -201,7 +201,7 @@ cvar_t* Cvar_Get(const char* var_name, const char* var_value, int32 flags)
     }
 
     if (!Cvar_ValidateString(var_name)) {
-        logger.info("invalid cvar name string: %s", var_name);
+        logger.info("invalid cvar name string: {}", var_name);
         var_name = "BADNAME";
     }
 
@@ -227,7 +227,7 @@ cvar_t* Cvar_Get(const char* var_name, const char* var_value, int32 flags)
             Z_Free(var->resetString);
             var->resetString = CopyString(var_value);
         } else if (var_value[0] && strcmp(var->resetString, var_value)) {
-            logger.debug("Warning: cvar '%s' given initial values: '%s' and '%s'", var_name, var->resetString, var_value);
+            logger.debug("Warning: cvar '{}' given initial values: '{}' and '{}'", var_name, var->resetString, var_value);
         }
         // if we have a latched string, take that value now
         if (var->latchedString) {
@@ -280,10 +280,10 @@ cvar_t* Cvar_Set2(const char* var_name, const char* value, bool force)
 {
     cvar_t* var;
 
-    logger.debug("Cvar_Set2: %s %s", var_name, value);
+    logger.debug("Cvar_Set2: {} {}", var_name, value ? value : "nullptr");
 
     if (!Cvar_ValidateString(var_name)) {
-        logger.info("invalid cvar name string: %s", var_name);
+        logger.info("invalid cvar name string: {}", var_name);
         var_name = "BADNAME";
     }
 
@@ -312,12 +312,12 @@ cvar_t* Cvar_Set2(const char* var_name, const char* value, bool force)
 
     if (!force) {
         if (var->flags & CVAR_ROM) {
-            logger.info("%s is read only.", var_name);
+            logger.info("{} is read only.", var_name);
             return var;
         }
 
         if (var->flags & CVAR_INIT) {
-            logger.info("%s is write protected.", var_name);
+            logger.info("{} is write protected.", var_name);
             return var;
         }
 
@@ -333,14 +333,14 @@ cvar_t* Cvar_Set2(const char* var_name, const char* value, bool force)
                 }
             }
 
-            logger.info("%s will be changed upon restarting.", var_name);
+            logger.info("{} will be changed upon restarting.", var_name);
             var->latchedString = CopyString(value);
             var->modified = true;
             return var;
         }
 
         if ((var->flags & CVAR_CHEAT) && !cvar_cheats->integer) {
-            logger.info("%s is cheat protected.", var_name);
+            logger.info("{} is cheat protected.", var_name);
             return var;
         }
 
@@ -461,9 +461,9 @@ bool Cvar_Command()
 
     // perform a variable print or set
     if (Cmd_Argc() == 1) {
-        logger.info("'%s' is:'%s' default:'%s'", v->name, v->string, v->resetString);
+        logger.info("'{}' is:'{}' default:'{}'", v->name, v->string, v->resetString);
         if (v->latchedString) {
-            logger.info("latched: '%s'", v->latchedString);
+            logger.info("latched: '{}'", v->latchedString);
         }
         return true;
     }
@@ -670,11 +670,11 @@ void Cvar_List_f()
         char a = var->flags & CVAR_ARCHIVE ? 'A' : '-';
         char l = var->flags & CVAR_LATCH ? 'L' : '-';
         char c = var->flags & CVAR_LATCH ? 'C' : '-';
-        logger.info("%c%c%c%c%c%c%c %s \"%s\"\n", s, u, r, i, a, l, c, var->name, var->string);
+        logger.info("%c%c%c%c%c%c%c {} \"%s\"\n", s, u, r, i, a, l, c, var->name, var->string);
     }
 
-    logger.info("%i total cvars", j);
-    logger.info("%i cvar indexes", cvar_numIndexes);
+    logger.info("{} total cvars", j);
+    logger.info("{} cvar indexes", cvar_numIndexes);
 }
 
 /*

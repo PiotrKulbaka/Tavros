@@ -56,6 +56,8 @@ namespace tavros::core
         // And add to the allocations
         m_allocations[ptr] = allocation_info{size, align, tag};
 
+        memset(ptr, 0, size);
+
         return ptr;
     }
 

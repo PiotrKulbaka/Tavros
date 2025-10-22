@@ -556,7 +556,7 @@ void CM_LoadMap(const char* name, bool clientload, int32* checksum)
     cm_noCurves = Cvar_Get("cm_noCurves", "0", CVAR_CHEAT);
     cm_playerCurveClip = Cvar_Get("cm_playerCurveClip", "1", CVAR_ARCHIVE | CVAR_CHEAT);
 
-    logger.debug("CM_LoadMap( %s, %i )", name, clientload);
+    logger.debug("CM_LoadMap( {}, {} )", name, clientload);
 
     if (!strcmp(cm.name, name) && clientload) {
         *checksum = last_checksum;

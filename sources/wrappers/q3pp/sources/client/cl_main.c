@@ -273,7 +273,7 @@ void        CL_Record_f()
 
     // open the demo file
 
-    logger.info("recording to %s.", name);
+    logger.info("recording to {}.", name);
     clc.demofile = FS_FOpenFileWrite(name);
     if (!clc.demofile) {
         logger.error("couldn't open.");
@@ -367,7 +367,7 @@ void CL_DemoCompleted()
 
         time = Sys_Milliseconds() - clc.timeDemoStart;
         if (time > 0) {
-            logger.info("%i frames, %3.1f seconds: %3.1f fps", clc.timeDemoFrames, time / 1000.0, clc.timeDemoFrames * 1000.0 / time);
+            logger.info("{} frames, %3.1f seconds: %3.1f fps", clc.timeDemoFrames, time / 1000.0, clc.timeDemoFrames * 1000.0 / time);
         }
     }
 
@@ -442,10 +442,10 @@ static void CL_WalkDemoExt(const char* arg, char* name, int32* demofile)
         Com_sprintf(name, MAX_OSPATH, "demos/%s.dm_%d", arg, demo_protocols[i]);
         FS_FOpenFileRead(name, demofile, true);
         if (*demofile) {
-            logger.info("Demo file: %s", name);
+            logger.info("Demo file: {}", name);
             break;
         } else {
-            logger.info("Not found: %s", name);
+            logger.info("Not found: {}", name);
         }
         i++;
     }
@@ -494,7 +494,7 @@ void CL_PlayDemo_f()
             Com_sprintf(name, sizeof(name), "demos/%s", arg);
             FS_FOpenFileRead(name, &clc.demofile, true);
         } else {
-            logger.info("Protocol %d not supported for demos", protocol);
+            logger.info("Protocol {} not supported for demos", protocol);
             Q_strncpyz(retry, arg, sizeof(retry));
             retry[strlen(retry) - 6] = 0;
             CL_WalkDemoExt(retry, name, &clc.demofile);
@@ -553,7 +553,7 @@ void CL_NextDemo()
 
     Q_strncpyz(v, Cvar_VariableString("nextdemo"), sizeof(v));
     v[MAX_STRING_CHARS - 1] = 0;
-    logger.debug("CL_NextDemo: %s", v);
+    logger.debug("CL_NextDemo: {}", v);
     if (!v[0]) {
         return;
     }
@@ -757,7 +757,7 @@ void CL_ForwardCommandToServer(const char* string)
     }
 
     if (clc.demoplaying || cls.state < CA_CONNECTED || cmd[0] == '+') {
-        logger.info("Unknown command '%s'", cmd);
+        logger.info("Unknown command '{}'", cmd);
         return;
     }
 
@@ -781,13 +781,13 @@ void CL_RequestMotd()
     if (!cl_motd->integer) {
         return;
     }
-    logger.info("Resolving %s", UPDATE_SERVER_NAME);
+    logger.info("Resolving {}", UPDATE_SERVER_NAME);
     if (!NET_StringToAdr(UPDATE_SERVER_NAME, &cls.updateServer)) {
         logger.info("Couldn't resolve address");
         return;
     }
     cls.updateServer.port = BigShort(PORT_UPDATE);
-    logger.info("%s resolved to %i.%i.%i.%i:%i", UPDATE_SERVER_NAME, cls.updateServer.ip[0], cls.updateServer.ip[1], cls.updateServer.ip[2], cls.updateServer.ip[3], BigShort(cls.updateServer.port));
+    logger.info("{} resolved to {}.{}.{}.{}:{}", UPDATE_SERVER_NAME, cls.updateServer.ip[0], cls.updateServer.ip[1], cls.updateServer.ip[2], cls.updateServer.ip[3], BigShort(cls.updateServer.port));
 
     info[0] = 0;
     // NOTE TTimo xoring against Com_Milliseconds, otherwise we may not have a true randomization
@@ -841,14 +841,14 @@ void CL_RequestAuthorization()
     cvar_t* fs;
 
     if (!cls.authorizeServer.port) {
-        logger.info("Resolving %s", AUTHORIZE_SERVER_NAME);
+        logger.info("Resolving {}", AUTHORIZE_SERVER_NAME);
         if (!NET_StringToAdr(AUTHORIZE_SERVER_NAME, &cls.authorizeServer)) {
             logger.info("Couldn't resolve address");
             return;
         }
 
         cls.authorizeServer.port = BigShort(PORT_AUTHORIZE);
-        logger.info("%s resolved to %i.%i.%i.%i:%i", AUTHORIZE_SERVER_NAME, cls.authorizeServer.ip[0], cls.authorizeServer.ip[1], cls.authorizeServer.ip[2], cls.authorizeServer.ip[3], BigShort(cls.authorizeServer.port));
+        logger.info("{} resolved to {}.{}.{}.{}:{}", AUTHORIZE_SERVER_NAME, cls.authorizeServer.ip[0], cls.authorizeServer.ip[1], cls.authorizeServer.ip[2], cls.authorizeServer.ip[3], BigShort(cls.authorizeServer.port));
     }
     if (cls.authorizeServer.type == NA_BAD) {
         return;
@@ -912,9 +912,9 @@ void CL_Setenv_f()
         char* env = getenv(Cmd_Argv(1));
 
         if (env) {
-            logger.info("%s=%s", Cmd_Argv(1), env);
+            logger.info("{}={}", Cmd_Argv(1), env);
         } else {
-            logger.info("%s undefined", Cmd_Argv(1), env);
+            logger.info("{} undefined", Cmd_Argv(1), env);
         }
     }
 }
@@ -1001,7 +1001,7 @@ void CL_Connect_f()
     if (clc.serverAddress.port == 0) {
         clc.serverAddress.port = BigShort(PORT_SERVER);
     }
-    logger.info("%s resolved to %i.%i.%i.%i:%i", cls.servername, clc.serverAddress.ip[0], clc.serverAddress.ip[1], clc.serverAddress.ip[2], clc.serverAddress.ip[3], BigShort(clc.serverAddress.port));
+    logger.info("{} resolved to {}.{}.{}.{}:{}", cls.servername, clc.serverAddress.ip[0], clc.serverAddress.ip[1], clc.serverAddress.ip[2], clc.serverAddress.ip[3], BigShort(clc.serverAddress.port));
 
     // if we aren't playing on a lan, we need to authenticate
     // with the cd key
@@ -1186,7 +1186,7 @@ CL_PK3List_f
 */
 void CL_OpenedPK3List_f()
 {
-    logger.info("Opened PK3 Names: %s", FS_LoadedPakNames());
+    logger.info("Opened PK3 Names: {}", FS_LoadedPakNames());
 }
 
 /*
@@ -1196,7 +1196,7 @@ CL_PureList_f
 */
 void CL_ReferencedPK3List_f()
 {
-    logger.info("Referenced PK3 Names: %s", FS_ReferencedPakNames());
+    logger.info("Referenced PK3 Names: {}", FS_ReferencedPakNames());
 }
 
 /*
@@ -1219,7 +1219,7 @@ void CL_Configstrings_f()
         if (!ofs) {
             continue;
         }
-        logger.info("%4i: %s", i, cl.gameState.stringData + ofs);
+        logger.info("%4i: {}", i, cl.gameState.stringData + ofs);
     }
 }
 
@@ -1231,9 +1231,9 @@ CL_Clientinfo_f
 void CL_Clientinfo_f()
 {
     logger.info("--------- Client Information ---------");
-    logger.info("state: %i", cls.state);
-    logger.info("Server: %s", cls.servername);
-    logger.info("User info settings: %s", Cvar_InfoString(CVAR_USERINFO));
+    logger.info("state: {}", (uint32) cls.state);
+    logger.info("Server: {}", cls.servername);
+    logger.info("User info settings: {}", Cvar_InfoString(CVAR_USERINFO));
     logger.info("--------------------------------------");
 }
 
@@ -1304,8 +1304,8 @@ game directory.
 void CL_BeginDownload(const char* localName, const char* remoteName)
 {
     logger.debug("***** CL_BeginDownload *****");
-    logger.debug("Localname: %s", localName);
-    logger.debug("Remotename: %s", remoteName);
+    logger.debug("Localname: {}", localName);
+    logger.debug("Remotename: {}", remoteName);
     logger.debug("****************************");
 
     Q_strncpyz(clc.downloadName, localName, sizeof(clc.downloadName));
@@ -1399,7 +1399,7 @@ void CL_InitDownloads()
             );
         }
     } else if (FS_ComparePaks(clc.downloadList, sizeof(clc.downloadList), true)) {
-        logger.info("Need paks: %s", clc.downloadList);
+        logger.info("Need paks: {}", clc.downloadList);
 
         if (*clc.downloadList) {
             // if autodownloading is not enabled on the server
@@ -1632,7 +1632,7 @@ void CL_ServersResponsePacket(netadr_t from, msg_t* msg)
             break;
         }
 
-        logger.debug("server: %d ip: %d.%d.%d.%d:%d", numservers, addresses[numservers].ip[0], addresses[numservers].ip[1], addresses[numservers].ip[2], addresses[numservers].ip[3], addresses[numservers].port);
+        logger.debug("server: {} ip: {}.{}.{}.{}:{}", numservers, addresses[numservers].ip[0], addresses[numservers].ip[1], addresses[numservers].ip[2], addresses[numservers].ip[3], addresses[numservers].port);
 
         numservers++;
         if (numservers >= MAX_SERVERSPERPACKET) {
@@ -1687,7 +1687,7 @@ void CL_ServersResponsePacket(netadr_t from, msg_t* msg)
         total = count;
     }
 
-    logger.info("%d servers parsed (total %d)", numservers, total);
+    logger.info("{} servers parsed (total {})", numservers, total);
 }
 
 /*
@@ -1711,7 +1711,7 @@ void CL_ConnectionlessPacket(netadr_t from, msg_t* msg)
 
     c = Cmd_Argv(0);
 
-    logger.debug("CL packet %s: %s", NET_AdrToString(from), c);
+    logger.debug("CL packet {}: {}", NET_AdrToString(from), c);
 
     // challenge from the server we are connecting to
     if (!Q_stricmp(c, "challengeResponse")) {
@@ -1727,7 +1727,7 @@ void CL_ConnectionlessPacket(netadr_t from, msg_t* msg)
             // take this address as the new server address.  This allows
             // a server proxy to hand off connections to multiple servers
             clc.serverAddress = from;
-            logger.debug("challengeResponse: %d", clc.challenge);
+            logger.debug("challengeResponse: {}", clc.challenge);
         }
         return;
     }
@@ -1744,7 +1744,7 @@ void CL_ConnectionlessPacket(netadr_t from, msg_t* msg)
         }
         if (!NET_CompareBaseAdr(from, clc.serverAddress)) {
             logger.info("connectResponse from a different address.  Ignored.");
-            logger.info("%s should have been %s", NET_AdrToString(from), NET_AdrToString(clc.serverAddress));
+            logger.info("{} should have been {}", NET_AdrToString(from), NET_AdrToString(clc.serverAddress));
             return;
         }
         Netchan_Setup(NS_CLIENT, &clc.netchan, from, Cvar_VariableValue("net_qport"));
@@ -1794,7 +1794,7 @@ void CL_ConnectionlessPacket(netadr_t from, msg_t* msg)
     if (!Q_stricmp(c, "print")) {
         s = MSG_ReadString(msg);
         Q_strncpyz(clc.serverMessage, s, sizeof(clc.serverMessage));
-        logger.info("%s", s);
+        logger.info("{}", s);
         return;
     }
 
@@ -1831,7 +1831,7 @@ void CL_PacketEvent(netadr_t from, msg_t* msg)
     }
 
     if (msg->cursize < 4) {
-        logger.info("%s: Runt packet", NET_AdrToString(from));
+        logger.info("{}: Runt packet", NET_AdrToString(from));
         return;
     }
 
@@ -1839,7 +1839,7 @@ void CL_PacketEvent(netadr_t from, msg_t* msg)
     // packet from server
     //
     if (!NET_CompareAdr(from, clc.netchan.remoteAddress)) {
-        logger.debug("%s:sequenced packet without connection", NET_AdrToString(from));
+        logger.debug("{}:sequenced packet without connection", NET_AdrToString(from));
         // FIXME: send a client disconnect?
         return;
     }
@@ -2063,7 +2063,7 @@ void CL_SetModel_f()
         Cvar_Set("headmodel", arg);
     } else {
         Cvar_VariableStringBuffer("model", name, sizeof(name));
-        logger.info("model is set to %s", name);
+        logger.info("model is set to {}", name);
     }
 }
 
@@ -2315,7 +2315,7 @@ void CL_ServerInfoPacket(netadr_t from, msg_t* msg)
     // if this isn't the correct protocol version, ignore it
     prot = atoi(Info_ValueForKey(infoString, "protocol"));
     if (prot != PROTOCOL_VERSION) {
-        logger.debug("Different protocol info packet: %s", infoString);
+        logger.debug("Different protocol info packet: {}", infoString);
         return;
     }
 
@@ -2324,7 +2324,7 @@ void CL_ServerInfoPacket(netadr_t from, msg_t* msg)
         if (cl_pinglist[i].adr.port && !cl_pinglist[i].time && NET_CompareAdr(from, cl_pinglist[i].adr)) {
             // calc ping time
             cl_pinglist[i].time = cls.realtime - cl_pinglist[i].start + 1;
-            logger.debug("ping time %dms from %s", cl_pinglist[i].time, NET_AdrToString(from));
+            logger.debug("ping time %dms from {}", cl_pinglist[i].time, NET_AdrToString(from));
 
             // save of info
             Q_strncpyz(cl_pinglist[i].info, infoString, sizeof(cl_pinglist[i].info));
@@ -2398,7 +2398,7 @@ void CL_ServerInfoPacket(netadr_t from, msg_t* msg)
         if (info[strlen(info) - 1] != '\n') {
             strncat(info, "\n", sizeof(info));
         }
-        logger.info("%s: %s", NET_AdrToString(from), info);
+        logger.info("{}: {}", NET_AdrToString(from), info);
     }
 }
 
@@ -2489,7 +2489,7 @@ void CL_ServerStatusResponse(netadr_t from, msg_t* msg)
                 }
                 info[l] = '\0';
                 if (i) {
-                    logger.info("%s", info);
+                    logger.info("{}", info);
                 } else {
                     logger.info("%-24s", info);
                 }
@@ -2520,7 +2520,7 @@ void CL_ServerStatusResponse(netadr_t from, msg_t* msg)
             } else {
                 s = (char*) "unknown";
             }
-            logger.info("%-2d   %-3d    %-3d   %s", i, score, ping, s);
+            logger.info("%-2d   %-3d    %-3d   {}", i, score, ping, s);
         }
     }
     len = strlen(serverStatus->string);

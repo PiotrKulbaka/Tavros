@@ -340,7 +340,7 @@ void Touch_Item(gentity_t* ent, gentity_t* other, trace_t* trace)
         return;
     }
 
-    logger.debug("Item: %i %s\n", other->s.number, ent->item->classname);
+    logger.debug("Item: {} {}\n", other->s.number, ent->item->classname);
 
     // call the item-specific pickup function
     switch (ent->item->giType) {
@@ -575,7 +575,7 @@ void FinishSpawningItem(gentity_t* ent)
         VectorSet(dest, ent->s.origin[0], ent->s.origin[1], ent->s.origin[2] - 4096);
         trap_Trace(&tr, ent->s.origin, ent->r.mins, ent->r.maxs, dest, ent->s.number, MASK_SOLID);
         if (tr.startsolid) {
-            logger.info("FinishSpawningItem: %s startsolid at %s", ent->classname, vtos(ent->s.origin));
+            logger.info("FinishSpawningItem: {} startsolid at {}", ent->classname, vtos(ent->s.origin));
             G_FreeEntity(ent);
             return;
         }
@@ -692,7 +692,7 @@ void SaveRegisteredItems()
     }
     string[bg_numItems] = 0;
 
-    logger.info("%i items registered", count);
+    logger.info("{} items registered", count);
     trap_SetConfigstring(CS_ITEMS, string);
 }
 

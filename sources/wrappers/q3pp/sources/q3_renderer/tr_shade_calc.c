@@ -343,10 +343,10 @@ static void AutospriteDeform()
     vec3_t leftDir, upDir;
 
     if (tess.numVertexes & 3) {
-        logger.warning("Autosprite shader %s had odd vertex count", tess.shader->name);
+        logger.warning("Autosprite shader {} had odd vertex count", tess.shader->name);
     }
     if (tess.numIndexes != (tess.numVertexes >> 2) * 6) {
-        logger.warning("Autosprite shader %s had odd index count", tess.shader->name);
+        logger.warning("Autosprite shader {} had odd index count", tess.shader->name);
     }
 
     oldVerts = tess.numVertexes;
@@ -421,10 +421,10 @@ static void Autosprite2Deform()
     vec3_t forward;
 
     if (tess.numVertexes & 3) {
-        logger.warning("Autosprite2 shader %s had odd vertex count", tess.shader->name);
+        logger.warning("Autosprite2 shader {} had odd vertex count", tess.shader->name);
     }
     if (tess.numIndexes != (tess.numVertexes >> 2) * 6) {
-        logger.warning("Autosprite2 shader %s had odd index count", tess.shader->name);
+        logger.warning("Autosprite2 shader {} had odd index count", tess.shader->name);
     }
 
     if (backEnd.currentEntity != &tr.worldEntity) {

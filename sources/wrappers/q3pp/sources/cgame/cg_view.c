@@ -119,7 +119,7 @@ void CG_TestGun_f()
 void CG_TestModelNextFrame_f()
 {
     cg.testModelEntity.frame++;
-    logger.info("frame %i", cg.testModelEntity.frame);
+    logger.info("frame {}", cg.testModelEntity.frame);
 }
 
 void CG_TestModelPrevFrame_f()
@@ -128,13 +128,13 @@ void CG_TestModelPrevFrame_f()
     if (cg.testModelEntity.frame < 0) {
         cg.testModelEntity.frame = 0;
     }
-    logger.info("frame %i", cg.testModelEntity.frame);
+    logger.info("frame {}", cg.testModelEntity.frame);
 }
 
 void CG_TestModelNextSkin_f()
 {
     cg.testModelEntity.skinNum++;
-    logger.info("skin %i", cg.testModelEntity.skinNum);
+    logger.info("skin {}", cg.testModelEntity.skinNum);
 }
 
 void CG_TestModelPrevSkin_f()
@@ -143,7 +143,7 @@ void CG_TestModelPrevSkin_f()
     if (cg.testModelEntity.skinNum < 0) {
         cg.testModelEntity.skinNum = 0;
     }
-    logger.info("skin %i", cg.testModelEntity.skinNum);
+    logger.info("skin {}", cg.testModelEntity.skinNum);
 }
 
 static void CG_AddTestModel()

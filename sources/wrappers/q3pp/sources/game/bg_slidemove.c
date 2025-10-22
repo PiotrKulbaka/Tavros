@@ -266,7 +266,7 @@ void PM_StepSlideMove(bool gravity)
     // test the player position if they were a stepheight higher
     pm->trace(&trace, start_o, pm->mins, pm->maxs, up, pm->ps->clientNum, pm->tracemask);
     if (trace.allsolid) {
-        logger.debug("%i:bend can't step", c_pmove);
+        logger.debug("{}:bend can't step", c_pmove);
         return; // can't step up
     }
 
@@ -304,7 +304,7 @@ void PM_StepSlideMove(bool gravity)
                 PM_AddEvent(EV_STEP_16);
             }
         }
-        logger.debug("%i:stepped", c_pmove);
+        logger.debug("{}:stepped", c_pmove);
     }
 }
 

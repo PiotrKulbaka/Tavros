@@ -108,7 +108,7 @@ void QDECL BotImport_Print(int32 type, const char* fmt, ...)
 
     switch (type) {
     case PRT_MESSAGE: {
-        logger.info("%s", str);
+        logger.info("{}", str);
         break;
     }
     case PRT_WARNING: {
