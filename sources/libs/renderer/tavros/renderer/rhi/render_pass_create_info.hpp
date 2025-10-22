@@ -55,6 +55,9 @@ namespace tavros::renderer::rhi
 
         /// Clear value for the stencil component (used only if stencil_load == clear)
         int32 stencil_clear_value = 0;
+
+        // Resolve depth/stencil target attachment, used when depth_store or/and stencil_store is set to `resolve`
+        texture_handle resolve_target;
     };
 
     /**

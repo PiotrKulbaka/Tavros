@@ -342,6 +342,7 @@ namespace tavros::renderer::rhi
             if (rp->info.color_attachments[0].load == load_op::clear) {
                 clear_mask |= GL_COLOR_BUFFER_BIT;
                 auto color = rp->info.color_attachments[0].clear_value;
+                GL_CALL(glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
                 GL_CALL(glClearColor(color[0], color[1], color[2], color[3]));
             }
 
@@ -349,11 +350,14 @@ namespace tavros::renderer::rhi
                 // Clear for depth buffer
                 if (rp->info.depth_stencil_attachment.depth_load == load_op::clear) {
                     clear_mask |= GL_DEPTH_BUFFER_BIT;
+                    GL_CALL(glDepthMask(GL_TRUE));
                     GL_CALL(glClearDepth(rp->info.depth_stencil_attachment.depth_clear_value));
                 }
                 // Clear for stencil buffer
                 if (rp->info.depth_stencil_attachment.stencil_load == load_op::clear) {
                     clear_mask |= GL_STENCIL_BUFFER_BIT;
+                    GL_CALL(glStencilMaskSeparate(GL_FRONT, 0xffffffff));
+                    GL_CALL(glStencilMaskSeparate(GL_BACK, 0xffffffff));
                     GL_CALL(glClearStencil(rp->info.depth_stencil_attachment.stencil_clear_value));
                 }
             }
@@ -465,6 +469,8 @@ namespace tavros::renderer::rhi
             // Apply load operation (only clear)
             // Any other load operation doesn't need to be applied
             if (load_op::clear == rp_color_attachment.load) {
+                auto gl_attachment_index = static_cast<GLuint>(i);
+                GL_CALL(glColorMaski(gl_attachment_index, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
                 GL_CALL(glClearBufferfv(GL_COLOR, static_cast<GLint>(i), rp_color_attachment.clear_value));
             }
         }
@@ -475,11 +481,14 @@ namespace tavros::renderer::rhi
 
             // Apply load operation to depth component
             if (load_op::clear == rp_ds_attachment.depth_load) {
+                GL_CALL(glDepthMask(GL_TRUE));
                 GL_CALL(glClearBufferfv(GL_DEPTH, 0, &rp_ds_attachment.depth_clear_value));
             }
 
             // Apply load operation to stencil component
             if (load_op::clear == rp_ds_attachment.stencil_load) {
+                GL_CALL(glStencilMaskSeparate(GL_FRONT, 0xffffffff));
+                GL_CALL(glStencilMaskSeparate(GL_BACK, 0xffffffff));
                 GL_CALL(glClearBufferiv(GL_STENCIL, 0, &rp_ds_attachment.stencil_clear_value));
             }
         }
@@ -523,21 +532,18 @@ namespace tavros::renderer::rhi
         struct blit_info
         {
             GLuint      attachment = 0;
-            gl_texture* source = nullptr;
-            gl_texture* destination = nullptr;
+            gl_texture* dst = nullptr;
         };
         core::static_vector<blit_info, k_max_color_attachments> blit_data;
         for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
             auto& rp_attachment = rp->info.color_attachments[i];
 
             if (store_op::resolve == rp_attachment.store) {
-                // Find resolve source and resolve destination textures
-                auto* src = m_device->get_resources()->try_get(fb->info.color_attachments[i]);
-                TAV_ASSERT(src);
+                // Find resolve resolve destination textures
                 auto* dst = m_device->get_resources()->try_get(rp->info.color_attachments[i].resolve_target);
                 TAV_ASSERT(dst);
 
-                blit_data.push_back({GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i), src, dst});
+                blit_data.push_back({GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i), dst});
             }
         }
 
@@ -548,6 +554,14 @@ namespace tavros::renderer::rhi
         }
         if (store_op::resolve == rp->info.depth_stencil_attachment.stencil_store) {
             depth_stencil_blit_mask |= GL_STENCIL_BUFFER_BIT;
+        }
+
+        // Get resolve texture
+        gl_texture* depth_stencil_resolve_dst = nullptr;
+        if (depth_stencil_blit_mask != 0) {
+            auto* dst = m_device->get_resources()->try_get(rp->info.depth_stencil_attachment.resolve_target);
+            TAV_ASSERT(dst);
+            depth_stencil_resolve_dst = dst;
         }
 
         auto need_resolve = depth_stencil_blit_mask != 0 || blit_data.size() > 0;
@@ -563,13 +577,13 @@ namespace tavros::renderer::rhi
 
                 for (uint32 i = 0; i < blit_data.size(); ++i) {
                     auto& blit_info = blit_data[i];
-                    TAV_ASSERT(blit_info.destination->target == GL_TEXTURE_2D);
+                    TAV_ASSERT(blit_info.dst->target == GL_TEXTURE_2D);
 
                     GL_CALL(glFramebufferTexture2D(
                         GL_DRAW_FRAMEBUFFER,
                         GL_COLOR_ATTACHMENT0,
-                        blit_info.destination->target,
-                        blit_info.destination->texture_obj,
+                        blit_info.dst->target,
+                        blit_info.dst->texture_obj,
                         0
                     ));
 
@@ -586,6 +600,19 @@ namespace tavros::renderer::rhi
 
             // Check if need to resolve depth/stencil attachment
             if (depth_stencil_blit_mask) {
+                TAV_ASSERT(depth_stencil_resolve_dst->target == GL_TEXTURE_2D);
+
+                auto ds_info = to_depth_stencil_fromat(depth_stencil_resolve_dst->info.format);
+                TAV_ASSERT(ds_info.is_depth_stencil_format);
+
+                GL_CALL(glFramebufferTexture2D(
+                    GL_FRAMEBUFFER,
+                    ds_info.depth_stencil_attachment_type,
+                    depth_stencil_resolve_dst->target,
+                    depth_stencil_resolve_dst->texture_obj,
+                    0
+                ));
+
                 // Resolve depth/stencil attachment
                 GL_CALL(glBlitFramebuffer(
                     0, 0, fb->info.width, fb->info.height,
@@ -1012,7 +1039,11 @@ namespace tavros::renderer::rhi
         auto* gl_buffer_offset = reinterpret_cast<void*>(dst_offset);
 
         if (tinfo.type == texture_type::texture_2d) {
-            GL_CALL(glGetTexImage(GL_TEXTURE_2D, 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+            if (tex->target == GL_RENDERBUFFER) {
+                GL_CALL(glReadPixels(0, 0, tinfo.width, tinfo.height, gl_pixel_format.format, gl_pixel_format.type, nullptr));
+            } else {
+                GL_CALL(glGetTexImage(tex->target, 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+            }
         } else if (tinfo.type == texture_type::texture_3d) {
             GL_CALL(glGetTexImage(GL_TEXTURE_3D, 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
         } else if (tinfo.type == texture_type::texture_cube) {

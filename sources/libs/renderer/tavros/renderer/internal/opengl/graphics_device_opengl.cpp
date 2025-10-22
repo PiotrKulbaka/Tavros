@@ -579,6 +579,8 @@ namespace tavros::renderer::rhi
                 ));
             }
 
+            GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
+
             auto h = m_resources.create(gl_texture{info, 0, GL_RENDERBUFFER, rbo});
             ::logger.debug("Texture ({}) {} created as {}", info.type, h, fmt::styled_param("renderbuffer"));
             return h;
@@ -1485,6 +1487,66 @@ namespace tavros::renderer::rhi
                     fmt::styled_param(i)
                 );
             }
+        }
+
+        auto& ds_attachment = info.depth_stencil_attachment;
+        bool  need_depth_resolve = store_op::resolve == ds_attachment.depth_store;
+        bool  need_stencil_resolve = store_op::resolve == ds_attachment.stencil_store;
+        if (need_depth_resolve || need_stencil_resolve) {
+            auto* resolve_tex = m_resources.try_get(ds_attachment.resolve_target);
+            if (!resolve_tex) {
+                ::logger.error(
+                    "Failed to create render pass: resolve depth/stencil attachment texture {} not found",
+                    ds_attachment.resolve_target
+                );
+                return {};
+            }
+
+            if (resolve_tex->info.format != ds_attachment.format) {
+                ::logger.error(
+                    "Failed to create render pass: mismatched resolve depth/stencil attachment texture format {} with color attachment format {}",
+                    fmt::styled_param(resolve_tex->info.format),
+                    fmt::styled_param(ds_attachment.format)
+                );
+                return {};
+            }
+
+            if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
+                ::logger.error(
+                    "Failed to create render pass: resolve depth/stencil attachment texture {} must have resolve_destination usage flag",
+                    ds_attachment.resolve_target
+                );
+                return {};
+            }
+
+            if (resolve_tex->info.sample_count != 1) {
+                ::logger.error(
+                    "Failed to create render pass: resolve depth/stencil attachment texture {} must be single-sampled",
+                    ds_attachment.resolve_target
+                );
+                return {};
+            }
+
+            auto ds_info = to_gl_wnd_fb_info(resolve_tex->info.format);
+            if (ds_info.depth_bits == 0 && need_depth_resolve) {
+                // No depth component, but required depth resolve
+                ::logger.error(
+                    "Failed to create render pass: no depth component {} but `resolve` required",
+                    ds_attachment.format
+                );
+                return {};
+            }
+
+            if (ds_info.stencil_bits == 0 && need_stencil_resolve) {
+                // No dtencil component, but required stencil resolve
+                ::logger.error(
+                    "Failed to create render pass: no stencil component {} but `resolve` required",
+                    ds_attachment.format
+                );
+                return {};
+            }
+        } else if (ds_attachment.resolve_target.valid()) {
+            ::logger.warning("Render pass creation: resolve depth/stencil attachment is provided but its store operation is not set to `resolve`");
         }
 
         auto h = m_resources.create(gl_render_pass{info});

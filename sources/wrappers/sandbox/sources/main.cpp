@@ -396,10 +396,12 @@ public:
 
     rhi::texture_handle get_color_attachment(uint32 index) const
     {
-        if (m_resolve_destination_color_attachments.size()) {
-            return m_resolve_destination_color_attachments[index];
-        }
-        return m_resolve_source_color_attachments[index];
+        return m_resolve_destination_color_attachments[index];
+    }
+
+    rhi::texture_handle get_depth_stencil_attachment() const
+    {
+        return m_resolve_destination_depth_stencil_attachment;
     }
 
     rhi::framebuffer_handle framebuffer() const
@@ -480,6 +482,7 @@ private:
         dsca_info.stencil_load = rhi::load_op::dont_care;
         dsca_info.stencil_store = rhi::store_op::dont_care;
         dsca_info.stencil_clear_value = 0;
+        dsca_info.resolve_target = m_resolve_destination_depth_stencil_attachment;
 
         rp_info.depth_stencil_attachment = dsca_info;
 
@@ -589,7 +592,7 @@ public:
         tavros::core::static_vector<rhi::pixel_format, rhi::k_max_color_attachments> color_attachment_formats;
         color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
         color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
-        rhi::pixel_format depth_stencil_attachment_format = rhi::pixel_format::depth32f_stencil8;
+        rhi::pixel_format depth_stencil_attachment_format = rhi::pixel_format::depth32f;
         m_offscreen_rt = tavros::core::make_unique<render_target>(m_graphics_device.get(), color_attachment_formats, depth_stencil_attachment_format);
 
         auto fullscreen_quad_vertex_shader = m_graphics_device->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
@@ -613,7 +616,7 @@ public:
 
         m_stage_buffer = create_stage_buffer(1024 * 1024 * 16, rhi::buffer_access::cpu_to_gpu);
 
-        m_stage_upload_buffer = create_stage_buffer(1024 * 1024 * 32, rhi::buffer_access::gpu_to_cpu);
+        m_stage_upload_buffer = create_stage_buffer(1024 * 1024 * 64, rhi::buffer_access::gpu_to_cpu);
 
         m_fence = m_graphics_device->create_fence();
         if (!m_fence) {
@@ -790,7 +793,7 @@ public:
         world_grid_rendering_pipeline_info.shaders.push_back(world_grid_rendering_vertex_shader);
         world_grid_rendering_pipeline_info.shaders.push_back(world_grid_rendering_fragment_shader);
         world_grid_rendering_pipeline_info.depth_stencil.depth_test_enable = true;
-        world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = true;
+        world_grid_rendering_pipeline_info.depth_stencil.depth_write_enable = false;
         world_grid_rendering_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
         world_grid_rendering_pipeline_info.rasterizer.cull = rhi::cull_face::off;
         world_grid_rendering_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
@@ -874,36 +877,42 @@ public:
             }
         }
 
-        bool need_buffer_switch = false;
-
         if (m_input_manager.is_key_released(tavros::system::keys::k_F1)) {
             if (m_current_buffer_output_index != 0) {
                 m_current_buffer_output_index = 0;
-                need_buffer_switch = true;
             }
         } else if (m_input_manager.is_key_released(tavros::system::keys::k_F2)) {
             if (m_current_buffer_output_index != 1) {
                 m_current_buffer_output_index = 1;
-                need_buffer_switch = true;
             }
         }
 
-        if ((need_resize || need_buffer_switch) && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
+        if (need_resize && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
             m_offscreen_rt->recreate(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height), 32);
 
-            if (m_fullscreen_quad_shader_binding) {
-                m_graphics_device->destroy_shader_binding(m_fullscreen_quad_shader_binding);
-                m_fullscreen_quad_shader_binding = rhi::shader_binding_handle();
+            if (m_color_shader_binding) {
+                m_graphics_device->destroy_shader_binding(m_color_shader_binding);
+                m_color_shader_binding = rhi::shader_binding_handle();
             }
 
-            rhi::shader_binding_create_info fullscreen_quad_shader_binding_info;
-            fullscreen_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_color_attachment(m_current_buffer_output_index), m_sampler, 0});
-            rhi::texture_handle fullscreen_quad_textures_to_binding[] = {m_offscreen_rt->get_color_attachment(m_current_buffer_output_index)};
-            rhi::sampler_handle fullscreen_quad_samplers_to_binding[] = {m_sampler};
+            if (m_depth_stencil_shader_binding) {
+                m_graphics_device->destroy_shader_binding(m_depth_stencil_shader_binding);
+                m_depth_stencil_shader_binding = rhi::shader_binding_handle();
+            }
 
-            m_fullscreen_quad_shader_binding = m_graphics_device->create_shader_binding(fullscreen_quad_shader_binding_info);
-            if (!m_fullscreen_quad_shader_binding) {
-                ::logger.fatal("Failed to create fullscreen quad shader binding");
+            rhi::shader_binding_create_info color_quad_shader_binding_info;
+            color_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_color_attachment(0), m_sampler, 0});
+            m_color_shader_binding = m_graphics_device->create_shader_binding(color_quad_shader_binding_info);
+            if (!m_color_shader_binding) {
+                ::logger.fatal("Failed to create color quad shader binding");
+                exit_fail();
+            }
+
+            rhi::shader_binding_create_info depth_stencil_quad_shader_binding_info;
+            depth_stencil_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_depth_stencil_attachment(), m_sampler, 0});
+            m_depth_stencil_shader_binding = m_graphics_device->create_shader_binding(depth_stencil_quad_shader_binding_info);
+            if (!m_depth_stencil_shader_binding) {
+                ::logger.fatal("Failed to create depth/stencil quad shader binding");
                 exit_fail();
             }
 
@@ -1024,14 +1033,18 @@ public:
             auto image_size = m_current_frame_size.width * m_current_frame_size.height * 4;
             auto depth_image_size = m_current_frame_size.width * m_current_frame_size.height;
             cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(0), m_stage_upload_buffer, 0, image_size, 0, 0);
-            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(1), m_stage_upload_buffer, 0, depth_image_size, image_size, 0);
+            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_depth_stencil_attachment(), m_stage_upload_buffer, 0, depth_image_size, image_size, 0);
         }
 
         // Draw to backbuffer
         cbuf->begin_render_pass(m_main_pass, m_composer->backbuffer());
 
         cbuf->bind_pipeline(m_fullscreen_quad_pipeline);
-        cbuf->bind_shader_binding(m_fullscreen_quad_shader_binding);
+        if (m_current_buffer_output_index == 0) {
+            cbuf->bind_shader_binding(m_color_shader_binding);
+        } else {
+            cbuf->bind_shader_binding(m_depth_stencil_shader_binding);
+        }
         cbuf->draw(4);
 
         cbuf->end_render_pass();
@@ -1044,13 +1057,25 @@ public:
         if (is_f10_released) {
             auto screenshot_pixels = m_graphics_device->map_buffer(m_stage_upload_buffer);
 
-            // Save screenshot
             int width = static_cast<int>(m_current_frame_size.width);
             int height = static_cast<int>(m_current_frame_size.height);
             int channels = 4;
+
+            std::vector<uint8> depth_data;
+            depth_data.reserve(width * height);
+            size_t       plane_size = static_cast<size_t>(width * height);
+            const float* src = reinterpret_cast<const float*>(screenshot_pixels.data() + plane_size * channels);
+            for (size_t i = 0; i < plane_size; ++i) {
+                /*float z = src[i] * 2.0 - 1.0;
+                float lnr = (2.0 * 0.1f * 1000.0f) / (1000.0f + 0.1f - z * (1000.0f - 0.1f));
+                uint8 c = static_cast<uint8>((lnr - 0.1f) * 255.0f / 1000.0f);*/
+                depth_data.push_back(static_cast<uint8>(src[i] * 255.0f));
+            }
+
+            // Save screenshot
             stbi_flip_vertically_on_write(true);
             stbi_write_png("C:/Users/Piotr/Desktop/screenshots/image.png", width, height, channels, screenshot_pixels.data(), width * channels);
-            stbi_write_png("C:/Users/Piotr/Desktop/screenshots/depth.png", width, height, 4, screenshot_pixels.data() + width * height * channels, width * channels);
+            stbi_write_png("C:/Users/Piotr/Desktop/screenshots/depth.png", width, height, 1, depth_data.data(), width * 1);
 
             m_graphics_device->unmap_buffer(m_stage_upload_buffer);
         }
@@ -1074,7 +1099,8 @@ private:
     rhi::shader_binding_handle m_shader_binding;
     rhi::shader_binding_handle m_mesh_shader_binding;
     rhi::shader_binding_handle m_world_grid_shader_binding;
-    rhi::shader_binding_handle m_fullscreen_quad_shader_binding;
+    rhi::shader_binding_handle m_color_shader_binding;
+    rhi::shader_binding_handle m_depth_stencil_shader_binding;
     rhi::texture_handle        m_texture;
     rhi::buffer_handle         m_stage_buffer;
     rhi::buffer_handle         m_stage_upload_buffer;
