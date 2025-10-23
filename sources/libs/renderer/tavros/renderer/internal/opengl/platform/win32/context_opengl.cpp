@@ -8,6 +8,8 @@
 #include <tavros/core/debug/unreachable.hpp>
 #include <tavros/core/raii/scoped_owner.hpp>
 
+#include <mutex>
+
 #include <WinUser.h>
 #include <windef.h>
 #include <wingdi.h>
@@ -149,12 +151,16 @@ namespace tavros::renderer::rhi
             return nullptr;
         }
 
-        static bool glad_initialized = false;
-        if (!glad_initialized) {
-            glad_initialized = true;
-            if (!gladLoadGL()) {
-                ::logger.error("gladLoadGL failed" /*, last_win_error_str()*/);
-                return nullptr;
+        {
+            static bool                 glad_initialized = false;
+            static std::mutex           mtx;
+            std::lock_guard<std::mutex> lock(mtx);
+            if (!glad_initialized) {
+                if (!gladLoadGL()) {
+                    ::logger.error("gladLoadGL failed" /*, last_win_error_str()*/);
+                    return nullptr;
+                }
+                glad_initialized = true;
             }
         }
 

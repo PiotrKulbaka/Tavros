@@ -16,8 +16,16 @@ namespace app
 
         void* native_window_handle() const noexcept;
 
+        void                set_location(int32 left, int32 top);
+        tavros::math::ivec2 location() const;
+
+        void                set_client_size(int32 width, int32 height);
+        tavros::math::ivec2 client_size() const;
+
+        bool is_closed() const;
+
         // should be called in the main thread
-        int run();
+        void run();
 
         virtual void init() = 0;
 
@@ -26,8 +34,6 @@ namespace app
         virtual void render(event_queue_view events, double delta_time) = 0;
 
     private:
-        void center_window();
-
         void init_window_callbacks();
 
         void render_thread_main();
@@ -37,13 +43,13 @@ namespace app
         void stop_render_thread();
 
     private:
-        tavros::core::unique_ptr<tavros::system::interfaces::application> m_app;
-        tavros::core::unique_ptr<tavros::system::interfaces::window>      m_wnd;
+        tavros::core::unique_ptr<tavros::system::interfaces::window> m_wnd;
 
         event_queue m_event_queue;
 
         std::atomic<bool> m_running;
         std::thread       m_render_thread;
+        bool              m_is_closed = false;
     };
 
 } // namespace app

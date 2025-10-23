@@ -10,11 +10,9 @@ namespace app
         constexpr int32 initial_width = 1280 * 2;
         constexpr int32 initial_height = 720 * 2;
 
-        m_app = tavros::system::interfaces::application::create();
         m_wnd = tavros::system::interfaces::window::create(name);
 
         m_wnd->set_window_size(initial_width, initial_height);
-        center_window();
 
         init_window_callbacks();
 
@@ -26,6 +24,7 @@ namespace app
 
     render_app_base::~render_app_base()
     {
+        stop_render_thread();
     }
 
     void* render_app_base::native_window_handle() const noexcept
@@ -33,37 +32,43 @@ namespace app
         return m_wnd->native_handle();
     }
 
-    int render_app_base::run()
+    void render_app_base::set_location(int32 left, int32 top)
     {
-        m_app->run();
-        m_app->poll_events();
-
-        start_render_thread();
-
-        m_wnd->show();
-
-        while (m_app->is_runing()) {
-            m_app->wait_events();
-            m_app->poll_events();
-        }
-
-        stop_render_thread();
-
-        return 0;
+        m_wnd->set_location(left, top);
     }
 
-    void render_app_base::center_window()
+    tavros::math::ivec2 render_app_base::location() const
     {
-        auto ds = m_app->desktop_size();
-        auto ws = m_wnd->get_window_size();
-        auto loc = (ds - ws) / 2;
-        m_wnd->set_location(loc.left, loc.top);
+        return m_wnd->get_location();
+    }
+
+    void render_app_base::set_client_size(int32 width, int32 height)
+    {
+        m_wnd->set_client_size(width, height);
+    }
+
+    tavros::math::ivec2 render_app_base::client_size() const
+    {
+        return m_wnd->get_client_size();
+    }
+
+    bool render_app_base::is_closed() const
+    {
+        return m_is_closed;
+    }
+
+    void render_app_base::run()
+    {
+        start_render_thread();
+        m_wnd->show();
     }
 
     void render_app_base::init_window_callbacks()
     {
         m_wnd->set_on_close_listener([&](tavros::system::window_ptr, tavros::system::close_event_args& e) {
-            m_app->exit();
+            stop_render_thread();
+            m_is_closed = true;
+            m_wnd->hide();
         });
 
         m_wnd->set_on_resize_listener([&](tavros::system::window_ptr, tavros::system::size_event_args& e) {
@@ -152,14 +157,15 @@ namespace app
 
     void render_app_base::start_render_thread()
     {
+        stop_render_thread();
         m_running.store(true, std::memory_order_relaxed);
         m_render_thread = std::thread([this]() { render_thread_main(); });
     }
 
     void render_app_base::stop_render_thread()
     {
-        m_running.store(false, std::memory_order_relaxed);
-        if (m_render_thread.joinable()) {
+        auto started = m_running.exchange(false, std::memory_order_relaxed);
+        if (started && m_render_thread.joinable()) {
             m_render_thread.join();
         }
     }

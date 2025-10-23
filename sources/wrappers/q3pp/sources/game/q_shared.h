@@ -53,7 +53,7 @@ static int16 BigShort(int16 l)
 
 
 //=============================================================
-typedef int32 qhandle_t;
+typedef int64 qhandle_t;
 typedef int32 sfxHandle_t;
 typedef int32 fileHandle_t;
 typedef int32 clipHandle_t;

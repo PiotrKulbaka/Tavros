@@ -911,6 +911,37 @@ void enable_virtual_terminal()
     SetConsoleMode(h_out, mode);
 }
 
+tavros::core::string_view strip_ansi(tavros::core::string_view text)
+{
+    static char buf[4096];
+    size_t      len = 0;
+
+    const char* src = text.data();
+    const char* end = src + text.size();
+
+    while (src < end && len + 1 < sizeof(buf)) {
+        if (*src == '\x1B') { // ESC
+            ++src;
+            if (src < end && *src == '[') {
+                ++src;
+                while (src < end && *src != 'm') {
+                    ++src;
+                }
+                if (src < end) {
+                    ++src;
+                }
+                continue;
+            }
+        }
+
+        buf[len++] = *src++;
+    }
+
+    buf[len] = 0;
+
+    return tavros::core::string_view(buf, len);
+}
+
 /* WinMain */
 int32 WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, int32 nCmdShow)
 {
@@ -929,7 +960,7 @@ int32 WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLi
 
     log_f = fopen("qlog.log", "w");
     tavros::core::logger::add_consumer([](tavros::core::severity_level, tavros::core::string_view tag, tavros::core::string_view msg) {
-        fprintf(log_f, "%s\n", msg.data());
+        fprintf(log_f, "%s\n", strip_ansi(msg).data());
         printf("%s\n", msg.data());
         fflush(log_f);
     });

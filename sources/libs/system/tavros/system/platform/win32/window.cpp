@@ -145,7 +145,6 @@ window::window(tavros::core::string_view name)
         ::logger.info("Window {} created", fmt::styled_text(name));
         SetWindowLongPtr(hWnd, GWLP_USERDATA, reinterpret_cast<uint64>(this));
         m_hWnd = hWnd;
-        register_raw_inpput_mouse(hWnd);
     } else {
         ::logger.error("Failed to create window {}", fmt::styled_text(name));
     }
@@ -471,8 +470,10 @@ LRESULT window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPAR
 
     case WM_ACTIVATE:
         if (LOWORD(wParam) == WA_INACTIVE) {
+            remove_raw_inpput_mouse(m_hWnd);
             on_deactivate();
         } else {
+            register_raw_inpput_mouse(m_hWnd);
             on_activate();
         }
         return 0;

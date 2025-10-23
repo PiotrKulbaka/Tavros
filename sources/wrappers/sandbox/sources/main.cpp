@@ -514,8 +514,8 @@ private:
 class my_app : public app::render_app_base
 {
 public:
-    my_app(tavros::core::shared_ptr<tavros::resources::resource_manager> resource_manager)
-        : app::render_app_base("TavrosEngine")
+    my_app(tavros::core::string_view name, tavros::core::shared_ptr<tavros::resources::resource_manager> resource_manager)
+        : app::render_app_base(name)
         , m_image_decoder(&m_allocator)
         , m_resource_manager(resource_manager)
     {
@@ -1151,10 +1151,25 @@ int main()
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
 
-    auto app = std::make_unique<my_app>(resource_manager);
-    auto exit_code = app->run();
 
-    ::logger.info("TavrosEngine application exited with exit code {}", exit_code);
+    auto wnd = std::make_unique<my_app>("FirstWindow", resource_manager);
 
-    return exit_code;
+
+    auto m_app = tavros::system::interfaces::application::create();
+    m_app->run();
+    m_app->poll_events();
+
+    wnd->run();
+
+    while (m_app->is_runing()) {
+        m_app->wait_events();
+        m_app->poll_events();
+        if (wnd->is_closed()) {
+            m_app->exit();
+        }
+    }
+
+    ::logger.info("TavrosEngine application ended");
+
+    return 0;
 }
