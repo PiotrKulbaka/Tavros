@@ -512,17 +512,17 @@ private:
 };
 
 
-class my_app : public app::render_app_base
+class main_window : public app::render_app_base
 {
 public:
-    my_app(tavros::core::string_view name, tavros::core::shared_ptr<tavros::resources::resource_manager> resource_manager)
+    main_window(tavros::core::string_view name, tavros::core::shared_ptr<tavros::resources::resource_manager> resource_manager)
         : app::render_app_base(name)
         , m_image_decoder(&m_allocator)
         , m_resource_manager(resource_manager)
     {
     }
 
-    ~my_app() override
+    ~main_window() override
     {
     }
 
@@ -1142,23 +1142,16 @@ private:
 
 int main()
 {
-    tavros::core::logger::add_consumer([](auto lvl, auto tag, auto msg) {
-        printf("%s\n", msg.data());
-    });
+    tavros::core::logger::add_consumer([](auto lvl, auto tag, auto msg) { printf("%s\n", msg.data()); });
 
-    ::logger.info("Starting TavrosEngine application...");
+    auto app = tavros::system::application::create();
 
     auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
 
-    auto app = tavros::system::application::create();
+    auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", resource_manager);
+    wnd->run_render_loop();
 
-    auto wnd = std::make_unique<my_app>("FirstWindow", resource_manager);
-
-    wnd->run();
-
-    auto exit_code = app->run();
-    ::logger.info("TavrosEngine application ended");
-    return exit_code;
+    return app->run();
 }

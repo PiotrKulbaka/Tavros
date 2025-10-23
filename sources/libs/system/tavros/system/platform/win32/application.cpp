@@ -1,7 +1,7 @@
 #include <tavros/system/platform/win32/application.hpp>
 
 #include <tavros/core/logger/logger.hpp>
-#include <tavros/system/platform/win32/window.hpp>
+#include <tavros/system/platform/win32/platform_window.hpp>
 
 #include <Windows.h>
 #include <shellscalingapi.h>
@@ -75,6 +75,7 @@ namespace tavros::system::win32
 
     application::application()
         : m_is_running(false)
+        , m_exit_code(0)
     {
         enable_high_dpi_awareness();
     }
@@ -88,21 +89,17 @@ namespace tavros::system::win32
         m_is_running = true;
 
         poll_events();
-        while (s_windows_count.load(std::memory_order_relaxed) > 0) {
+        while (m_is_running && s_windows_count.load(std::memory_order_relaxed) > 0) {
             wait_events();
             poll_events();
         }
-        return 0;
+        return m_exit_code;
     }
 
-    void application::exit()
+    void application::exit(int exit_code)
     {
+        m_exit_code = exit_code;
         m_is_running = false;
-    }
-
-    bool application::is_runing()
-    {
-        return m_is_running;
     }
 
     void application::poll_events()
@@ -110,7 +107,7 @@ namespace tavros::system::win32
         MSG msg;
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
             if (msg.message == WM_QUIT) {
-                exit();
+                exit(0);
             }
 
             TranslateMessage(&msg);

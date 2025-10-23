@@ -1,9 +1,10 @@
-#include <tavros/system/platform/win32/window.hpp>
+#include <tavros/system/platform/win32/platform_window.hpp>
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 #include <tavros/system/platform/win32/utils.hpp>
 #include <tavros/system/platform/win32/application.hpp>
+#include <tavros/system/window.hpp>
 
 #include <Windowsx.h>
 #include <CommCtrl.h>
@@ -24,7 +25,7 @@ namespace
 
     LRESULT CALLBACK wnd_proc_window(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
-        if (auto* wnd = reinterpret_cast<tavros::system::win32::window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
+        if (auto* wnd = reinterpret_cast<tavros::system::win32::platform_window*>(GetWindowLongPtr(hWnd, GWLP_USERDATA))) {
             return wnd->process_window_message(hWnd, uMsg, wParam, lParam);
         }
         // Does not log here to avoid spam, because some messages can be sent before GWLP_USERDATA is set
@@ -116,14 +117,14 @@ namespace tavros::system
 {
     tavros::core::unique_ptr<tavros::system::platform_window> tavros::system::platform_window::create(tavros::core::string_view name)
     {
-        return tavros::core::make_unique<tavros::system::win32::window>(name);
+        return tavros::core::make_unique<tavros::system::win32::platform_window>(name);
     }
 } // namespace tavros::system
 
 namespace tavros::system::win32
 {
 
-    window::window(tavros::core::string_view name)
+    platform_window::platform_window(tavros::core::string_view name)
         : m_hWnd(nullptr)
     {
         increase_windows_count();
@@ -153,7 +154,7 @@ namespace tavros::system::win32
         }
     }
 
-    window::~window()
+    platform_window::~platform_window()
     {
         if (m_hWnd) {
             destroy_window(m_hWnd);
@@ -161,14 +162,14 @@ namespace tavros::system::win32
         decrease_windows_count();
     }
 
-    void window::set_text(tavros::core::string_view text)
+    void platform_window::set_text(tavros::core::string_view text)
     {
         if (!SetWindowText(m_hWnd, text.data())) {
             ::logger.error("Failed to set window text: {}", last_win_error_str());
         }
     }
 
-    void window::set_state(window_state ws)
+    void platform_window::set_state(window_state ws)
     {
         switch (ws) {
         case window_state::minimized:
@@ -187,7 +188,7 @@ namespace tavros::system::win32
         UpdateWindow(m_hWnd);
     }
 
-    window_state window::state() const
+    window_state platform_window::get_state() const
     {
         if (IsIconic(m_hWnd)) {
             return window_state::minimized;
@@ -198,14 +199,14 @@ namespace tavros::system::win32
         return window_state::normal;
     }
 
-    void window::set_location(int32 left, int32 top)
+    void platform_window::set_position(int32 left, int32 top)
     {
         if (!SetWindowPos(m_hWnd, nullptr, left, top, 0, 0, SWP_NOSIZE | SWP_NOZORDER)) {
-            ::logger.error("Failed to set window location: {}", last_win_error_str());
+            ::logger.error("Failed to set window position: {}", last_win_error_str());
         }
     }
 
-    math::ipoint2 window::location() const
+    math::ipoint2 platform_window::get_position() const
     {
         RECT rect;
         if (GetWindowRect(m_hWnd, &rect)) {
@@ -214,61 +215,57 @@ namespace tavros::system::win32
             ScreenToClient(parent, &pt);
             return math::ipoint2(pt.x, pt.y);
         }
-        ::logger.error("Failed to get window location: {}", last_win_error_str());
+        ::logger.error("Failed to get window position: {}", last_win_error_str());
         return math::ipoint2();
     }
 
-    void window::set_size(int32 width, int32 height)
+    void platform_window::set_size(int32 width, int32 height, bool client_rect)
     {
-        if (!SetWindowPos(m_hWnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER)) {
-            ::logger.error("Failed to set window size: {}", last_win_error_str());
+        if (client_rect) {
+            RECT rect{.left = 0, .top = 0, .right = width, .bottom = height};
+            AdjustWindowRect(&rect, GetWindowLong(m_hWnd, GWL_STYLE), FALSE);
+            if (!SetWindowPos(m_hWnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER)) {
+                ::logger.error("Failed to set client size: {}", last_win_error_str());
+            }
+        } else {
+            if (!SetWindowPos(m_hWnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER)) {
+                ::logger.error("Failed to set window size: {}", last_win_error_str());
+            }
         }
     }
 
-    math::isize2 window::size() const
+    math::isize2 platform_window::get_size(bool client_rect) const
     {
         RECT rect;
-        if (GetWindowRect(m_hWnd, &rect)) {
-            int32 width = rect.right - rect.left;
-            int32 height = rect.bottom - rect.top;
-            return math::isize2(width, height);
+        if (client_rect) {
+            if (GetClientRect(m_hWnd, &rect)) {
+                int32 width = rect.right - rect.left;
+                int32 height = rect.bottom - rect.top;
+                return math::isize2(width, height);
+            }
+            ::logger.error("Failed to get client size: {}", last_win_error_str());
+        } else {
+            if (GetWindowRect(m_hWnd, &rect)) {
+                int32 width = rect.right - rect.left;
+                int32 height = rect.bottom - rect.top;
+                return math::isize2(width, height);
+            }
+            ::logger.error("Failed to get window size: {}", last_win_error_str());
         }
-        ::logger.error("Failed to get window size: {}", last_win_error_str());
         return math::isize2();
     }
 
-    void window::set_client_size(int32 width, int32 height)
-    {
-        RECT rect{.left = 0, .top = 0, .right = width, .bottom = height};
-        AdjustWindowRect(&rect, GetWindowLong(m_hWnd, GWL_STYLE), FALSE);
-        if (!SetWindowPos(m_hWnd, nullptr, 0, 0, width, height, SWP_NOMOVE | SWP_NOZORDER)) {
-            ::logger.error("Failed to set client size: {}", last_win_error_str());
-        }
-    }
-
-    math::isize2 window::client_size() const
-    {
-        RECT rect;
-        if (GetClientRect(m_hWnd, &rect)) {
-            int32 width = rect.right - rect.left;
-            int32 height = rect.bottom - rect.top;
-            return math::isize2(width, height);
-        }
-        ::logger.error("Failed to get client size: {}", last_win_error_str());
-        return math::isize2();
-    }
-
-    void window::set_enabled(bool enable)
+    void platform_window::set_enabled(bool enable)
     {
         EnableWindow(m_hWnd, enable);
     }
 
-    bool window::is_enabled() const
+    bool platform_window::is_enabled() const
     {
         return IsWindowEnabled(m_hWnd);
     }
 
-    void window::activate()
+    void platform_window::activate()
     {
         SetActiveWindow(m_hWnd);
         EnableWindow(m_hWnd, TRUE);
@@ -277,184 +274,33 @@ namespace tavros::system::win32
         SetFocus(m_hWnd);
     }
 
-    void window::show()
+    void platform_window::show()
     {
         ShowWindow(m_hWnd, SW_SHOW);
         UpdateWindow(m_hWnd);
     }
 
-    void window::hide()
+    void platform_window::hide()
     {
         ShowWindow(m_hWnd, SW_HIDE);
     }
 
-    void window::close()
+    void platform_window::close()
     {
         PostMessage(m_hWnd, WM_CLOSE, 0, 0);
     }
 
-    void* window::native_handle() const noexcept
+    void* platform_window::native_handle() const noexcept
     {
         return reinterpret_cast<void*>(m_hWnd);
     }
 
-    void window::set_on_close_listener(close_callback cb)
+    void platform_window::set_events_listener(window* listener)
     {
-        m_on_close_cb = std::move(cb);
+        m_cb_listener = listener;
     }
 
-    void window::set_on_activate_listener(event_callback cb)
-    {
-        m_on_activate_cb = std::move(cb);
-    }
-
-    void window::set_on_deactivate_listener(event_callback cb)
-    {
-        m_on_deactivate_cb = std::move(cb);
-    }
-
-    void window::set_on_drop_listener(drop_callback cb)
-    {
-        m_on_drop_cb = std::move(cb);
-    }
-
-    void window::set_on_move_listener(move_callback cb)
-    {
-        m_on_move_cb = std::move(cb);
-    }
-
-    void window::set_on_resize_listener(size_callback cb)
-    {
-        m_on_resize_cb = std::move(cb);
-    }
-
-    void window::set_on_mouse_down_listener(mouse_callback cb)
-    {
-        m_on_mouse_down_cb = std::move(cb);
-    }
-
-    void window::set_on_mouse_move_listener(mouse_callback cb)
-    {
-        m_on_mouse_move_cb = std::move(cb);
-    }
-
-    void window::set_on_mouse_up_listener(mouse_callback cb)
-    {
-        m_on_mouse_up_cb = std::move(cb);
-    }
-
-    void window::set_on_mouse_wheel_listener(mouse_callback cb)
-    {
-        m_on_mouse_wheel_cb = std::move(cb);
-    }
-
-    void window::set_on_key_down_listener(key_callback cb)
-    {
-        m_on_key_down_cb = std::move(cb);
-    }
-
-    void window::set_on_key_up_listener(key_callback cb)
-    {
-        m_on_key_up_cb = std::move(cb);
-    }
-
-    void window::set_on_key_press_listener(key_callback cb)
-    {
-        m_on_key_press_cb = std::move(cb);
-    }
-
-    void window::on_close(close_event_args& e)
-    {
-        if (m_on_close_cb) {
-            m_on_close_cb(this, e);
-        }
-    }
-
-    void window::on_activate()
-    {
-        if (m_on_activate_cb) {
-            m_on_activate_cb(this);
-        }
-    }
-
-    void window::on_deactivate()
-    {
-        if (m_on_deactivate_cb) {
-            m_on_deactivate_cb(this);
-        }
-    }
-
-    void window::on_drop(drop_event_args& e)
-    {
-        if (m_on_drop_cb) {
-            m_on_drop_cb(this, e);
-        }
-    }
-
-    void window::on_move(move_event_args& e)
-    {
-        if (m_on_move_cb) {
-            m_on_move_cb(this, e);
-        }
-    }
-
-    void window::on_resize(size_event_args& e)
-    {
-        if (m_on_resize_cb) {
-            m_on_resize_cb(this, e);
-        }
-    }
-
-    void window::on_mouse_down(mouse_event_args& e)
-    {
-        if (m_on_mouse_down_cb) {
-            m_on_mouse_down_cb(this, e);
-        }
-    }
-
-    void window::on_mouse_move(mouse_event_args& e)
-    {
-        if (m_on_mouse_move_cb) {
-            m_on_mouse_move_cb(this, e);
-        }
-    }
-
-    void window::on_mouse_up(mouse_event_args& e)
-    {
-        if (m_on_mouse_up_cb) {
-            m_on_mouse_up_cb(this, e);
-        }
-    }
-
-    void window::on_mouse_wheel(mouse_event_args& e)
-    {
-        if (m_on_mouse_wheel_cb) {
-            m_on_mouse_wheel_cb(this, e);
-        }
-    }
-
-    void window::on_key_down(key_event_args& e)
-    {
-        if (m_on_key_down_cb) {
-            m_on_key_down_cb(this, e);
-        }
-    }
-
-    void window::on_key_up(key_event_args& e)
-    {
-        if (m_on_key_up_cb) {
-            m_on_key_up_cb(this, e);
-        }
-    }
-
-    void window::on_key_press(key_event_args& e)
-    {
-        if (m_on_key_press_cb) {
-            m_on_key_press_cb(this, e);
-        }
-    }
-
-    LRESULT window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
+    LRESULT platform_window::process_window_message(HWND hWnd, UINT uMsg, WPARAM wParam, LPARAM lParam)
     {
         move_event_args  mvargs;
         size_event_args  szargs;
@@ -466,7 +312,9 @@ namespace tavros::system::win32
         switch (uMsg) {
         case WM_CLOSE: {
             close_event_args args{.event_time_us = get_event_time_us(), .cancel = false};
-            on_close(args);
+            if (auto* c = m_cb_listener) {
+                c->on_close(args);
+            }
             if (!args.cancel) {
                 return 0;
             }
@@ -475,10 +323,14 @@ namespace tavros::system::win32
         case WM_ACTIVATE:
             if (LOWORD(wParam) == WA_INACTIVE) {
                 remove_raw_inpput_mouse(m_hWnd);
-                on_deactivate();
+                if (auto* c = m_cb_listener) {
+                    c->on_deactivate();
+                }
             } else {
                 register_raw_inpput_mouse(m_hWnd);
-                on_activate();
+                if (auto* c = m_cb_listener) {
+                    c->on_activate();
+                }
             }
             return 0;
 
@@ -500,7 +352,9 @@ namespace tavros::system::win32
                         .delta = 0,
                         .pos = math::point2(static_cast<float>(mouse.lLastX), static_cast<float>(mouse.lLastY))
                     };
-                    on_mouse_move(margs);
+                    if (auto* c = m_cb_listener) {
+                        c->on_mouse_move(margs);
+                    }
                     return 0;
                 }
             }
@@ -544,7 +398,9 @@ namespace tavros::system::win32
             files[number] = nullptr;
 
             drop_event_args dargs = {.files = files};
-            on_drop(dargs);
+            if (auto* c = m_cb_listener) {
+                c->on_drop(dargs);
+            }
 
             free(mem_block);
             DragFinish(hDrop);
@@ -560,82 +416,114 @@ namespace tavros::system::win32
 
         case WM_MOVE:
             mvargs = {.event_time_us = get_event_time_us(), .pos = create_point2(lParam)};
-            on_move(mvargs);
+            if (auto* c = m_cb_listener) {
+                c->on_move(mvargs);
+            }
             return 0;
 
         case WM_SIZE:
             szargs = {.event_time_us = get_event_time_us(), .size = create_size2(lParam)};
-            on_resize(szargs);
+            if (auto* c = m_cb_listener) {
+                c->on_resize(szargs);
+            }
             return 0;
 
         case WM_MOUSEMOVE:
             margs = create_mouse_event_args(lParam, mouse_button::none);
-            on_mouse_move(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_move(margs);
+            }
             return 0;
 
         case WM_LBUTTONDOWN:
             margs = create_mouse_event_args(lParam, mouse_button::left);
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return 0;
 
         case WM_LBUTTONUP:
             margs = create_mouse_event_args(lParam, mouse_button::left);
-            on_mouse_up(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_up(margs);
+            }
             return 0;
 
         case WM_LBUTTONDBLCLK:
             margs = create_mouse_event_args(lParam, mouse_button::left, true);
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return 0;
 
         case WM_RBUTTONDOWN:
             margs = create_mouse_event_args(lParam, mouse_button::right);
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return 0;
 
         case WM_RBUTTONUP:
             margs = create_mouse_event_args(lParam, mouse_button::right);
-            on_mouse_up(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_up(margs);
+            }
             return 0;
 
         case WM_RBUTTONDBLCLK:
             margs = create_mouse_event_args(lParam, mouse_button::right, true);
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return 0;
 
         case WM_MBUTTONDOWN:
             margs = create_mouse_event_args(lParam, mouse_button::middle);
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return 0;
 
         case WM_MBUTTONUP:
             margs = create_mouse_event_args(lParam, mouse_button::middle);
-            on_mouse_up(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_up(margs);
+            }
             return 0;
 
         case WM_MBUTTONDBLCLK:
             margs = create_mouse_event_args(lParam, mouse_button::middle, true);
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return 0;
 
         case WM_XBUTTONDOWN:
             margs = create_mouse_event_args(lParam, create_mouse_x_button(wParam));
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return TRUE;
 
         case WM_XBUTTONUP:
             margs = create_mouse_event_args(lParam, create_mouse_x_button(wParam));
-            on_mouse_up(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_up(margs);
+            }
             return TRUE;
 
         case WM_XBUTTONDBLCLK:
             margs = create_mouse_event_args(lParam, create_mouse_x_button(wParam), true);
-            on_mouse_down(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_down(margs);
+            }
             return TRUE;
 
         case WM_MOUSEWHEEL:
             margs = create_mouse_event_args(lParam, mouse_button::none, false, GET_WHEEL_DELTA_WPARAM(wParam));
-            on_mouse_wheel(margs);
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_wheel(margs);
+            }
             return 0;
 
         case WM_SYSKEYDOWN:
@@ -643,28 +531,38 @@ namespace tavros::system::win32
             if (kargs.key == keys::k_F4) {
                 close();
             } else {
-                on_key_down(kargs);
+                if (auto* c = m_cb_listener) {
+                    c->on_key_down(kargs);
+                }
             }
             return 0;
 
         case WM_SYSKEYUP:
             kargs = create_key_event_args(wParam, lParam);
-            on_key_up(kargs);
+            if (auto* c = m_cb_listener) {
+                c->on_key_up(kargs);
+            }
             return 0;
 
         case WM_KEYDOWN:
             kargs = create_key_event_args(wParam, lParam);
-            on_key_down(kargs);
+            if (auto* c = m_cb_listener) {
+                c->on_key_down(kargs);
+            }
             return 0;
 
         case WM_KEYUP:
             kargs = create_key_event_args(wParam, lParam);
-            on_key_up(kargs);
+            if (auto* c = m_cb_listener) {
+                c->on_key_up(kargs);
+            }
             return 0;
 
         case WM_CHAR:
             kargs = create_char_event_args(wParam, lParam);
-            on_key_press(kargs);
+            if (auto* c = m_cb_listener) {
+                c->on_key_press(kargs);
+            }
             return 0;
         }
 

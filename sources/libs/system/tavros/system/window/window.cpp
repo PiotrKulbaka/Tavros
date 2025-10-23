@@ -48,19 +48,7 @@ namespace tavros::system
             return;
         }
 
-        m_wnd->set_on_close_listener([this](auto*, auto& e) { this->on_close(e); });
-        m_wnd->set_on_activate_listener([this](auto*) { this->on_activate(); });
-        m_wnd->set_on_deactivate_listener([this](auto*) { this->on_deactivate(); });
-        m_wnd->set_on_drop_listener([this](auto*, auto& e) { this->on_drop(e); });
-        m_wnd->set_on_move_listener([this](auto*, auto& e) { this->on_move(e); });
-        m_wnd->set_on_resize_listener([this](auto*, auto& e) { this->on_resize(e); });
-        m_wnd->set_on_mouse_down_listener([this](auto*, auto& e) { this->on_mouse_down(e); });
-        m_wnd->set_on_mouse_move_listener([this](auto*, auto& e) { this->on_mouse_move(e); });
-        m_wnd->set_on_mouse_up_listener([this](auto*, auto& e) { this->on_mouse_up(e); });
-        m_wnd->set_on_mouse_wheel_listener([this](auto*, auto& e) { this->on_mouse_wheel(e); });
-        m_wnd->set_on_key_down_listener([this](auto*, auto& e) { this->on_key_down(e); });
-        m_wnd->set_on_key_up_listener([this](auto*, auto& e) { this->on_key_up(e); });
-        m_wnd->set_on_key_press_listener([this](auto*, auto& e) { this->on_key_press(e); });
+        m_wnd->set_events_listener(this);
     }
 
     void window::destroy()
@@ -71,6 +59,7 @@ namespace tavros::system
         }
 
         m_wnd->close();
+        m_wnd->set_events_listener(nullptr);
         m_wnd = nullptr;
     }
 
@@ -95,43 +84,43 @@ namespace tavros::system
     window_state window::state() const
     {
         CHECK_WINDOW_HANDLE_R(window_state::minimized);
-        return m_wnd->state();
+        return m_wnd->get_state();
     }
 
     void window::set_position(int32 left, int32 top)
     {
         CHECK_WINDOW_HANDLE();
-        m_wnd->set_location(left, top);
+        m_wnd->set_position(left, top);
     }
 
     math::ipoint2 window::position() const
     {
         CHECK_WINDOW_HANDLE_R({});
-        return m_wnd->location();
+        return m_wnd->get_position();
     }
 
     void window::set_size(int32 width, int32 height)
     {
         CHECK_WINDOW_HANDLE();
-        m_wnd->set_size(width, height);
+        m_wnd->set_size(width, height, false);
     }
 
     math::isize2 window::size() const
     {
         CHECK_WINDOW_HANDLE_R({});
-        return m_wnd->size();
+        return m_wnd->get_size(false);
     }
 
     void window::set_client_size(int32 width, int32 height)
     {
         CHECK_WINDOW_HANDLE();
-        m_wnd->set_client_size(width, height);
+        m_wnd->set_size(width, height, true);
     }
 
     math::isize2 window::client_size() const
     {
         CHECK_WINDOW_HANDLE_R({});
-        return m_wnd->client_size();
+        return m_wnd->get_size(true);
     }
 
     void window::set_enabled(bool enable)
@@ -176,7 +165,7 @@ namespace tavros::system
         return m_wnd->native_handle();
     }
 
-    void window::on_close(close_event_args& e)
+    void window::on_close(close_event_args&)
     {
         destroy();
     }
@@ -189,44 +178,44 @@ namespace tavros::system
     {
     }
 
-    void window::on_drop(drop_event_args& e)
+    void window::on_drop(drop_event_args&)
     {
     }
 
-    void window::on_move(move_event_args& e)
+    void window::on_move(move_event_args&)
     {
     }
 
-    void window::on_resize(size_event_args& e)
+    void window::on_resize(size_event_args&)
     {
     }
 
-    void window::on_mouse_down(mouse_event_args& e)
+    void window::on_mouse_down(mouse_event_args&)
     {
     }
 
-    void window::on_mouse_move(mouse_event_args& e)
+    void window::on_mouse_move(mouse_event_args&)
     {
     }
 
-    void window::on_mouse_up(mouse_event_args& e)
+    void window::on_mouse_up(mouse_event_args&)
     {
     }
 
 
-    void window::on_mouse_wheel(mouse_event_args& e)
+    void window::on_mouse_wheel(mouse_event_args&)
     {
     }
 
-    void window::on_key_down(key_event_args& e)
+    void window::on_key_down(key_event_args&)
     {
     }
 
-    void window::on_key_up(key_event_args& e)
+    void window::on_key_up(key_event_args&)
     {
     }
 
-    void window::on_key_press(key_event_args& e)
+    void window::on_key_press(key_event_args&)
     {
     }
 

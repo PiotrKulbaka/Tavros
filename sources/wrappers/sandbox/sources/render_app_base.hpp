@@ -14,10 +14,8 @@ namespace app
         render_app_base(tavros::core::string_view title);
         virtual ~render_app_base() override;
 
-        bool is_closed() const;
-
         // should be called in the main thread
-        void run();
+        void run_render_loop();
 
         virtual void init() = 0;
 

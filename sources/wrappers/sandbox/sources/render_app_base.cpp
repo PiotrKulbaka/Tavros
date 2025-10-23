@@ -24,7 +24,7 @@ namespace app
         stop_render_thread();
     }
 
-    void render_app_base::run()
+    void render_app_base::run_render_loop()
     {
         start_render_thread();
         show();

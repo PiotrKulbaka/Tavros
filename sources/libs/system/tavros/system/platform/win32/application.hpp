@@ -18,17 +18,15 @@ namespace tavros::system::win32
         ~application() override;
 
         int  run() override;
-        void exit() override;
-        bool is_runing() override;
-
+        void exit(int exit_code) override;
         void poll_events() override;
-
         void wait_events() override;
 
         math::isize2 desktop_size() override;
 
     private:
         bool m_is_running;
+        int  m_exit_code;
     };
 
 } // namespace tavros::system::win32

@@ -17,8 +17,7 @@ namespace tavros::system
         virtual ~application() = default;
 
         virtual int  run() = 0;
-        virtual void exit() = 0;
-        virtual bool is_runing() = 0;
+        virtual void exit(int exit_code) = 0;
 
         virtual void poll_events() = 0;
         virtual void wait_events() = 0;
