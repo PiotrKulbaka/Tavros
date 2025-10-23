@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/system/event_callbacks.hpp>
+#include <tavros/system/event_args.hpp>
 #include <tavros/system/keys.hpp>
 
 #include <tavros/core/math/ivec2.hpp>

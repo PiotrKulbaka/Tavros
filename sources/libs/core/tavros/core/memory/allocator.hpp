@@ -72,6 +72,46 @@ namespace tavros::core
          * Not all allocator implementations may support this operation.
          */
         virtual void clear() = 0;
+
+        /**
+         * @brief Allocates and constructs an object of type T.
+         *
+         * Calls allocate() to reserve memory and constructs the object in place
+         * using placement new and the provided constructor arguments.
+         *
+         * @tparam T Type of object to allocate.
+         * @tparam Args Constructor argument types.
+         * @param args Constructor arguments.
+         * @param tag Optional tag for allocation tracking.
+         * @return Pointer to the constructed object, or nullptr if allocation fails.
+         */
+        template<typename T, typename... Args>
+        T* new_object(const char* tag, Args&&... args)
+        {
+            void* mem = allocate(sizeof(T), alignof(T), tag);
+            if (!mem) {
+                return nullptr;
+            }
+            return new (mem) T(std::forward<Args>(args)...);
+        }
+
+        /**
+         * @brief Destroys and deallocates an object previously created by new_object().
+         *
+         * Invokes the object's destructor, then calls deallocate() on its memory.
+         *
+         * @tparam T Type of object to destroy.
+         * @param ptr Pointer to the object.
+         */
+        template<typename T>
+        void delete_object(T* ptr)
+        {
+            if (!ptr) {
+                return;
+            }
+            ptr->~T();
+            deallocate(ptr);
+        }
     };
 
 } // namespace tavros::core

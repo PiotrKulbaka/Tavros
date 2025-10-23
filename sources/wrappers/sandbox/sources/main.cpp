@@ -17,6 +17,7 @@
 #include <tavros/core/memory/buffer.hpp>
 
 #include <tavros/system/time.hpp>
+#include <tavros/system/application.hpp>
 
 #include <algorithm>
 
@@ -575,7 +576,7 @@ public:
         main_composer_info.vsync = true;
         main_composer_info.color_attachment_format = rhi::pixel_format::rgba8un;
         main_composer_info.depth_stencil_attachment_format = rhi::pixel_format::depth32f_stencil8;
-        main_composer_info.native_handle = native_window_handle();
+        main_composer_info.native_handle = native_handle();
 
         auto main_composer_handle = m_graphics_device->create_frame_composer(main_composer_info);
         if (!main_composer_handle) {
@@ -1151,25 +1152,13 @@ int main()
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
 
+    auto app = tavros::system::application::create();
 
     auto wnd = std::make_unique<my_app>("FirstWindow", resource_manager);
 
-
-    auto m_app = tavros::system::interfaces::application::create();
-    m_app->run();
-    m_app->poll_events();
-
     wnd->run();
 
-    while (m_app->is_runing()) {
-        m_app->wait_events();
-        m_app->poll_events();
-        if (wnd->is_closed()) {
-            m_app->exit();
-        }
-    }
-
+    auto exit_code = app->run();
     ::logger.info("TavrosEngine application ended");
-
-    return 0;
+    return exit_code;
 }

@@ -3,12 +3,6 @@
 #include <tavros/core/math/vec2.hpp>
 #include <tavros/core/math/ivec2.hpp>
 #include <tavros/system/keys.hpp>
-#include <functional>
-
-namespace tavros::system::interfaces
-{
-    class window;
-}
 
 namespace tavros::system
 {
@@ -73,14 +67,5 @@ namespace tavros::system
         uint64       event_time_us = 0; /// Event timestamp in microseconds (use get_high_precision_system_time_us() for current time).
         const char** files = nullptr;   /// Null-terminated list of dropped file paths.
     };
-
-    using window_ptr = interfaces::window*;
-    using mouse_callback = std::function<void(window_ptr, mouse_event_args& e)>;
-    using key_callback = std::function<void(window_ptr, key_event_args& e)>;
-    using move_callback = std::function<void(window_ptr, move_event_args& e)>;
-    using size_callback = std::function<void(window_ptr, size_event_args& e)>;
-    using close_callback = std::function<void(window_ptr, close_event_args& e)>;
-    using drop_callback = std::function<void(window_ptr, drop_event_args& e)>;
-    using event_callback = std::function<void(window_ptr)>;
 
 } // namespace tavros::system

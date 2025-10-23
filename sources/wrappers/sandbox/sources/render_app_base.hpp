@@ -1,26 +1,18 @@
 #pragma once
 
 #include "event_queue.hpp"
-#include <tavros/system/interfaces/application.hpp>
+#include <tavros/system/window.hpp>
 #include <atomic>
 #include <thread>
 
 namespace app
 {
 
-    class render_app_base : tavros::core::noncopyable
+    class render_app_base : public tavros::system::window
     {
     public:
-        render_app_base(tavros::core::string_view name);
-        virtual ~render_app_base();
-
-        void* native_window_handle() const noexcept;
-
-        void                set_location(int32 left, int32 top);
-        tavros::math::ivec2 location() const;
-
-        void                set_client_size(int32 width, int32 height);
-        tavros::math::ivec2 client_size() const;
+        render_app_base(tavros::core::string_view title);
+        virtual ~render_app_base() override;
 
         bool is_closed() const;
 
@@ -34,7 +26,19 @@ namespace app
         virtual void render(event_queue_view events, double delta_time) = 0;
 
     private:
-        void init_window_callbacks();
+        virtual void on_close(tavros::system::close_event_args& e) override;
+        virtual void on_activate() override;
+        virtual void on_deactivate() override;
+        // virtual void on_drop(tavros::system::drop_event_args& e) override;
+        // virtual void on_move(tavros::system::move_event_args& e) override;
+        virtual void on_resize(tavros::system::size_event_args& e) override;
+        virtual void on_mouse_down(tavros::system::mouse_event_args& e) override;
+        virtual void on_mouse_move(tavros::system::mouse_event_args& e) override;
+        virtual void on_mouse_up(tavros::system::mouse_event_args& e) override;
+        // virtual void on_mouse_wheel(tavros::system::mouse_event_args& e) override;
+        virtual void on_key_down(tavros::system::key_event_args& e) override;
+        virtual void on_key_up(tavros::system::key_event_args& e) override;
+        // virtual void on_key_press(tavros::system::key_event_args& e) override;
 
         void render_thread_main();
 
@@ -43,13 +47,10 @@ namespace app
         void stop_render_thread();
 
     private:
-        tavros::core::unique_ptr<tavros::system::interfaces::window> m_wnd;
-
         event_queue m_event_queue;
 
         std::atomic<bool> m_running;
         std::thread       m_render_thread;
-        bool              m_is_closed = false;
     };
 
 } // namespace app

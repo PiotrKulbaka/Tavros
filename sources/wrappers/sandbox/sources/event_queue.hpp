@@ -3,7 +3,7 @@
 #include <tavros/core/math.hpp>
 #include <tavros/core/memory/buffer.hpp>
 #include <tavros/core/noncopyable.hpp>
-#include <tavros/system/interfaces/window.hpp>
+#include <tavros/system/keys.hpp>
 #include <mutex>
 #include <array>
 

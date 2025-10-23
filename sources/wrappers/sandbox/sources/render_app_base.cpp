@@ -6,15 +6,12 @@ namespace app
 {
 
     render_app_base::render_app_base(tavros::core::string_view name)
+        : tavros::system::window(name)
     {
         constexpr int32 initial_width = 1280 * 2;
         constexpr int32 initial_height = 720 * 2;
 
-        m_wnd = tavros::system::interfaces::window::create(name);
-
-        m_wnd->set_window_size(initial_width, initial_height);
-
-        init_window_callbacks();
+        set_client_size(initial_width, initial_height);
 
         event_info initial_resize_event;
         initial_resize_event.type = event_type::window_resize;
@@ -27,115 +24,90 @@ namespace app
         stop_render_thread();
     }
 
-    void* render_app_base::native_window_handle() const noexcept
-    {
-        return m_wnd->native_handle();
-    }
-
-    void render_app_base::set_location(int32 left, int32 top)
-    {
-        m_wnd->set_location(left, top);
-    }
-
-    tavros::math::ivec2 render_app_base::location() const
-    {
-        return m_wnd->get_location();
-    }
-
-    void render_app_base::set_client_size(int32 width, int32 height)
-    {
-        m_wnd->set_client_size(width, height);
-    }
-
-    tavros::math::ivec2 render_app_base::client_size() const
-    {
-        return m_wnd->get_client_size();
-    }
-
-    bool render_app_base::is_closed() const
-    {
-        return m_is_closed;
-    }
-
     void render_app_base::run()
     {
         start_render_thread();
-        m_wnd->show();
+        show();
     }
 
-    void render_app_base::init_window_callbacks()
+    void render_app_base::on_close(tavros::system::close_event_args& e)
     {
-        m_wnd->set_on_close_listener([&](tavros::system::window_ptr, tavros::system::close_event_args& e) {
-            stop_render_thread();
-            m_is_closed = true;
-            m_wnd->hide();
-        });
+        stop_render_thread();
+        destroy();
+    }
 
-        m_wnd->set_on_resize_listener([&](tavros::system::window_ptr, tavros::system::size_event_args& e) {
+    void render_app_base::on_activate()
+    {
+        event_info ei;
+        ei.type = event_type::activate;
+        m_event_queue.push_event(ei);
+    }
+
+    void render_app_base::on_deactivate()
+    {
+        event_info ei;
+        ei.type = event_type::deactivate;
+        m_event_queue.push_event(ei);
+    }
+
+    void render_app_base::on_resize(tavros::system::size_event_args& e)
+    {
+        event_info ei;
+        ei.type = event_type::window_resize;
+        ei.vec_info = tavros::math::vec2(static_cast<float>(e.size.width), static_cast<float>(e.size.height));
+        ei.event_time_us = e.event_time_us;
+        m_event_queue.push_event(ei);
+    }
+
+    void render_app_base::on_mouse_down(tavros::system::mouse_event_args& e)
+    {
+        if (e.is_relative_move) {
             event_info ei;
-            ei.type = event_type::window_resize;
-            ei.vec_info = tavros::math::vec2(static_cast<float>(e.size.width), static_cast<float>(e.size.height));
+            ei.type = event_type::mouse_button_down;
+            ei.mouse_button_info = e.button;
             ei.event_time_us = e.event_time_us;
             m_event_queue.push_event(ei);
-        });
+        }
+    }
 
-        m_wnd->set_on_key_down_listener([&](tavros::system::window_ptr, tavros::system::key_event_args& e) {
+    void render_app_base::on_mouse_move(tavros::system::mouse_event_args& e)
+    {
+        if (e.is_relative_move) {
             event_info ei;
-            ei.type = event_type::key_down;
-            ei.key_info = e.key;
+            ei.type = event_type::mouse_move;
+            ei.vec_info = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
             ei.event_time_us = e.event_time_us;
             m_event_queue.push_event(ei);
-        });
+        }
+    }
 
-        m_wnd->set_on_key_up_listener([&](tavros::system::window_ptr, tavros::system::key_event_args& e) {
+    void render_app_base::on_mouse_up(tavros::system::mouse_event_args& e)
+    {
+        if (e.is_relative_move) {
             event_info ei;
-            ei.type = event_type::key_up;
-            ei.key_info = e.key;
+            ei.type = event_type::mouse_button_up;
+            ei.mouse_button_info = e.button;
             ei.event_time_us = e.event_time_us;
             m_event_queue.push_event(ei);
-        });
+        }
+    }
 
-        m_wnd->set_on_deactivate_listener([&](tavros::system::window_ptr) {
-            event_info ei;
-            ei.type = event_type::deactivate;
-            m_event_queue.push_event(ei);
-        });
+    void render_app_base::on_key_down(tavros::system::key_event_args& e)
+    {
+        event_info ei;
+        ei.type = event_type::key_down;
+        ei.key_info = e.key;
+        ei.event_time_us = e.event_time_us;
+        m_event_queue.push_event(ei);
+    }
 
-        m_wnd->set_on_activate_listener([&](tavros::system::window_ptr) {
-            event_info ei;
-            ei.type = event_type::activate;
-            m_event_queue.push_event(ei);
-        });
-
-        m_wnd->set_on_mouse_move_listener([&](tavros::system::window_ptr, tavros::system::mouse_event_args& e) {
-            if (e.is_relative_move) {
-                event_info ei;
-                ei.type = event_type::mouse_move;
-                ei.vec_info = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
-                ei.event_time_us = e.event_time_us;
-                m_event_queue.push_event(ei);
-            }
-        });
-
-        m_wnd->set_on_mouse_down_listener([&](tavros::system::window_ptr, tavros::system::mouse_event_args& e) {
-            if (e.is_relative_move) {
-                event_info ei;
-                ei.type = event_type::mouse_button_down;
-                ei.mouse_button_info = e.button;
-                ei.event_time_us = e.event_time_us;
-                m_event_queue.push_event(ei);
-            }
-        });
-
-        m_wnd->set_on_mouse_up_listener([&](tavros::system::window_ptr, tavros::system::mouse_event_args& e) {
-            if (e.is_relative_move) {
-                event_info ei;
-                ei.type = event_type::mouse_button_up;
-                ei.mouse_button_info = e.button;
-                ei.event_time_us = e.event_time_us;
-                m_event_queue.push_event(ei);
-            }
-        });
+    void render_app_base::on_key_up(tavros::system::key_event_args& e)
+    {
+        event_info ei;
+        ei.type = event_type::key_up;
+        ei.key_info = e.key;
+        ei.event_time_us = e.event_time_us;
+        m_event_queue.push_event(ei);
     }
 
     void render_app_base::render_thread_main()

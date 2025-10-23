@@ -1,20 +1,23 @@
 #pragma once
 
-#include <tavros/core/noncopyable.hpp>
-#include <tavros/core/nonmovable.hpp>
-#include <tavros/system/interfaces/application.hpp>
+#include <tavros/core/containers/vector.hpp>
+#include <tavros/core/memory/mallocator.hpp>
+#include <tavros/system/application.hpp>
+#include <tavros/system/window.hpp>
 
-namespace tavros::system
+namespace tavros::system::win32
 {
+    void increase_windows_count();
+    void decrease_windows_count();
 
-    class application : public interfaces::application, core::noncopyable, core::nonmovable
+    class application : public tavros::system::application
     {
     public:
         application();
 
         ~application() override;
 
-        void run() override;
+        int  run() override;
         void exit() override;
         bool is_runing() override;
 
@@ -24,8 +27,8 @@ namespace tavros::system
 
         math::isize2 desktop_size() override;
 
-    public:
+    private:
         bool m_is_running;
     };
 
-} // namespace tavros::system
+} // namespace tavros::system::win32

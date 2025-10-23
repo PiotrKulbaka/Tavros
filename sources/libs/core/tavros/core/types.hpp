@@ -22,6 +22,7 @@ using atomic_int32 = std::atomic_int32_t;
 using atomic_uint64 = std::atomic_uint64_t;
 using atomic_int64 = std::atomic_int64_t;
 using atomic_size_t = std::atomic_size_t;
+using atomic_bool = std::atomic_bool;
 
 constexpr size_t pointer_size = sizeof(void*);
 
