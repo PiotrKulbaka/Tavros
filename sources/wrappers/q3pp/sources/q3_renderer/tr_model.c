@@ -26,7 +26,6 @@ Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
 static tavros::core::logger logger("tr_model");
 
 static bool R_LoadMD3(model_t* mod, int32 lod, void* buffer, const char* name);
-static bool R_LoadMD4(model_t* mod, void* buffer, const char* name);
 
 model_t* loadmodel;
 
@@ -153,16 +152,13 @@ qhandle_t RE_RegisterModel(const char* name)
         loadmodel = mod;
 
         ident = (*(uint32*) buf);
-        if (ident == MD4_IDENT) {
-            loaded = R_LoadMD4(mod, buf, name);
-        } else {
-            if (ident != MD3_IDENT) {
-                logger.warning("RE_RegisterModel: unknown fileid for {}", name);
-                goto fail;
-            }
-
-            loaded = R_LoadMD3(mod, lod, buf, name);
+        if (ident != MD3_IDENT) {
+            logger.warning("RE_RegisterModel: unknown fileid for {}", name);
+            goto fail;
         }
+
+        loaded = R_LoadMD3(mod, lod, buf, name);
+
 
         FS_FreeFile(buf);
 
@@ -299,128 +295,6 @@ static bool R_LoadMD3(model_t* mod, int32 lod, void* buffer, const char* mod_nam
 
     return true;
 }
-
-
-/*
-=================
-R_LoadMD4
-=================
-*/
-static bool R_LoadMD4(model_t* mod, void* buffer, const char* mod_name)
-{
-    int32         i, j, k, lodindex;
-    md4Header_t * pinmodel, *md4;
-    md4Frame_t*   frame;
-    md4LOD_t*     lod;
-    md4Surface_t* surf;
-    md4Vertex_t*  v;
-    int32         version;
-    int32         size;
-    shader_t*     sh;
-    int32         frameSize;
-
-    pinmodel = (md4Header_t*) buffer;
-
-    version = (pinmodel->version);
-    if (version != MD4_VERSION) {
-        logger.warning("R_LoadMD4: {} has wrong version ({} should be {})", mod_name, version, MD4_VERSION);
-        return false;
-    }
-
-    mod->type = MOD_MD4;
-    size = (pinmodel->ofsEnd);
-    mod->dataSize += size;
-    md4 = mod->md4 = (md4Header_t*) Hunk_Alloc(size, h_low);
-
-    Com_Memcpy(md4, buffer, (pinmodel->ofsEnd));
-
-    if (md4->numFrames < 1) {
-        logger.warning("R_LoadMD4: {} has no frames", mod_name);
-        return false;
-    }
-
-    // we don't need to swap tags in the renderer, they aren't used
-
-    // swap all the frames
-    frameSize = (int32) (&((md4Frame_t*) 0)->bones[md4->numBones]);
-    for (i = 0; i < md4->numFrames; i++, frame++) {
-        frame = (md4Frame_t*) ((uint8*) md4 + md4->ofsFrames + i * frameSize);
-        frame->radius = (frame->radius);
-        for (j = 0; j < 3; j++) {
-            frame->bounds[0][j] = (frame->bounds[0][j]);
-            frame->bounds[1][j] = (frame->bounds[1][j]);
-            frame->localOrigin[j] = (frame->localOrigin[j]);
-        }
-        for (j = 0; j < md4->numBones * sizeof(md4Bone_t) / 4; j++) {
-            ((float*) frame->bones)[j] = (((float*) frame->bones)[j]);
-        }
-    }
-
-    // swap all the LOD's
-    lod = (md4LOD_t*) ((uint8*) md4 + md4->ofsLODs);
-    for (lodindex = 0; lodindex < md4->numLODs; lodindex++) {
-        // swap all the surfaces
-        surf = (md4Surface_t*) ((uint8*) lod + lod->ofsSurfaces);
-        for (i = 0; i < lod->numSurfaces; i++) {
-            if (surf->numVerts > SHADER_MAX_VERTEXES) {
-                Com_Error(ERR_DROP, "R_LoadMD3: %s has more than %i verts on a surface (%i)", mod_name, SHADER_MAX_VERTEXES, surf->numVerts);
-            }
-            if (surf->numTriangles * 3 > SHADER_MAX_INDEXES) {
-                Com_Error(ERR_DROP, "R_LoadMD3: %s has more than %i triangles on a surface (%i)", mod_name, SHADER_MAX_INDEXES / 3, surf->numTriangles);
-            }
-
-            // change to surface identifier
-            surf->ident = SF_MD4;
-
-            // lowercase the surface name so skin compares are faster
-            Q_strlwr(surf->name);
-
-            // register the shaders
-            sh = R_FindShader(surf->shader, LIGHTMAP_NONE, true);
-            if (sh->defaultShader) {
-                surf->shaderIndex = 0;
-            } else {
-                surf->shaderIndex = sh->index;
-            }
-
-            // swap all the vertexes
-            // FIXME
-            // This makes TFC's skeletons work.  Shouldn't be necessary anymore, but left
-            // in for reference.
-            // v = (md4Vertex_t *) ( (uint8 *)surf + surf->ofsVerts + 12);
-            v = (md4Vertex_t*) ((uint8*) surf + surf->ofsVerts);
-            for (j = 0; j < surf->numVerts; j++) {
-                v->normal[0] = (v->normal[0]);
-                v->normal[1] = (v->normal[1]);
-                v->normal[2] = (v->normal[2]);
-
-                v->numWeights = (v->numWeights);
-
-                for (k = 0; k < v->numWeights; k++) {
-                    v->weights[k].boneIndex = (v->weights[k].boneIndex);
-                    v->weights[k].boneWeight = (v->weights[k].boneWeight);
-                    v->weights[k].offset[0] = (v->weights[k].offset[0]);
-                    v->weights[k].offset[1] = (v->weights[k].offset[1]);
-                    v->weights[k].offset[2] = (v->weights[k].offset[2]);
-                }
-                // FIXME
-                // This makes TFC's skeletons work.  Shouldn't be necessary anymore, but left
-                // in for reference.
-                // v = (md4Vertex_t *)( ( uint8 * )&v->weights[v->numWeights] + 12 );
-                v = (md4Vertex_t*) ((uint8*) &v->weights[v->numWeights]);
-            }
-
-            // find the next surface
-            surf = (md4Surface_t*) ((uint8*) surf + surf->ofsEnd);
-        }
-
-        // find the next LOD
-        lod = (md4LOD_t*) ((uint8*) lod + lod->ofsEnd);
-    }
-
-    return true;
-}
-
 
 //=============================================================================
 

@@ -514,7 +514,6 @@ typedef enum
     SF_TRIANGLES,
     SF_POLY,
     SF_MD3,
-    SF_MD4,
     SF_FLARE,
     SF_ENTITY, // beams, rails, lightning, etc that can be determined by entity
     SF_DISPLAY_LIST,
@@ -737,7 +736,6 @@ typedef enum
     MOD_BAD,
     MOD_BRUSH,
     MOD_MESH,
-    MOD_MD4
 } modtype_t;
 
 struct model_t
@@ -749,7 +747,6 @@ struct model_t
     int32        dataSize;          // just for listing purposes
     bmodel_t*    bmodel;            // only if type == MOD_BRUSH
     md3Header_t* md3[MD3_MAX_LODS]; // only if type == MOD_MESH
-    md4Header_t* md4;               // only if type == MOD_MD4
 
     int32 numLods;
 };
@@ -1166,18 +1163,6 @@ SCENE GENERATION
 */
 
 void R_ToggleSmpFrame();
-
-
-/*
-=============================================================
-
-ANIMATED MODELS
-
-=============================================================
-*/
-
-void R_AddAnimSurfaces(trRefEntity_t* ent);
-void RB_SurfaceAnim(md4Surface_t* surfType);
 
 /*
 =============================================================

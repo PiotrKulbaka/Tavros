@@ -164,7 +164,6 @@ set(TAV_Q3PP_CROSSPLATFORM_SOURCES
 
     ${CMAKE_CURRENT_LIST_DIR}/sources/q3_renderer/qgl.c
     ${CMAKE_CURRENT_LIST_DIR}/sources/q3_renderer/qgl.h
-    ${CMAKE_CURRENT_LIST_DIR}/sources/q3_renderer/tr_animation.c
     ${CMAKE_CURRENT_LIST_DIR}/sources/q3_renderer/tr_backend.c
     ${CMAKE_CURRENT_LIST_DIR}/sources/q3_renderer/tr_bsp.c
     ${CMAKE_CURRENT_LIST_DIR}/sources/q3_renderer/tr_cmds.c

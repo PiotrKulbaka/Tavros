@@ -37,16 +37,17 @@ void RE_Shutdown(bool destroyWindow);
 // and returns the current gl configuration, including screen width
 // and height, which can be used by the client to intelligently
 // size display elements
-void      RE_BeginRegistration(glconfig_t* glconfig);
+void RE_BeginRegistration(glconfig_t* glconfig);
+// EndRegistration will draw a tiny polygon with each texture, forcing
+// them to be loaded into card memory
+void RE_EndRegistration();
+
 qhandle_t RE_RegisterModel(const char* name);
 qhandle_t RE_RegisterSkin(const char* name);
 qhandle_t RE_RegisterShader(const char* name);
 qhandle_t RE_RegisterShaderNoMip(const char* name);
 void      RE_LoadWorldMap(const char* mapname);
 
-// EndRegistration will draw a tiny polygon with each texture, forcing
-// them to be loaded into card memory
-void RE_EndRegistration();
 
 // a scene is built up by calls to R_ClearScene and the various R_Add functions.
 // Nothing is drawn until R_RenderScene is called.
