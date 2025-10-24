@@ -16,7 +16,6 @@
 #include <tavros/resources/providers/filesystem_provider.hpp>
 #include <tavros/core/memory/buffer.hpp>
 
-#include <tavros/system/time.hpp>
 #include <tavros/system/application.hpp>
 
 #include <algorithm>
@@ -835,7 +834,7 @@ public:
 
     void process_events(app::event_queue_view events, double delta_time)
     {
-        m_input_manager.on_frame_started(tavros::system::get_high_precision_system_time_us());
+        m_input_manager.on_frame_started(tavros::system::application::instance().highp_time_us());
 
         bool need_resize = false;
 
@@ -1144,8 +1143,6 @@ int main()
 {
     tavros::core::logger::add_consumer([](auto lvl, auto tag, auto msg) { printf("%s\n", msg.data()); });
 
-    auto app = tavros::system::application::create();
-
     auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
     resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
@@ -1153,5 +1150,5 @@ int main()
     auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", resource_manager);
     wnd->run_render_loop();
 
-    return app->run();
+    return tavros::system::application::instance().run();
 }

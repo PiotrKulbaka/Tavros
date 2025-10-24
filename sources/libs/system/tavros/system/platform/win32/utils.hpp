@@ -9,8 +9,9 @@
 
 namespace tavros::system
 {
-
-    uint64 get_event_time_us(); // Implemented in time.cpp
+    // Implemented in time.cpp
+    uint64 get_event_time_us();
+    uint64 get_high_precision_system_time_us();
 
     const char*      wm_message_to_str(UINT msg);
     keys             map_key(UINT vk);

@@ -3,7 +3,7 @@
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 #include <tavros/system/platform/win32/utils.hpp>
-#include <tavros/system/platform/win32/application.hpp>
+#include <tavros/system/platform/win32/platform_application.hpp>
 #include <tavros/system/window.hpp>
 
 #include <Windowsx.h>

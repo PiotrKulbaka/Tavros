@@ -7,7 +7,7 @@
 namespace tavros::system::win32
 {
 
-    class platform_window : public tavros::system::platform_window
+    class platform_window final : public tavros::system::platform_window
     {
     public:
         platform_window(core::string_view name);

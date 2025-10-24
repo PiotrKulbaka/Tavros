@@ -12,7 +12,7 @@ namespace tavros::system
      */
     struct mouse_event_args
     {
-        uint64       event_time_us = 0;           /// Event timestamp in microseconds (use get_high_precision_system_time_us() for current time).
+        uint64       event_time_us = 0;           /// Event timestamp in microseconds (use application::highp_time_us() for current time).
         mouse_button button = mouse_button::none; /// Mouse button associated with the event.
         bool         is_double_click = false;     /// True only for a double-click in an on_mouse_down event.
         bool         is_relative_move = false;    /// True if 'pos' represents relative movement instead of absolute.
@@ -25,7 +25,7 @@ namespace tavros::system
      */
     struct key_event_args
     {
-        uint64 event_time_us = 0;       /// Event timestamp in microseconds (use get_high_precision_system_time_us() for current time).
+        uint64 event_time_us = 0;       /// Event timestamp in microseconds (use application::highp_time_us() for current time).
         keys   key = keys::none;        /// Key associated with the event; 'none' for on_key_press.
         bool   is_prev_pressed = false; /// True if the key was pressed previously.
         uint16 repeats = 0;             /// Number of repeated presses.
@@ -37,7 +37,7 @@ namespace tavros::system
      */
     struct move_event_args
     {
-        uint64        event_time_us = 0; /// Event timestamp in microseconds (use get_high_precision_system_time_us() for current time).
+        uint64        event_time_us = 0; /// Event timestamp in microseconds (use application::highp_time_us() for current time).
         math::ipoint2 pos;               /// New window position.
     };
 
@@ -46,7 +46,7 @@ namespace tavros::system
      */
     struct size_event_args
     {
-        uint64       event_time_us = 0; /// Event timestamp in microseconds (use get_high_precision_system_time_us() for current time).
+        uint64       event_time_us = 0; /// Event timestamp in microseconds (use application::highp_time_us() for current time).
         math::isize2 size;              /// New window size.
     };
 
@@ -55,7 +55,7 @@ namespace tavros::system
      */
     struct close_event_args
     {
-        uint64 event_time_us = 0; /// Event timestamp in microseconds (use get_high_precision_system_time_us() for current time).
+        uint64 event_time_us = 0; /// Event timestamp in microseconds (use application::highp_time_us() for current time).
         bool   cancel = false;    /// Set to true to cancel the closing action.
     };
 
@@ -64,7 +64,7 @@ namespace tavros::system
      */
     struct drop_event_args
     {
-        uint64       event_time_us = 0; /// Event timestamp in microseconds (use get_high_precision_system_time_us() for current time).
+        uint64       event_time_us = 0; /// Event timestamp in microseconds (use application::highp_time_us() for current time).
         const char** files = nullptr;   /// Null-terminated list of dropped file paths.
     };
 

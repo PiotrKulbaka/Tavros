@@ -1,7 +1,8 @@
-#include <tavros/system/platform/win32/application.hpp>
+#include <tavros/system/platform/win32/platform_application.hpp>
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/system/platform/win32/platform_window.hpp>
+#include <tavros/system/platform/win32/utils.hpp>
 
 #include <Windows.h>
 #include <shellscalingapi.h>
@@ -54,9 +55,9 @@ namespace
 
 namespace tavros::system
 {
-    tavros::core::unique_ptr<application> application::create()
+    core::unique_ptr<platform_application> platform_application::create()
     {
-        return tavros::core::make_unique<tavros::system::win32::application>();
+        return core::make_unique<win32::platform_application>();
     }
 } // namespace tavros::system
 
@@ -73,36 +74,39 @@ namespace tavros::system::win32
         --s_windows_count;
     }
 
-    application::application()
+    platform_application::platform_application()
         : m_is_running(false)
         , m_exit_code(0)
     {
         enable_high_dpi_awareness();
     }
 
-    application::~application()
+    platform_application::~platform_application()
     {
     }
 
-    int application::run()
+    void platform_application::run()
     {
         m_is_running = true;
-
-        poll_events();
-        while (m_is_running && s_windows_count.load(std::memory_order_relaxed) > 0) {
-            wait_events();
-            poll_events();
-        }
-        return m_exit_code;
     }
 
-    void application::exit(int exit_code)
+    bool platform_application::is_running()
+    {
+        return m_is_running && s_windows_count.load(std::memory_order_acquire);
+    }
+
+    void platform_application::request_exit(int exit_code)
     {
         m_exit_code = exit_code;
         m_is_running = false;
     }
 
-    void application::poll_events()
+    int platform_application::exit_code()
+    {
+        return m_exit_code;
+    }
+
+    void platform_application::poll_events()
     {
         MSG msg;
         while (PeekMessage(&msg, NULL, 0, 0, PM_REMOVE)) {
@@ -115,12 +119,12 @@ namespace tavros::system::win32
         }
     }
 
-    void application::wait_events()
+    void platform_application::wait_events()
     {
         MsgWaitForMultipleObjects(0, nullptr, FALSE, INFINITE, QS_ALLINPUT);
     }
 
-    tavros::math::isize2 application::desktop_size()
+    tavros::math::isize2 platform_application::desktop_size()
     {
         RECT       desktopRect;
         const HWND hDesktop = GetDesktopWindow();
@@ -130,6 +134,11 @@ namespace tavros::system::win32
             return {width, height};
         }
         return {0, 0};
+    }
+
+    uint64 platform_application::highp_time_us()
+    {
+        return get_high_precision_system_time_us();
     }
 
 } // namespace tavros::system::win32

@@ -1,4 +1,4 @@
-#include <tavros/system/time.hpp>
+#include <tavros/core/types.hpp>
 
 #include <windows.h>
 
@@ -23,7 +23,7 @@ namespace
         // Align QPC and GetTickCount (used in GetMessageTime)
         LARGE_INTEGER counter;
         ::QueryPerformanceCounter(&counter);
-        DWORD tick_ms = ::GetTickCount();
+        ULONGLONG tick_ms = ::GetTickCount64();
 
         uint64 qpc_us = static_cast<uint64>(counter.QuadPart * s_qpc_to_micro);
         uint64 tick_us = static_cast<uint64>(tick_ms) * 1000ULL;

@@ -1,5 +1,6 @@
 #include <tavros/system/window.hpp>
 
+#include <tavros/system/window/platform_window.hpp>
 #include <tavros/core/logger/logger.hpp>
 
 #define CHECK_WINDOW_HANDLE_R(ret)                                          \
