@@ -59,6 +59,16 @@ namespace tavros::math
         return std::sqrt(value);
     }
 
+    [[nodiscard]] inline float floor(float value) noexcept
+    {
+        return std::floor(value);
+    }
+
+    [[nodiscard]] inline float ceil(float value) noexcept
+    {
+        return std::ceil(value);
+    }
+
     [[nodiscard]] inline constexpr bool almost_equal(float a, float b, float epsilon = k_epsilon6) noexcept
     {
         if (a > b) {
