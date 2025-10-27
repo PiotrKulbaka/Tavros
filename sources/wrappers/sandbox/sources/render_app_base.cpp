@@ -11,12 +11,12 @@ namespace app
         constexpr int32 initial_width = 1280 * 2;
         constexpr int32 initial_height = 720 * 2;
 
-        set_client_size(initial_width, initial_height);
-
         event_info initial_resize_event;
         initial_resize_event.type = event_type::window_resize;
         initial_resize_event.vec_info = tavros::math::vec2(static_cast<float>(initial_width), static_cast<float>(initial_height));
         m_event_queue.push_event(initial_resize_event);
+
+        set_client_size(initial_width, initial_height);
     }
 
     render_app_base::~render_app_base()
@@ -27,7 +27,6 @@ namespace app
     void render_app_base::run_render_loop()
     {
         start_render_thread();
-        show();
     }
 
     void render_app_base::on_close(tavros::system::close_event_args& e)

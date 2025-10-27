@@ -69,8 +69,7 @@ const char* mesh_renderer_vertex_shader_source = R"(
 
 layout (location = 0) in vec3 a_pos;
 layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_uv_outside;
-layout (location = 3) in vec2 a_uv_inside;
+layout (location = 2) in vec2 a_uv;
 
 layout (std430, binding = 0) buffer Scene
 {
@@ -90,8 +89,7 @@ layout (std430, binding = 0) buffer Scene
     float u_fov_y;
 };
 
-out vec2 v_tex_coord_outside;
-out vec2 v_tex_coord_inside;
+out vec2 v_tex_coord;
 out vec3 v_normal;
 out vec3 v_to_camera;
 out float v_near;
@@ -109,8 +107,7 @@ void main()
     vec3 camera_pos = (u_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     v_to_camera = normalize(camera_pos - world_pos.xyz);
 
-    v_tex_coord_outside = a_uv_outside;
-    v_tex_coord_inside = a_uv_inside;
+    v_tex_coord = a_uv;
 
     gl_Position = u_view_perspective_projection * vec4(a_pos, 1.0);
 }
@@ -121,25 +118,17 @@ const char* mesh_renderer_fragment_shader_source = R"(
 
 layout(binding = 0) uniform sampler2D uTex;
 
-in vec2 v_tex_coord_outside;
-in vec2 v_tex_coord_inside;
+in vec2 v_tex_coord;
 in vec3 v_normal;
 in vec3 v_to_camera;
 in float v_near;
 in float v_far;
 
 layout(location = 0) out vec4 out_color;
-layout(location = 1) out vec4 out_depth;
-
-float linear_depth01(float z_buffer, float near, float far)
-{
-    float z_eye = (2.0 * near * far) / (far + near - z_buffer * (far - near));
-    return (z_eye - near) / (far - near);
-}
 
 void main()
 {
-    vec3 N = gl_FrontFacing ? -v_normal : v_normal;
+    vec3 N = gl_FrontFacing ? v_normal : -v_normal;
     vec3 L = normalize(-v_to_camera);
 
     float diffuse = max(dot(N, L), 0.0);
@@ -147,14 +136,9 @@ void main()
     float diffuse_intensity = ambient + diffuse * 1.25;
     vec3 lighting = vec3(min(diffuse_intensity, 1.0f));
 
-    vec2 texCoord = gl_FrontFacing ? v_tex_coord_outside : v_tex_coord_inside;
-    vec3 base_color = texture(uTex, texCoord).rgb;
+    vec3 base_color = texture(uTex, v_tex_coord).rgb;
 
     out_color = vec4(base_color * lighting, 1.0);
-
-    float linear_depth = linear_depth01(gl_FragCoord.z, v_near, v_far);
-
-    out_depth = vec4(vec3(linear_depth), 1.0);
 }
 )";
 
@@ -247,16 +231,7 @@ in float v_view_space_depth;
 in float v_near;
 in float v_far;
 
-out vec4 FragColor;
-
 layout(location = 0) out vec4 out_color;
-layout(location = 1) out vec4 out_depth;
-
-float linear_depth01(float z_buffer, float near, float far)
-{
-    float z_eye = (2.0 * near * far) / (far + near - z_buffer * (far - near));
-    return (z_eye - near) / (far - near);
-}
 
 void main()
 {
@@ -298,10 +273,6 @@ void main()
     float final_alpha = dist_factor *  angle_factor * final_mask * 0.8;
 
     out_color = vec4(final_color, final_alpha);
-
-    float linear_depth = linear_depth01(gl_FragCoord.z, v_near, v_far);
-
-    out_depth = vec4(vec3(linear_depth), 1.0);
 }
 )";
 
@@ -584,16 +555,12 @@ public:
         }
 
         m_composer = m_graphics_device->get_frame_composer_ptr(main_composer_handle);
-        if (m_composer == nullptr) {
+        if (!m_composer) {
             ::logger.fatal("Failed to get main frame composer.");
             exit_fail();
         }
 
-        tavros::core::static_vector<rhi::pixel_format, rhi::k_max_color_attachments> color_attachment_formats;
-        color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
-        color_attachment_formats.push_back(rhi::pixel_format::rgba8un);
-        rhi::pixel_format depth_stencil_attachment_format = rhi::pixel_format::depth32f;
-        m_offscreen_rt = tavros::core::make_unique<render_target>(m_graphics_device.get(), color_attachment_formats, depth_stencil_attachment_format);
+        m_offscreen_rt = tavros::core::make_unique<render_target>(m_graphics_device.get(), rhi::pixel_format::rgba8un, rhi::pixel_format::depth32f);
 
         auto fullscreen_quad_vertex_shader = m_graphics_device->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
         auto fullscreen_quad_fragment_shader = m_graphics_device->create_shader({fullscreen_quad_fragment_shader_source, rhi::shader_stage::fragment, "main"});
@@ -704,7 +671,6 @@ public:
         mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
         mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
         mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
-        mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 3});
 
         mesh_rendering_pipeline_info.shaders.push_back(mesh_rendering_vertex_shader);
         mesh_rendering_pipeline_info.shaders.push_back(mesh_rendering_fragment_shader);
@@ -715,7 +681,6 @@ public:
         mesh_rendering_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
         mesh_rendering_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
         mesh_rendering_pipeline_info.topology = rhi::primitive_topology::triangles;
-        mesh_rendering_pipeline_info.blend_states.push_back({false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
         mesh_rendering_pipeline_info.blend_states.push_back({false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
         mesh_rendering_pipeline_info.multisample.sample_shading_enabled = false;
         mesh_rendering_pipeline_info.multisample.sample_count = 1;
@@ -749,8 +714,7 @@ public:
         mesh_geometry_info.vertex_buffer_layouts.push_back({mesh_vertices_buffer, 0, sizeof(app::vertex_type)});
         mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::pos), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
         mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::normal), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
-        mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::uv_outside), 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
-        mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::uv_inside), 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 3});
+        mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::uv), 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
         mesh_geometry_info.has_index_buffer = true;
         mesh_geometry_info.index_format = rhi::index_buffer_format::u32;
         mesh_geometry_info.index_buffer = mesh_indices_buffer;
@@ -800,7 +764,6 @@ public:
         world_grid_rendering_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
         world_grid_rendering_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
         world_grid_rendering_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
-        world_grid_rendering_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
         world_grid_rendering_pipeline_info.multisample.sample_shading_enabled = false;
         world_grid_rendering_pipeline_info.multisample.sample_count = 1;
         world_grid_rendering_pipeline_info.multisample.min_sample_shading = 0.0;
@@ -825,6 +788,8 @@ public:
         }
 
         m_graphics_device->wait_for_fence(m_fence);
+
+        show();
     }
 
     void shutdown() override
@@ -860,7 +825,7 @@ public:
                 break;
 
             case app::event_type::window_resize:
-                m_current_frame_size = tavros::math::ivec2(static_cast<int32>(it.vec_info.x), static_cast<int32>(it.vec_info.y));
+                m_current_frame_size = tavros::math::ivec2(static_cast<int32>(it.vec_info.width), static_cast<int32>(it.vec_info.height));
                 need_resize = true;
                 break;
 
@@ -932,8 +897,8 @@ public:
         tavros::math::vec3 move_delta =
             m_camera.forward() * factor(tavros::system::keys::k_W)
             - m_camera.forward() * factor(tavros::system::keys::k_S)
-            + m_camera.right() * factor(tavros::system::keys::k_D)
-            - m_camera.right() * factor(tavros::system::keys::k_A) 
+            + m_camera.right() * factor(tavros::system::keys::k_A)
+            - m_camera.right() * factor(tavros::system::keys::k_D) 
             + m_camera.up() * factor(tavros::system::keys::k_space) 
             - m_camera.up() * factor(tavros::system::keys::k_C);
         // clang-format on
@@ -957,7 +922,7 @@ public:
 
             auto world_up = m_camera.world_up();
 
-            auto q_yaw = tavros::math::quat::from_axis_angle(world_up, -scaled_mouse_delta.x);
+            auto q_yaw = tavros::math::quat::from_axis_angle(world_up, scaled_mouse_delta.x);
             auto q_pitch = tavros::math::quat::from_axis_angle(m_camera.right(), -scaled_mouse_delta.y);
             auto yaw_pitch_rotation = tavros::math::normalize(q_yaw * q_pitch);
 
@@ -980,11 +945,11 @@ public:
 
     void update_scene()
     {
-        m_renderer_frame_data.view = tavros::math::transpose(m_camera.get_view_matrix());
-        m_renderer_frame_data.perspective_projection = tavros::math::transpose(m_camera.get_projection_matrix());
-        m_renderer_frame_data.view_projection = tavros::math::transpose(m_camera.get_view_projection_matrix());
-        m_renderer_frame_data.inverse_view = tavros::math::transpose(tavros::math::inverse(m_camera.get_view_matrix()));
-        m_renderer_frame_data.inverse_projection = tavros::math::transpose(tavros::math::inverse(m_camera.get_projection_matrix()));
+        m_renderer_frame_data.view = m_camera.get_view_matrix();
+        m_renderer_frame_data.perspective_projection = m_camera.get_projection_matrix();
+        m_renderer_frame_data.view_projection = m_camera.get_view_projection_matrix();
+        m_renderer_frame_data.inverse_view = tavros::math::inverse(m_camera.get_view_matrix());
+        m_renderer_frame_data.inverse_projection = tavros::math::inverse(m_camera.get_projection_matrix());
         m_renderer_frame_data.frame_width = static_cast<float>(m_current_frame_size.width);
         m_renderer_frame_data.frame_height = static_cast<float>(m_current_frame_size.height);
         m_renderer_frame_data.near_plane = m_camera.near_plane();

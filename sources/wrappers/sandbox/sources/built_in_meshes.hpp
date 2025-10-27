@@ -9,8 +9,7 @@ namespace app
     {
         tavros::math::vec3 pos;
         tavros::math::vec3 normal;
-        tavros::math::vec2 uv_outside;
-        tavros::math::vec2 uv_inside;
+        tavros::math::vec2 uv;
     };
 
     extern const vertex_type cube_vertices[24];
