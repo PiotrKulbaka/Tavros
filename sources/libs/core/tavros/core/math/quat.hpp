@@ -11,7 +11,6 @@ namespace tavros::math
      * @brief Quaternion for representing 3D rotations.
      *
      * Quaternions avoid gimbal lock and provide smooth interpolation (slerp).
-     * This implementation uses left-handed coordinate system (X forward, Y right, Z up).
      * All matrices returned by this class are in column-major order.
      */
     class quat
@@ -29,7 +28,6 @@ namespace tavros::math
 
         /**
          * @brief Constructs a quaternion from euler angles (XYZ order)
-         * Assumes left-handed coordinate system (X forward, Y right, Z up)
          */
         static quat from_euler(const euler3& euler) noexcept;
 
@@ -42,7 +40,6 @@ namespace tavros::math
 
         /**
          * @brief Constructs a quaternion looking in the forward direction with a given up vector.
-         * Assumes left-handed coordinate system (X forward, Y right, Z up).
          * @param forward Direction to look at (must be normalized).
          * @param up World up direction (must be normalized and not colinear with forward).
          */

@@ -38,11 +38,14 @@ namespace tavros::math
         /// @brief Construct matrix from quaternion
         static mat4 from_quat(const quat& q) noexcept;
 
-        /// @brief Construct a left-hand look at matix
-        static mat4 look_at(const vec3& origin, const vec3& forward, const vec3& up) noexcept;
+        /// @brief Construct a right-hand look at matix
+        static mat4 look_at_dir(const vec3& origin, const vec3& dir, const vec3& up) noexcept;
 
-        /// @brief Construct a left-hand perspective matrix
+        /// @brief Construct a right-hand perspective matrix
         static mat4 perspective(float fov_y, float aspect, float z_near, float z_far) noexcept;
+
+        /// @brief Construct a right-hand otho matrix
+        static mat4 ortho(float left, float right, float bottom, float top, float z_near, float z_far) noexcept;
 
     public:
         /// @brief Default constructor, constructs a zero matrix

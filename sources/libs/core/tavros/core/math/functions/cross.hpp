@@ -11,8 +11,7 @@
  *   which represents the signed area of the parallelogram formed by the two vectors.
  *
  * ### 3D Cross Product:
- * The result is a vector perpendicular to both input vectors, following the **left-handed coordinate system**
- * (X forward, Y right, Z up). If using a **right-handed coordinate system**, negate the result.
+ * The result is a vector perpendicular to both input vectors.
  *
  * ### 2D Cross Product:
  * The result is a scalar value representing the signed magnitude of the 3D cross product's Z component

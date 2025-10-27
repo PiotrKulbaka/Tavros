@@ -94,8 +94,8 @@ namespace tavros::renderer
     mat4 camera::get_view_matrix() noexcept
     {
         if (m_dirty) {
-            m_view = mat4::look_at(m_position, m_forward, m_up);
-            m_view_projection = m_view * m_projection;
+            m_view = mat4::look_at_dir(m_position, m_forward, m_up);
+            m_view_projection = m_projection * m_view;
             m_dirty = false;
         }
         return m_view;
