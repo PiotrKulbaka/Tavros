@@ -159,4 +159,27 @@ namespace tavros::math
         return rad * k_pi / 180.0f;
     }
 
+    inline uint32 mip_levels(uint32 width) noexcept
+    {
+        return static_cast<uint32>(std::floor(std::log2(width))) + 1;
+    }
+
+    inline uint32 mip_levels(uint32 width, uint32 height) noexcept
+    {
+        auto max_side = width > height ? width : height;
+        return static_cast<uint32>(std::floor(std::log2(max_side))) + 1;
+    }
+
+    inline uint32 mip_levels(uint32 width, uint32 height, uint32 depth) noexcept
+    {
+        auto max_side = width > height ? (width > depth ? width : depth) : (height > depth ? height : depth);
+        return static_cast<uint32>(std::floor(std::log2(max_side))) + 1;
+    }
+
+    inline uint32 mip_side(uint32 side, uint32 level)
+    {
+        auto sz = side >> level;
+        return sz > 1 ? sz : 1;
+    }
+
 } // namespace tavros::math

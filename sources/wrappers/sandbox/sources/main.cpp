@@ -555,7 +555,7 @@ public:
         }
 
         m_composer = m_graphics_device->get_frame_composer_ptr(main_composer_handle);
-        if (!m_composer) {
+        if (m_composer == nullptr) {
             ::logger.fatal("Failed to get main frame composer.");
             exit_fail();
         }
@@ -605,7 +605,7 @@ public:
         tex_create_info.height = im_view.height;
         tex_create_info.depth = 1;
         tex_create_info.usage = rhi::k_default_texture_usage;
-        tex_create_info.mip_levels = 1;
+        tex_create_info.mip_levels = tavros::math::mip_levels(im_view.width, im_view.height);
         tex_create_info.array_layers = 1;
         tex_create_info.sample_count = 1;
 
@@ -616,8 +616,14 @@ public:
         }
 
 
+        rhi::texture_copy_region copy_region;
+
+        copy_region.width = im_view.width;
+        copy_region.height = im_view.height;
+        copy_region.buffer_row_length = im_view.stride / im_view.channels;
+
         auto* cbuf = m_composer->create_command_queue();
-        cbuf->copy_buffer_to_texture(m_stage_buffer, m_texture, 0, tex_size, 0);
+        cbuf->copy_buffer_to_texture(m_stage_buffer, m_texture, copy_region);
         cbuf->signal_fence(m_fence);
         m_composer->submit_command_queue(cbuf);
 

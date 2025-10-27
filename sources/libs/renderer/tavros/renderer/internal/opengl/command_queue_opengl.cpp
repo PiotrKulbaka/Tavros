@@ -6,6 +6,7 @@
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/unreachable.hpp>
+#include <tavros/core/math/functions/basic_math.hpp>
 
 #include <glad/glad.h>
 
@@ -829,11 +830,8 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_COPY_WRITE_BUFFER, 0));
     }
 
-    void command_queue_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset, uint32 row_stride)
+    void command_queue_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, const texture_copy_region& region)
     {
-        // TODO: unused size
-        TAV_UNUSED(size);
-
         auto* b = m_device->get_resources()->try_get(src_buffer);
         if (!b) {
             ::logger.error("Failed to copy buffer {} to texture {}: source buffer not found", src_buffer, dst_texture);
@@ -849,22 +847,35 @@ namespace tavros::renderer::rhi
         auto& tinfo = tex->info;
 
         if (b->info.usage != buffer_usage::stage) {
-            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer usage type, expected `stage` got {}", src_buffer, dst_texture, b->info.usage);
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: invalid source buffer usage type, expected `stage` got {}",
+                src_buffer, dst_texture, b->info.usage
+            );
             return;
         }
 
         if (b->info.access != buffer_access::cpu_to_gpu) {
-            ::logger.error("Failed to copy buffer {} to texture {}: invalid source buffer access type, expected `cpu_to_gpu` got {}", src_buffer, dst_texture, b->info.access);
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: invalid source buffer access type, expected `cpu_to_gpu` got {}",
+                src_buffer, dst_texture, b->info.access
+            );
             return;
         }
 
         if (tinfo.sample_count != 1) {
-            ::logger.error("Failed to copy buffer {} to texture {}: destination texture has invalid sample count {}, only 1 is supported", src_buffer, dst_texture, fmt::styled_param(tex->info.sample_count));
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: destination texture has invalid sample count {}, only 1 is supported",
+                src_buffer, dst_texture,
+                fmt::styled_param(tex->info.sample_count)
+            );
             return;
         }
 
         if (!tinfo.usage.has_flag(texture_usage::transfer_destination)) {
-            ::logger.error("Failed to copy buffer {} to texture {}: destination texture does not have `transfer_destination` usage flag", src_buffer, dst_texture);
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: destination texture does not have `transfer_destination` usage flag",
+                src_buffer, dst_texture
+            );
             return;
         }
 
@@ -873,34 +884,80 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        auto gl_pixel_format = to_gl_pixel_format(tinfo.format);
-        if (row_stride % gl_pixel_format.bytes != 0) {
-            ::logger.error("Failed to copy buffer {} to texture {}: row stride {} must be aligned to pixel size {}", src_buffer, dst_texture, fmt::styled_param(row_stride), fmt::styled_param(gl_pixel_format.bytes));
-            return;
-        }
-
-        uint32 real_row_bytes = tinfo.width * gl_pixel_format.bytes;
-        if (row_stride > 0 && row_stride < real_row_bytes) {
+        if (region.mip_level >= tex->max_mip) {
             ::logger.error(
-                "Failed to copy buffer {} to texture {}: row stride {} less than required row size {}",
-                src_buffer,
-                dst_texture,
-                fmt::styled_param(row_stride),
-                fmt::styled_param(real_row_bytes)
+                "Failed to copy buffer {} to texture {}: mip_level ({}) exceeds max mip level ({}).",
+                src_buffer, dst_texture, region.mip_level, tex->max_mip
             );
             return;
         }
 
-        size_t stride_bytes = static_cast<size_t>(row_stride > 0 ? row_stride : real_row_bytes);
+        if (region.width == 0 || region.height == 0) {
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: region dimensions are invalid (width={}, height={}). "
+                "Width and height must be greater than zero.",
+                src_buffer, dst_texture, region.width, region.height
+            );
+            return;
+        }
+
+        auto max_w = math::mip_side(tinfo.width, region.mip_level);
+        auto max_h = math::mip_side(tinfo.height, region.mip_level);
+
+        if (region.x_offset + region.width > max_w || region.y_offset + max_h > tinfo.height) {
+            ::logger.error(
+                "Failed to copy buffer {} to texture {}: region out of bounds. "
+                "Region (x_offset={}, y_offset={}, width={}, height={}) exceeds mip level () size ({}x{}).",
+                src_buffer, dst_texture,
+                region.x_offset, region.y_offset, region.width, region.height,
+                region.mip_level, max_w, max_h
+            );
+            return;
+        }
+
+        if (tinfo.type == texture_type::texture_2d || tinfo.type == texture_type::texture_cube) {
+            if (region.depth != 1 || region.z_offset != 0) {
+                ::logger.error(
+                    "Failed to copy buffer {} to texture {}: invalid depth ({}) or z_offset ({}). "
+                    "Depth must be 1 and z_offset must be 0 for texture_2d or texture_cube.",
+                    src_buffer, dst_texture, region.depth, region.z_offset
+                );
+                return;
+            }
+        } else if (tinfo.type == texture_type::texture_3d) {
+            auto max_d = math::mip_side(tinfo.depth, region.mip_level);
+
+            if (region.depth == 0) {
+                ::logger.error(
+                    "Failed to copy buffer {} to texture {}: invalid depth ({}). "
+                    "Depth must be greater than zero for texture_3d.",
+                    src_buffer, dst_texture, region.depth
+                );
+                return;
+            }
+
+            if (region.z_offset + region.depth > max_d) {
+                ::logger.error(
+                    "Failed to copy buffer {} to texture {}: region z-range out of bounds. "
+                    "Region (z_offset={}, depth={}) exceeds mip level ({}) depth ({}).",
+                    src_buffer, dst_texture,
+                    region.z_offset, region.depth, region.mip_level, max_d
+                );
+                return;
+            }
+        } else {
+            TAV_UNREACHABLE();
+        }
+
+        auto   gl_pixel_format = to_gl_pixel_format(tinfo.format);
+        uint32 real_row_bytes = tinfo.width * gl_pixel_format.bytes;
+        size_t stride_bytes = static_cast<size_t>(region.buffer_row_length > 0 ? region.buffer_row_length * gl_pixel_format.bytes : real_row_bytes);
         size_t need_bytes = stride_bytes * tinfo.height * tinfo.depth - (stride_bytes - real_row_bytes);
 
-        if (src_offset + need_bytes > b->info.size) {
+        if (region.buffer_offset + need_bytes > b->info.size) {
             ::logger.error(
                 "Failed to copy buffer {} to texture {}: buffer is too small. Required {} bytes, available {} bytes",
-                src_buffer,
-                dst_texture,
-                fmt::styled_param(src_offset + need_bytes),
-                fmt::styled_param(b->info.size)
+                src_buffer, dst_texture, fmt::styled_param(region.buffer_offset + need_bytes), fmt::styled_param(b->info.size)
             );
             return;
         }
@@ -908,64 +965,73 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, b->buffer_obj));
         GL_CALL(glBindTexture(tex->target, tex->texture_obj));
 
-        auto row_length_in_pixels = static_cast<GLint>(row_stride / gl_pixel_format.bytes);
+        auto row_length_in_pixels = static_cast<GLint>(region.buffer_row_length);
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, row_length_in_pixels));
         GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 1));
 
-        auto* gl_buffer_offset = reinterpret_cast<const void*>(src_offset);
+        auto* gl_buffer_offset = reinterpret_cast<const void*>(region.buffer_offset);
 
-        if (tinfo.type == texture_type::texture_2d) {
+        static constexpr GLenum faces[6] = {
+            GL_TEXTURE_CUBE_MAP_POSITIVE_X,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
+            GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
+            GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
+        };
+
+        switch (tinfo.type) {
+        case texture_type::texture_2d:
             GL_CALL(glTexSubImage2D(
                 GL_TEXTURE_2D,
-                0,    // Mip level
-                0, 0, // xoffset, yoffset
-                tinfo.width, tinfo.height,
+                static_cast<GLint>(region.mip_level),
+                static_cast<GLint>(region.x_offset),
+                static_cast<GLint>(region.y_offset),
+                static_cast<GLsizei>(region.width),
+                static_cast<GLsizei>(region.height),
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 gl_buffer_offset
             ));
-        } else if (tinfo.type == texture_type::texture_3d) {
+            break;
+
+        case texture_type::texture_3d:
             GL_CALL(glTexSubImage3D(
                 GL_TEXTURE_3D,
-                0,       // mip level
-                0, 0, 0, // xoffset, yoffset, zoffset
-                tinfo.width, tinfo.height, tinfo.depth,
+                static_cast<GLint>(region.mip_level),
+                static_cast<GLint>(region.x_offset),
+                static_cast<GLint>(region.y_offset),
+                static_cast<GLint>(region.z_offset),
+                static_cast<GLsizei>(region.width),
+                static_cast<GLsizei>(region.height),
+                static_cast<GLsizei>(region.depth),
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 gl_buffer_offset
             ));
-        } else if (tinfo.type == texture_type::texture_cube) {
-            static constexpr GLenum faces[6] = {
-                GL_TEXTURE_CUBE_MAP_POSITIVE_X,
-                GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
-                GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
-                GL_TEXTURE_CUBE_MAP_NEGATIVE_Y,
-                GL_TEXTURE_CUBE_MAP_POSITIVE_Z,
-                GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
-            };
+            break;
 
+        case texture_type::texture_cube:
             GL_CALL(glTexSubImage2D(
-                faces[layer_index % 6],
-                0,    // mip level
-                0, 0, // xoffset, yoffset
-                tinfo.width, tinfo.height,
+                faces[region.layer_index % 6],
+                static_cast<GLint>(region.mip_level),
+                static_cast<GLint>(region.x_offset),
+                static_cast<GLint>(region.y_offset),
+                static_cast<GLsizei>(region.width),
+                static_cast<GLsizei>(region.height),
                 gl_pixel_format.format,
                 gl_pixel_format.type,
                 gl_buffer_offset
             ));
-        } else {
+            break;
+
+        default:
             TAV_UNREACHABLE();
+            break;
         }
 
         GL_CALL(glPixelStorei(GL_UNPACK_ALIGNMENT, 4));
         GL_CALL(glPixelStorei(GL_UNPACK_ROW_LENGTH, 0));
-
-        if (tinfo.mip_levels > 1) {
-            // This call gets warning for texture_cube:
-            // warning [OpenGL_debug] Pixel-path performance warning: Pixel transfer is synchronized with 3D rendering
-            // TODO: fix it
-            GL_CALL(glGenerateMipmap(tex->target));
-        }
 
         GL_CALL(glBindTexture(tex->target, 0));
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));

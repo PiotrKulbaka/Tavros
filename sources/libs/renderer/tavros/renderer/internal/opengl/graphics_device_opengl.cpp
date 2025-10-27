@@ -9,6 +9,7 @@
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 #include <tavros/core/containers/vector.hpp>
+#include <tavros/core/math/functions/basic_math.hpp>
 
 #include <tavros/renderer/rhi/string_utils.hpp>
 
@@ -363,9 +364,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    texture_handle graphics_device_opengl::create_texture(
-        const texture_create_info& info
-    )
+    texture_handle graphics_device_opengl::create_texture(const texture_create_info& info)
     {
         auto gl_pixel_format = to_gl_pixel_format(info.format);
 
@@ -581,12 +580,14 @@ namespace tavros::renderer::rhi
 
             GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
 
-            auto h = m_resources.create(gl_texture{info, 0, GL_RENDERBUFFER, rbo});
+            auto h = m_resources.create(gl_texture{info, 0, GL_RENDERBUFFER, rbo, 1});
             ::logger.debug("Texture ({}) {} created as {}", info.type, h, fmt::styled_param("renderbuffer"));
             return h;
 
         } else {
             // Otherwise, create a texture object
+
+            uint32 max_mip = info.mip_levels > 1 ? math::mip_levels(info.width, info.height, info.depth) : 1;
 
             GLenum gl_target = 0;
             switch (info.type) {
@@ -682,7 +683,7 @@ namespace tavros::renderer::rhi
 
             GL_CALL(glBindTexture(gl_target, 0));
 
-            auto h = m_resources.create(gl_texture{info, tex, gl_target, 0});
+            auto h = m_resources.create(gl_texture{info, tex, gl_target, 0, max_mip});
             ::logger.debug("Texture ({}) {} created", info.type, h);
             return h;
         }

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/renderer/rhi/handle.hpp>
+#include <tavros/renderer/rhi/texture_copy_region.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -131,16 +132,18 @@ namespace tavros::renderer::rhi
          * @brief Copy data from a buffer to a texture.
          *
          * Uploads texture data from a CPU-visible buffer into a GPU texture.
-         * Used for updating texture content.
+         * Supports partial updates, mipmap levels, layers, and custom buffer layouts.
          *
          * @param src_buffer  Source buffer handle containing image data.
          * @param dst_texture Destination texture handle.
-         * @param layer_index Index of the texture layer to update.
-         * @param size        Number of bytes to copy.
-         * @param src_offset  Offset within the source buffer in bytes.
-         * @param row_stride  Row stride in bytes (0 = use texture width).
+         * @param region      Region of the texture to update, including mip level, layer, offsets,
+         *                    dimensions, and buffer layout parameters (buffer_offset, row length, etc.).
+         *
+         * @note For 2D textures or cube faces, `region.depth` should be 1 and `z_offset` should be 0.
+         * @note For 3D textures, `depth` specifies the number of slices and `z_offset` specifies the starting slice.
+         * @note `buffer_row_length` of 0 means the buffer rows are tightly packed (row length equals `region.width`).
          */
-        virtual void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, uint32 layer_index, size_t size, size_t src_offset = 0, uint32 row_stride = 0) = 0;
+        virtual void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, const texture_copy_region& region) = 0;
 
         /**
          * @brief Copies pixel data from a texture to a buffer.
