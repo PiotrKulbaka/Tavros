@@ -148,18 +148,20 @@ namespace tavros::renderer::rhi
         /**
          * @brief Copies pixel data from a texture to a buffer.
          *
-         * This operation transfers image data from a specified texture (or one of its array layers)
-         * into a destination buffer. It can be used for readback operations, such as saving rendered
-         * images or performing CPU-side image processing.
+         * Transfers image data from a specified texture (or one of its array layers / mip levels)
+         * into a destination buffer. Useful for readback operations, saving rendered images,
+         * or performing CPU-side image processing.
          *
-         * @param src_texture   Handle to the source texture.
-         * @param dst_buffer    Handle to the destination buffer.
-         * @param layer_index   Index of the texture layer to copy (for array or 3D textures).
-         * @param size          Number of bytes to copy.
-         * @param dst_offset    Byte offset in the destination buffer where data will be written.
-         * @param row_stride    Optional row stride (in bytes). If zero, data is assumed to be tightly packed.
+         * @param src_texture Handle to the source texture to read from.
+         * @param dst_buffer  Handle to the destination buffer where the data will be written.
+         * @param region      Region of the texture to copy, including mip level, layer, offsets,
+         *                    dimensions, and buffer layout parameters (buffer_offset, row length, etc.).
+         *
+         * @note For 2D textures or cube faces, `region.depth` should be 1 and `z_offset` should be 0.
+         * @note For 3D textures, `depth` specifies the number of slices and `z_offset` specifies the starting slice.
+         * @note `buffer_row_length` of 0 means the buffer rows are tightly packed (row length equals `region.width`).
          */
-        virtual void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset = 0, uint32 row_stride = 0) = 0;
+        virtual void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, const texture_copy_region& region) = 0;
     };
 
 } // namespace tavros::renderer::rhi

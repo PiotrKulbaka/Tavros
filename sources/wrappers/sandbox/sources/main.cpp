@@ -1001,10 +1001,12 @@ public:
         cbuf->end_render_pass();
 
         if (is_f10_released) {
-            auto image_size = m_current_frame_size.width * m_current_frame_size.height * 4;
-            auto depth_image_size = m_current_frame_size.width * m_current_frame_size.height;
-            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(0), m_stage_upload_buffer, 0, image_size, 0, 0);
-            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_depth_stencil_attachment(), m_stage_upload_buffer, 0, depth_image_size, image_size, 0);
+            rhi::texture_copy_region copy_rgn;
+            copy_rgn.width = m_current_frame_size.width / 2;
+            copy_rgn.height = m_current_frame_size.height / 2;
+            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(0), m_stage_upload_buffer, copy_rgn);
+            copy_rgn.buffer_offset = copy_rgn.width * copy_rgn.height * 4;
+            cbuf->copy_texture_to_buffer(m_offscreen_rt->get_depth_stencil_attachment(), m_stage_upload_buffer, copy_rgn);
         }
 
         // Draw to backbuffer
@@ -1028,19 +1030,16 @@ public:
         if (is_f10_released) {
             auto screenshot_pixels = m_graphics_device->map_buffer(m_stage_upload_buffer);
 
-            int width = static_cast<int>(m_current_frame_size.width);
-            int height = static_cast<int>(m_current_frame_size.height);
+            int width = static_cast<int>(m_current_frame_size.width) / 2;
+            int height = static_cast<int>(m_current_frame_size.height) / 2;
             int channels = 4;
 
-            std::vector<uint8> depth_data;
+            tavros::core::dynamic_buffer<uint8> depth_data(&m_allocator);
             depth_data.reserve(width * height);
             size_t       plane_size = static_cast<size_t>(width * height);
             const float* src = reinterpret_cast<const float*>(screenshot_pixels.data() + plane_size * channels);
             for (size_t i = 0; i < plane_size; ++i) {
-                /*float z = src[i] * 2.0 - 1.0;
-                float lnr = (2.0 * 0.1f * 1000.0f) / (1000.0f + 0.1f - z * (1000.0f - 0.1f));
-                uint8 c = static_cast<uint8>((lnr - 0.1f) * 255.0f / 1000.0f);*/
-                depth_data.push_back(static_cast<uint8>(src[i] * 255.0f));
+                depth_data.data()[i] = static_cast<uint8>(src[i] * 255.0f);
             }
 
             // Save screenshot

@@ -35,7 +35,7 @@ namespace tavros::renderer::rhi
 
         void copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, const texture_copy_region& region) override;
 
-        void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset = 0, uint32 row_stride = 0) override;
+        void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, const texture_copy_region& region) override;
 
     private:
         graphics_device_opengl* m_device = nullptr;

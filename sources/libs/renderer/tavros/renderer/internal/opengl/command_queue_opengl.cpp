@@ -1037,10 +1037,8 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_PIXEL_UNPACK_BUFFER, 0));
     }
 
-    void command_queue_opengl::copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, uint32 layer_index, size_t size, size_t dst_offset, uint32 row_stride)
+    void command_queue_opengl::copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, const texture_copy_region& region)
     {
-        TAV_UNUSED(size);
-
         auto* tex = m_device->get_resources()->try_get(src_texture);
         if (!tex) {
             ::logger.error("Failed to copy texture {} to buffer {}: source texture not found", src_texture, dst_buffer);
@@ -1056,62 +1054,137 @@ namespace tavros::renderer::rhi
         auto& tinfo = tex->info;
 
         if (b->info.usage != buffer_usage::stage) {
-            ::logger.error("Failed to copy texture {} to buffer {}: invalid destination buffer usage type, expected `stage` got {}", src_texture, dst_buffer, b->info.usage);
+            ::logger.error(
+                "Failed to copy texture {} to buffer {}: invalid destination buffer usage type, expected `stage` got {}",
+                src_texture, dst_buffer, b->info.usage
+            );
             return;
         }
 
         if (b->info.access != buffer_access::gpu_to_cpu) {
-            ::logger.error("Failed to copy texture {} to buffer {}: invalid destination buffer access type, expected `gpu_to_cpu` got {}", src_texture, dst_buffer, b->info.access);
+            ::logger.error(
+                "Failed to copy texture {} to buffer {}: invalid destination buffer access type, expected `gpu_to_cpu` got {}",
+                src_texture, dst_buffer, b->info.access
+            );
             return;
         }
 
         if (!tinfo.usage.has_flag(texture_usage::transfer_source)) {
-            ::logger.error("Failed to copy texture {} to buffer {}: source texture does not have `transfer_source` usage flag", src_texture, dst_buffer);
+            ::logger.error(
+                "Failed to copy texture {} to buffer {}: source texture does not have `transfer_source` usage flag",
+                src_texture, dst_buffer
+            );
             return;
         }
-
-        /*if (!is_color_format(tinfo.format)) {
-            ::logger.error("Failed to copy texture {} to buffer {}: texture format is not a color format", src_texture, dst_buffer);
-            return;
-        }*/
 
         auto gl_pixel_format = to_gl_pixel_format(tinfo.format);
-        if (row_stride % gl_pixel_format.bytes != 0) {
-            ::logger.error("Failed to copy texture {} to buffer {}: row stride {} must be aligned to pixel size {}", src_texture, dst_buffer, fmt::styled_param(row_stride), fmt::styled_param(gl_pixel_format.bytes));
-            return;
-        }
 
         uint32 real_row_bytes = tinfo.width * gl_pixel_format.bytes;
-        if (row_stride > 0 && row_stride < real_row_bytes) {
-            ::logger.error("Failed to copy texture {} to buffer {}: row stride {} less than required row size {}", src_texture, dst_buffer, fmt::styled_param(row_stride), fmt::styled_param(real_row_bytes));
+        size_t stride_bytes = static_cast<size_t>(region.buffer_row_length > 0 ? region.buffer_row_length * gl_pixel_format.bytes : real_row_bytes);
+        size_t need_bytes = stride_bytes * tinfo.height * tinfo.depth - (stride_bytes - real_row_bytes);
+
+        if (region.buffer_offset + need_bytes > b->info.size) {
+            ::logger.error(
+                "Failed to copy texture {} to buffer {}: buffer is too small. Required {} bytes, available {}",
+                src_texture, dst_buffer, fmt::styled_param(region.buffer_offset + need_bytes), fmt::styled_param(b->info.size)
+            );
             return;
         }
 
-        size_t stride_bytes = static_cast<size_t>(row_stride > 0 ? row_stride : real_row_bytes);
-        size_t need_bytes = stride_bytes * tinfo.height * tinfo.depth - (stride_bytes - real_row_bytes);
+        auto max_w = math::mip_side(tinfo.width, region.mip_level);
+        auto max_h = math::mip_side(tinfo.height, region.mip_level);
 
-        if (dst_offset + need_bytes > b->info.size) {
-            ::logger.error("Failed to copy texture {} to buffer {}: buffer is too small. Required {} bytes, available {}", src_texture, dst_buffer, fmt::styled_param(dst_offset + need_bytes), fmt::styled_param(b->info.size));
+        if (region.x_offset + region.width > max_w || region.y_offset + max_h > tinfo.height) {
+            ::logger.error(
+                "Failed to copy texture {} to buffer {}: region out of bounds. "
+                "Region (x_offset={}, y_offset={}, width={}, height={}) exceeds mip level () size ({}x{}).",
+                src_texture, dst_buffer,
+                region.x_offset, region.y_offset, region.width, region.height,
+                region.mip_level, max_w, max_h
+            );
             return;
         }
 
         GL_CALL(glBindBuffer(GL_PIXEL_PACK_BUFFER, b->buffer_obj));
         GL_CALL(glBindTexture(tex->target, tex->texture_obj));
 
-        auto row_length_in_pixels = static_cast<GLint>(row_stride / gl_pixel_format.bytes);
-        GL_CALL(glPixelStorei(GL_PACK_ROW_LENGTH, row_length_in_pixels));
+        GL_CALL(glPixelStorei(GL_PACK_ROW_LENGTH, static_cast<GLint>(region.buffer_row_length)));
         GL_CALL(glPixelStorei(GL_PACK_ALIGNMENT, 1));
 
-        auto* gl_buffer_offset = reinterpret_cast<void*>(dst_offset);
+        auto* gl_buffer_offset = reinterpret_cast<void*>(region.buffer_offset);
 
         if (tinfo.type == texture_type::texture_2d) {
-            if (tex->target == GL_RENDERBUFFER) {
-                GL_CALL(glReadPixels(0, 0, tinfo.width, tinfo.height, gl_pixel_format.format, gl_pixel_format.type, nullptr));
-            } else {
-                GL_CALL(glGetTexImage(tex->target, 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+            auto  is_rb = GL_RENDERBUFFER == tex->target;
+            GLint prev_read_fbo = 0;
+
+            if (!is_rb) {
+                // Is not a renderbuffer, so, attach texture to the read from framebuffer
+                GL_CALL(glGetIntegerv(GL_READ_FRAMEBUFFER_BINDING, &prev_read_fbo));
+
+                TAV_ASSERT(m_resolve_fbo);
+
+                GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, m_resolve_fbo));
+
+                GLenum read_attachment = GL_COLOR_ATTACHMENT0;
+                auto   ds_fmt = to_depth_stencil_fromat(tex->info.format);
+                if (ds_fmt.is_depth_stencil_format) {
+                    read_attachment = ds_fmt.depth_stencil_attachment_type;
+                }
+
+                if (tex->target == GL_TEXTURE_2D) {
+                    GL_CALL(glFramebufferTexture2D(
+                        GL_READ_FRAMEBUFFER,
+                        read_attachment,
+                        tex->target,
+                        tex->texture_obj,
+                        static_cast<GLint>(region.mip_level)
+                    ));
+                } else {
+                    GL_CALL(glFramebufferTexture(
+                        GL_READ_FRAMEBUFFER,
+                        read_attachment,
+                        tex->texture_obj,
+                        static_cast<GLint>(region.mip_level)
+                    ));
+                }
+
+                // Set read buffer only with color attachment
+                if (!ds_fmt.is_depth_stencil_format) {
+                    GL_CALL(glReadBuffer(read_attachment));
+                }
+
+                if (GL_FRAMEBUFFER_COMPLETE != glCheckFramebufferStatus(GL_READ_FRAMEBUFFER)) {
+                    ::logger.error(
+                        "Failed to copy texture {} to buffer {}: framebuffer is not complete",
+                        src_texture, dst_buffer
+                    );
+                    return;
+                }
+            }
+
+            // Read pixels to the pbo
+            GL_CALL(glReadPixels(
+                static_cast<GLint>(region.x_offset),
+                static_cast<GLint>(region.y_offset),
+                static_cast<GLsizei>(region.width),
+                static_cast<GLsizei>(region.height),
+                gl_pixel_format.format,
+                gl_pixel_format.type,
+                gl_buffer_offset
+            ));
+
+            if (!is_rb) {
+                // Restore old read framebuffer
+                GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, prev_read_fbo));
             }
         } else if (tinfo.type == texture_type::texture_3d) {
-            GL_CALL(glGetTexImage(GL_TEXTURE_3D, 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+            GL_CALL(glGetTexImage(
+                GL_TEXTURE_3D,
+                static_cast<GLint>(region.mip_level),
+                gl_pixel_format.format,
+                gl_pixel_format.type,
+                gl_buffer_offset
+            ));
         } else if (tinfo.type == texture_type::texture_cube) {
             static constexpr GLenum faces[6] = {
                 GL_TEXTURE_CUBE_MAP_POSITIVE_X,
@@ -1122,7 +1195,13 @@ namespace tavros::renderer::rhi
                 GL_TEXTURE_CUBE_MAP_NEGATIVE_Z
             };
 
-            GL_CALL(glGetTexImage(faces[layer_index % 6], 0, gl_pixel_format.format, gl_pixel_format.type, gl_buffer_offset));
+            GL_CALL(glGetTexImage(
+                faces[region.layer_index % 6],
+                static_cast<GLint>(region.mip_level),
+                gl_pixel_format.format,
+                gl_pixel_format.type,
+                gl_buffer_offset
+            ));
         } else {
             TAV_UNREACHABLE();
         }
