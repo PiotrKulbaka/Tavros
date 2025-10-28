@@ -24,11 +24,27 @@ namespace tavros::resources
         return false;
     }
 
-    core::shared_ptr<resource> resource_manager::open(core::string_view path)
+    core::shared_ptr<resource> resource_manager::open(core::string_view path, resource_access access)
     {
         for (auto& p : m_providers) {
-            if (p->exists(path)) {
-                return p->open(path);
+            switch (access) {
+            case resource_access::read_only:
+                if (p->available_for_read(path) && p->exists(path)) {
+                    return p->open(path);
+                }
+                break;
+
+            case resource_access::write_only:
+                if (p->available_for_write(path)) {
+                    return p->open(path);
+                }
+                break;
+
+            case resource_access::read_write:
+                if (p->available_for_read(path) && p->available_for_write(path)) {
+                    return p->open(path);
+                }
+                break;
             }
         }
 

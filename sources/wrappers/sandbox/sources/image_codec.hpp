@@ -8,7 +8,7 @@
 namespace app
 {
 
-    class image_decoder : tavros::core::noncopyable
+    class image_codec : tavros::core::noncopyable
     {
     public:
         struct pixels_view
@@ -28,16 +28,16 @@ namespace app
         };
 
     public:
-        explicit image_decoder(tavros::core::allocator* alc)
+        explicit image_codec(tavros::core::allocator* alc)
             : m_buffer(alc)
         {
         }
 
-        ~image_decoder() = default;
+        ~image_codec() = default;
 
-        image_info decode_image_info(tavros::core::buffer_view<uint8> packed_pixels) const;
+        pixels_view decode(tavros::core::buffer_view<uint8> packed_pixels, uint32 required_channels = 4, bool y_flip = false);
 
-        pixels_view decode_image(tavros::core::buffer_view<uint8> packed_pixels, uint32 required_channels = 4);
+        tavros::core::buffer_view<uint8> encode(const pixels_view& pixels, bool y_flip = false);
 
     private:
         tavros::core::dynamic_buffer<uint8> m_buffer;

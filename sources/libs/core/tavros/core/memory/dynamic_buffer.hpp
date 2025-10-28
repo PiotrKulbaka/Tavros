@@ -132,6 +132,21 @@ namespace tavros::core
         }
 
         /**
+         * @brief Copies elements from the source array into the buffer span.
+         *
+         * @param src Pointer to the source data.
+         * @param count Number of elements to copy.
+         * @param offset Starting offset in the destination buffer (in elements).
+         * @return The number of elements actually copied.
+         */
+        size_t copy_from(const void* src, size_t count, size_t offset = 0)
+        {
+            TAV_ASSERT(offset + count <= m_capacity);
+            std::memcpy(m_storage + offset, src, count * sizeof(T));
+            return count;
+        }
+
+        /**
          * @brief Returns a pointer to the underlying buffer memory.
          */
         T* data() noexcept

@@ -5,6 +5,7 @@
 #include <tavros/core/noncopyable.hpp>
 
 #include <tavros/resources/resource_provider.hpp>
+#include <tavros/resources/resource_access.hpp>
 
 #include <tavros/core/containers/static_vector.hpp>
 
@@ -36,7 +37,7 @@ namespace tavros::resources
 
         bool exists(core::string_view path) const;
 
-        core::shared_ptr<resource> open(core::string_view path);
+        core::shared_ptr<resource> open(core::string_view path, resource_access access = resource_access::read_only);
 
     private:
         using providers_vector = core::static_vector<core::shared_ptr<resource_provider>, k_max_resource_providers>;

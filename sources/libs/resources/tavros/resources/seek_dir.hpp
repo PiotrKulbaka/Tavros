@@ -1,13 +1,21 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
-
 namespace tavros::resources
 {
-    enum class seek_dir : uint8
+
+    /**
+     * @brief Represents the direction for seeking within a stream or file.
+     */
+    enum class seek_dir
     {
+        /// Seek relative to the beginning of the stream.
         begin,
+
+        /// Seek relative to the current position in the stream.
         current,
+
+        /// Seek relative to the end of the stream.
         end,
     };
-}
+
+} // namespace tavros::resources

@@ -1,7 +1,7 @@
 ﻿#include <stdio.h>
 
 #include "render_app_base.hpp"
-#include "image_decoder.hpp"
+#include "image_codec.hpp"
 #include "built_in_meshes.hpp"
 #include "input_manager.hpp"
 
@@ -20,7 +20,9 @@
 
 #include <algorithm>
 
-#include <stb/stb_image_write.h>
+#include <tavros/core/geometry/aabb2.hpp>
+
+#include <stb/stb_truetype.h>
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -482,12 +484,323 @@ private:
 };
 
 
+struct irect2
+{
+    int32 left = 0;
+    int32 top = 0;
+    int32 right = 0;
+    int32 bottom = 0;
+
+    int32 width()
+    {
+        return right - left;
+    }
+
+    int32 height()
+    {
+        return bottom - top;
+    }
+};
+
+
+class truetype_font
+{
+public:
+    truetype_font()
+        : m_is_init(false)
+        , m_scale(1.0f)
+    {
+        memset(&m_info, 0, sizeof(m_info));
+        set_glyph_padding_in_pixels(0.0f);
+    }
+
+    ~truetype_font()
+    {
+        shutdown();
+    }
+
+    void init(tavros::core::buffer_view<uint8> font_file_data)
+    {
+        if (stbtt_InitFont(&m_info, font_file_data.data(), 0) == 0) {
+            ::logger.error("Failed to init font data");
+            m_is_init = false;
+            return;
+        }
+        m_is_init = true;
+    }
+
+    void shutdown()
+    {
+        if (m_is_init) {
+            m_is_init = false;
+            m_scale = 1.0f;
+        }
+    }
+
+    bool is_init()
+    {
+        return m_is_init;
+    }
+
+    void set_font_height_in_pixels(float font_height)
+    {
+        if (!m_is_init) {
+            return;
+        }
+
+        m_scale = stbtt_ScaleForPixelHeight(&m_info, font_height);
+    }
+
+    void set_glyph_padding_in_pixels(float glyph_padding)
+    {
+        if (!m_is_init) {
+            return;
+        }
+
+        m_padding = glyph_padding < 0.0f ? 0.0f : glyph_padding;
+        m_ipadding = static_cast<uint32>(tavros::math::ceil(m_padding));
+        m_pix_dist_scale = m_padding == 0.0f ? 256.0f : 128.0f / static_cast<float>(m_ipadding);
+    }
+
+    uint32 find_glyph_index(uint32 unicode_codepoint)
+    {
+        if (!m_is_init) {
+            return 0;
+        }
+
+        return static_cast<uint32>(stbtt_FindGlyphIndex(&m_info, static_cast<int>(unicode_codepoint)));
+    }
+
+    irect2 get_font_sdf_box()
+    {
+        if (!m_is_init) {
+            return {};
+        }
+
+        int32 ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
+        stbtt_GetFontBoundingBox(&m_info, &ix0, &iy0, &ix1, &iy1);
+        if (ix0 == ix1 || iy0 == iy1) {
+            return {};
+        }
+
+        irect2 rc;
+        rc.left = static_cast<int32>(tavros::math::floor(static_cast<float>(ix0) * m_scale)) - m_ipadding;
+        rc.top = static_cast<int32>(tavros::math::floor(static_cast<float>(-iy1) * m_scale)) - m_ipadding;
+        rc.right = static_cast<int32>(tavros::math::ceil(static_cast<float>(ix1) * m_scale)) + m_ipadding;
+        rc.bottom = static_cast<int32>(tavros::math::ceil(static_cast<float>(-iy0) * m_scale)) + m_ipadding;
+
+        return rc;
+    }
+
+    irect2 get_glyph_sdf_box(uint32 glyph)
+    {
+        if (!m_is_init) {
+            return {};
+        }
+
+        int32 ix0, iy0, ix1, iy1;
+        stbtt_GetGlyphBitmapBox(&m_info, glyph, m_scale, m_scale, &ix0, &iy0, &ix1, &iy1);
+        if (ix0 == ix1 || iy0 == iy1) {
+            return {};
+        }
+
+        irect2 rc;
+        rc.left = ix0 - m_ipadding;
+        rc.top = iy0 - m_ipadding;
+        rc.right = ix1 + m_ipadding;
+        rc.bottom = iy1 + m_ipadding;
+
+        return rc;
+    }
+
+    bool make_glyph_sdf(uint32 glyph, tavros::core::buffer_span<uint8> out_pixels, uint32 pixels_stride)
+    {
+        if (!m_is_init) {
+            return false;
+        }
+
+        return !!stbtt_MakeGlyphSDF(&m_info, m_scale, glyph, m_ipadding, 128, m_pix_dist_scale, out_pixels.data(), pixels_stride, nullptr, nullptr, nullptr, nullptr);
+    }
+
+private:
+    stbtt_fontinfo m_info;
+    bool           m_is_init;
+    float          m_scale;
+    float          m_padding;
+    uint32         m_ipadding;
+    float          m_pix_dist_scale;
+};
+
+
+struct glyph_info
+{
+    truetype_font* font = nullptr;
+    uint32         index = 0;
+    irect2         bbox;
+    irect2         location;
+};
+
+struct glyph_uv_data
+{
+    tavros::math::vec2 min_uv;
+    tavros::math::vec2 max_uv;
+};
+
+class font_atlas_maker
+{
+public:
+    font_atlas_maker()
+        : m_layout_maked(false)
+    {
+    }
+
+    ~font_atlas_maker() = default;
+
+    bool add_font_codepoint(truetype_font* font, uint32 codepoint)
+    {
+        TAV_ASSERT(font);
+        TAV_ASSERT(font->is_init());
+
+        auto glyph = font->find_glyph_index(codepoint);
+        if (glyph > 0) {
+            glyph_info info;
+            info.font = font;
+            info.index = glyph;
+            m_atlas_info[codepoint] = info;
+
+            m_layout_maked = false;
+
+            return true;
+        }
+        return false;
+    }
+
+    bool add_null_codepoint(truetype_font* font)
+    {
+        TAV_ASSERT(font);
+        TAV_ASSERT(font->is_init());
+
+        auto glyph = font->find_glyph_index(0);
+        m_null.font = font;
+        m_null.index = glyph;
+        m_atlas_info[0] = m_null;
+
+        m_layout_maked = false;
+
+        return true;
+    }
+
+    tavros::math::isize2 make_layout()
+    {
+        constexpr int32 pixels_width = 2048;
+
+        int32 left = 0;
+        int32 top = 0;
+        int32 max_row_h = 0;
+
+        for (auto& info : m_atlas_info) {
+            info.second.bbox = info.second.font->get_glyph_sdf_box(info.second.index);
+            if (info.second.bbox.width() == 0 || info.second.bbox.height() == 0) {
+                info.second.bbox = m_null.font->get_glyph_sdf_box(m_null.index);
+            }
+
+            auto& bbox = info.second.bbox;
+
+            if (left + bbox.width() > pixels_width) {
+                left = 0;
+                top += max_row_h;
+                max_row_h = 0;
+            }
+
+            if (max_row_h < bbox.height()) {
+                max_row_h = bbox.height();
+            }
+
+            auto& loc = info.second.location;
+            loc.left = left;
+            loc.top = top;
+            loc.right = left + bbox.width();
+            loc.bottom = top + bbox.height();
+
+            left += bbox.width();
+        }
+
+        m_layout_maked = true;
+
+        int32 min_pixels_height = top > 0 ? top + max_row_h : 1;
+
+        m_atlas_size = {pixels_width, min_pixels_height};
+        return m_atlas_size;
+    }
+
+    tavros::math::isize2 atlas_size()
+    {
+        return m_atlas_size;
+    }
+
+    std::vector<glyph_uv_data> make_uv_data()
+    {
+        if (!m_layout_maked) {
+            return {};
+        }
+
+        auto w = static_cast<float>(m_atlas_size.width);
+        auto h = static_cast<float>(m_atlas_size.height);
+
+        std::vector<glyph_uv_data> data;
+        data.reserve(m_atlas_info.size());
+
+        for (auto& info : m_atlas_info) {
+            auto&              loc = info.second.location;
+            tavros::math::vec2 min(static_cast<float>(loc.left) / w, static_cast<float>(loc.top) / h);
+            tavros::math::vec2 max(static_cast<float>(loc.right) / w, static_cast<float>(loc.bottom) / h);
+            data.emplace_back(min, max);
+        }
+
+        return data;
+    }
+
+    bool bake_atlas(tavros::core::buffer_span<uint8> pixels, uint32 pixels_width, uint32 pixels_height)
+    {
+        if (!m_layout_maked) {
+            return false;
+        }
+
+        if (pixels_width < m_atlas_size.width || pixels_height < m_atlas_size.height) {
+            return false;
+        }
+
+        for (auto& info : m_atlas_info) {
+            size_t                           offset = info.second.location.top * pixels_width + info.second.location.left;
+            tavros::core::buffer_span<uint8> dst(pixels.data() + offset, pixels.size() - offset);
+            if (!info.second.font->make_glyph_sdf(info.second.index, dst, pixels_width)) {
+                m_null.font->make_glyph_sdf(m_null.index, dst, pixels_width);
+            }
+        }
+
+        return true;
+    }
+
+private:
+    std::unordered_map<uint32, glyph_info> m_atlas_info;
+    glyph_info                             m_null;
+    bool                                   m_layout_maked;
+    tavros::math::isize2                   m_atlas_size;
+};
+
+struct font_instance_info
+{
+    tavros::math::mat4 mat;
+    int32              glyph_index = 0;
+};
+
+
 class main_window : public app::render_app_base
 {
 public:
     main_window(tavros::core::string_view name, tavros::core::shared_ptr<tavros::resources::resource_manager> resource_manager)
         : app::render_app_base(name)
-        , m_image_decoder(&m_allocator)
+        , m_imcodec(&m_allocator)
         , m_resource_manager(resource_manager)
     {
     }
@@ -510,11 +823,11 @@ public:
         return buffer;
     }
 
-    app::image_decoder::pixels_view load_image(tavros::core::string_view path)
+    app::image_codec::pixels_view load_image(tavros::core::string_view path, bool y_flip = false)
     {
         tavros::core::dynamic_buffer<uint8> buffer(&m_allocator);
 
-        auto res = m_resource_manager->open(path);
+        auto res = m_resource_manager->open(path, tavros::resources::resource_access::read_only);
         if (res) {
             auto* reader = res->reader();
             if (reader->is_open()) {
@@ -525,7 +838,143 @@ public:
         }
 
         // buffer.data() can be nullptr; decode_image will return fallback with white pixel
-        return m_image_decoder.decode_image(buffer);
+        return m_imcodec.decode(buffer, 4, y_flip);
+    }
+
+    bool save_image(const app::image_codec::pixels_view& pixels, tavros::core::string_view path, bool y_flip = false)
+    {
+        auto im_data = m_imcodec.encode(pixels, y_flip);
+        if (im_data.empty()) {
+            ::logger.error("Failed to save image '{}': im_data is empty()", path);
+            return false;
+        }
+
+        auto res = m_resource_manager->open(path, tavros::resources::resource_access::write_only);
+        if (res) {
+            auto* writer = res->writer();
+            if (writer->is_open()) {
+                writer->write(im_data);
+                return true;
+            }
+        }
+
+        ::logger.error("Failed to save image: '{}'", path);
+        return false;
+    }
+
+    rhi::shader_binding_handle load_font_data(tavros::core::string_view path)
+    {
+        tavros::core::dynamic_buffer<uint8> font_data(&m_allocator);
+
+        auto res = m_resource_manager->open(path);
+        if (res) {
+            auto* reader = res->reader();
+            if (reader->is_open()) {
+                auto size = reader->size();
+                font_data.reserve(size);
+                reader->read(font_data);
+            }
+        } else {
+            ::logger.fatal("Failed to load font {}.", path);
+            exit_fail();
+        }
+
+        constexpr float font_height = 40.0f;
+        constexpr float glyph_padding = 8.0f;
+
+
+        truetype_font font;
+
+        font.init(font_data);
+        if (!font.is_init()) {
+            ::logger.error("Failed to init font.");
+            exit_fail();
+        }
+
+
+        font.set_font_height_in_pixels(font_height);
+        font.set_glyph_padding_in_pixels(glyph_padding);
+
+
+        font_atlas_maker atlas_maker;
+
+        atlas_maker.add_null_codepoint(&font);
+        for (uint32 codepoint = 0; codepoint < 0xffff; ++codepoint) {
+            atlas_maker.add_font_codepoint(&font, codepoint);
+        }
+
+        auto atlas_size = atlas_maker.make_layout();
+
+        std::vector<uint8> bitmap(atlas_size.width * atlas_size.height, 0);
+
+        if (!atlas_maker.bake_atlas(bitmap, atlas_size.width, atlas_size.height)) {
+            ::logger.error("Failed to make atlas.");
+            exit_fail();
+        }
+
+        // create texture
+        size_t tex_size = atlas_size.width * atlas_size.height;
+        auto   dst = m_graphics_device->map_buffer(m_stage_buffer);
+        dst.copy_from(bitmap.data(), tex_size);
+        m_graphics_device->unmap_buffer(m_stage_buffer);
+
+        rhi::texture_create_info tex_info;
+        tex_info.type = rhi::texture_type::texture_2d;
+        tex_info.format = rhi::pixel_format::r8un;
+        tex_info.width = atlas_size.width;
+        tex_info.height = atlas_size.height;
+        tex_info.depth = 1;
+        tex_info.usage = rhi::k_default_texture_usage;
+        tex_info.mip_levels = 1;
+        tex_info.array_layers = 1;
+        tex_info.sample_count = 1;
+
+        auto texture = m_graphics_device->create_texture(tex_info);
+        if (!texture) {
+            ::logger.fatal("Failed to create sdf texture");
+            exit_fail();
+        }
+
+        auto* cbuf = m_composer->create_command_queue();
+        cbuf->wait_for_fence(m_fence);
+        rhi::texture_copy_region rgn;
+        rgn.width = atlas_size.width;
+        rgn.height = atlas_size.height;
+        cbuf->copy_buffer_to_texture(m_stage_buffer, texture, rgn);
+        cbuf->signal_fence(m_fence);
+        m_composer->submit_command_queue(cbuf);
+
+        // Create SSBO
+        auto uv_data = atlas_maker.make_uv_data();
+
+        size_t                  uv_size = uv_data.size() * sizeof(glyph_uv_data);
+        rhi::buffer_create_info uniform_buffer_desc{uv_size, rhi::buffer_usage::storage, rhi::buffer_access::cpu_to_gpu};
+        auto                    ssbo_uv = m_graphics_device->create_buffer(uniform_buffer_desc);
+        if (!ssbo_uv) {
+            ::logger.fatal("Failed to create ssbo uv buffer");
+            exit_fail();
+        }
+
+        cbuf->wait_for_fence(m_fence);
+        auto dst_uv = m_graphics_device->map_buffer(ssbo_uv);
+        dst_uv.copy_from(uv_data.data(), uv_size);
+        m_graphics_device->unmap_buffer(m_stage_buffer);
+        cbuf->signal_fence(m_fence);
+
+
+        rhi::shader_binding_create_info shader_binding_info;
+        shader_binding_info.texture_bindings.push_back({texture, m_sampler, 0});
+        shader_binding_info.buffer_bindings.push_back({ssbo_uv, 0, 0, 0});
+        auto sh_binding = m_graphics_device->create_shader_binding(shader_binding_info);
+        if (!sh_binding) {
+            ::logger.fatal("Failed to create shader binding pass");
+            exit_fail();
+        }
+
+        app::image_codec::pixels_view im{atlas_size.width, atlas_size.height, 1, atlas_size.width, bitmap.data()};
+        save_image(im, "font_atlas.png");
+
+        return sh_binding;
     }
 
     void init() override
@@ -796,6 +1245,8 @@ public:
         m_graphics_device->wait_for_fence(m_fence);
 
         show();
+
+        auto font_binding = load_font_data("fonts/pixels/BoldPixels.ttf");
     }
 
     void shutdown() override
@@ -1002,8 +1453,8 @@ public:
 
         if (is_f10_released) {
             rhi::texture_copy_region copy_rgn;
-            copy_rgn.width = m_current_frame_size.width / 2;
-            copy_rgn.height = m_current_frame_size.height / 2;
+            copy_rgn.width = m_current_frame_size.width;
+            copy_rgn.height = m_current_frame_size.height;
             cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(0), m_stage_upload_buffer, copy_rgn);
             copy_rgn.buffer_offset = copy_rgn.width * copy_rgn.height * 4;
             cbuf->copy_texture_to_buffer(m_offscreen_rt->get_depth_stencil_attachment(), m_stage_upload_buffer, copy_rgn);
@@ -1030,9 +1481,10 @@ public:
         if (is_f10_released) {
             auto screenshot_pixels = m_graphics_device->map_buffer(m_stage_upload_buffer);
 
-            int width = static_cast<int>(m_current_frame_size.width) / 2;
-            int height = static_cast<int>(m_current_frame_size.height) / 2;
+            int width = static_cast<int>(m_current_frame_size.width);
+            int height = static_cast<int>(m_current_frame_size.height);
             int channels = 4;
+            int stride = width * channels;
 
             tavros::core::dynamic_buffer<uint8> depth_data(&m_allocator);
             depth_data.reserve(width * height);
@@ -1043,9 +1495,10 @@ public:
             }
 
             // Save screenshot
-            stbi_flip_vertically_on_write(true);
-            stbi_write_png("C:/Users/Piotr/Desktop/screenshots/image.png", width, height, channels, screenshot_pixels.data(), width * channels);
-            stbi_write_png("C:/Users/Piotr/Desktop/screenshots/depth.png", width, height, 1, depth_data.data(), width * 1);
+            app::image_codec::pixels_view im_color{static_cast<uint32>(width), static_cast<uint32>(height), channels, stride, screenshot_pixels.data()};
+            save_image(im_color, "color.png", true);
+            app::image_codec::pixels_view im_depth{width, height, 1, width, depth_data.data()};
+            save_image(im_depth, "depth.png", true);
 
             m_graphics_device->unmap_buffer(m_stage_upload_buffer);
         }
@@ -1058,7 +1511,7 @@ private:
     tavros::core::unique_ptr<rhi::graphics_device> m_graphics_device;
     rhi::frame_composer*                           m_composer = nullptr;
 
-    app::image_decoder m_image_decoder;
+    app::image_codec m_imcodec;
 
     tavros::core::unique_ptr<render_target> m_offscreen_rt;
 
@@ -1114,8 +1567,9 @@ int main()
     tavros::core::logger::add_consumer([](auto lvl, auto tag, auto msg) { printf("%s\n", msg.data()); });
 
     auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
-    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets");
-    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3");
+    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets", tavros::resources::resource_access::read_only);
+    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3", tavros::resources::resource_access::read_only);
+    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/TavrosOutput", tavros::resources::resource_access::write_only);
 
     auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", resource_manager);
     wnd->run_render_loop();

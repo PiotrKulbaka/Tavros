@@ -11,8 +11,9 @@ namespace
 namespace tavros::resources
 {
 
-    file_resource::file_resource(core::string_view path)
+    file_resource::file_resource(core::string_view path, resource_access access)
         : m_path(path)
+        , m_access(access)
     {
     }
 
@@ -23,6 +24,11 @@ namespace tavros::resources
 
     resource_reader* file_resource::reader()
     {
+        if (resource_access::read_only != m_access && resource_access::read_write != m_access) {
+            ::logger.error("Attempt to open reader '{}', but no read access", m_path);
+            return nullptr;
+        }
+
         if (m_writer.is_open()) {
             ::logger.error("Attempt to open reader while writer is active for '{}'", m_path);
             TAV_DEBUG_BREAK();
@@ -43,6 +49,11 @@ namespace tavros::resources
 
     resource_writer* file_resource::writer()
     {
+        if (resource_access::write_only != m_access && resource_access::read_write != m_access) {
+            ::logger.error("Attempt to open writer '{}', but no write access", m_path);
+            return nullptr;
+        }
+
         if (m_reader.is_open()) {
             ::logger.error("Attempt to open writer while reader is active for '{}'", m_path);
             TAV_DEBUG_BREAK();
