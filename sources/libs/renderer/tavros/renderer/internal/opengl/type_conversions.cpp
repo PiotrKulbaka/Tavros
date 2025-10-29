@@ -506,6 +506,10 @@ namespace tavros::renderer::rhi
             info.type = GL_FLOAT;
             info.size = 4;
             break;
+        case attribute_format::f64:
+            info.type = GL_DOUBLE;
+            info.size = 8;
+            break;
         default:
             TAV_UNREACHABLE();
         }

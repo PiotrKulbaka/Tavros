@@ -1381,6 +1381,7 @@ namespace tavros::renderer::rhi
             // Enable the vertex buffer
             GL_CALL(glBindVertexBuffer(attrib_i, b->buffer_obj, buf_layout.base_offset, buf_layout.stride));
 
+            bool is_flt = attribute_format::f32 == attrib.format || attribute_format::f16 == attrib.format || attribute_format::f64 == attrib.format;
             auto gl_attrib_info = to_gl_attribute_info(attrib.type, attrib.format);
             for (uint32 col = 0; col < gl_attrib_info.cols; ++col) {
                 GLuint location = attrib.location + col;
@@ -1388,7 +1389,11 @@ namespace tavros::renderer::rhi
 
                 // Enable attribute and set pointer
                 GL_CALL(glEnableVertexAttribArray(location));
-                GL_CALL(glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, attrib.normalize, offset));
+                if (is_flt) {
+                    GL_CALL(glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, attrib.normalize, offset));
+                } else {
+                    GL_CALL(glVertexAttribIFormat(location, gl_attrib_info.rows, gl_attrib_info.type, offset));
+                }
                 GL_CALL(glVertexAttribBinding(location, attrib_i));
             }
             GL_CALL(glVertexBindingDivisor(attrib_i, attrib_bind.instance_divisor));
