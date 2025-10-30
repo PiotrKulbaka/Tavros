@@ -13,6 +13,7 @@ lib_core = "${path.libs}/core"
 lib_renderer = "${path.libs}/renderer"
 lib_system = "${path.libs}/system"
 lib_resources = "${path.libs}/resources"
+lib_ui = "${path.libs}/ui"
 
 
 [command.autoformat]
@@ -24,8 +25,8 @@ include = [
     "${path.lib_renderer}",
     "${path.lib_system}",
     "${path.lib_resources}",
+    "${path.lib_ui}",
     "${path.wrappers}/sandbox",
-    "${path.wrappers}/q3pp",
 ]
 
 
@@ -37,10 +38,10 @@ collect_paths = [
     "${path.lib_renderer}",
     "${path.lib_system}",
     "${path.lib_resources}",
+    "${path.lib_ui}",
     "${path.wrappers}/sandbox",
     "${path.tests}/sources",
     "${path.tests}/sources",
-    "${path.wrappers}/q3pp",
 ]
 
 

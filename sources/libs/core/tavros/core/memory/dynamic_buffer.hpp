@@ -27,7 +27,6 @@ namespace tavros::core
         explicit dynamic_buffer(allocator* alc) noexcept
             : m_allocator(alc)
         {
-            TAV_ASSERT(alc);
         }
 
         /**

@@ -12,6 +12,7 @@ target_link_libraries(
         tav_renderer
         tav_system
         tav_resources
+        tav_ui
         tinyobjloader
         stb
 )

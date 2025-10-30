@@ -22,7 +22,8 @@
 
 #include <tavros/core/geometry/aabb2.hpp>
 
-#include <stb/stb_truetype.h>
+#include <tavros/ui/font/truetype_font.hpp>
+#include <tavros/ui/font/font_atlas.hpp>
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -80,6 +81,7 @@ layout (std430, binding = 0) buffer Scene
     mat4 u_view_perspective_projection;
     mat4 u_inverse_view;
     mat4 u_inverse_perspective_projection;
+    mat4 u_ortho;
 
     float u_frame_width;
     float u_frame_height;
@@ -161,6 +163,7 @@ layout (std430, binding = 0) buffer Scene
     mat4 u_view_projection;
     mat4 u_inverse_view;
     mat4 u_inverse_projection;
+    mat4 u_ortho;
     
     float u_frame_width;
     float u_frame_height;
@@ -277,6 +280,173 @@ void main()
     out_color = vec4(final_color, final_alpha);
 }
 )";
+
+const char* sdf_font_vertex_shader_source = R"(
+#version 430 core
+
+layout (location = 0) in unsigned int a_glyph_index; // per-instance glyph index
+layout (location = 1) in mat3x2 a_gpyph_transform;  // per-instance transform
+layout (location = 4) in vec3 a_gpyph_color;  // per-instance color
+layout (location = 5) in vec3 a_outline_color;  // per-instance color
+
+
+// === SSBO with glyph UVs ===
+struct GlyphUVs {
+    vec2 uv_min;
+    vec2 uv_max;
+};
+
+layout(std430, binding = 1) buffer GlyphBuffer
+{
+    GlyphUVs glyphs[];
+};
+
+layout (std430, binding = 0) buffer Scene
+{
+    mat4 u_view;
+    mat4 u_perspective_projection;
+    mat4 u_view_projection;
+    mat4 u_inverse_view;
+    mat4 u_inverse_projection;
+    mat4 u_ortho;
+    
+    float u_frame_width;
+    float u_frame_height;
+
+    float u_near_plane;
+    float u_far_plane;
+    float u_view_space_depth;
+    float u_aspect_ratio;
+    float u_fov_y;
+};
+
+const vec2 plane_verts[4] = vec2[](
+    vec2(0.0, 0.0),
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0),
+    vec2(1.0, 1.0)
+);
+
+out vec2 v_uv;
+out vec3 v_color;
+out vec3 v_outline_color;
+
+void main()
+{
+    int vid = gl_VertexID % 4;
+    vec2 local_pos = plane_verts[vid];
+
+    GlyphUVs glyph_uvs = glyphs[a_glyph_index];
+
+    // Interpolate UVs (simple quad mapping)
+    v_uv = mix(glyph_uvs.uv_min, glyph_uvs.uv_max, local_pos);
+
+    // Transform to clip space
+    vec2 world_pos = a_gpyph_transform * vec3(local_pos, 1.0);
+    gl_Position = u_ortho * vec4(world_pos, 0.0, 1.0);
+
+    v_color = a_gpyph_color;
+    v_outline_color = a_outline_color;
+}
+)";
+
+const char* sdf_font_fragment_shader_source = R"(
+#version 430 core
+
+out vec4 frag_color;
+
+layout(binding = 0) uniform sampler2D u_sdf_atlas;
+
+in vec2 v_uv;
+in vec3 v_color;
+in vec3 v_outline_color;
+
+void main()
+{
+    float sdf = texture(u_sdf_atlas, v_uv).r;
+    float smooth_th = 0.02;
+    float text_th = 0.5;
+    float outline_th = 0.45;
+    float text_alpha = smoothstep(text_th, text_th + smooth_th, sdf);
+    float final_alpha = smoothstep(outline_th, outline_th + smooth_th, sdf);
+    vec3 color = mix(v_outline_color, v_color, text_alpha);
+    frag_color = vec4(color, final_alpha);
+}
+)";
+
+
+uint32 extract_utf8_codepoint(const char* text, const char* end, const char** out)
+{
+    TAV_ASSERT(text);
+    TAV_ASSERT(end);
+    TAV_ASSERT(out);
+    TAV_ASSERT(text <= end);
+
+    if (text + 0 == end) {
+        *out = end;
+        return 0;
+    }
+
+    uint32 c0 = static_cast<uint8>(text[0]);
+    if (!(c0 & 0x80)) {
+        *out = text + 1;
+        return c0;
+    }
+
+    if (text + 1 == end) {
+        *out = end;
+        return 0xFFFD;
+    }
+
+    uint32 c1 = static_cast<uint8>(text[1]);
+    if ((c1 & 0xC0) != 0x80) {
+        *out = text + 1;
+        return 0xFFFD;
+    }
+
+    if ((c0 & 0xE0) == 0xC0) {
+        uint32 cp = ((c0 & 0x1F) << 6) | (c1 & 0x3F);
+        *out = text + 2;
+        return cp < 0x80 ? 0xFFFD : cp;
+    }
+
+    if (text + 2 == end) {
+        *out = end;
+        return 0xFFFD;
+    }
+
+    uint32 c2 = static_cast<uint8>(text[2]);
+    if ((c2 & 0xC0) != 0x80) {
+        *out = text + 1;
+        return 0xFFFD;
+    }
+
+    if ((c0 & 0xF0) == 0xE0) {
+        uint32 cp = ((c0 & 0x0F) << 12) | ((c1 & 0x3F) << 6) | (c2 & 0x3F);
+        *out = text + 3;
+        return cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF) ? 0xFFFD : cp;
+    }
+
+    if (text + 3 == end) {
+        *out = end;
+        return 0xFFFD;
+    }
+
+    uint32 c3 = static_cast<uint8>(text[3]);
+    if ((c3 & 0xC0) != 0x80) {
+        *out = text + 1;
+        return 0xFFFD;
+    }
+
+    if ((c0 & 0xF8) == 0xF0) {
+        uint32 cp = ((c0 & 0x07) << 18) | ((c1 & 0x3F) << 12) | ((c2 & 0x3F) << 6) | (c3 & 0x3F);
+        *out = text + 4;
+        return cp < 0x10000 || cp > 0x10FFFF ? 0xFFFD : cp;
+    }
+
+    *out = text + 1;
+    return 0xFFFD;
+}
 
 
 namespace rhi = tavros::renderer::rhi;
@@ -484,314 +654,12 @@ private:
 };
 
 
-struct irect2
-{
-    int32 left = 0;
-    int32 top = 0;
-    int32 right = 0;
-    int32 bottom = 0;
-
-    int32 width()
-    {
-        return right - left;
-    }
-
-    int32 height()
-    {
-        return bottom - top;
-    }
-};
-
-
-class truetype_font
-{
-public:
-    truetype_font()
-        : m_is_init(false)
-        , m_scale(1.0f)
-    {
-        memset(&m_info, 0, sizeof(m_info));
-        set_glyph_padding_in_pixels(0.0f);
-    }
-
-    ~truetype_font()
-    {
-        shutdown();
-    }
-
-    void init(tavros::core::buffer_view<uint8> font_file_data)
-    {
-        if (stbtt_InitFont(&m_info, font_file_data.data(), 0) == 0) {
-            ::logger.error("Failed to init font data");
-            m_is_init = false;
-            return;
-        }
-        m_is_init = true;
-    }
-
-    void shutdown()
-    {
-        if (m_is_init) {
-            m_is_init = false;
-            m_scale = 1.0f;
-        }
-    }
-
-    bool is_init()
-    {
-        return m_is_init;
-    }
-
-    void set_font_height_in_pixels(float font_height)
-    {
-        if (!m_is_init) {
-            return;
-        }
-
-        m_scale = stbtt_ScaleForPixelHeight(&m_info, font_height);
-    }
-
-    void set_glyph_padding_in_pixels(float glyph_padding)
-    {
-        if (!m_is_init) {
-            return;
-        }
-
-        m_padding = glyph_padding < 0.0f ? 0.0f : glyph_padding;
-        m_ipadding = static_cast<uint32>(tavros::math::ceil(m_padding));
-        m_pix_dist_scale = m_padding == 0.0f ? 256.0f : 128.0f / static_cast<float>(m_ipadding);
-    }
-
-    uint32 find_glyph_index(uint32 unicode_codepoint)
-    {
-        if (!m_is_init) {
-            return 0;
-        }
-
-        return static_cast<uint32>(stbtt_FindGlyphIndex(&m_info, static_cast<int>(unicode_codepoint)));
-    }
-
-    irect2 get_font_sdf_box()
-    {
-        if (!m_is_init) {
-            return {};
-        }
-
-        int32 ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
-        stbtt_GetFontBoundingBox(&m_info, &ix0, &iy0, &ix1, &iy1);
-        if (ix0 == ix1 || iy0 == iy1) {
-            return {};
-        }
-
-        irect2 rc;
-        rc.left = static_cast<int32>(tavros::math::floor(static_cast<float>(ix0) * m_scale)) - m_ipadding;
-        rc.top = static_cast<int32>(tavros::math::floor(static_cast<float>(-iy1) * m_scale)) - m_ipadding;
-        rc.right = static_cast<int32>(tavros::math::ceil(static_cast<float>(ix1) * m_scale)) + m_ipadding;
-        rc.bottom = static_cast<int32>(tavros::math::ceil(static_cast<float>(-iy0) * m_scale)) + m_ipadding;
-
-        return rc;
-    }
-
-    irect2 get_glyph_sdf_box(uint32 glyph)
-    {
-        if (!m_is_init) {
-            return {};
-        }
-
-        int32 ix0, iy0, ix1, iy1;
-        stbtt_GetGlyphBitmapBox(&m_info, glyph, m_scale, m_scale, &ix0, &iy0, &ix1, &iy1);
-        if (ix0 == ix1 || iy0 == iy1) {
-            return {};
-        }
-
-        irect2 rc;
-        rc.left = ix0 - m_ipadding;
-        rc.top = iy0 - m_ipadding;
-        rc.right = ix1 + m_ipadding;
-        rc.bottom = iy1 + m_ipadding;
-
-        return rc;
-    }
-
-    bool make_glyph_sdf(uint32 glyph, tavros::core::buffer_span<uint8> out_pixels, uint32 pixels_stride)
-    {
-        if (!m_is_init) {
-            return false;
-        }
-
-        return !!stbtt_MakeGlyphSDF(&m_info, m_scale, glyph, m_ipadding, 128, m_pix_dist_scale, out_pixels.data(), pixels_stride, nullptr, nullptr, nullptr, nullptr);
-    }
-
-private:
-    stbtt_fontinfo m_info;
-    bool           m_is_init;
-    float          m_scale;
-    float          m_padding;
-    uint32         m_ipadding;
-    float          m_pix_dist_scale;
-};
-
-
-struct glyph_info
-{
-    truetype_font* font = nullptr;
-    uint32         index = 0;
-    irect2         bbox;
-    irect2         location;
-};
-
-struct glyph_uv_data
-{
-    tavros::math::vec2 min_uv;
-    tavros::math::vec2 max_uv;
-};
-
-class font_atlas_maker
-{
-public:
-    font_atlas_maker()
-        : m_layout_maked(false)
-    {
-    }
-
-    ~font_atlas_maker() = default;
-
-    bool add_font_codepoint(truetype_font* font, uint32 codepoint)
-    {
-        TAV_ASSERT(font);
-        TAV_ASSERT(font->is_init());
-
-        auto glyph = font->find_glyph_index(codepoint);
-        if (glyph > 0) {
-            glyph_info info;
-            info.font = font;
-            info.index = glyph;
-            m_atlas_info[codepoint] = info;
-
-            m_layout_maked = false;
-
-            return true;
-        }
-        return false;
-    }
-
-    bool add_null_codepoint(truetype_font* font)
-    {
-        TAV_ASSERT(font);
-        TAV_ASSERT(font->is_init());
-
-        auto glyph = font->find_glyph_index(0);
-        m_null.font = font;
-        m_null.index = glyph;
-        m_atlas_info[0] = m_null;
-
-        m_layout_maked = false;
-
-        return true;
-    }
-
-    tavros::math::isize2 make_layout()
-    {
-        constexpr int32 pixels_width = 2048;
-
-        int32 left = 0;
-        int32 top = 0;
-        int32 max_row_h = 0;
-
-        for (auto& info : m_atlas_info) {
-            info.second.bbox = info.second.font->get_glyph_sdf_box(info.second.index);
-            if (info.second.bbox.width() == 0 || info.second.bbox.height() == 0) {
-                info.second.bbox = m_null.font->get_glyph_sdf_box(m_null.index);
-            }
-
-            auto& bbox = info.second.bbox;
-
-            if (left + bbox.width() > pixels_width) {
-                left = 0;
-                top += max_row_h;
-                max_row_h = 0;
-            }
-
-            if (max_row_h < bbox.height()) {
-                max_row_h = bbox.height();
-            }
-
-            auto& loc = info.second.location;
-            loc.left = left;
-            loc.top = top;
-            loc.right = left + bbox.width();
-            loc.bottom = top + bbox.height();
-
-            left += bbox.width();
-        }
-
-        m_layout_maked = true;
-
-        int32 min_pixels_height = top > 0 ? top + max_row_h : 1;
-
-        m_atlas_size = {pixels_width, min_pixels_height};
-        return m_atlas_size;
-    }
-
-    tavros::math::isize2 atlas_size()
-    {
-        return m_atlas_size;
-    }
-
-    std::vector<glyph_uv_data> make_uv_data()
-    {
-        if (!m_layout_maked) {
-            return {};
-        }
-
-        auto w = static_cast<float>(m_atlas_size.width);
-        auto h = static_cast<float>(m_atlas_size.height);
-
-        std::vector<glyph_uv_data> data;
-        data.reserve(m_atlas_info.size());
-
-        for (auto& info : m_atlas_info) {
-            auto&              loc = info.second.location;
-            tavros::math::vec2 min(static_cast<float>(loc.left) / w, static_cast<float>(loc.top) / h);
-            tavros::math::vec2 max(static_cast<float>(loc.right) / w, static_cast<float>(loc.bottom) / h);
-            data.emplace_back(min, max);
-        }
-
-        return data;
-    }
-
-    bool bake_atlas(tavros::core::buffer_span<uint8> pixels, uint32 pixels_width, uint32 pixels_height)
-    {
-        if (!m_layout_maked) {
-            return false;
-        }
-
-        if (pixels_width < m_atlas_size.width || pixels_height < m_atlas_size.height) {
-            return false;
-        }
-
-        for (auto& info : m_atlas_info) {
-            size_t                           offset = info.second.location.top * pixels_width + info.second.location.left;
-            tavros::core::buffer_span<uint8> dst(pixels.data() + offset, pixels.size() - offset);
-            if (!info.second.font->make_glyph_sdf(info.second.index, dst, pixels_width)) {
-                m_null.font->make_glyph_sdf(m_null.index, dst, pixels_width);
-            }
-        }
-
-        return true;
-    }
-
-private:
-    std::unordered_map<uint32, glyph_info> m_atlas_info;
-    glyph_info                             m_null;
-    bool                                   m_layout_maked;
-    tavros::math::isize2                   m_atlas_size;
-};
-
 struct font_instance_info
 {
-    tavros::math::mat4 mat;
-    int32              glyph_index = 0;
+    float              mat[3][2] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    uint32             glyph_index = 0;
+    tavros::math::vec3 color;
+    tavros::math::vec3 outline_color;
 };
 
 
@@ -879,35 +747,28 @@ public:
             exit_fail();
         }
 
-        constexpr float font_height = 40.0f;
-        constexpr float glyph_padding = 8.0f;
-
-
-        truetype_font font;
-
-        font.init(font_data);
-        if (!font.is_init()) {
+        m_font.init(std::move(font_data));
+        if (!m_font.is_init()) {
             ::logger.error("Failed to init font.");
             exit_fail();
         }
 
-
-        font.set_font_height_in_pixels(font_height);
-        font.set_glyph_padding_in_pixels(glyph_padding);
-
-
-        font_atlas_maker atlas_maker;
-
-        atlas_maker.add_null_codepoint(&font);
-        for (uint32 codepoint = 0; codepoint < 0xffff; ++codepoint) {
-            atlas_maker.add_font_codepoint(&font, codepoint);
+        m_font_atlas.begin_atlas();
+        for (uint32 codepoint = 0; codepoint < 0x80; ++codepoint) {
+            m_font_atlas.add_glyph_from(&m_font, codepoint, 64.0f, 8.0f);
         }
+        m_font_atlas.end_atlas();
 
-        auto atlas_size = atlas_maker.make_layout();
+        auto atlas_size = m_font_atlas.get_atlas_size();
 
-        std::vector<uint8> bitmap(atlas_size.width * atlas_size.height, 0);
+        std::vector<uint8>                   bitmap(atlas_size.width * atlas_size.height, 0);
+        tavros::ui::font_atlas::atlas_pixels pixels;
+        pixels.pixels = bitmap.data();
+        pixels.width = atlas_size.width;
+        pixels.height = atlas_size.height;
+        pixels.stride = atlas_size.width;
 
-        if (!atlas_maker.bake_atlas(bitmap, atlas_size.width, atlas_size.height)) {
+        if (!m_font_atlas.bake_atlas(pixels)) {
             ::logger.error("Failed to make atlas.");
             exit_fail();
         }
@@ -945,7 +806,20 @@ public:
         m_composer->submit_command_queue(cbuf);
 
         // Create SSBO
-        auto uv_data = atlas_maker.make_uv_data();
+
+        struct glyph_uv_data
+        {
+            tavros::math::vec2 min;
+            tavros::math::vec2 max;
+        };
+        std::vector<glyph_uv_data> uv_data;
+        uv_data.reserve(m_font_atlas.map().size());
+
+        uint32 index = 0;
+        for (auto& item : m_font_atlas.map()) {
+            auto& info = item.second;
+            uv_data.push_back({item.second.uv1, item.second.uv2});
+        }
 
         size_t                  uv_size = uv_data.size() * sizeof(glyph_uv_data);
         rhi::buffer_create_info uniform_buffer_desc{uv_size, rhi::buffer_usage::storage, rhi::buffer_access::cpu_to_gpu};
@@ -958,13 +832,23 @@ public:
         cbuf->wait_for_fence(m_fence);
         auto dst_uv = m_graphics_device->map_buffer(ssbo_uv);
         dst_uv.copy_from(uv_data.data(), uv_size);
-        m_graphics_device->unmap_buffer(m_stage_buffer);
+        m_graphics_device->unmap_buffer(ssbo_uv);
         cbuf->signal_fence(m_fence);
 
+        rhi::sampler_create_info sampler_info;
+        sampler_info.filter.mipmap_filter = rhi::mipmap_filter_mode::off;
+        sampler_info.filter.min_filter = rhi::filter_mode::linear;
+        sampler_info.filter.mag_filter = rhi::filter_mode::linear;
+
+        auto sampler = m_graphics_device->create_sampler(sampler_info);
+        if (!sampler) {
+            ::logger.fatal("Failed to create sdf sampler");
+            exit_fail();
+        }
 
         rhi::shader_binding_create_info shader_binding_info;
-        shader_binding_info.texture_bindings.push_back({texture, m_sampler, 0});
-        shader_binding_info.buffer_bindings.push_back({ssbo_uv, 0, 0, 0});
+        shader_binding_info.texture_bindings.push_back({texture, sampler, 0});
+        shader_binding_info.buffer_bindings.push_back({ssbo_uv, 0, 0, 1});
         auto sh_binding = m_graphics_device->create_shader_binding(shader_binding_info);
         if (!sh_binding) {
             ::logger.fatal("Failed to create shader binding pass");
@@ -1030,7 +914,7 @@ public:
         m_graphics_device->destroy_shader(fullscreen_quad_vertex_shader);
         m_graphics_device->destroy_shader(fullscreen_quad_fragment_shader);
 
-        m_stage_buffer = create_stage_buffer(1024 * 1024 * 16, rhi::buffer_access::cpu_to_gpu);
+        m_stage_buffer = create_stage_buffer(1024 * 1024 * 32, rhi::buffer_access::cpu_to_gpu);
 
         m_stage_upload_buffer = create_stage_buffer(1024 * 1024 * 64, rhi::buffer_access::gpu_to_cpu);
 
@@ -1151,14 +1035,14 @@ public:
         m_graphics_device->destroy_shader(mesh_rendering_fragment_shader);
 
 
-        rhi::buffer_create_info mesh_vertices_buffer_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::gpu_only};
+        rhi::buffer_create_info mesh_vertices_buffer_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::cpu_to_gpu};
         auto                    mesh_vertices_buffer = m_graphics_device->create_buffer(mesh_vertices_buffer_info);
         if (!mesh_vertices_buffer) {
             ::logger.fatal("Failed to create mesh vertices buffer");
             exit_fail();
         }
 
-        rhi::buffer_create_info mesh_indices_buffer_info{1024 * 128, rhi::buffer_usage::index, rhi::buffer_access::gpu_only};
+        rhi::buffer_create_info mesh_indices_buffer_info{1024 * 128, rhi::buffer_usage::index, rhi::buffer_access::cpu_to_gpu};
         auto                    mesh_indices_buffer = m_graphics_device->create_buffer(mesh_indices_buffer_info);
         if (!mesh_indices_buffer) {
             ::logger.fatal("Failed to create mesh indices buffer");
@@ -1180,21 +1064,15 @@ public:
             exit_fail();
         }
 
-        auto stage_map = m_graphics_device->map_buffer(m_stage_buffer);
-        stage_map.copy_from(app::cube_vertices, sizeof(app::cube_vertices));
-        stage_map.copy_from(app::cube_indices, sizeof(app::cube_indices), sizeof(app::cube_vertices));
-        m_graphics_device->unmap_buffer(m_stage_buffer);
+        auto verts_map = m_graphics_device->map_buffer(mesh_vertices_buffer);
+        verts_map.copy_from(app::cube_vertices, sizeof(app::cube_vertices));
+        m_graphics_device->unmap_buffer(mesh_vertices_buffer);
 
-
-        cbuf = m_composer->create_command_queue();
-        cbuf->wait_for_fence(m_fence);
-        cbuf->copy_buffer(m_stage_buffer, mesh_vertices_buffer, sizeof(app::cube_vertices), 0, 0);
-        cbuf->copy_buffer(m_stage_buffer, mesh_indices_buffer, sizeof(app::cube_indices), sizeof(app::cube_vertices), 0);
-        cbuf->signal_fence(m_fence);
-        m_composer->submit_command_queue(cbuf);
+        auto inds_map = m_graphics_device->map_buffer(mesh_indices_buffer);
+        inds_map.copy_from(app::cube_indices, sizeof(app::cube_indices));
+        m_graphics_device->unmap_buffer(mesh_indices_buffer);
 
         rhi::shader_binding_create_info mesh_shader_binding_info;
-        mesh_shader_binding_info.buffer_bindings.push_back({m_uniform_buffer, 0, sizeof(frame_data), 0});
         mesh_shader_binding_info.texture_bindings.push_back({m_texture, m_sampler, 0});
 
         m_mesh_shader_binding = m_graphics_device->create_shader_binding(mesh_shader_binding_info);
@@ -1233,11 +1111,11 @@ public:
         m_graphics_device->destroy_shader(world_grid_rendering_fragment_shader);
 
 
-        rhi::shader_binding_create_info world_grid_shader_binding_info;
-        world_grid_shader_binding_info.buffer_bindings.push_back({m_uniform_buffer, 0, sizeof(frame_data), 0});
+        rhi::shader_binding_create_info scene_shader_binding_info;
+        scene_shader_binding_info.buffer_bindings.push_back({m_uniform_buffer, 0, sizeof(frame_data), 0});
 
-        m_world_grid_shader_binding = m_graphics_device->create_shader_binding(world_grid_shader_binding_info);
-        if (!m_world_grid_shader_binding) {
+        m_scene_binding = m_graphics_device->create_shader_binding(scene_shader_binding_info);
+        if (!m_scene_binding) {
             ::logger.fatal("Failed to create world grid shader binding");
             exit_fail();
         }
@@ -1246,7 +1124,55 @@ public:
 
         show();
 
-        auto font_binding = load_font_data("fonts/pixels/BoldPixels.ttf");
+        m_font_shader_binding = load_font_data("fonts/Alice/Alice-Regular.ttf");
+
+        // SDF
+        auto sdf_font_vertex_shader = m_graphics_device->create_shader({sdf_font_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+        auto sdf_font_fragment_shader = m_graphics_device->create_shader({sdf_font_fragment_shader_source, rhi::shader_stage::fragment, "main"});
+
+        rhi::pipeline_create_info sdf_font_pipeline_info;
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 0});
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 1});
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 4});
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 5});
+        sdf_font_pipeline_info.shaders.push_back(sdf_font_vertex_shader);
+        sdf_font_pipeline_info.shaders.push_back(sdf_font_fragment_shader);
+        sdf_font_pipeline_info.depth_stencil.depth_test_enable = false;
+        sdf_font_pipeline_info.rasterizer.cull = rhi::cull_face::off;
+        sdf_font_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
+        sdf_font_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
+        sdf_font_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
+        sdf_font_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
+        sdf_font_pipeline_info.multisample.sample_shading_enabled = false;
+        sdf_font_pipeline_info.multisample.sample_count = 1;
+        sdf_font_pipeline_info.multisample.min_sample_shading = 0.0;
+
+        m_sdf_font_pipeline = m_graphics_device->create_pipeline(sdf_font_pipeline_info);
+        if (!m_sdf_font_pipeline) {
+            ::logger.fatal("Failed to create sdf font rendering pipeline");
+            exit_fail();
+        }
+
+        rhi::buffer_create_info font_instance_buffer_info{1024 * 1024, rhi::buffer_usage::vertex, rhi::buffer_access::cpu_to_gpu};
+        m_font_buffer_info = m_graphics_device->create_buffer(font_instance_buffer_info);
+        if (!m_font_buffer_info) {
+            ::logger.fatal("Failed to create font instance buffer");
+            exit_fail();
+        }
+
+        rhi::geometry_create_info font_instance_data_info;
+        font_instance_data_info.vertex_buffer_layouts.push_back({m_font_buffer_info, 0, sizeof(font_instance_info)});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::glyph_index), 1, rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 0});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::mat), 1, rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 1});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::color), 1, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 4});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::outline_color), 1, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 5});
+        font_instance_data_info.has_index_buffer = false;
+
+        m_font_geometry = m_graphics_device->create_geometry(font_instance_data_info);
+        if (!m_font_geometry) {
+            ::logger.fatal("Failed to create font geometry instance binding");
+            exit_fail();
+        }
     }
 
     void shutdown() override
@@ -1307,6 +1233,14 @@ public:
             if (m_current_buffer_output_index != 1) {
                 m_current_buffer_output_index = 1;
             }
+        }
+
+        if (m_input_manager.is_key_pressed(tavros::system::keys::k_minus)) {
+            m_font_height -= 2.0f;
+        }
+
+        if (m_input_manager.is_key_pressed(tavros::system::keys::k_equal)) {
+            m_font_height += 2.0f;
         }
 
         if (need_resize && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
@@ -1402,13 +1336,16 @@ public:
 
     void update_scene()
     {
+        auto w = static_cast<float>(m_current_frame_size.width);
+        auto h = static_cast<float>(m_current_frame_size.height);
         m_renderer_frame_data.view = m_camera.get_view_matrix();
         m_renderer_frame_data.perspective_projection = m_camera.get_projection_matrix();
         m_renderer_frame_data.view_projection = m_camera.get_view_projection_matrix();
         m_renderer_frame_data.inverse_view = tavros::math::inverse(m_camera.get_view_matrix());
         m_renderer_frame_data.inverse_projection = tavros::math::inverse(m_camera.get_projection_matrix());
-        m_renderer_frame_data.frame_width = static_cast<float>(m_current_frame_size.width);
-        m_renderer_frame_data.frame_height = static_cast<float>(m_current_frame_size.height);
+        m_renderer_frame_data.orto_projection = tavros::math::mat4::ortho(0.0f, w, h, 0.0f, 1.0f, -1.0f);
+        m_renderer_frame_data.frame_width = w;
+        m_renderer_frame_data.frame_height = h;
         m_renderer_frame_data.near_plane = m_camera.near_plane();
         m_renderer_frame_data.far_plane = m_camera.far_plane();
         m_renderer_frame_data.view_space_depth = m_camera.far_plane() - m_camera.near_plane();
@@ -1429,6 +1366,77 @@ public:
         uniform_buffer_data_map.copy_from(&m_renderer_frame_data, sizeof(m_renderer_frame_data));
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
+        // Update text
+
+        const char* text = "Hello, AVAWAT WAorld!;";
+        size_t      text_size = std::strlen(text);
+        const char* beg = text;
+        const char* tmp = text;
+        const char* end = text + text_size;
+        float       font_height_in_pixels = m_font_height; // Font height will be 120 pixels
+
+        std::vector<font_instance_info> instance_info;
+        auto                            aspect = m_camera.aspect();
+
+        tavros::math::vec2 pen = tavros::math::vec2(100.0f, m_current_frame_size.height - 100.0f);
+
+        auto cp_cur = extract_utf8_codepoint(beg, end, &beg);
+
+        while (beg < end) {
+            auto cp_next = extract_utf8_codepoint(beg, end, &beg);
+
+            auto it = m_font_atlas.map().find(cp_cur);
+            if (it == m_font_atlas.map().end()) {
+                it = m_font_atlas.map().find(0);
+                if (it == m_font_atlas.map().end()) {
+                    cp_cur = cp_next;
+                    continue;
+                }
+            }
+
+            const auto& g = it->second.metrics;
+
+            float font_scale = 2.0f * font_height_in_pixels;
+
+            if (cp_cur == ' ') {
+                pen.x += (g.advance_x * font_scale);
+                cp_cur = cp_next;
+                continue;
+            }
+
+            font_instance_info inst_info{};
+            inst_info.glyph_index = it->second.serial_index;
+
+            inst_info.color = tavros::math::vec3(1.0f);
+            inst_info.outline_color = tavros::math::vec3(1.0f, 0.0f, 0.0f);
+
+            // Размер quad’a
+            auto pad = it->second.sdf_padding / it->second.glyph_scale * font_scale;
+            inst_info.mat[0][0] = g.width * font_scale + pad * 2;
+            inst_info.mat[1][1] = g.height * font_scale + pad * 2;
+            // inst_info.mat[1][0] = -g.height * font_scale / 4.0f;
+
+            // Позиция quad’a (учитываем bearing)
+            inst_info.mat[2][0] = pen.x + g.bearing_x * font_scale - pad;
+            inst_info.mat[2][1] = pen.y - pad - (g.height - g.bearing_y) * font_scale; // bearing_y от baseline вверх
+
+            instance_info.push_back(inst_info);
+
+            // === advance & kerning ===
+            float kern = 0.0f;
+            if (auto it_next = m_font_atlas.map().find(cp_next); it_next != m_font_atlas.map().end()) {
+                kern = it->second.font->get_kerning(it->second.glyph, it_next->second.glyph) * 2.0;
+            }
+
+            pen.x += (g.advance_x + kern) * font_scale;
+
+            cp_cur = cp_next;
+        }
+
+        size_t size = instance_info.size() * sizeof(font_instance_info);
+        auto   map_data = m_graphics_device->map_buffer(m_font_buffer_info, 0, size);
+        map_data.copy_from(instance_info.data(), size);
+        m_graphics_device->unmap_buffer(m_font_buffer_info);
 
         auto* cbuf = m_composer->create_command_queue();
         m_composer->begin_frame();
@@ -1441,13 +1449,22 @@ public:
         // Draw cube
         cbuf->bind_pipeline(m_mesh_rendering_pipeline);
         cbuf->bind_geometry(m_mesh_geometry);
+        cbuf->bind_shader_binding(m_scene_binding);
         cbuf->bind_shader_binding(m_mesh_shader_binding);
         cbuf->draw_indexed(6 * 6);
 
         // Draw world grid
         cbuf->bind_pipeline(m_world_grid_rendering_pipeline);
-        cbuf->bind_shader_binding(m_world_grid_shader_binding);
+        cbuf->bind_shader_binding(m_scene_binding);
         cbuf->draw(4);
+
+
+        cbuf->bind_pipeline(m_sdf_font_pipeline);
+        cbuf->bind_shader_binding(m_font_shader_binding);
+        cbuf->bind_shader_binding(m_scene_binding);
+        cbuf->bind_geometry(m_font_geometry);
+        cbuf->draw(4, 0, text_size, 0);
+
 
         cbuf->end_render_pass();
 
@@ -1507,6 +1524,8 @@ public:
     }
 
 private:
+    float m_font_height = 100.0f;
+
     tavros::core::mallocator                       m_allocator;
     tavros::core::unique_ptr<rhi::graphics_device> m_graphics_device;
     rhi::frame_composer*                           m_composer = nullptr;
@@ -1518,18 +1537,22 @@ private:
     rhi::pipeline_handle       m_fullscreen_quad_pipeline;
     rhi::pipeline_handle       m_mesh_rendering_pipeline;
     rhi::pipeline_handle       m_world_grid_rendering_pipeline;
+    rhi::pipeline_handle       m_sdf_font_pipeline;
     rhi::render_pass_handle    m_main_pass;
     rhi::shader_binding_handle m_shader_binding;
     rhi::shader_binding_handle m_mesh_shader_binding;
-    rhi::shader_binding_handle m_world_grid_shader_binding;
+    rhi::shader_binding_handle m_scene_binding;
     rhi::shader_binding_handle m_color_shader_binding;
     rhi::shader_binding_handle m_depth_stencil_shader_binding;
+    rhi::shader_binding_handle m_font_shader_binding;
     rhi::texture_handle        m_texture;
     rhi::buffer_handle         m_stage_buffer;
     rhi::buffer_handle         m_stage_upload_buffer;
     rhi::sampler_handle        m_sampler;
     rhi::buffer_handle         m_uniform_buffer;
+    rhi::buffer_handle         m_font_buffer_info;
     rhi::geometry_handle       m_mesh_geometry;
+    rhi::geometry_handle       m_font_geometry;
     rhi::fence_handle          m_fence;
 
     uint32 m_current_buffer_output_index = 0;
@@ -1548,6 +1571,7 @@ private:
         tavros::math::mat4 view_projection;
         tavros::math::mat4 inverse_view;
         tavros::math::mat4 inverse_projection;
+        tavros::math::mat4 orto_projection;
 
         float frame_width = 0.0f;
         float frame_height = 0.0f;
@@ -1560,6 +1584,9 @@ private:
     };
 
     frame_data m_renderer_frame_data;
+
+    tavros::ui::truetype_font m_font;
+    tavros::ui::font_atlas    m_font_atlas;
 };
 
 int main()
