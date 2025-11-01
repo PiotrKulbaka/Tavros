@@ -261,6 +261,8 @@ namespace tavros::renderer::rhi
 
         init_limits();
 
+        GL_CALL(glEnable(GL_PROGRAM_POINT_SIZE));
+
         frame_composer_handle handle = m_resources.create(gl_composer{info, std::move(composer)});
         ::logger.debug("Frame composer {} created", handle);
         return handle;
