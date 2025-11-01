@@ -21,6 +21,9 @@ namespace tavros::math
         /// @brief Constructs all components with the same value
         constexpr vec3(float v) noexcept;
 
+        /// @brief Constructs a vec2 and z component
+        constexpr vec3(vec2 v, float z) noexcept;
+
         /// @brief Constructs a vec3 from individual components
         constexpr vec3(float x, float y, float z) noexcept;
 

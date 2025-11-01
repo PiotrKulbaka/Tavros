@@ -21,6 +21,12 @@ namespace tavros::math
         /// @brief Constructs all components with the same value
         constexpr vec4(float v) noexcept;
 
+        /// @brief Constructs a vec2 and z, w components
+        constexpr vec4(vec2 v, float z, float w) noexcept;
+
+        /// @brief Constructs a vec3 and w component
+        constexpr vec4(vec3 v, float w) noexcept;
+
         /// @brief Constructs a vec4 from individual components
         constexpr vec4(float x, float y, float z, float w) noexcept;
 
@@ -80,6 +86,8 @@ namespace tavros::math
     };
 
 #pragma warning(pop)
+
+    using color = vec4;
 
     constexpr vec4 operator-(const vec4& v) noexcept;
     constexpr vec4 operator+(const vec4& a, const vec4& b) noexcept;

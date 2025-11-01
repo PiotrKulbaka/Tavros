@@ -7,4 +7,5 @@
 #include <tavros/core/geometry/sphere.hpp>
 #include <tavros/core/geometry/aabb2.hpp>
 #include <tavros/core/geometry/aabb3.hpp>
+#include <tavros/core/geometry/obb2.hpp>
 #include <tavros/core/geometry/obb3.hpp>

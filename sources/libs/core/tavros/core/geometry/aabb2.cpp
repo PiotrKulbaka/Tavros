@@ -20,6 +20,12 @@ aabb2::aabb2(const math::vec2& min_point, const math::vec2& max_point) noexcept
 {
 }
 
+aabb2::aabb2(float left, float top, float right, float bottom) noexcept
+    : min(left, top)
+    , max(right, bottom)
+{
+}
+
 math::vec2 aabb2::center() const noexcept
 {
     return (min + max) * 0.5f;

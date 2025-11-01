@@ -27,9 +27,16 @@ namespace tavros::geometry
     class obb3
     {
     public:
-        constexpr obb3() noexcept;
+        constexpr obb3() noexcept = default;
 
-        constexpr obb3(const math::vec3& forward, const math::vec3& right, const math::vec3& up, const math::vec3& center, const math::vec3& half_extents) noexcept;
+        constexpr obb3(const math::vec3& center, const math::vec3& forward, const math::vec3& right, const math::vec3& up, const math::vec3& half_extents) noexcept
+            : center(center)
+            , forward(forward)
+            , right(right)
+            , up(up)
+            , half_extents(half_extents)
+        {
+        }
 
         /**
          * @brief Checks if a point is inside the OBB.
@@ -40,9 +47,11 @@ namespace tavros::geometry
         bool contains_point(const math::vec3& point) const noexcept;
 
     public:
-        math::vec3 center;      // Center of the OBB
-        math::vec3 axes[3];     // The three axes (directions) of the OBB
-        math::vec3 halfExtents; // Half-extents along each of the axes
+        math::vec3 center; // Center of the OBB
+        math::vec3 forward;
+        math::vec3 right;
+        math::vec3 up;
+        math::vec3 half_extents; // Half-extents along each of the axes
     };
 
 } // namespace tavros::geometry

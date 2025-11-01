@@ -23,6 +23,15 @@ namespace tavros::geometry
         aabb2(const math::vec2& min_point, const math::vec2& max_point) noexcept;
 
         /**
+         * @brief Constructs AABB from two corner points.
+         * @param left side.
+         * @param top side.
+         * @param right side.
+         * @param bottom side.
+         */
+        aabb2(float left, float top, float right, float bottom) noexcept;
+
+        /**
          * @brief Returns the center point of the AABB.
          */
         math::vec2 center() const noexcept;
