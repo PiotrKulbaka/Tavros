@@ -673,8 +673,9 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::draw_indexed(uint32 index_count, uint32 first_index, uint32 vertex_offset, uint32 instance_count, uint32 first_instance)
     {
-        // TODO: unused vertex_offset
-        TAV_UNUSED(vertex_offset);
+        if (index_count == 0 || instance_count == 0) {
+            return;
+        }
 
         auto* p = m_device->get_resources()->try_get(m_current_pipeline);
         if (!p) {
@@ -707,22 +708,25 @@ namespace tavros::renderer::rhi
         auto  gl_index_count = static_cast<GLsizei>(index_count);
         auto  gl_instance_count = static_cast<GLsizei>(instance_count);
         auto  gl_first_instance = static_cast<GLuint>(first_instance);
+        auto  gl_vertex_offset = static_cast<GLint>(vertex_offset);
 
         if (instance_count > 1 || first_instance > 0) {
-            GL_CALL(glDrawElementsInstancedBaseInstance(
+            GL_CALL(glDrawElementsInstancedBaseVertexBaseInstance(
                 gl_topology,
                 gl_index_count,
                 gl_index_format.type,
                 gl_index_offset,
                 gl_instance_count,
+                gl_vertex_offset,
                 gl_first_instance
             ));
         } else if (instance_count == 1) {
-            GL_CALL(glDrawElements(
+            GL_CALL(glDrawElementsBaseVertex(
                 gl_topology,
                 gl_index_count,
                 gl_index_format.type,
-                gl_index_offset
+                gl_index_offset,
+                gl_vertex_offset
             ));
         } else {
             ::logger.warning("Failed to draw indexed: instance count {} must be at least 1", fmt::styled_param(instance_count));

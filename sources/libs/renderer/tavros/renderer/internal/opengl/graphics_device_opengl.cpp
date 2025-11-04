@@ -840,12 +840,12 @@ namespace tavros::renderer::rhi
         }
 
         if (total_gl_attributes != info.attributes.size()) {
-            ::logger.error(
-                "Failed to create pipeline: mismach attributes size. Provided {}, expected {}",
+            ::logger.warning(
+                "Pipeline creation: mismach attributes size. Provided {}, expected {}",
                 fmt::styled_param(info.attributes.size()),
                 fmt::styled_param(total_gl_attributes)
             );
-            return {};
+            // return {};
         }
 
 

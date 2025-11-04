@@ -20,6 +20,8 @@
 #include <tavros/renderer/rhi/shader_binding_create_info.hpp>
 #include <tavros/renderer/rhi/shader_create_info.hpp>
 
+#include <type_traits>
+
 namespace tavros::renderer::rhi
 {
 
@@ -257,6 +259,50 @@ namespace tavros::renderer::rhi
          * @param buffer Buffer handle to unmap.
          */
         virtual void unmap_buffer(buffer_handle buffer) = 0;
+
+        /**
+         * @brief Safely destroys a GPU resource handle.
+         *
+         * Invokes the appropriate destroy function for the given handle type and resets the handle
+         * to an invalid state.
+         *
+         * @param h Reference to the handle to destroy.
+         */
+        template<class T>
+        void safe_destroy(T& h)
+        {
+            if (!h.valid()) {
+                return;
+            }
+
+            if constexpr (std::is_same_v<T, frame_composer_handle>) {
+                destroy_frame_composer(h);
+            } else if constexpr (std::is_same_v<T, sampler_handle>) {
+                destroy_sampler(h);
+            } else if constexpr (std::is_same_v<T, texture_handle>) {
+                destroy_texture(h);
+            } else if constexpr (std::is_same_v<T, pipeline_handle>) {
+                destroy_pipeline(h);
+            } else if constexpr (std::is_same_v<T, framebuffer_handle>) {
+                destroy_framebuffer(h);
+            } else if constexpr (std::is_same_v<T, buffer_handle>) {
+                destroy_buffer(h);
+            } else if constexpr (std::is_same_v<T, geometry_handle>) {
+                destroy_geometry(h);
+            } else if constexpr (std::is_same_v<T, render_pass_handle>) {
+                destroy_render_pass(h);
+            } else if constexpr (std::is_same_v<T, shader_binding_handle>) {
+                destroy_shader_binding(h);
+            } else if constexpr (std::is_same_v<T, shader_handle>) {
+                destroy_shader(h);
+            } else if constexpr (std::is_same_v<T, fence_handle>) {
+                destroy_fence(h);
+            } else {
+                static_assert(false, "safe_destroy not implemented for this handle type");
+            }
+
+            h = {};
+        }
     };
 
 } // namespace tavros::renderer::rhi
