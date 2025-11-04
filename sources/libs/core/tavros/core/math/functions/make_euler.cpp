@@ -14,7 +14,7 @@ namespace tavros::math
         auto pitch = atan2(sinr_cosp, cosr_cosp);
 
         auto sinp = 2.0f * (q.w * q.y - q.z * q.x);
-        auto yaw = abs(sinp) >= 1.0f ? copysignf(k_half_pi, sinp) : asin(sinp);
+        auto yaw = abs(sinp) >= 1.0f ? copysignf(k_half_pi<float>, sinp) : asin(sinp);
 
         auto siny_cosp = 2.0f * (q.w * q.z + q.x * q.y);
         auto cosy_cosp = 1.0f - 2.0f * (q.y * q.y + q.z * q.z);

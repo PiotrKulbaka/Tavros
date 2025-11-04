@@ -39,6 +39,16 @@ namespace tavros::math
         return make_ortho(left, right, bottom, top, z_near, z_far);
     }
 
+    inline mat4 mat4::scale_translate(const vec3& scale, const vec3& translate)
+    {
+        return mat4(
+            scale.x, 0.0f, 0.0f, 0.0f,
+            0.0f, scale.y, 0.0f, 0.0f,
+            0.0f, 0.0f, scale.z, 0.0f,
+            translate.x, translate.y, translate.z, 1.0f
+        );
+    }
+
     inline constexpr mat4::mat4() noexcept
         : mat4(0.0f)
     {

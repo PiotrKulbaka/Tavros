@@ -45,7 +45,7 @@ namespace tavros::math
         }
         if (dot_val <= -1.0f + k_epsilon6) {
             auto axis = normalize(orthogonal(from));
-            return quat::from_axis_angle(axis, k_pi);
+            return quat::from_axis_angle(axis, k_pi<float>);
         }
         auto axis = cross(from, to);
         auto s = sqrt((1.0f + dot_val) * 2.0f);

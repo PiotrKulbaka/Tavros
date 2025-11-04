@@ -10,9 +10,15 @@ namespace tavros::math
 
     constexpr float k_epsilon5 = 1e-5f;
     constexpr float k_epsilon6 = 1e-6f;
-    constexpr float k_pi = 3.1415926535897932384626433832795f;
-    constexpr float k_two_pi = static_cast<float>(2.0 * k_pi);
-    constexpr float k_half_pi = static_cast<float>(k_pi / 2.0);
+
+    template<typename T>
+    constexpr T k_pi = static_cast<T>(3.14159265358979323846264338327950288L);
+    template<typename T>
+    constexpr T k_phi = static_cast<T>(1.61803398874989484820458683436563811L);
+    template<typename T>
+    constexpr T k_two_pi = static_cast<T>(2.0L) * k_pi<T>;
+    template<typename T>
+    constexpr T k_half_pi = k_pi<T> * static_cast<T>(0.5L);
 
     [[nodiscard]] inline float sin(float rad) noexcept
     {
@@ -142,21 +148,21 @@ namespace tavros::math
 
     [[nodiscard]] inline float wrap_angle(float angle) noexcept
     {
-        angle = std::fmod(angle + k_pi, k_two_pi);
+        angle = std::fmod(angle + k_pi<float>, k_two_pi<float>);
         if (angle < 0.0f) {
-            angle += k_two_pi;
+            angle += k_two_pi<float>;
         }
-        return angle - k_pi;
+        return angle - k_pi<float>;
     }
 
     [[nodiscard]] inline constexpr float rad_to_deg(float rad)
     {
-        return rad * 180.0f / k_pi;
+        return rad * 180.0f / k_pi<float>;
     }
 
     [[nodiscard]] inline constexpr float deg_to_rad(float rad)
     {
-        return rad * k_pi / 180.0f;
+        return rad * k_pi<float> / 180.0f;
     }
 
     inline uint32 mip_levels(uint32 width) noexcept
