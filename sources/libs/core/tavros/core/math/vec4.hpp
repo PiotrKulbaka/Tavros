@@ -21,8 +21,14 @@ namespace tavros::math
         /// @brief Constructs all components with the same value
         constexpr vec4(float v) noexcept;
 
+        /// @brief Constructs a vec2 and 0.0f as z and w components
+        constexpr vec4(vec2 v) noexcept;
+
         /// @brief Constructs a vec2 and z, w components
         constexpr vec4(vec2 v, float z, float w) noexcept;
+
+        /// @brief Constructs a vec2 and 0.0f as w component
+        constexpr vec4(vec3 v) noexcept;
 
         /// @brief Constructs a vec3 and w component
         constexpr vec4(vec3 v, float w) noexcept;

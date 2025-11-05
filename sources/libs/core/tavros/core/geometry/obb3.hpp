@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/math/vec3.hpp>
+#include <tavros/core/math/mat4.hpp>
 
 namespace tavros::geometry
 {
@@ -45,6 +46,23 @@ namespace tavros::geometry
          * @return true if the point is inside the OBB, false otherwise.
          */
         bool contains_point(const math::vec3& point) const noexcept;
+
+        /**
+         * @brief Converts the OBB to a transformation matrix.
+         *
+         * Builds a 4x4 matrix that represents the oriented bounding box in world space.
+         *
+         * @return A 4x4 transformation matrix representing this OBB.
+         */
+        math::mat4 to_mat() const noexcept
+        {
+            return math::mat4(
+                math::vec4(forward * half_extents.x),
+                math::vec4(right * half_extents.y),
+                math::vec4(up * half_extents.z),
+                math::vec4(center, 1.0f)
+            );
+        }
 
     public:
         math::vec3 center; // Center of the OBB

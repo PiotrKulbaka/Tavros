@@ -22,11 +22,27 @@ namespace tavros::math
     {
     }
 
+    inline constexpr vec4::vec4(vec2 v) noexcept
+        : x(v.x)
+        , y(v.y)
+        , z(0.0f)
+        , w(0.0f)
+    {
+    }
+
     inline constexpr vec4::vec4(vec2 v, float z, float w) noexcept
         : x(v.x)
         , y(v.y)
         , z(z)
         , w(w)
+    {
+    }
+
+    inline constexpr vec4::vec4(vec3 v) noexcept
+        : x(v.x)
+        , y(v.y)
+        , z(v.z)
+        , w(0.0f)
     {
     }
 

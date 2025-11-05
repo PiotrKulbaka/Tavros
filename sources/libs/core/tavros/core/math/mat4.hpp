@@ -47,6 +47,7 @@ namespace tavros::math
         /// @brief Construct a right-hand otho matrix
         static mat4 ortho(float left, float right, float bottom, float top, float z_near, float z_far) noexcept;
 
+        /// @brief Construct scale transpose matrix
         static mat4 scale_translate(const vec3& scale, const vec3& translate);
 
     public:

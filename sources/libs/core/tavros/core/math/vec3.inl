@@ -20,6 +20,13 @@ namespace tavros::math
     {
     }
 
+    inline constexpr vec3::vec3(vec2 v) noexcept
+        : x(v.x)
+        , y(v.y)
+        , z(0.0f)
+    {
+    }
+
     inline constexpr vec3::vec3(vec2 v, float z) noexcept
         : x(v.x)
         , y(v.y)
