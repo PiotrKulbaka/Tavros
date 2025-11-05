@@ -9,57 +9,48 @@
 namespace tavros::renderer
 {
 
-    class debug_renderer
+    class debug_renderer : core::noncopyable
     {
     public:
+        enum class draw_mode
+        {
+            points,
+            edges,
+            faces,
+        };
+
         debug_renderer();
         ~debug_renderer();
 
         void init(rhi::graphics_device* gdevice);
         void shutdown();
 
-        void begin_frame(const math::mat4& orto_view_proj, const math::mat4& persp_view_proj);
+        void set_point_size(float size);
+
+        void begin_frame(const math::mat4& view_orto_proj, const math::mat4& view_persp_proj);
         void end_frame();
 
-        void draw_point2d(math::vec2 p, float point_size, math::color color);
-        void draw_line2d(math::vec2 p1, math::vec2 p2, math::color color);
-        void draw_line2d(math::vec2 p1, math::color color1, math::vec2 p2, math::color color2);
-        void draw_bezier_curve2d(const math::vec2& start, const math::vec2& p2, const math::vec2& p3, const math::vec2& finish, uint32 segments, const math::color& color_start, const math::color& color_finish, bool draw_edges = false, float segment_point_size = 0.0f);
-        void draw_box2d(geometry::aabb2 rect, math::color color);
-        void fill_box2d(geometry::aabb2 rect, math::color color);
-        void draw_oriented_box2d(geometry::obb2 box, math::color color);
-        void fill_oriented_box2d(geometry::obb2 box, math::color color);
+        void point2d(math::vec2 p, float point_size, math::color color);
+        void line2d(math::vec2 p1, math::vec2 p2, math::color color);
+        void line2d(math::vec2 p1, math::color color1, math::vec2 p2, math::color color2);
+        void bezier_curve2d(const math::vec2& start, const math::vec2& p2, const math::vec2& p3, const math::vec2& finish, uint32 segments, const math::color& color_start, const math::color& color_finish, bool draw_edges = false, float segment_point_size = 0.0f);
+        void tri2d(math::vec2 p1, math::vec2 p2, math::vec2 p3, math::color color, draw_mode mode = draw_mode::faces);
+        void box2d(geometry::aabb2 rect, math::color color, draw_mode mode = draw_mode::faces);
+        void oriented_box2d(geometry::obb2 box, math::color color, draw_mode mode = draw_mode::faces);
 
-        void draw_point3d(const math::vec3& p, float point_size, const math::color& color);
-        void draw_line3d(const math::vec3& p1, const math::vec3& p2, const math::color& color);
-        void draw_line3d(const math::vec3& p1, const math::color& color1, const math::vec3& p2, const math::color& color2);
-        void draw_bezier_curve3d(const math::vec3& start, const math::vec3& p2, const math::vec3& p3, const math::vec3& finish, uint32 segments, const math::color& color_start, const math::color& color_finish, bool draw_edges = false, float segment_point_size = 0.0f);
-        void draw_box3d(const geometry::aabb3& box, const math::color& color);
-        void fill_box3d(const geometry::aabb3& box, const math::color& color);
-        void draw_oriented_box3d(const geometry::obb3& box, const math::color& color);
-        void fill_oriented_box3d(const geometry::obb3& box, const math::color& color);
-
-        void fill_sphere(const math::vec3& center, float radius, const math::color& color);
+        void point3d(const math::vec3& p, float point_size, const math::color& color);
+        void line3d(const math::vec3& p1, const math::vec3& p2, const math::color& color);
+        void line3d(const math::vec3& p1, const math::color& color1, const math::vec3& p2, const math::color& color2);
+        void bezier_curve3d(const math::vec3& start, const math::vec3& p2, const math::vec3& p3, const math::vec3& finish, uint32 segments, const math::color& color_start, const math::color& color_finish, bool draw_edges = false, float segment_point_size = 0.0f);
+        void tri3d(math::vec3 p1, math::vec3 p2, math::vec3 p3, math::color color, draw_mode mode = draw_mode::faces);
+        void box3d(const geometry::aabb3& box, const math::color& color, draw_mode mode = draw_mode::faces);
+        void oriented_box3d(const geometry::obb3& box, const math::color& color, draw_mode mode = draw_mode::faces);
+        void sphere3d(const geometry::sphere& sph, const math::color& color, draw_mode mode = draw_mode::faces);
 
         void update();
         void render(rhi::command_queue* cmds);
 
     private:
-        bool create_shader_bindings();
-        bool create_pipelines();
-        bool create_static_geom();
-        bool create_batch_geom();
-
-        void destroy_all();
-
-        void push_line2d(const math::vec3& p1, const math::vec3& p2, const math::color& color);
-        void push_quad2d(const math::vec3& p1, const math::vec3& p2, const math::vec3& p3, const math::vec3& p4, const math::color& color);
-
-        void push_line3d(const math::vec3& p1, const math::vec3& p2, const math::color& color);
-        void push_tri3d(const math::vec3& p1, const math::vec3& p2, const math::vec3& p3, const math::color& color);
-        void push_quad3d(const math::vec3& p1, const math::vec3& p2, const math::vec3& p3, const math::vec3& p4, const math::color& color);
-
-
         struct mesh_view
         {
             uint32 first_vertex = 0;
@@ -67,40 +58,67 @@ namespace tavros::renderer
             uint32 first_index = 0;
             uint32 index_count = 0;
             uint32 instance_count = 0;
+            uint32 first_instance = 0;
         };
 
+        void draw(rhi::command_queue* cmds, const mesh_view& mesh);
+
+        bool create_shader_bindings();
+        bool create_pipelines();
+        bool create_static_geom();
+        bool create_batch_geom();
+
+        void destroy_all();
 
     private:
-        struct vert3d_pos_norm
+        struct xyz_norm_t
         {
             math::vec3 pos;
             math::vec3 norm;
         };
 
-        struct vert3d_instance_data
+        struct instance_data_t
         {
-            math::vec4 color;
-            math::mat4 model;
+            math::color color;
+            math::mat4  model;
         };
 
-        struct vert3d_params
+        struct xyz_sz_cl_t
         {
             math::vec3  pos;
             float       point_size = 1.0f;
             math::color color;
         };
 
-        core::vector<vert3d_params> m_points2d;
-        core::vector<vert3d_params> m_lines2d;
-        core::vector<vert3d_params> m_tris2d;
-        core::vector<vert3d_params> m_points3d;
-        core::vector<vert3d_params> m_lines3d;
-        core::vector<vert3d_params> m_tris3d;
+        core::vector<xyz_sz_cl_t> m_points2d;
+        core::vector<xyz_sz_cl_t> m_lines2d;
+        core::vector<xyz_sz_cl_t> m_tris2d;
+        core::vector<xyz_sz_cl_t> m_points3d;
+        core::vector<xyz_sz_cl_t> m_lines3d;
+        core::vector<xyz_sz_cl_t> m_tris3d;
 
-        core::vector<vert3d_instance_data> m_spheres;
+        core::vector<instance_data_t> m_spheres;
+        core::vector<instance_data_t> m_sphere_wireframes;
+        core::vector<instance_data_t> m_cubes;
 
-        math::mat4 m_orto;
-        math::mat4 m_persp;
+        struct scene_t
+        {
+            math::mat4 proj;
+        };
+
+        struct memory_layout_t
+        {
+            size_t offset = 0;
+            size_t size = 0;
+        };
+
+        memory_layout_t m_2d_scene_mem_layout;
+        scene_t         m_2d_scene;
+
+        memory_layout_t m_3d_scene_mem_layout;
+        scene_t         m_3d_scene;
+
+        float m_point_size;
 
         rhi::graphics_device* m_gdevice;
         bool                  m_gpu_resources_created = false;
@@ -123,6 +141,7 @@ namespace tavros::renderer
         // Meshes draw info
         mesh_view m_draw_cube_mesh_info;
         mesh_view m_draw_icosphere_mesh_info;
+        mesh_view m_draw_icosphere_wireframe_info;
         mesh_view m_draw_points3d_info;
         mesh_view m_draw_lines3d_info;
         mesh_view m_draw_tris3d_info;
