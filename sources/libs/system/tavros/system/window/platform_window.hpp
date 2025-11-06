@@ -2,6 +2,7 @@
 
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/math/ivec2.hpp>
+#include <tavros/core/string_view.hpp>
 
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/core/nonmovable.hpp>

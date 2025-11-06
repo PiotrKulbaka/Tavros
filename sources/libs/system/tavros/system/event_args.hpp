@@ -2,10 +2,14 @@
 
 #include <tavros/core/math/vec2.hpp>
 #include <tavros/core/math/ivec2.hpp>
-#include <tavros/system/keys.hpp>
+#include <tavros/input/keyboard_key.hpp>
+#include <tavros/input/mouse_button.hpp>
 
 namespace tavros::system
 {
+
+    using mouse_button = input::mouse_button;
+    using keyboard_key = input::keyboard_key;
 
     /**
      * @brief Contains information about a mouse event.
@@ -25,11 +29,11 @@ namespace tavros::system
      */
     struct key_event_args
     {
-        uint64 event_time_us = 0;       /// Event timestamp in microseconds (use application::highp_time_us() for current time).
-        keys   key = keys::none;        /// Key associated with the event; 'none' for on_key_press.
-        bool   is_prev_pressed = false; /// True if the key was pressed previously.
-        uint16 repeats = 0;             /// Number of repeated presses.
-        int32  key_char = 0;            /// Unicode character code (valid only for on_key_press).
+        uint64       event_time_us = 0;        /// Event timestamp in microseconds (use application::highp_time_us() for current time).
+        keyboard_key key = keyboard_key::none; /// Key associated with the event; 'none' for on_key_press.
+        bool         is_prev_pressed = false;  /// True if the key was pressed previously.
+        uint16       repeats = 0;              /// Number of repeated presses.
+        int32        key_char = 0;             /// Unicode character code (valid only for on_key_press).
     };
 
     /**

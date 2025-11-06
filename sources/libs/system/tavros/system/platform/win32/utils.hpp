@@ -1,7 +1,6 @@
 #pragma once
 
 #include <tavros/system/event_args.hpp>
-#include <tavros/system/keys.hpp>
 
 #include <tavros/core/math/ivec2.hpp>
 
@@ -14,7 +13,7 @@ namespace tavros::system
     uint64 get_high_precision_system_time_us();
 
     const char*      wm_message_to_str(UINT msg);
-    keys             map_key(UINT vk);
+    keyboard_key     map_key(UINT vk);
     const char*      last_win_error_str(); // do not store a pointer to the str
     math::ipoint2    create_point2(LPARAM lParam);
     math::isize2     create_size2(LPARAM lParam);

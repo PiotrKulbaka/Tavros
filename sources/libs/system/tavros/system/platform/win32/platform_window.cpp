@@ -528,7 +528,7 @@ namespace tavros::system::win32
 
         case WM_SYSKEYDOWN:
             kargs = create_key_event_args(wParam, lParam);
-            if (kargs.key == keys::k_F4) {
+            if (kargs.key == keyboard_key::k_F4) {
                 close();
             } else {
                 if (auto* c = m_cb_listener) {

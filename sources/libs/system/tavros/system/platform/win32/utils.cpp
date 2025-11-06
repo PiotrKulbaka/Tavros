@@ -516,247 +516,247 @@ const char* tavros::system::wm_message_to_str(UINT msg)
     }
 }
 
-tavros::system::keys tavros::system::map_key(UINT vk)
+tavros::system::keyboard_key tavros::system::map_key(UINT vk)
 {
     switch (vk) {
     case VK_LBUTTON:
-        return keys::k_lbutton;
+        return keyboard_key::k_lbutton;
     case VK_RBUTTON:
-        return keys::k_rbutton;
+        return keyboard_key::k_rbutton;
     case VK_MBUTTON:
-        return keys::k_mbutton;
+        return keyboard_key::k_mbutton;
     case VK_XBUTTON1:
-        return keys::k_xbutton1;
+        return keyboard_key::k_xbutton1;
     case VK_XBUTTON2:
-        return keys::k_xbutton2;
+        return keyboard_key::k_xbutton2;
     case VK_BACK:
-        return keys::k_backspace;
+        return keyboard_key::k_backspace;
     case VK_TAB:
-        return keys::k_tab;
+        return keyboard_key::k_tab;
     case VK_RETURN:
-        return keys::k_enter;
+        return keyboard_key::k_enter;
     case VK_PAUSE:
-        return keys::k_pause;
+        return keyboard_key::k_pause;
     case VK_CAPITAL:
-        return keys::k_capslock;
+        return keyboard_key::k_capslock;
     case VK_ESCAPE:
-        return keys::k_escape;
+        return keyboard_key::k_escape;
     case VK_SPACE:
-        return keys::k_space;
+        return keyboard_key::k_space;
     case VK_PRIOR:
-        return keys::k_pageup;
+        return keyboard_key::k_pageup;
     case VK_NEXT:
-        return keys::k_pagedown;
+        return keyboard_key::k_pagedown;
     case VK_END:
-        return keys::k_end;
+        return keyboard_key::k_end;
     case VK_HOME:
-        return keys::k_home;
+        return keyboard_key::k_home;
     case VK_LEFT:
-        return keys::k_left;
+        return keyboard_key::k_left;
     case VK_UP:
-        return keys::k_up;
+        return keyboard_key::k_up;
     case VK_RIGHT:
-        return keys::k_right;
+        return keyboard_key::k_right;
     case VK_DOWN:
-        return keys::k_down;
+        return keyboard_key::k_down;
     case VK_PRINT:
-        return keys::k_print;
+        return keyboard_key::k_print;
     case VK_SNAPSHOT:
-        return keys::k_print_screen;
+        return keyboard_key::k_print_screen;
     case VK_INSERT:
-        return keys::k_insert;
+        return keyboard_key::k_insert;
     case VK_DELETE:
-        return keys::k_delete;
+        return keyboard_key::k_delete;
     case VK_HELP:
-        return keys::k_help;
+        return keyboard_key::k_help;
     case '0':
-        return keys::k_0;
+        return keyboard_key::k_0;
     case '1':
-        return keys::k_1;
+        return keyboard_key::k_1;
     case '2':
-        return keys::k_2;
+        return keyboard_key::k_2;
     case '3':
-        return keys::k_3;
+        return keyboard_key::k_3;
     case '4':
-        return keys::k_4;
+        return keyboard_key::k_4;
     case '5':
-        return keys::k_5;
+        return keyboard_key::k_5;
     case '6':
-        return keys::k_6;
+        return keyboard_key::k_6;
     case '7':
-        return keys::k_7;
+        return keyboard_key::k_7;
     case '8':
-        return keys::k_8;
+        return keyboard_key::k_8;
     case '9':
-        return keys::k_9;
+        return keyboard_key::k_9;
     case 'A':
-        return keys::k_A;
+        return keyboard_key::k_A;
     case 'B':
-        return keys::k_B;
+        return keyboard_key::k_B;
     case 'C':
-        return keys::k_C;
+        return keyboard_key::k_C;
     case 'D':
-        return keys::k_D;
+        return keyboard_key::k_D;
     case 'E':
-        return keys::k_E;
+        return keyboard_key::k_E;
     case 'F':
-        return keys::k_F;
+        return keyboard_key::k_F;
     case 'G':
-        return keys::k_G;
+        return keyboard_key::k_G;
     case 'H':
-        return keys::k_H;
+        return keyboard_key::k_H;
     case 'I':
-        return keys::k_I;
+        return keyboard_key::k_I;
     case 'J':
-        return keys::k_J;
+        return keyboard_key::k_J;
     case 'K':
-        return keys::k_K;
+        return keyboard_key::k_K;
     case 'L':
-        return keys::k_L;
+        return keyboard_key::k_L;
     case 'M':
-        return keys::k_M;
+        return keyboard_key::k_M;
     case 'N':
-        return keys::k_N;
+        return keyboard_key::k_N;
     case 'O':
-        return keys::k_O;
+        return keyboard_key::k_O;
     case 'P':
-        return keys::k_P;
+        return keyboard_key::k_P;
     case 'Q':
-        return keys::k_Q;
+        return keyboard_key::k_Q;
     case 'R':
-        return keys::k_R;
+        return keyboard_key::k_R;
     case 'S':
-        return keys::k_S;
+        return keyboard_key::k_S;
     case 'T':
-        return keys::k_T;
+        return keyboard_key::k_T;
     case 'U':
-        return keys::k_U;
+        return keyboard_key::k_U;
     case 'V':
-        return keys::k_V;
+        return keyboard_key::k_V;
     case 'W':
-        return keys::k_W;
+        return keyboard_key::k_W;
     case 'X':
-        return keys::k_X;
+        return keyboard_key::k_X;
     case 'Y':
-        return keys::k_Y;
+        return keyboard_key::k_Y;
     case 'Z':
-        return keys::k_Z;
+        return keyboard_key::k_Z;
     case VK_LWIN:
-        return keys::k_lsuper;
+        return keyboard_key::k_lsuper;
     case VK_RWIN:
-        return keys::k_rsuper;
+        return keyboard_key::k_rsuper;
     case VK_APPS:
-        return keys::k_menu;
+        return keyboard_key::k_menu;
     case VK_NUMPAD0:
-        return keys::k_numpad0;
+        return keyboard_key::k_numpad0;
     case VK_NUMPAD1:
-        return keys::k_numpad1;
+        return keyboard_key::k_numpad1;
     case VK_NUMPAD2:
-        return keys::k_numpad2;
+        return keyboard_key::k_numpad2;
     case VK_NUMPAD3:
-        return keys::k_numpad3;
+        return keyboard_key::k_numpad3;
     case VK_NUMPAD4:
-        return keys::k_numpad4;
+        return keyboard_key::k_numpad4;
     case VK_NUMPAD5:
-        return keys::k_numpad5;
+        return keyboard_key::k_numpad5;
     case VK_NUMPAD6:
-        return keys::k_numpad6;
+        return keyboard_key::k_numpad6;
     case VK_NUMPAD7:
-        return keys::k_numpad7;
+        return keyboard_key::k_numpad7;
     case VK_NUMPAD8:
-        return keys::k_numpad8;
+        return keyboard_key::k_numpad8;
     case VK_NUMPAD9:
-        return keys::k_numpad9;
+        return keyboard_key::k_numpad9;
     case VK_MULTIPLY:
-        return keys::k_multiply;
+        return keyboard_key::k_multiply;
     case VK_ADD:
-        return keys::k_add;
+        return keyboard_key::k_add;
     case VK_SUBTRACT:
-        return keys::k_subtract;
+        return keyboard_key::k_subtract;
     case VK_DECIMAL:
-        return keys::k_decimal;
+        return keyboard_key::k_decimal;
     case VK_DIVIDE:
-        return keys::k_divide;
+        return keyboard_key::k_divide;
     case VK_F1:
-        return keys::k_F1;
+        return keyboard_key::k_F1;
     case VK_F2:
-        return keys::k_F2;
+        return keyboard_key::k_F2;
     case VK_F3:
-        return keys::k_F3;
+        return keyboard_key::k_F3;
     case VK_F4:
-        return keys::k_F4;
+        return keyboard_key::k_F4;
     case VK_F5:
-        return keys::k_F5;
+        return keyboard_key::k_F5;
     case VK_F6:
-        return keys::k_F6;
+        return keyboard_key::k_F6;
     case VK_F7:
-        return keys::k_F7;
+        return keyboard_key::k_F7;
     case VK_F8:
-        return keys::k_F8;
+        return keyboard_key::k_F8;
     case VK_F9:
-        return keys::k_F9;
+        return keyboard_key::k_F9;
     case VK_F10:
-        return keys::k_F10;
+        return keyboard_key::k_F10;
     case VK_F11:
-        return keys::k_F11;
+        return keyboard_key::k_F11;
     case VK_F12:
-        return keys::k_F12;
+        return keyboard_key::k_F12;
     case VK_F13:
-        return keys::k_F13;
+        return keyboard_key::k_F13;
     case VK_F14:
-        return keys::k_F14;
+        return keyboard_key::k_F14;
     case VK_F15:
-        return keys::k_F15;
+        return keyboard_key::k_F15;
     case VK_F16:
-        return keys::k_F16;
+        return keyboard_key::k_F16;
     case VK_F17:
-        return keys::k_F17;
+        return keyboard_key::k_F17;
     case VK_F18:
-        return keys::k_F18;
+        return keyboard_key::k_F18;
     case VK_F19:
-        return keys::k_F19;
+        return keyboard_key::k_F19;
     case VK_F20:
-        return keys::k_F20;
+        return keyboard_key::k_F20;
     case VK_OEM_1:
-        return keys::k_semicolon;
+        return keyboard_key::k_semicolon;
     case VK_OEM_PLUS:
-        return keys::k_equal;
+        return keyboard_key::k_equal;
     case VK_OEM_COMMA:
-        return keys::k_comma;
+        return keyboard_key::k_comma;
     case VK_OEM_MINUS:
-        return keys::k_minus;
+        return keyboard_key::k_minus;
     case VK_OEM_PERIOD:
-        return keys::k_period;
+        return keyboard_key::k_period;
     case VK_OEM_2:
-        return keys::k_slash;
+        return keyboard_key::k_slash;
     case VK_OEM_3:
-        return keys::k_grave_accent;
+        return keyboard_key::k_grave_accent;
     case VK_OEM_4:
-        return keys::k_lbracket;
+        return keyboard_key::k_lbracket;
     case VK_OEM_5:
-        return keys::k_backslash;
+        return keyboard_key::k_backslash;
     case VK_OEM_6:
-        return keys::k_rbracket;
+        return keyboard_key::k_rbracket;
     case VK_OEM_7:
-        return keys::k_apostrophe;
+        return keyboard_key::k_apostrophe;
     case VK_NUMLOCK:
-        return keys::k_numlock;
+        return keyboard_key::k_numlock;
     case VK_SCROLL:
-        return keys::k_scroll;
+        return keyboard_key::k_scroll;
     case VK_LSHIFT:
-        return keys::k_lshift;
+        return keyboard_key::k_lshift;
     case VK_RSHIFT:
-        return keys::k_rshift;
+        return keyboard_key::k_rshift;
     case VK_LCONTROL:
-        return keys::k_lcontrol;
+        return keyboard_key::k_lcontrol;
     case VK_RCONTROL:
-        return keys::k_rcontrol;
+        return keyboard_key::k_rcontrol;
     case VK_LMENU:
-        return keys::k_lalt;
+        return keyboard_key::k_lalt;
     case VK_RMENU:
-        return keys::k_ralt;
+        return keyboard_key::k_ralt;
     default:
-        return keys::none;
+        return keyboard_key::none;
     }
 }
 
@@ -874,7 +874,7 @@ key_event_args tavros::system::create_char_event_args(WPARAM wParam, LPARAM lPar
     WORD repeatCount = LOWORD(lParam);
 
     return {
-        .key = keys::none,
+        .key = keyboard_key::none,
         .is_prev_pressed = static_cast<bool>(wasKeyDown),
         .repeats = repeatCount,
         .key_char = static_cast<char>(wParam),

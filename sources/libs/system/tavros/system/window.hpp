@@ -3,6 +3,7 @@
 #include <tavros/core/string.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/core/memory/memory.hpp>
+#include <tavros/core/string_view.hpp>
 #include <tavros/system/event_args.hpp>
 #include <tavros/system/window_state.hpp>
 
