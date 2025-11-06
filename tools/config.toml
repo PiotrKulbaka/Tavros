@@ -10,6 +10,7 @@ libs = "${builtin_root}/sources/libs"
 wrappers = "${builtin_root}/sources/wrappers"
 tests = "${builtin_root}/tests"
 lib_core = "${path.libs}/core"
+lib_input = "${path.libs}/input"
 lib_renderer = "${path.libs}/renderer"
 lib_system = "${path.libs}/system"
 lib_resources = "${path.libs}/resources"
@@ -22,6 +23,7 @@ min_version = "21.1"
 exts = [".cpp", ".hpp", ".h", ".c", ".inl", ".m", ".mm"]
 include = [
     "${path.lib_core}",
+    "${path.lib_input}",
     "${path.lib_renderer}",
     "${path.lib_system}",
     "${path.lib_resources}",
@@ -35,6 +37,7 @@ exts = [".cpp", ".hpp", ".c", ".h", ".inl", ".mm", ".m"]
 test_exts = [".test.cpp", ".test.hpp"]
 collect_paths = [
     "${path.lib_core}",
+    "${path.lib_input}",
     "${path.lib_renderer}",
     "${path.lib_system}",
     "${path.lib_resources}",

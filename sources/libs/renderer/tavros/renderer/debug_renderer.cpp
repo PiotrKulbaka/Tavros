@@ -313,7 +313,7 @@ namespace tavros::renderer
         }
     }
 
-    void debug_renderer::oriented_box2d(geometry::obb2 box, math::color color, draw_mode mode)
+    void debug_renderer::box2d(geometry::obb2 box, math::color color, draw_mode mode)
     {
         math::vec2 v00(box.center - box.right * box.half_extents.x - box.up * box.half_extents.y);
         math::vec2 v01(box.center - box.right * box.half_extents.x + box.up * box.half_extents.y);
@@ -481,7 +481,7 @@ namespace tavros::renderer
         }
     }
 
-    void debug_renderer::oriented_box3d(const geometry::obb3& box, const math::color& color, draw_mode mode)
+    void debug_renderer::box3d(const geometry::obb3& box, const math::color& color, draw_mode mode)
     {
         if (mode == draw_mode::faces) {
             m_cubes.emplace_back(color, box.to_mat());

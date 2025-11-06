@@ -36,7 +36,7 @@ namespace tavros::renderer
         void bezier_curve2d(const math::vec2& start, const math::vec2& p2, const math::vec2& p3, const math::vec2& finish, uint32 segments, const math::color& color_start, const math::color& color_finish, bool draw_edges = false, float segment_point_size = 0.0f);
         void tri2d(math::vec2 p1, math::vec2 p2, math::vec2 p3, math::color color, draw_mode mode = draw_mode::faces);
         void box2d(geometry::aabb2 rect, math::color color, draw_mode mode = draw_mode::faces);
-        void oriented_box2d(geometry::obb2 box, math::color color, draw_mode mode = draw_mode::faces);
+        void box2d(geometry::obb2 box, math::color color, draw_mode mode = draw_mode::faces);
 
         void point3d(const math::vec3& p, float point_size, const math::color& color);
         void line3d(const math::vec3& p1, const math::vec3& p2, const math::color& color);
@@ -44,7 +44,7 @@ namespace tavros::renderer
         void bezier_curve3d(const math::vec3& start, const math::vec3& p2, const math::vec3& p3, const math::vec3& finish, uint32 segments, const math::color& color_start, const math::color& color_finish, bool draw_edges = false, float segment_point_size = 0.0f);
         void tri3d(math::vec3 p1, math::vec3 p2, math::vec3 p3, math::color color, draw_mode mode = draw_mode::faces);
         void box3d(const geometry::aabb3& box, const math::color& color, draw_mode mode = draw_mode::faces);
-        void oriented_box3d(const geometry::obb3& box, const math::color& color, draw_mode mode = draw_mode::faces);
+        void box3d(const geometry::obb3& box, const math::color& color, draw_mode mode = draw_mode::faces);
         void sphere3d(const geometry::sphere& sph, const math::color& color, draw_mode mode = draw_mode::faces);
 
         void update();
