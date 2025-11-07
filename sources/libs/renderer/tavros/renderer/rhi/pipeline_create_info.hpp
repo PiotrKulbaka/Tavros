@@ -113,6 +113,9 @@ namespace tavros::renderer::rhi
 
         /// Clamp value for depth biasing
         float depth_bias_clamp = 0.0f;
+
+        /// Enable scissor for the pipeline
+        bool scissor_enable = false;
     };
 
     /**

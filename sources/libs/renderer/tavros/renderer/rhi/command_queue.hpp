@@ -2,6 +2,7 @@
 
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/texture_copy_region.hpp>
+#include <tavros/renderer/rhi/structs.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -52,7 +53,6 @@ namespace tavros::renderer::rhi
          */
         virtual void bind_shader_binding(shader_binding_handle shader_binding) = 0;
 
-
         /**
          * @brief Begin a render pass.
          *
@@ -72,6 +72,29 @@ namespace tavros::renderer::rhi
          */
         virtual void end_render_pass() = 0;
 
+        /**
+         * @brief Sets the active viewport for subsequent rendering commands.
+         *
+         * Defines the transformation from normalized device coordinates (NDC)
+         * to framebuffer coordinates.
+         *
+         * Must be called within a render pass before issuing draw commands.
+         *
+         * @param viewport Viewport parameters, including position, size, and depth range.
+         */
+        virtual void set_viewport(const viewport_info& viewport) = 0;
+
+        /**
+         * @brief Sets the active scissor rectangle for subsequent rendering commands.
+         *
+         * The scissor rectangle limits rendering to a specific region of the framebuffer.
+         * Fragments outside of the defined rectangle are discarded after rasterization.
+         *
+         * Must be called within a render pass before issuing draw commands.
+         *
+         * @param scissor Scissor rectangle parameters, defining the clipping region in pixels.
+         */
+        virtual void set_scissor(const scissor_info& scissor) = 0;
 
         /**
          * @brief Issue a non-indexed draw command.

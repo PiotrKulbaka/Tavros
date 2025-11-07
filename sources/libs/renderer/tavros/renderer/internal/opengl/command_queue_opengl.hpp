@@ -23,6 +23,10 @@ namespace tavros::renderer::rhi
 
         void end_render_pass() override;
 
+        void set_viewport(const viewport_info& viewport) override;
+
+        void set_scissor(const scissor_info& scissor) override;
+
         void draw(uint32 vertex_count, uint32 first_vertex = 0, uint32 instance_count = 1, uint32 first_instance = 0) override;
 
         void draw_indexed(uint32 index_count, uint32 first_index = 0, uint32 vertex_offset = 0, uint32 instance_count = 1, uint32 first_instance = 0) override;

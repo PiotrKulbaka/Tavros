@@ -13,7 +13,7 @@ namespace tavros::geometry
     public:
         constexpr obb2() noexcept = default;
 
-        constexpr obb2(const math::vec2& center, const math::vec2& right, const math::vec2& up, const math::vec2& half_extents) noexcept
+        obb2(const math::vec2& center, const math::vec2& right, const math::vec2& up, const math::vec2& half_extents) noexcept
             : center(center)
             , right(right)
             , up(up)

@@ -50,6 +50,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_binding_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/shader_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/string_utils.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/structs.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/texture_copy_region.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/texture_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/vertex_attribute.hpp

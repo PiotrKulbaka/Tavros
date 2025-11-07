@@ -49,7 +49,6 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        m_current_pipeline = pipeline;
         auto& info = p->info;
 
         auto* pass = m_device->get_resources()->try_get(m_current_render_pass);
@@ -67,8 +66,11 @@ namespace tavros::renderer::rhi
                 fmt::styled_param(pass_info.color_attachments.size()),
                 fmt::styled_param(info.blend_states.size())
             );
+            GL_CALL(glUseProgram(0));
             return;
         }
+
+        m_current_pipeline = pipeline;
 
         // Enable/disable blending and color maks
         bool need_enable_blending = false;
@@ -201,6 +203,14 @@ namespace tavros::renderer::rhi
             GL_CALL(glPolygonOffset(info.rasterizer.depth_bias_factor, info.rasterizer.depth_bias));
         } else {
             GL_CALL(glDisable(gl_polygon_offset));
+        }
+
+        // Scissor test
+
+        if (info.rasterizer.scissor_enable) {
+            glEnable(GL_SCISSOR_TEST);
+        } else {
+            glDisable(GL_SCISSOR_TEST);
         }
 
         // multisample state
@@ -458,9 +468,13 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        // Set viewport
-        GL_CALL(glViewport(0, 0, fb->info.width, fb->info.height));
-
+        // Set viewport and scissor
+        {
+            auto w = static_cast<GLsizei>(fb->info.width);
+            auto h = static_cast<GLsizei>(fb->info.height);
+            GL_CALL(glViewport(0, 0, w, h));
+            GL_CALL(glScissor(0, 0, w, h));
+        }
 
         // Allpy load operations to the color attachments and depth/stencil attachment (only clear)
         auto color_attachments_size = static_cast<uint32>(fb->info.color_attachments.size());
@@ -632,6 +646,28 @@ namespace tavros::renderer::rhi
         m_current_render_pass = render_pass_handle();
         GL_CALL(glBindVertexArray(0));
         m_current_geometry = geometry_handle();
+    }
+
+    void command_queue_opengl::set_viewport(const viewport_info& viewport)
+    {
+        TAV_ASSERT(viewport.width >= 1 && viewport.height >= 1);
+
+        auto x = static_cast<GLint>(viewport.left);
+        auto y = static_cast<GLint>(viewport.top);
+        auto w = static_cast<GLsizei>(viewport.width);
+        auto h = static_cast<GLsizei>(viewport.height);
+        GL_CALL(glViewport(x, y, w, h));
+    }
+
+    void command_queue_opengl::set_scissor(const scissor_info& scissor)
+    {
+        TAV_ASSERT(scissor.width >= 1 && scissor.height >= 1);
+
+        auto x = static_cast<GLint>(scissor.left);
+        auto y = static_cast<GLint>(scissor.top);
+        auto w = static_cast<GLsizei>(scissor.width);
+        auto h = static_cast<GLsizei>(scissor.height);
+        GL_CALL(glScissor(x, y, w, h));
     }
 
     void command_queue_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)

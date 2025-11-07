@@ -48,6 +48,12 @@ namespace tavros::input
 
         /// Timestamp of the event in microseconds
         uint64 time_us = 0;
+
+        // Key character (for key press)
+        int32 key_char = 0;
+
+        // Number of repeats (for key press)
+        uint16 repeats = 0;
     };
 
     /// Type alias for accessing the front queue as a contiguous view.
