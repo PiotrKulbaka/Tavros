@@ -40,6 +40,24 @@ namespace tavros::renderer::rhi
         ::logger.debug("command_queue_opengl destroyed");
     }
 
+    void command_queue_opengl::begin()
+    {
+        if (m_started) {
+            ::logger.error("Command queue already begun");
+            return;
+        }
+        m_started = true;
+    }
+
+    void command_queue_opengl::end()
+    {
+        if (!m_started) {
+            ::logger.error("Command queue not begun");
+            return;
+        }
+        m_started = false;
+    }
+
     void command_queue_opengl::bind_pipeline(pipeline_handle pipeline)
     {
         auto* p = m_device->get_resources()->try_get(pipeline);

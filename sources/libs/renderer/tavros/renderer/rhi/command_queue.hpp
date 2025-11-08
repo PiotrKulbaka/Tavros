@@ -24,6 +24,26 @@ namespace tavros::renderer::rhi
         virtual ~command_queue() = default;
 
         /**
+         * @brief Begins recording commands into the command queue.
+         *
+         * Must be called before issuing any rendering or compute commands.
+         * Once begun, commands can be recorded until @ref end() is called.
+         * Command queues cannot be executed until they have been properly ended.
+         */
+        virtual void begin() = 0;
+
+        /**
+         * @brief Ends command recording.
+         *
+         * Finalizes the recorded command sequence, making it ready for submission
+         * to a command queue or execution context. After calling this method,
+         * no further commands can be recorded until @ref begin() is called again.
+         *
+         * This must be called before submitting the command buffer for execution.
+         */
+        virtual void end() = 0;
+
+        /**
          * @brief Bind a graphics pipeline.
          *
          * Associates the given pipeline state object with the command queue.

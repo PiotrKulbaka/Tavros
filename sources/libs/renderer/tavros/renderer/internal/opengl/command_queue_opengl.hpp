@@ -13,6 +13,10 @@ namespace tavros::renderer::rhi
 
         ~command_queue_opengl() override;
 
+        void begin() override;
+
+        void end() override;
+
         void bind_pipeline(pipeline_handle pipeline) override;
 
         void bind_geometry(geometry_handle geometry) override;
@@ -49,6 +53,8 @@ namespace tavros::renderer::rhi
         geometry_handle         m_current_geometry;
 
         GLuint m_resolve_fbo = 0;
+
+        bool m_started = false;
     };
 
 } // namespace tavros::renderer::rhi
