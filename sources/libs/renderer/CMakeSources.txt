@@ -6,11 +6,8 @@
 set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/debug_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/debug_renderer.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/mesh.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.hpp
