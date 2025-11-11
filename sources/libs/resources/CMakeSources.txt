@@ -13,6 +13,9 @@ set(TAV_RESOURCES_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/resources/resource_writer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/resources/seek_dir.hpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/resources/codecs/image_codec.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/resources/codecs/image_codec.hpp
+
     ${CMAKE_CURRENT_LIST_DIR}/tavros/resources/io/file_reader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/resources/io/file_reader.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/resources/io/file_resource.cpp

@@ -12,6 +12,7 @@ tavros_add_library(
     LIB_DEPENDS
         PRIVATE
             tav_core
+            stb
     LIB_DEFINES
 )
 
