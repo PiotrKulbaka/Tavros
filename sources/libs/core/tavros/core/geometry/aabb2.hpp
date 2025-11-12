@@ -82,8 +82,21 @@ namespace tavros::geometry
         float distance(const math::vec2& point) const noexcept;
 
     public:
-        math::vec2 min;
-        math::vec2 max;
+        union
+        {
+            struct
+            {
+                float left;
+                float top;
+                float right;
+                float bottom;
+            };
+            struct
+            {
+                math::vec2 min;
+                math::vec2 max;
+            };
+        };
     };
 
 } // namespace tavros::geometry
