@@ -38,6 +38,14 @@ namespace tavros::math
     {
     }
 
+    inline constexpr vec4::vec4(vec2 v1, vec2 v2) noexcept
+        : x(v1.x)
+        , y(v1.y)
+        , z(v2.x)
+        , w(v2.y)
+    {
+    }
+
     inline constexpr vec4::vec4(vec3 v) noexcept
         : x(v.x)
         , y(v.y)

@@ -27,6 +27,9 @@ namespace tavros::math
         /// @brief Constructs a vec2 and z, w components
         constexpr vec4(vec2 v, float z, float w) noexcept;
 
+        /// @brief Constructs with 2x vec2
+        constexpr vec4(vec2 v1, vec2 v2) noexcept;
+
         /// @brief Constructs a vec2 and 0.0f as w component
         constexpr vec4(vec3 v) noexcept;
 

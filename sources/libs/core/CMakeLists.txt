@@ -10,6 +10,7 @@ tavros_add_library(
     LIB_DEPENDS
         PUBLIC
             fmt
+            zlibstatic
     LIB_DEFINES
 )
 
