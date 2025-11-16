@@ -10,6 +10,7 @@ set(HEADERS
     ${CMAKE_CURRENT_LIST_DIR}/stb_image.h
     ${CMAKE_CURRENT_LIST_DIR}/stb_image_write.h
     ${CMAKE_CURRENT_LIST_DIR}/stb_truetype.h
+    ${CMAKE_CURRENT_LIST_DIR}/stb_rect_pack.h
 )
 
 add_library(stb STATIC ${SOURCES})
