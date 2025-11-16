@@ -21,6 +21,18 @@ namespace tavros::core
     {
     public:
         /**
+         * @brief Constructs an empty buffer from nullptr.
+         *
+         * Useful to represent an empty buffer.
+         */
+        constexpr dynamic_buffer(std::nullptr_t) noexcept
+            : m_allocator(nullptr)
+            , m_storage(nullptr)
+            , m_capacity(0)
+        {
+        }
+
+        /**
          * @brief Constructs the buffer using the specified allocator.
          * @param alc Pointer to the allocator used for memory management. Must not be null.
          */
@@ -143,6 +155,33 @@ namespace tavros::core
             TAV_ASSERT(offset + count <= m_capacity);
             std::memcpy(m_storage + offset, src, count * sizeof(T));
             return count;
+        }
+
+        /**
+         * @brief Fills a portion of the buffer with a specified value.
+         *
+         * Writes @p value into the range [offset, offset + count).
+         * If the range exceeds the buffer capacity, the operation is trimmed.
+         *
+         * @param offset Starting index.
+         * @param count Number of elements to fill.
+         * @param value The value to assign to each element.
+         */
+        void fill(size_t offset, size_t count, const T& value) noexcept
+        {
+            TAV_ASSERT(offset + count <= m_capacity);
+
+            std::fill_n(m_storage + offset, count, value);
+        }
+
+        /**
+         * @brief Fills the entire buffer with the specified value.
+         *
+         * @param value The value to assign to each element.
+         */
+        void fill(const T& value) noexcept
+        {
+            std::fill_n(m_storage, m_capacity, value);
         }
 
         /**

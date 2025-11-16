@@ -125,6 +125,33 @@ namespace tavros::core
         }
 
         /**
+         * @brief Fills a portion of the buffer with a specified value.
+         *
+         * Writes @p value into the range [offset, offset + count).
+         * If the range exceeds the buffer capacity, the operation is trimmed.
+         *
+         * @param offset Starting index.
+         * @param count Number of elements to fill.
+         * @param value The value to assign to each element.
+         */
+        void fill(size_t offset, size_t count, const T& value) noexcept
+        {
+            TAV_ASSERT(offset + count <= m_size);
+
+            std::fill_n(m_data + offset, count, value);
+        }
+
+        /**
+         * @brief Fills the entire buffer with the specified value.
+         *
+         * @param value The value to assign to each element.
+         */
+        void fill(const T& value) noexcept
+        {
+            std::fill_n(m_data, m_size, value);
+        }
+
+        /**
          * @brief Returns a pointer to the beginning of the buffer.
          */
         [[nodiscard]] constexpr T* data() noexcept
