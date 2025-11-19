@@ -6,6 +6,7 @@
 #include <tavros/core/math/vec3.hpp>
 #include <tavros/core/math/vec4.hpp>
 #include <tavros/core/math/ivec2.hpp>
+#include <tavros/core/math/rgba8.hpp>
 
 #include <tavros/core/math/bitops.hpp>
 

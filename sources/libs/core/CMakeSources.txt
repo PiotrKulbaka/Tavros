@@ -92,6 +92,7 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/mat4.inl
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/quat.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/quat.inl
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/rgba8.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/vec2.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/vec2.inl
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/vec3.hpp
