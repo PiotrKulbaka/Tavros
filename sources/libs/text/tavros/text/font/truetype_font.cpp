@@ -67,7 +67,7 @@ namespace tavros::text
         m_font_metrics = {static_cast<float>(ascent) * m_scale, static_cast<float>(descent) * m_scale, static_cast<float>(line_gap) * m_scale};
 
         // Null glyph
-        m_glyphs.emplace_back(0, atlas_entry{math::vec4{0.0f}, 0.0f}, glyph_metrics{math::vec2(0.5f), math::vec2(0.0f), math::size2(0.4f, 0.5f)});
+        m_glyphs.emplace_back(0, atlas_entry{}, glyph_metrics{math::vec2(0.5f), math::vec2(0.0f), math::size2(0.4f, 0.5f)});
 
         for (auto& range : codepoint_ranges) {
             char32 beg = range.first_codepoint;
@@ -101,7 +101,7 @@ namespace tavros::text
                     size = math::size2(x1f - x0f, y1f - y0f);
                 }
 
-                m_glyphs.emplace_back(cp, atlas_entry{math::vec4{0.0f}, 0.0f}, glyph_metrics{advance, bearing, size});
+                m_glyphs.emplace_back(cp, atlas_entry{}, glyph_metrics{advance, bearing, size});
             }
         }
 

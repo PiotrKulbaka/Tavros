@@ -52,11 +52,14 @@ namespace tavros::text
          */
         struct atlas_entry
         {
-            /// UV rectangle of the glyph in the atlas (min.xy, max.xy).
-            math::vec4 uv_bounds;
+            /// Rectangle of the glyph in the atlas.
+            uint16 left = 0;
+            uint16 top = 0;
+            uint16 right = 0;
+            uint16 bottom = 0;
 
-            /// UV-space padding used for correct SDF scaling.
-            float sdf_pad;
+            /// Padding used for correct SDF glyph scaling.
+            float sdf_pad = 0.0f;
         };
 
         /**
@@ -80,16 +83,20 @@ namespace tavros::text
          * @brief Font-wide metric values.
          *
          * These values describe the vertical layout characteristics of the font.
+         * Common sign convention:
+         *   - ascent_y  > 0 (above baseline)
+         *   - descent_y < 0 (below baseline)
+         *   - line_gap_y > 0 (extra spacing between lines)
          */
         struct font_metrics
         {
-            /// Distance from the baseline to the highest ascender
+            /// Distance from the baseline to the highest ascender. Usually positive.
             float ascent_y = 0.0f;
 
-            /// Distance from the baseline to the lowest descender
+            /// Distance from the baseline to the lowest descender. Usually negative.
             float descent_y = 0.0f;
 
-            /// Additional space between lines
+            /// Additional space between lines. Usually positive.
             float line_gap_y = 0.0f;
         };
 
