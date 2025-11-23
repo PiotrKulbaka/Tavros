@@ -6,10 +6,10 @@
 #include <tavros/core/math/vec4.hpp>
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/string.hpp>
-#include <tavros/core/memory/buffer_view.hpp>
-#include <tavros/core/memory/buffer_span.hpp>
-
+#include <tavros/core/memory/buffer.hpp>
 #include <tavros/core/containers/vector.hpp>
+
+#include <tavros/text/font/atlas_rect.hpp>
 
 namespace tavros::text
 {
@@ -46,23 +46,6 @@ namespace tavros::text
         };
 
         /**
-         * @brief Atlas-related data for a glyph.
-         *
-         * Includes texture coordinate bounds and SDF-specific padding.
-         */
-        struct atlas_entry
-        {
-            /// Rectangle of the glyph in the atlas.
-            uint16 left = 0;
-            uint16 top = 0;
-            uint16 right = 0;
-            uint16 bottom = 0;
-
-            /// Padding used for correct SDF glyph scaling.
-            float sdf_pad = 0.0f;
-        };
-
-        /**
          * @brief Combined glyph information.
          *
          * Stores the codepoint, atlas data, and metrics needed for rendering and layout.
@@ -72,8 +55,8 @@ namespace tavros::text
             /// Unicode codepoint
             char32 codepoint = 0;
 
-            /// Atlas entry describing UV placement and padding.
-            atlas_entry entry;
+            /// Atlas entry describing UV placement.
+            atlas_rect entry;
 
             /// Layout and rendering metrics.
             glyph_metrics metrics;

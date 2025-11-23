@@ -111,8 +111,6 @@ namespace tavros::text
         storage.reserve(atlas_size);
         storage.fill(0, atlas_size, 0);
 
-        auto sdf_pad = glyph_sdf_pad_pix / glyph_scale_pix;
-
         // Bake atlas
         auto   atlas = atlas_pixels{storage.data(), atlas_width, atlas_height, atlas_width};
         size_t rect_idx = 0;
@@ -126,7 +124,6 @@ namespace tavros::text
                 g.entry.top = static_cast<uint16>(rect.y + 1);
                 g.entry.right = static_cast<uint16>(rect.x + rect.w);
                 g.entry.bottom = static_cast<uint16>(rect.y + rect.h);
-                g.entry.sdf_pad = sdf_pad;
 
                 // Bake glyph
                 auto offset = static_cast<size_t>(rect.y + 1) * static_cast<size_t>(atlas.stride) + static_cast<size_t>(rect.x + 1);

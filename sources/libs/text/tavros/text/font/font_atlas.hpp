@@ -2,7 +2,6 @@
 
 #include <tavros/core/types.hpp>
 #include <tavros/core/noncopyable.hpp>
-#include <tavros/core/memory/dynamic_buffer.hpp>
 #include <tavros/core/containers/static_vector.hpp>
 
 #include <tavros/text/font/font.hpp>

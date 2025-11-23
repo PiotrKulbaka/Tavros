@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/memory/dynamic_buffer.hpp>
+#include <tavros/core/memory/buffer_span.hpp>
 #include <concepts>
 
 namespace tavros::core
@@ -96,6 +97,20 @@ namespace tavros::core
         constexpr buffer_view(const dynamic_buffer<T>& buffer) noexcept
             : m_data(buffer.data())
             , m_size(buffer.capacity())
+        {
+        }
+
+        /**
+         * @brief Constructs a view over the given buffer_span.
+         *
+         * Initializes the view to reference the underlying data and capacity
+         * of the specified buffer_span without taking ownership.
+         *
+         * @param buffer Reference to the source buffer_span.
+         */
+        constexpr buffer_view(const buffer_span<T>& buffer) noexcept
+            : m_data(buffer.data())
+            , m_size(buffer.size())
         {
         }
 

@@ -2,7 +2,7 @@
 
 #include <tavros/text/font/font.hpp>
 #include <tavros/core/pimpl.hpp>
-#include <tavros/core/memory/dynamic_buffer.hpp>
+#include <tavros/core/memory/buffer.hpp>
 
 namespace tavros::text
 {

@@ -9,6 +9,7 @@
 #include <tavros/core/math/rgba8.hpp>
 
 #include <tavros/core/math/bitops.hpp>
+#include <tavros/core/math/rgba8.hpp>
 
 #include <tavros/core/math/functions/almost_equal.hpp>
 #include <tavros/core/math/functions/angle.hpp>
