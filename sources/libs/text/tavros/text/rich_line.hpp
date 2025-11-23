@@ -6,62 +6,65 @@
 #include <tavros/core/containers/vector.hpp>
 #include <tavros/text/font/font.hpp>
 
+#include <cwctype>
+
 namespace tavros::text
 {
 
-    struct text_style
-    {
-        const font* font = nullptr;
-        math::color fill_color = {1.0f, 1.0f, 1.0f, 1.0f};
-        math::color outline_color = {0.0f, 0.0f, 0.0f, 1.0f};
-        float       font_size = 21.0f;
-    };
-
-    enum class text_align
-    {
-        left,
-        right,
-        center,
-        justify,
-    };
-
-    struct layout_params
-    {
-        float      width = 0.0f;
-        text_align align = text_align::left;
-    };
-
-
+    /**
+     * @brief Base glyph information used by the rich text line builder.
+     *
+     * Stores all font-dependent metrics and layout-related fields for a single glyph.
+     * These values are updated by style and font assignment functions.
+     */
     struct glyph_data_base
     {
-        char32 codepoint = 0;
-        bool   is_space = false;
+        char32 codepoint = 0;                /// Unicode codepoint.
+        bool   is_space = false;             /// True if the glyph is whitespace.
 
-        const font*       font = nullptr;
-        font::glyph_index idx = 0;
-        float             glyph_size = 0.0f;
-        atlas_rect        rect;
-        math::vec2        bearing;
-        float             advance_x = 0.0f;
-        float             kern_x = 0.0f;
-        geometry::aabb2   layout;
-        geometry::aabb2   bounds;
+        const font*       font = nullptr;    /// Pointer to the font used for this glyph.
+        font::glyph_index idx = 0;           /// Index of the glyph in the font.
+        float             glyph_size = 0.0f; /// Glyph rendering size (scale).
+
+        atlas_rect rect;                     /// Texture atlas rectangle of the glyph image.
+        math::vec2 bearing;                  /// Glyph bearing scaled by glyph_size.
+        float      advance_x = 0.0f;         /// Horizontal advance (scaled).
+        float      kern_x = 0.0f;            /// Horizontal kerning to the next glyph (scaled).
+
+        geometry::aabb2 layout;              /// Final layout position relative to the baseline.
+        geometry::aabb2 bounds;              /// Bounding box of the rendered glyph (for selecting).
     };
 
+    /**
+     * @brief Combines base glyph data with user-defined per-glyph parameters.
+     *
+     * @tparam GlyphParams  User-defined parameter type stored alongside each glyph.
+     */
     template<class GlyphParams>
     struct glyph_data_param
     {
-        glyph_data_base base;
-        GlyphParams     params;
+        glyph_data_base base;   /// Basic glyph metrics and layout information.
+        GlyphParams     params; /// User-defined glyph parameters.
     };
 
+    /**
+     * @brief Specialization for glyphs without additional parameters.
+     */
     template<>
     struct glyph_data_param<void>
     {
-        glyph_data_base base;
+        glyph_data_base base; /// Basic glyph metrics only.
     };
 
-
+    /**
+     * @brief Holds and manages a sequence of glyphs representing a styled text line.
+     *
+     * The class stores raw glyphs with metrics and dynamically updates them when font,
+     * size, or style ranges are modified. No layout or line breaking is performed here —
+     * this class only prepares glyph metrics and kerning before layout.
+     *
+     * @tparam GlyphParams  Optional per-glyph extension data.
+     */
     template<class GlyphParams = void>
     class rich_line
     {
@@ -73,91 +76,131 @@ namespace tavros::text
 
         ~rich_line() noexcept = default;
 
-        void set_text(core::u32string_view text, const text_style& style)
+        /**
+         * @brief Initializes glyphs from a Unicode text string and applies a uniform font and size.
+         *
+         * Clears existing glyphs, creates one glyph per codepoint, determines whitespace flags,
+         * and applies the specified font and size to the entire range.
+         *
+         * @param text  UTF-32 string view containing the text.
+         * @param fnt   Font used for glyph lookup and metrics.
+         * @param size  Rendering size of all glyphs.
+         */
+        void set_text(core::u32string_view text, const font* fnt, float size)
         {
-            TAV_ASSERT(style.font != nullptr);
+            TAV_ASSERT(fnt != nullptr);
 
-            m_glyphs.reserve(text.length());
             m_glyphs.clear(); // clear old data
-
-            auto is_sp = [](char32 c) { return c == ' ' || c == '\t' || c == '\v' || c == '\r' || c == '\n' || c == '\f'; };
+            m_glyphs.reserve(text.length());
 
             for (auto it = text.begin(); it < text.end(); ++it) {
                 auto cp = *it;
 
                 glyph_data g;
                 g.base.codepoint = cp;
-                g.base.is_space = is_sp(cp);
+                g.base.is_space = static_cast<bool>(std::iswspace(cp));
 
                 m_glyphs.push_back(g);
             }
 
-            set_style(0, m_glyphs.size(), style);
+            set_style(0, m_glyphs.size(), fnt, size);
         }
 
-        void set_style(size_t begin, size_t end, const text_style& style)
+        /**
+         * @brief Applies font and size to a glyph range and updates metrics and kerning.
+         *
+         * For each glyph in the specified range, computes glyph index, bearings, advances,
+         * and kerning to the next glyph. Kerning is applied both within the style range and,
+         * if possible, across range boundaries when the adjacent glyph uses the same font.
+         *
+         * @param begin  Start index (inclusive).
+         * @param end    End index (exclusive).
+         * @param fnt    Font to apply.
+         * @param size   Glyph rendering size.
+         */
+        void set_style(size_t begin, size_t end, const font* fnt, float size)
         {
-            TAV_ASSERT(style.font != nullptr);
-            TAV_ASSERT(begin < m_glyphs.size());
+            TAV_ASSERT(fnt != nullptr);
+            TAV_ASSERT(begin <= m_glyphs.size());
             TAV_ASSERT(end <= m_glyphs.size());
-            TAV_ASSERT(begin < end);
+            TAV_ASSERT(begin <= end);
 
             for (auto i = begin; i < end; ++i) {
                 auto& g = m_glyphs[i].base;
+                auto  idx = fnt->find_glyph(g.codepoint);
+                auto& info = fnt->get_glyph_info(idx);
 
-                auto& info = style.font->get_glyph_info(g.idx);
-
-                g.font = style.font;
-                g.idx = style.font->find_glyph(g.codepoint);
-                g.glyph_size = style.font_size;
+                g.font = fnt;
+                g.idx = idx;
+                g.glyph_size = size;
                 g.rect = info.entry;
-                g.bearing = info.metrics.bearing * style.font_size;
-                g.advance_x = info.metrics.advance.x * style.font_size;
+                g.bearing = info.metrics.bearing * size;
+                g.advance_x = info.metrics.advance.x * size;
 
                 auto next = i + 1;
-                if (next != end) {
-                    g.kern_x = style.font->get_kerning(g.idx, m_glyphs[next].base.idx) * g.glyph_size;
-                } else if (next < m_glyphs.size() && style.font == m_glyphs[next].base.font) {
-                    g.kern_x = style.font->get_kerning(g.idx, m_glyphs[next].base.idx) * g.glyph_size;
+                if (next < end || (next < m_glyphs.size() && fnt == m_glyphs[next].base.font)) {
+                    auto next_idx = fnt->find_glyph(m_glyphs[next].base.codepoint);
+                    g.kern_x = fnt->get_kerning(g.idx, next_idx) * g.glyph_size;
                 } else {
                     g.kern_x = 0.0f;
                 }
             }
         }
 
+        /**
+         * @brief Changes the font for a glyph range without modifying glyph size.
+         *
+         * Updates the base font-dependent metrics (bearing, advance, kerning) according to
+         * the new font. Kerning applies within the range and beyond it if the adjacent glyph
+         * uses the same font.
+         *
+         * @param begin  Start index (inclusive).
+         * @param end    End index (exclusive).
+         * @param fnt    New font pointer.
+         */
         void set_font(size_t begin, size_t end, font* fnt)
         {
             TAV_ASSERT(fnt != nullptr);
-            TAV_ASSERT(begin < m_glyphs.size());
+            TAV_ASSERT(begin <= m_glyphs.size());
             TAV_ASSERT(end <= m_glyphs.size());
-            TAV_ASSERT(begin < end);
+            TAV_ASSERT(begin <= end);
 
             for (auto i = begin; i < end; ++i) {
                 auto& g = m_glyphs[i].base;
-                auto& info = fnt->get_glyph_info(g.idx);
+                auto  idx = fnt->find_glyph(g.codepoint);
+                auto& info = fnt->get_glyph_info(idx);
 
                 g.font = fnt;
-                g.idx = fnt->find_glyph(g.codepoint);
+                g.idx = idx;
                 g.rect = info.entry;
                 g.bearing = info.metrics.bearing * g.glyph_size;
                 g.advance_x = info.metrics.advance.x * g.glyph_size;
 
                 auto next = i + 1;
-                if (next != end) {
-                    g.kern_x = fnt->get_kerning(g.idx, m_glyphs[next].base.idx) * g.glyph_size;
-                } else if (next < m_glyphs.size() && fnt == m_glyphs[next].base.font) {
-                    g.kern_x = g.font->get_kerning(g.idx, m_glyphs[next].base.idx) * g.glyph_size;
+                if (next < end || (next < m_glyphs.size() && fnt == m_glyphs[next].base.font)) {
+                    auto next_idx = fnt->find_glyph(m_glyphs[next].base.codepoint);
+                    g.kern_x = fnt->get_kerning(g.idx, next_idx) * g.glyph_size;
                 } else {
                     g.kern_x = 0.0f;
                 }
             }
         }
 
+        /**
+         * @brief Changes glyph size for a range while keeping the previously assigned font.
+         *
+         * Recomputes bearings, advances, and kerning using the stored font and scaled metrics.
+         * Kerning is updated only when the next glyph uses the same font.
+         *
+         * @param begin  Start index (inclusive).
+         * @param end    End index (exclusive).
+         * @param size   New glyph size.
+         */
         void set_font_size(size_t begin, size_t end, float size)
         {
-            TAV_ASSERT(begin < m_glyphs.size());
+            TAV_ASSERT(begin <= m_glyphs.size());
             TAV_ASSERT(end <= m_glyphs.size());
-            TAV_ASSERT(begin < end);
+            TAV_ASSERT(begin <= end);
 
             for (auto i = begin; i < end; ++i) {
                 auto& g = m_glyphs[i].base;
@@ -175,11 +218,13 @@ namespace tavros::text
             }
         }
 
-        core::buffer_view<glyph_data> glyphs_view() const noexcept
-        {
-            return m_glyphs;
-        }
-
+        /**
+         * @brief Returns a mutable span over the internal glyph storage.
+         *
+         * Allows external systems (such as text layout components) to read and write layout fields.
+         *
+         * @return Mutable span of glyph_data.
+         */
         core::buffer_span<glyph_data> glyphs() noexcept
         {
             return m_glyphs;
