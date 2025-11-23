@@ -46,6 +46,9 @@ namespace tavros::input
         /// General-purpose 2D vector (e.g. position or delta)
         math::vec2 vec;
 
+        /// Mouse wheel delta
+        math::vec2 wheel;
+
         /// Timestamp of the event in microseconds
         uint64 time_us = 0;
 
