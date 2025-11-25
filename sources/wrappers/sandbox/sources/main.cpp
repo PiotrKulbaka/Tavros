@@ -931,6 +931,7 @@ public:
         sdf_font_pipeline_info.rasterizer.cull = rhi::cull_face::off;
         sdf_font_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
         sdf_font_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
+        sdf_font_pipeline_info.rasterizer.scissor_enable = true;
         sdf_font_pipeline_info.topology = rhi::primitive_topology::triangle_strip;
         sdf_font_pipeline_info.blend_states.push_back({true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask});
         sdf_font_pipeline_info.multisample.sample_shading_enabled = false;
@@ -1354,8 +1355,8 @@ public:
         if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_left)) {
             m_selected_font--;
         }
-        m_text_pos_y -= m_input_manager.key_hold_factor(tavros::input::keyboard_key::k_up) * 4.0f;
-        m_text_pos_y += m_input_manager.key_hold_factor(tavros::input::keyboard_key::k_down) * 4.0f;
+        m_text_pos_y -= m_input_manager.key_hold_factor(tavros::input::keyboard_key::k_up) * 2.0f;
+        m_text_pos_y += m_input_manager.key_hold_factor(tavros::input::keyboard_key::k_down) * 2.0f;
 
 
         if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_7)) {
@@ -1390,13 +1391,13 @@ public:
         layout_contaainer_size.max += text_rect_pos;
         m_drenderer.box2d(layout_contaainer_size, {0.0f, 1.0f, 0.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
 
-        auto test_glyph_mouse_pos = m_input_manager.get_mouse_pos() - text_rect_pos;
+        /*auto test_glyph_mouse_pos = m_input_manager.get_mouse_pos() - text_rect_pos;
         for (auto& g : m_rich_line.glyphs()) {
             if (g.base.bounds.contains_point(test_glyph_mouse_pos)) {
                 g.params.fill_color.set(255, 0, 0, 255);
             }
 
-            /*auto dbox = g.base.bounds;
+            auto dbox = g.base.bounds;
             dbox.min += text_rect_pos;
             dbox.max += text_rect_pos;
             m_drenderer.box2d(dbox, {1.0f, 1.0f, 1.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
@@ -1404,11 +1405,11 @@ public:
             auto gbox = g.base.layout;
             gbox.min += text_rect_pos;
             gbox.max += text_rect_pos;
-            m_drenderer.box2d(gbox, {0.0f, 1.0f, 0.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);*/
-        }
+            m_drenderer.box2d(gbox, {0.0f, 1.0f, 0.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
+        }*/
 
-
-        m_drenderer.box2d(text_rect, {1.0f, 1.0f, 1.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
+        auto text_lay_rect = tavros::geometry::aabb2(150.0f, 50.0f, 150.0f + text_rect_width, 700.0f);
+        m_drenderer.box2d(text_lay_rect, {1.0f, 1.0f, 1.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
 
         auto glyph_instances = tavros::core::buffer_span<glyph_instance>(instance_info.data(), m_rich_line.glyphs().size());
         auto glyphs = tavros::core::buffer_view<tavros::text::glyph_data_param<glyph_params>>(m_rich_line.glyphs().data(), m_rich_line.glyphs().size());
@@ -1445,6 +1446,15 @@ public:
         cbuf->bind_shader_binding(m_font_shader_binding);
         cbuf->bind_shader_binding(m_scene_binding);
         cbuf->bind_geometry(m_font_geometry);
+
+        rhi::scissor_info text_scissor = {
+            static_cast<int32>(tavros::math::floor(text_lay_rect.left)),
+            static_cast<int32>(tavros::math::floor(text_lay_rect.top)),
+            static_cast<int32>(tavros::math::ceil(text_lay_rect.right - text_lay_rect.left)),
+            static_cast<int32>(tavros::math::ceil(text_lay_rect.bottom - text_lay_rect.top))
+        };
+        cbuf->set_scissor(text_scissor);
+
         cbuf->draw(4, 0, static_cast<uint32>(text_draw_size), 0);
 
         m_drenderer.update();

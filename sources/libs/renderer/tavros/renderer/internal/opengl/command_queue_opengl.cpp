@@ -679,12 +679,18 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::set_scissor(const scissor_info& scissor)
     {
-        TAV_ASSERT(scissor.width >= 1 && scissor.height >= 1);
+        TAV_ASSERT(scissor.width >= 0 && scissor.height >= 0);
 
-        auto x = static_cast<GLint>(scissor.left);
-        auto y = static_cast<GLint>(scissor.top);
+        auto* fb = m_device->get_resources()->try_get(m_current_framebuffer);
+        if (!fb) {
+            ::logger.error("Failed to set scissor: no framebuffer is bound");
+            return;
+        }
+
         auto w = static_cast<GLsizei>(scissor.width);
         auto h = static_cast<GLsizei>(scissor.height);
+        auto x = static_cast<GLint>(scissor.left);
+        auto y = static_cast<GLint>(fb->info.height) - static_cast<GLint>(scissor.top) - static_cast<GLint>(h);
         GL_CALL(glScissor(x, y, w, h));
     }
 
