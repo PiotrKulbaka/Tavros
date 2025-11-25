@@ -12,6 +12,8 @@ tavros_add_library(
     LIB_WIN32_SOURCES
         ${TAV_RENDERER_WIN32_SOURCES}
     LIB_DEPENDS
+        PUBLIC
+            tav_text
         PRIVATE
             tav_core
             glad

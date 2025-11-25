@@ -2,9 +2,13 @@
 
 #include <tavros/core/math.hpp>
 #include <tavros/core/geometry.hpp>
+#include <tavros/core/memory/mallocator.hpp>
 
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/core/containers/vector.hpp>
+
+#include <tavros/text/font/font.hpp>
+#include <tavros/text/text_layout.hpp>
 
 namespace tavros::renderer
 {
@@ -17,6 +21,20 @@ namespace tavros::renderer
             points,
             edges,
             faces,
+        };
+
+        enum class vertical_align
+        {
+            top,
+            center,
+            bottom,
+        };
+
+        struct text_layout
+        {
+            text::text_align text_align = text::text_align::left;
+            vertical_align   vert_align = vertical_align::top;
+            float            line_spacing = 1.0f;
         };
 
         debug_renderer();
@@ -37,6 +55,7 @@ namespace tavros::renderer
         void tri2d(math::vec2 p1, math::vec2 p2, math::vec2 p3, math::color color, draw_mode mode = draw_mode::faces);
         void box2d(geometry::aabb2 rect, math::color color, draw_mode mode = draw_mode::faces);
         void box2d(geometry::obb2 box, math::color color, draw_mode mode = draw_mode::faces);
+        void draw_text2d(core::string_view text, float text_size, text_layout layout_params, geometry::aabb2 rect, math::color color);
 
         void point3d(const math::vec3& p, float point_size, const math::color& color);
         void line3d(const math::vec3& p1, const math::vec3& p2, const math::color& color);
@@ -67,6 +86,7 @@ namespace tavros::renderer
         bool create_pipelines();
         bool create_static_geom();
         bool create_batch_geom();
+        bool create_font_atlas();
 
         void destroy_all();
 
@@ -80,6 +100,7 @@ namespace tavros::renderer
         struct instance_data_t
         {
             math::color color;
+            math::vec4  uv1_uv2;
             math::mat4  model;
         };
 
@@ -89,6 +110,8 @@ namespace tavros::renderer
             float       point_size = 1.0f;
             math::color color;
         };
+
+        core::mallocator m_alc;
 
         core::vector<xyz_sz_cl_t> m_points2d;
         core::vector<xyz_sz_cl_t> m_lines2d;
@@ -100,6 +123,8 @@ namespace tavros::renderer
         core::vector<instance_data_t> m_spheres;
         core::vector<instance_data_t> m_sphere_wireframes;
         core::vector<instance_data_t> m_cubes;
+
+        core::vector<instance_data_t> m_text;
 
         struct scene_t
         {
@@ -142,6 +167,7 @@ namespace tavros::renderer
         mesh_view m_draw_cube_mesh_info;
         mesh_view m_draw_icosphere_mesh_info;
         mesh_view m_draw_icosphere_wireframe_info;
+        mesh_view m_draw_text_info;
         mesh_view m_draw_points3d_info;
         mesh_view m_draw_lines3d_info;
         mesh_view m_draw_tris3d_info;
@@ -158,6 +184,17 @@ namespace tavros::renderer
         rhi::pipeline_handle m_points2d_pipeline;
         rhi::pipeline_handle m_lines2d_pipeline;
         rhi::pipeline_handle m_tris2d_pipeline;
+        rhi::pipeline_handle m_text2d_pipeline;
+
+        rhi::texture_handle        m_font_atlas;
+        rhi::sampler_handle        m_font_sampler;
+        rhi::shader_binding_handle m_font_binding;
+        rhi::buffer_handle         m_stage;
+        bool                       m_need_upload_texture;
+        rhi::texture_copy_region   m_texture_copy_rgn;
+        math::vec2                 m_atlas_texture_size;
+
+        core::shared_ptr<text::font> m_font;
     };
 
 } // namespace tavros::renderer

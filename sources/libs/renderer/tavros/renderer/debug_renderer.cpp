@@ -1,10 +1,19 @@
 #include <tavros/renderer/debug_renderer.hpp>
+
 #include <tavros/renderer/geometry/builtin_geometry_generator.hpp>
+#include <tavros/renderer/resources/consola_mono_ttf.hpp>
+#include <tavros/text/text_layout.hpp>
+#include <tavros/text/rich_line.hpp>
+#include <tavros/text/font/truetype_font.hpp>
+#include <tavros/text/font/font_atlas.hpp>
 
 #include <tavros/core/raii/scoped_owner.hpp>
 #include <tavros/core/debug/unreachable.hpp>
-
+#include <tavros/core/memory/buffer.hpp>
+#include <tavros/core/compression/compression.hpp>
 #include <tavros/core/logger/logger.hpp>
+
+#include <array>
 
 namespace
 {
@@ -44,7 +53,7 @@ void main()
 layout (location = 0) in vec3 a_pos;
 layout (location = 1) in vec3 a_norm;
 layout (location = 2) in vec4 a_color; // per instance
-layout (location = 3) in mat4 a_model; // per instance
+layout (location = 4) in mat4 a_model; // per instance
 
 layout (std140, binding = 0) uniform Scene
 {
@@ -70,6 +79,63 @@ out vec4 frag_color;
 void main()
 {
     frag_color = v_color;
+}
+)");
+
+
+    static const auto inst_text_vert_shsrc = tavros::core::string_view(R"(
+#version 430 core
+
+layout (location = 2) in vec4 a_color; // per instance
+layout (location = 3) in vec4 a_uv1_uv2; // per instance
+layout (location = 4) in mat4 a_model; // per instance
+
+layout (std140, binding = 0) uniform Scene
+{
+    mat4 u_view_proj;
+};
+
+const vec2 plane_verts[4] = vec2[](
+    vec2(0.0, 0.0),
+    vec2(1.0, 0.0),
+    vec2(0.0, 1.0),
+    vec2(1.0, 1.0)
+);
+
+out vec2 v_uv;
+out vec4 v_color;
+
+void main()
+{
+    vec2 local_pos = plane_verts[gl_VertexID % 4];
+    v_uv = mix(a_uv1_uv2.xy, a_uv1_uv2.zw, local_pos);
+
+    v_color = a_color;
+    mat4 mvp = u_view_proj * a_model;
+    gl_Position = mvp * vec4(local_pos, 0.0f, 1.0);
+}
+)");
+
+    static const auto inst_text_frag_shsrc = tavros::core::string_view(R"(
+#version 430 core
+
+layout(binding = 0) uniform sampler2D u_atlas;
+
+in vec4 v_color;
+in vec2 v_uv;
+out vec4 frag_color;
+
+void main()
+{
+    float a = texture(u_atlas, v_uv).r;
+
+    float text_th = 0.45;
+    float smooth_th = 0.15;
+
+    float text_alpha = smoothstep(text_th, text_th + smooth_th, a);
+    float final_alpha = v_color.a * text_alpha; 
+
+    frag_color = vec4(v_color.rgb, final_alpha);
 }
 )");
 
@@ -104,6 +170,9 @@ void main()
         size_t m_offset;
         size_t m_total_bytes;
     };
+
+    constexpr float k_atlas_sdf_size_pix = 4.0f;
+    constexpr float k_atlas_font_scale_pix = 128.0f;
 
 } // namespace
 
@@ -152,6 +221,11 @@ namespace tavros::renderer
             return;
         }
 
+        if (!create_font_atlas()) {
+            destroy_all();
+            return;
+        }
+
         m_gpu_resources_created = true;
     }
 
@@ -183,6 +257,7 @@ namespace tavros::renderer
         m_spheres.clear();
         m_sphere_wireframes.clear();
         m_cubes.clear();
+        m_text.clear();
 
         m_2d_scene.proj = view_orto_proj;
         m_3d_scene.proj = view_persp_proj;
@@ -342,6 +417,49 @@ namespace tavros::renderer
         }
     }
 
+    void debug_renderer::draw_text2d(core::string_view text, float text_size, text_layout text_layout_p, geometry::aabb2 rect, math::color color)
+    {
+        text::rich_line line;
+        line.set_text(text, m_font.get(), text_size);
+
+        text::layout_params params;
+        params.width = rect.size().width;
+        params.line_spacing = text_layout_p.line_spacing;
+        params.align = text_layout_p.text_align;
+        auto  glyphs_bbox = text::text_layout::layout(line.glyphs(), params);
+        float pad = k_atlas_sdf_size_pix / k_atlas_font_scale_pix;
+
+        float y_off = 0.0f;
+        switch (text_layout_p.vert_align) {
+        case vertical_align::top:
+            break;
+        case vertical_align::center:
+            y_off = (rect.size().height - glyphs_bbox.size().height) / 2.0f;
+            break;
+        case vertical_align::bottom:
+            y_off = (rect.size().height - glyphs_bbox.size().height);
+            break;
+        }
+
+        for (const auto& it : line.glyphs()) {
+            instance_data_t d;
+
+            d.color = color;
+            d.uv1_uv2 = math::vec4(
+                static_cast<float>(it.base.rect.left) / m_atlas_texture_size.width,
+                static_cast<float>(it.base.rect.top) / m_atlas_texture_size.height,
+                static_cast<float>(it.base.rect.right) / m_atlas_texture_size.width,
+                static_cast<float>(it.base.rect.bottom) / m_atlas_texture_size.height
+            );
+
+            auto scaled_pad = pad * it.base.glyph_size;
+            auto size = it.base.layout.size();
+            d.model = math::mat4::scale_translate(size + scaled_pad * 2.0f, rect.min + it.base.layout.min - scaled_pad + math::vec2(0.0f, y_off));
+
+            m_text.emplace_back(d);
+        }
+    }
+
     void debug_renderer::point3d(const math::vec3& p, float point_size, const math::color& color)
     {
         m_points3d.emplace_back(p, point_size, color);
@@ -436,7 +554,7 @@ namespace tavros::renderer
     void debug_renderer::box3d(const geometry::aabb3& box, const math::color& color, draw_mode mode)
     {
         if (mode == draw_mode::faces) {
-            m_cubes.emplace_back(color, math::mat4::scale_translate(box.size() / 2.0f, box.center()));
+            m_cubes.emplace_back(color, math::vec4(), math::mat4::scale_translate(box.size() / 2.0f, box.center()));
             return;
         }
 
@@ -484,7 +602,7 @@ namespace tavros::renderer
     void debug_renderer::box3d(const geometry::obb3& box, const math::color& color, draw_mode mode)
     {
         if (mode == draw_mode::faces) {
-            m_cubes.emplace_back(color, box.to_mat());
+            m_cubes.emplace_back(color, math::vec4(), box.to_mat());
             return;
         }
 
@@ -536,10 +654,10 @@ namespace tavros::renderer
             point3d(sph.center, m_point_size, color);
             break;
         case draw_mode::edges:
-            m_sphere_wireframes.emplace_back(color, math::mat4::scale_translate(math::vec3(sph.radius), sph.center));
+            m_sphere_wireframes.emplace_back(color, math::vec4(), math::mat4::scale_translate(math::vec3(sph.radius), sph.center));
             break;
         case draw_mode::faces:
-            m_spheres.emplace_back(color, math::mat4::scale_translate(math::vec3(sph.radius), sph.center));
+            m_spheres.emplace_back(color, math::vec4(), math::mat4::scale_translate(math::vec3(sph.radius), sph.center));
             break;
         default:
             TAV_UNREACHABLE();
@@ -626,7 +744,7 @@ namespace tavros::renderer
 
         m_gdevice->unmap_buffer(m_batch_geom_buffer);
 
-
+        // Instanced geometry
         auto inst_stream_map = m_gdevice->map_buffer(m_inst_stream_data);
 
         offset = 0;
@@ -658,6 +776,15 @@ namespace tavros::renderer
             first_instance += cubes_count;
         }
 
+        {
+            // Upload text
+            auto chars_count = static_cast<uint32>(m_text.size());
+            m_draw_text_info.instance_count = chars_count;
+            m_draw_text_info.first_instance = first_instance;
+            offset += inst_stream_map.copy_from(m_text.data(), chars_count * sizeof(instance_data_t), offset);
+            first_instance += chars_count;
+        }
+
         m_gdevice->unmap_buffer(m_inst_stream_data);
     }
 
@@ -666,6 +793,11 @@ namespace tavros::renderer
         if (!m_gpu_resources_created) {
             ::logger.error("Failed to render(). Renderer not initialized");
             return;
+        }
+
+        if (m_need_upload_texture) {
+            cmds->copy_buffer_to_texture(m_stage, m_font_atlas, m_texture_copy_rgn);
+            m_need_upload_texture = false;
         }
 
         // Draw 3D geom (instanced)
@@ -706,6 +838,11 @@ namespace tavros::renderer
 
         cmds->bind_pipeline(m_tris2d_pipeline);
         draw(cmds, m_draw_tris2d_info);
+
+        cmds->bind_pipeline(m_text2d_pipeline);
+        cmds->bind_shader_binding(m_font_binding);
+        cmds->bind_geometry(m_static_geom_binding);
+        draw(cmds, m_draw_text_info);
     }
 
     void debug_renderer::draw(rhi::command_queue* cmds, const mesh_view& mesh)
@@ -791,7 +928,26 @@ namespace tavros::renderer
             info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
             info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
             info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2});
-            info.attributes.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 3});
+            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3});
+            info.attributes.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4});
+            info.shaders.push_back(vs);
+            info.shaders.push_back(fs);
+            info.depth_stencil.depth_test_enable = z_test;
+            info.depth_stencil.depth_write_enable = z_write;
+            info.depth_stencil.depth_compare = rhi::compare_op::less;
+            info.rasterizer.cull = cull;
+            info.rasterizer.face = rhi::front_face::counter_clockwise;
+            info.rasterizer.polygon = r_mode;
+            info.topology = r_topo;
+            info.blend_states.push_back(bs);
+            return d->create_pipeline(info);
+        };
+
+        auto create_instanced_text_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, bool z_write, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
+            tavros::renderer::rhi::pipeline_create_info info;
+            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2});
+            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3});
+            info.attributes.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4});
             info.shaders.push_back(vs);
             info.shaders.push_back(fs);
             info.depth_stencil.depth_test_enable = z_test;
@@ -863,6 +1019,17 @@ namespace tavros::renderer
             }
         }
 
+        {
+            auto vsh = core::make_scoped_owner(m_gdevice->create_shader({inst_text_vert_shsrc, rhi::shader_stage::vertex, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
+            auto fsh = core::make_scoped_owner(m_gdevice->create_shader({inst_text_frag_shsrc, rhi::shader_stage::fragment, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
+
+            m_text2d_pipeline = create_instanced_text_pipeline(m_gdevice, *vsh, *fsh, false, false, rhi::cull_face::off, rhi::polygon_mode::fill, rhi::primitive_topology::triangle_strip);
+            if (!m_text2d_pipeline) {
+                ::logger.error("Failed to create pipeline for 2d text");
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -930,6 +1097,12 @@ namespace tavros::renderer
             builtin_geometry_generator::gen_icosphere(icosphere_subdivisions, icosphere_verts, icosphere_inds);
         }
 
+        // For text use builtin quad (inside shader)
+        m_draw_text_info.index_count = 0;
+        m_draw_text_info.first_index = 0;
+        m_draw_text_info.vertex_count = 4;
+        m_draw_text_info.first_vertex = 0;
+
         m_gdevice->unmap_buffer(m_static_verts_buffer);
         m_gdevice->unmap_buffer(m_static_inds_buffer);
 
@@ -940,7 +1113,8 @@ namespace tavros::renderer
         geom_info.attribute_bindings.push_back({0, offsetof(xyz_norm_t, xyz_norm_t::pos), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
         geom_info.attribute_bindings.push_back({0, offsetof(xyz_norm_t, xyz_norm_t::norm), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
         geom_info.attribute_bindings.push_back({1, offsetof(instance_data_t, instance_data_t::color), 1, rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2});
-        geom_info.attribute_bindings.push_back({1, offsetof(instance_data_t, instance_data_t::model), 1, rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 3});
+        geom_info.attribute_bindings.push_back({1, offsetof(instance_data_t, instance_data_t::uv1_uv2), 1, rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3});
+        geom_info.attribute_bindings.push_back({1, offsetof(instance_data_t, instance_data_t::model), 1, rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4});
         geom_info.has_index_buffer = true;
         geom_info.index_format = rhi::index_buffer_format::u32;
         geom_info.index_buffer = m_static_inds_buffer;
@@ -980,6 +1154,82 @@ namespace tavros::renderer
         return true;
     }
 
+    bool debug_renderer::create_font_atlas()
+    {
+        auto ttf_data = core::dynamic_buffer<uint8>(&m_alc);
+        ttf_data.reserve(g_consola_mono_ttf_uncompressed_size);
+        auto compressed_ttf_data = core::buffer_view<uint8>(g_consola_mono_ttf_compressed_data, g_consola_mono_ttf_compressed_size);
+        if (!core::uncompress_data(compressed_ttf_data, ttf_data)) {
+            ::logger.fatal("Failed to uncompress ttf");
+            return false;
+        }
+
+        auto                                 ttf = core::make_shared<text::truetype_font>();
+        text::truetype_font::codepoint_range glyph_range = {0, 0xffff};
+        ttf->init(std::move(ttf_data), glyph_range);
+        if (!ttf->is_init()) {
+            ::logger.fatal("Failed to init ttf");
+            return false;
+        }
+        m_font = ttf;
+
+        text::font_atlas atlas;
+        atlas.register_font(m_font.get());
+
+        auto atlas_buffer = core::dynamic_buffer<uint8>(&m_alc);
+        auto atlas_pixels = atlas.invalidate_old_and_bake_new_atlas(atlas_buffer, k_atlas_font_scale_pix, k_atlas_sdf_size_pix);
+        m_atlas_texture_size.set(atlas_pixels.width, atlas_pixels.height);
+
+        rhi::texture_create_info tex_info;
+        tex_info.type = rhi::texture_type::texture_2d;
+        tex_info.format = rhi::pixel_format::r8un;
+        tex_info.width = atlas_pixels.width;
+        tex_info.height = atlas_pixels.height;
+        tex_info.usage = rhi::k_default_texture_usage;
+
+        m_font_atlas = m_gdevice->create_texture(tex_info);
+        if (!m_font_atlas) {
+            ::logger.fatal("Failed to create texture");
+            return false;
+        }
+
+        rhi::sampler_create_info sampler_info;
+        sampler_info.filter.mipmap_filter = rhi::mipmap_filter_mode::off;
+        sampler_info.filter.min_filter = rhi::filter_mode::linear;
+        sampler_info.filter.mag_filter = rhi::filter_mode::linear;
+        m_font_sampler = m_gdevice->create_sampler(sampler_info);
+        if (!m_font_sampler) {
+            ::logger.fatal("Failed to create sampler");
+            return false;
+        }
+
+        rhi::shader_binding_create_info shader_binding_info;
+        shader_binding_info.texture_bindings.push_back({m_font_atlas, m_font_sampler, 0});
+        m_font_binding = m_gdevice->create_shader_binding(shader_binding_info);
+        if (!m_font_binding) {
+            ::logger.fatal("Failed to create shader binding");
+            return false;
+        }
+
+        rhi::buffer_create_info stage_desc{1024ull * 1024ull, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu};
+        m_stage = m_gdevice->create_buffer(stage_desc);
+        if (!m_stage) {
+            ::logger.fatal("Failed to create stage buffer");
+            return false;
+        }
+
+        auto map = m_gdevice->map_buffer(m_stage, 0, atlas_pixels.width * atlas_pixels.height);
+        map.copy_from(atlas_pixels.pixels, atlas_pixels.width * atlas_pixels.height);
+        m_gdevice->unmap_buffer(m_stage);
+
+        m_texture_copy_rgn.width = atlas_pixels.width;
+        m_texture_copy_rgn.height = atlas_pixels.height;
+        m_need_upload_texture = true;
+
+
+        return true;
+    }
+
     void debug_renderer::destroy_all()
     {
         m_gdevice->safe_destroy(m_scene_params_buffer);
@@ -999,6 +1249,11 @@ namespace tavros::renderer
         m_gdevice->safe_destroy(m_points2d_pipeline);
         m_gdevice->safe_destroy(m_lines2d_pipeline);
         m_gdevice->safe_destroy(m_tris2d_pipeline);
+        m_gdevice->safe_destroy(m_font_atlas);
+        m_gdevice->safe_destroy(m_font_sampler);
+        m_gdevice->safe_destroy(m_font_binding);
+        m_gdevice->safe_destroy(m_text2d_pipeline);
+        m_gdevice->safe_destroy(m_stage);
         m_gdevice = nullptr;
     }
 

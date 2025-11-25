@@ -31,6 +31,9 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/graphics_device.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/string_utils.cpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resources/consola_mono_ttf.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resources/consola_mono_ttf.hpp
+
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/buffer_create_info.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/command_queue.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/enums.hpp
