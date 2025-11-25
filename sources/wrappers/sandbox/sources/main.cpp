@@ -1,29 +1,38 @@
 ﻿#include <stdio.h>
 
 #include "render_app_base.hpp"
-#include "image_codec.hpp"
 #include "built_in_meshes.hpp"
-#include "input_manager.hpp"
 
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/memory/mallocator.hpp>
+#include <tavros/core/memory/buffer.hpp>
+#include <tavros/core/utf8.hpp>
+#include <tavros/core/geometry/aabb2.hpp>
+
 #include <tavros/renderer/rhi/command_queue.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/camera/camera.hpp>
+#include <tavros/renderer/debug_renderer.hpp>
 #include <tavros/renderer/render_target.hpp>
+
+#include <tavros/input/input_manager.hpp>
 
 #include <tavros/resources/resource_manager.hpp>
 #include <tavros/resources/providers/filesystem_provider.hpp>
-#include <tavros/core/memory/buffer.hpp>
+#include <tavros/resources/codecs/image_codec.hpp>
+
+#include <tavros/ui/view.hpp>
+#include <tavros/ui/button/button.hpp>
+#include <tavros/ui/root_view.hpp>
+
+#include <tavros/text/font/font.hpp>
+#include <tavros/text/font/truetype_font.hpp>
+#include <tavros/text/font/font_atlas.hpp>
+#include <tavros/text/text_layout.hpp>
 
 #include <tavros/system/application.hpp>
 
 #include <algorithm>
-
-#include <tavros/core/geometry/aabb2.hpp>
-
-#include <tavros/ui/font/truetype_font.hpp>
-#include <tavros/ui/font/font_atlas.hpp>
 
 namespace rhi = tavros::renderer::rhi;
 
@@ -96,14 +105,9 @@ layout (std430, binding = 0) buffer Scene
 out vec2 v_tex_coord;
 out vec3 v_normal;
 out vec3 v_to_camera;
-out float v_near;
-out float v_far;
 
 void main()
 {
-    v_near = u_near_plane;
-    v_far = u_far_plane;
-
     vec4 world_pos = vec4(a_pos, 1.0); // u_model * vec4(a_pos, 1.0);
 
     v_normal = a_normal; // mat3(u_model) * a_normal;
@@ -125,15 +129,13 @@ layout(binding = 0) uniform sampler2D uTex;
 in vec2 v_tex_coord;
 in vec3 v_normal;
 in vec3 v_to_camera;
-in float v_near;
-in float v_far;
 
 layout(location = 0) out vec4 out_color;
 
 void main()
 {
     vec3 N = gl_FrontFacing ? v_normal : -v_normal;
-    vec3 L = normalize(-v_to_camera);
+    vec3 L = normalize(v_to_camera);
 
     float diffuse = max(dot(N, L), 0.0);
     float ambient = 0.25;
@@ -284,22 +286,10 @@ void main()
 const char* sdf_font_vertex_shader_source = R"(
 #version 430 core
 
-layout (location = 0) in unsigned int a_glyph_index; // per-instance glyph index
-layout (location = 1) in mat3x2 a_gpyph_transform;  // per-instance transform
-layout (location = 4) in vec3 a_gpyph_color;  // per-instance color
-layout (location = 5) in vec3 a_outline_color;  // per-instance color
-
-
-// === SSBO with glyph UVs ===
-struct GlyphUVs {
-    vec2 uv_min;
-    vec2 uv_max;
-};
-
-layout(std430, binding = 1) buffer GlyphBuffer
-{
-    GlyphUVs glyphs[];
-};
+layout (location = 0) in mat3x2 a_gpyph_transform;  // per-instance transform
+layout (location = 3) in uvec2 a_bounds; // per-instance glyph uvs
+layout (location = 4) in uint a_gpyph_color;  // per-instance color
+layout (location = 5) in uint a_outline_color;  // per-instance color
 
 layout (std430, binding = 0) buffer Scene
 {
@@ -327,26 +317,44 @@ const vec2 plane_verts[4] = vec2[](
     vec2(1.0, 1.0)
 );
 
+layout(binding = 0) uniform sampler2D u_sdf_atlas;
+
 out vec2 v_uv;
-out vec3 v_color;
-out vec3 v_outline_color;
+out vec4 v_color;
+out vec4 v_outline_color;
+
+vec4 unpack_color(uint cl)
+{
+    return vec4(
+        float((cl >> 24) & 0xFFu) / 255.0,
+        float((cl >> 16) & 0xFFu) / 255.0,
+        float((cl >>  8) & 0xFFu) / 255.0,
+        float((cl >>  0) & 0xFFu) / 255.0
+    );
+}
 
 void main()
 {
     int vid = gl_VertexID % 4;
     vec2 local_pos = plane_verts[vid];
 
-    GlyphUVs glyph_uvs = glyphs[a_glyph_index];
+    vec2 tex_size = textureSize(u_sdf_atlas, 0);
+    vec4 uv0uv1 = vec4(
+        float((a_bounds.x >> 0) & 0xffffu) / tex_size.x,
+        float((a_bounds.x >> 16 ) & 0xffffu) / tex_size.y,
+        float((a_bounds.y >> 0) & 0xffffu) / tex_size.x,
+        float((a_bounds.y >> 16) & 0xffffu) / tex_size.y
+    );
 
     // Interpolate UVs (simple quad mapping)
-    v_uv = mix(glyph_uvs.uv_min, glyph_uvs.uv_max, local_pos);
+    v_uv = mix(uv0uv1.xy, uv0uv1.zw, local_pos);
 
     // Transform to clip space
     vec2 world_pos = a_gpyph_transform * vec3(local_pos, 1.0);
     gl_Position = u_ortho * vec4(world_pos, 0.0, 1.0);
 
-    v_color = a_gpyph_color;
-    v_outline_color = a_outline_color;
+    v_color = unpack_color(a_gpyph_color);
+    v_outline_color = unpack_color(a_outline_color);
 }
 )";
 
@@ -358,100 +366,51 @@ out vec4 frag_color;
 layout(binding = 0) uniform sampler2D u_sdf_atlas;
 
 in vec2 v_uv;
-in vec3 v_color;
-in vec3 v_outline_color;
+in vec4 v_color;
+in vec4 v_outline_color;
 
 void main()
 {
     float sdf = texture(u_sdf_atlas, v_uv).r;
-    float smooth_th = 0.02;
+
+    // Thresholds and smoothing for SDF
+    float smooth_th = 0.05;
     float text_th = 0.5;
-    float outline_th = 0.45;
+    float outline_th = 0.35;
+
+    // Alpha masks for text and outline
     float text_alpha = smoothstep(text_th, text_th + smooth_th, sdf);
-    float final_alpha = smoothstep(outline_th, outline_th + smooth_th, sdf);
-    vec3 color = mix(v_outline_color, v_color, text_alpha);
-    frag_color = vec4(color, final_alpha);
+    float outline_alpha = smoothstep(outline_th, outline_th + smooth_th, sdf);
+
+    // Color interpolation between outline and main text
+    vec4 color = mix(v_outline_color, v_color, text_alpha);
+
+    // Combine alpha channels properly
+    float final_alpha = max(outline_alpha * color.a, 0.0);
+
+    frag_color = vec4(color.rgb, final_alpha);
 }
 )";
 
+const tavros::core::string_view lorem_ipsum = R"(Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec commodo tellus eu urna fermentum, porta facilisis libero lobortis. Vestibulum est urna, fermentum sed fringilla sed, dignissim quis est. Donec tempus sed enim vitae aliquet. Nullam rhoncus, erat at eleifend consequat, dolor tellus aliquam orci, eget varius mi est ut turpis. In nec enim eu nisi lobortis euismod in a neque. Fusce interdum vel turpis sit amet sodales. Nam quis volutpat est. Duis interdum libero eget dui dapibus laoreet. Mauris condimentum elit turpis, a semper ex elementum eu. Nam finibus urna purus, sit amet pellentesque ante pharetra id. Vivamus nisl ligula, lacinia consequat lacinia id, scelerisque ac sem. Vivamus pellentesque, ligula in posuere sodales, sem ante condimentum purus, in laoreet velit quam ac ipsum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur fermentum sit amet risus vitae aliquam. Aliquam id dapibus risus, et rhoncus tellus. Ut sit amet elementum leo.
 
-uint32 extract_utf8_codepoint(const char* text, const char* end, const char** out)
-{
-    TAV_ASSERT(text);
-    TAV_ASSERT(end);
-    TAV_ASSERT(out);
-    TAV_ASSERT(text <= end);
+Cras elementum lacinia diam nec eleifend. Nullam consequat porttitor tellus, ac finibus mauris suscipit non. Sed semper turpis non elit suscipit, et viverra risus suscipit. Aliquam sagittis felis et nibh consectetur facilisis eget quis nisl. Fusce blandit felis id nibh luctus ornare. Etiam cursus mattis velit, sed maximus massa tristique vel. Pellentesque vitae euismod augue. Duis vel velit eu nulla egestas convallis ac non eros. Proin quis sem quam. Phasellus elementum urna ut ipsum blandit vulputate. Duis lobortis rhoncus vestibulum.
 
-    if (text + 0 == end) {
-        *out = end;
-        return 0;
-    }
+Morbi ultrices, metus at viverra scelerisque, metus sem accumsan nisl, sit amet tincidunt risus nisi non nibh. Integer sed molestie ligula. Integer eu massa id sapien blandit sagittis vel in magna. Nam vestibulum massa nisl, vitae vestibulum mi molestie et. Fusce hendrerit augue ante, ut tincidunt leo commodo quis. Aenean blandit non urna at auctor. Sed luctus, metus nec dapibus consequat, nisi lacus fringilla arcu, eget posuere risus nunc in neque. Aenean lobortis nec diam ut lobortis. Phasellus bibendum tellus in sapien porta ultrices. Fusce nec ex iaculis, hendrerit sapien a, accumsan ante. Donec non tortor interdum, facilisis magna vitae, fermentum mi. Maecenas enim diam, fringilla a gravida sit amet, feugiat et lectus. Nunc dapibus ultrices est vitae ultrices. Mauris mattis nec nunc vel varius. Aliquam tincidunt ac ante sed elementum.
 
-    uint32 c0 = static_cast<uint8>(text[0]);
-    if (!(c0 & 0x80)) {
-        *out = text + 1;
-        return c0;
-    }
+Aliquam vitae rutrum purus. Nullam finibus, augue luctus molestie lacinia, nibh lectus rutrum odio, ut dapibus massa massa nec augue. Aliquam ac leo pharetra, finibus arcu nec, fermentum nibh. Nullam elit lorem, vehicula eget mollis vitae, dictum a eros. Suspendisse ultricies elit placerat, cursus ipsum id, pharetra justo. Nam eu libero et enim pretium pulvinar nec vel felis. Maecenas rhoncus est lobortis nibh commodo fermentum. Suspendisse ultricies tellus vulputate purus feugiat imperdiet. Vestibulum efficitur rutrum turpis, id pretium metus interdum at. Vestibulum sed purus eget diam bibendum sodales. Etiam ac massa sit amet enim fermentum tempor eu vitae justo. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Quisque est erat, condimentum non suscipit a, bibendum eu nisi. Pellentesque dolor massa, gravida sed efficitur id, tincidunt vel lectus. Suspendisse laoreet libero in mi molestie, sit amet commodo lacus tristique. Mauris egestas ultricies cursus.
 
-    if (text + 1 == end) {
-        *out = end;
-        return 0xFFFD;
-    }
+Integer ipsum est, tempus non mollis vel, blandit sit amet mauris. Duis luctus ligula vitae urna egestas, ut venenatis arcu malesuada. Lorem ipsum dolor sit amet, consectetur adipiscing elit. Morbi in nisl sed erat laoreet elementum id ut mauris. Morbi faucibus nunc turpis, eu blandit nisi ullamcorper in. Cras malesuada maximus elit, sed porttitor ipsum dapibus elementum. Fusce feugiat metus risus, sit amet dapibus arcu eleifend vel.
+)";
 
-    uint32 c1 = static_cast<uint8>(text[1]);
-    if ((c1 & 0xC0) != 0x80) {
-        *out = text + 1;
-        return 0xFFFD;
-    }
-
-    if ((c0 & 0xE0) == 0xC0) {
-        uint32 cp = ((c0 & 0x1F) << 6) | (c1 & 0x3F);
-        *out = text + 2;
-        return cp < 0x80 ? 0xFFFD : cp;
-    }
-
-    if (text + 2 == end) {
-        *out = end;
-        return 0xFFFD;
-    }
-
-    uint32 c2 = static_cast<uint8>(text[2]);
-    if ((c2 & 0xC0) != 0x80) {
-        *out = text + 1;
-        return 0xFFFD;
-    }
-
-    if ((c0 & 0xF0) == 0xE0) {
-        uint32 cp = ((c0 & 0x0F) << 12) | ((c1 & 0x3F) << 6) | (c2 & 0x3F);
-        *out = text + 3;
-        return cp < 0x800 || (cp >= 0xD800 && cp <= 0xDFFF) ? 0xFFFD : cp;
-    }
-
-    if (text + 3 == end) {
-        *out = end;
-        return 0xFFFD;
-    }
-
-    uint32 c3 = static_cast<uint8>(text[3]);
-    if ((c3 & 0xC0) != 0x80) {
-        *out = text + 1;
-        return 0xFFFD;
-    }
-
-    if ((c0 & 0xF8) == 0xF0) {
-        uint32 cp = ((c0 & 0x07) << 18) | ((c1 & 0x3F) << 12) | ((c2 & 0x3F) << 6) | (c3 & 0x3F);
-        *out = text + 4;
-        return cp < 0x10000 || cp > 0x10FFFF ? 0xFFFD : cp;
-    }
-
-    *out = text + 1;
-    return 0xFFFD;
-}
-
+const tavros::core::string_view lorem_ipsum_2 = "  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec commodo tellus eu urna fermentum, porta facilisis libero lobortis. Vestibulum est urna, fermentum sed fringilla sed, dignissim quis est. Donec tempus sed enim vitae aliquet. Nullam rhoncus, erat at eleifend consequat, dolor tellus aliquam orci, eget varius mi est ut turpis. In nec enim eu nisi lobortis euismod in a neque. Fusce interdum vel turpis sit amet sodales. Nam quis volutpat est. Duis interdum libero eget dui dapibus laoreet. Mauris condimentum elit turpis, a semper ex elementum eu. Nam finibus urna purus, sit amet pellentesque ante pharetra id. Vivamus nisl ligula, lacinia consequat lacinia id, scelerisque ac sem. Vivamus pellentesque, ligula in posuere sodales, sem ante condimentum purus, in laoreet velit quam ac ipsum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur fermentum sit amet risus vitae aliquam. Aliquam id dapibus risus, et rhoncus tellus. Ut sit amet elementum leo. В частности, постоянный количественный рост и сфера нашей активности, а также свежий взгляд на привычные вещи — безусловно открывает новые горизонты для поставленных обществом задач. И нет сомнений, что действия представителей оппозиции неоднозначны и будут представлены в исключительно положительном свете. Также как выбранный нами инновационный путь способствует подготовке и реализации поэтапного и последовательного развития общества. Повседневная практика показывает, что курс на социально-ориентированный национальный проект, а также свежий взгляд на привычные вещи — безусловно открывает новые горизонты для инновационных методов управления процессами. В частности, глубокий уровень погружения позволяет оценить значение распределения внутренних резервов и ресурсов.";
 
 namespace rhi = tavros::renderer::rhi;
 
 static tavros::core::logger logger("main");
+
+constexpr float k_sdf_size_pix = 6.0f;
+constexpr float k_font_scale_pix = 96.0f;
 
 [[noreturn]] void exit_fail()
 {
@@ -459,208 +418,51 @@ static tavros::core::logger logger("main");
 }
 
 
-class render_target : tavros::core::noncopyable
+struct glyph_params
 {
-public:
-    render_target(
-        rhi::graphics_device*                        graphics_device,
-        tavros::core::buffer_view<rhi::pixel_format> color_attachment_formats,
-        rhi::pixel_format                            depth_stencil_attachment_format
-    )
-        : m_graphics_device(graphics_device)
-        , m_color_attachment_formats(color_attachment_formats)
-        , m_depth_stencil_attachment_format(depth_stencil_attachment_format)
-    {
-        TAV_ASSERT(m_graphics_device);
-        for (auto fmt : m_color_attachment_formats) {
-            TAV_ASSERT(fmt != rhi::pixel_format::none);
-        }
-    }
-
-    void recreate(uint32 width, uint32 height, uint32 msaa)
-    {
-        destroy();
-
-        constexpr auto resolve_source_usage = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
-        constexpr auto resolve_destination_usage = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
-
-        for (auto fmt : m_color_attachment_formats) {
-            auto src_tex = create_texture(width, height, fmt, resolve_source_usage, msaa);
-            m_resolve_source_color_attachments.push_back(src_tex);
-
-            auto dst_tex = create_texture(width, height, fmt, resolve_destination_usage, 1);
-            m_resolve_destination_color_attachments.push_back(dst_tex);
-        }
-
-        m_resolve_source_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_source_usage, msaa);
-        m_resolve_destination_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_destination_usage, 1);
-
-        m_framebuffer = create_fb(width, height, msaa);
-        m_render_pass = create_rp(true);
-    }
-
-    void destroy()
-    {
-        for (auto tex : m_resolve_source_color_attachments) {
-            m_graphics_device->destroy_texture(tex);
-        }
-        m_resolve_source_color_attachments.clear();
-
-        for (auto tex : m_resolve_destination_color_attachments) {
-            m_graphics_device->destroy_texture(tex);
-        }
-        m_resolve_destination_color_attachments.clear();
-
-        if (m_resolve_source_depth_stencil_attachment) {
-            m_graphics_device->destroy_texture(m_resolve_source_depth_stencil_attachment);
-            m_resolve_source_depth_stencil_attachment = {};
-        }
-
-        if (m_resolve_destination_depth_stencil_attachment) {
-            m_graphics_device->destroy_texture(m_resolve_destination_depth_stencil_attachment);
-            m_resolve_destination_depth_stencil_attachment = {};
-        }
-
-        if (m_framebuffer) {
-            m_graphics_device->destroy_framebuffer(m_framebuffer);
-            m_framebuffer = {};
-        }
-
-        if (m_render_pass) {
-            m_graphics_device->destroy_render_pass(m_render_pass);
-            m_render_pass = {};
-        }
-    }
-
-    uint32 color_attachment_count() const
-    {
-        return m_color_attachment_formats.size();
-    }
-
-    rhi::texture_handle get_color_attachment(uint32 index) const
-    {
-        return m_resolve_destination_color_attachments[index];
-    }
-
-    rhi::texture_handle get_depth_stencil_attachment() const
-    {
-        return m_resolve_destination_depth_stencil_attachment;
-    }
-
-    rhi::framebuffer_handle framebuffer() const
-    {
-        TAV_ASSERT(m_framebuffer);
-        return m_framebuffer;
-    }
-
-    rhi::render_pass_handle render_pass() const
-    {
-        return m_render_pass;
-    }
-
-private:
-    rhi::framebuffer_handle create_fb(uint32 width, uint32 height, uint32 msaa)
-    {
-        rhi::framebuffer_create_info fb_info;
-        fb_info.width = width;
-        fb_info.height = height;
-        fb_info.color_attachments = m_resolve_source_color_attachments;
-        fb_info.has_depth_stencil_attachment = true;
-        fb_info.depth_stencil_attachment = m_resolve_source_depth_stencil_attachment;
-        fb_info.sample_count = msaa;
-
-        auto fb = m_graphics_device->create_framebuffer(fb_info);
-        if (!fb) {
-            ::logger.fatal("Failed to create framebuffer.");
-            exit_fail();
-        }
-        return fb;
-    }
-
-    rhi::texture_handle create_texture(uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa)
-    {
-        rhi::texture_create_info tex_info;
-        tex_info.type = rhi::texture_type::texture_2d;
-        tex_info.format = fmt;
-        tex_info.width = width;
-        tex_info.height = height;
-        tex_info.depth = 1;
-        tex_info.usage = usage;
-        tex_info.mip_levels = 1;
-        tex_info.array_layers = 1;
-        tex_info.sample_count = msaa;
-
-        auto tex = m_graphics_device->create_texture(tex_info);
-        if (!tex) {
-            ::logger.fatal("Failed to create texture.");
-            exit_fail();
-        }
-        return tex;
-    }
-
-    rhi::render_pass_handle create_rp(bool need_resolve)
-    {
-        rhi::render_pass_create_info rp_info;
-
-        uint32 resolve_index = 0;
-        for (uint32 index = 0; index < m_color_attachment_formats.size(); ++index) {
-            rhi::color_attachment_info ca_info;
-            ca_info.format = m_color_attachment_formats[index];
-            ca_info.load = rhi::load_op::clear;
-            ca_info.store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
-            ca_info.resolve_target = need_resolve ? m_resolve_destination_color_attachments[index] : rhi::texture_handle();
-            ca_info.clear_value[0] = 0.2f;
-            ca_info.clear_value[1] = 0.2f;
-            ca_info.clear_value[2] = 0.25f;
-            ca_info.clear_value[3] = 1.0f;
-
-            rp_info.color_attachments.push_back(ca_info);
-        }
-
-        rhi::depth_stencil_attachment_info dsca_info;
-        dsca_info.format = m_depth_stencil_attachment_format;
-        dsca_info.depth_load = rhi::load_op::clear;
-        dsca_info.depth_store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
-        dsca_info.depth_clear_value = 1.0f;
-        dsca_info.stencil_load = rhi::load_op::dont_care;
-        dsca_info.stencil_store = rhi::store_op::dont_care;
-        dsca_info.stencil_clear_value = 0;
-        dsca_info.resolve_target = m_resolve_destination_depth_stencil_attachment;
-
-        rp_info.depth_stencil_attachment = dsca_info;
-
-        auto rp = m_graphics_device->create_render_pass(rp_info);
-        if (!rp) {
-            ::logger.fatal("Failed to create render pass.");
-            exit_fail();
-        }
-
-        return rp;
-    }
-
-private:
-    template<class T>
-    using vector_t = tavros::core::static_vector<T, rhi::k_max_color_attachments>;
-
-    rhi::graphics_device*         m_graphics_device;
-    vector_t<rhi::pixel_format>   m_color_attachment_formats;
-    rhi::pixel_format             m_depth_stencil_attachment_format;
-    vector_t<rhi::texture_handle> m_resolve_source_color_attachments;
-    vector_t<rhi::texture_handle> m_resolve_destination_color_attachments;
-    rhi::texture_handle           m_resolve_source_depth_stencil_attachment;
-    rhi::texture_handle           m_resolve_destination_depth_stencil_attachment;
-    rhi::framebuffer_handle       m_framebuffer;
-    rhi::render_pass_handle       m_render_pass;
+    tavros::math::rgba8 fill_color;
+    tavros::math::rgba8 outline_color;
 };
 
-
-struct font_instance_info
+struct glyph_instance
 {
-    float              mat[3][2] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
-    uint32             glyph_index = 0;
-    tavros::math::vec3 color;
-    tavros::math::vec3 outline_color;
+    float                    mat[3][2] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+    tavros::text::atlas_rect rect;
+    tavros::math::rgba8      fill_color;
+    tavros::math::rgba8      outline_color;
 };
+
+template<class GlyphData>
+size_t fill_glyphs_instances(tavros::core::buffer_span<GlyphData> glyphs, tavros::core::buffer_span<glyph_instance> buf, tavros::math::vec2 pos_text, float pad)
+{
+    TAV_ASSERT(buf.size() == glyphs.size());
+
+    size_t len = 0;
+    auto*  dst = buf.begin();
+    for (auto src = glyphs.begin(); src < glyphs.end(); ++src) {
+        if (!src->base.is_space) {
+            auto scale = src->base.glyph_size;
+            auto scaled_pad = pad * scale;
+            auto size = src->base.layout.size();
+
+            dst->mat[0][0] = size.width + scaled_pad * 2.0f;
+            dst->mat[0][1] = 0.0f;
+            dst->mat[1][0] = 0.0f;
+            dst->mat[1][1] = size.height + scaled_pad * 2.0f;
+            dst->mat[2][0] = pos_text.x + src->base.layout.min.x - scaled_pad;
+            dst->mat[2][1] = pos_text.y + src->base.layout.min.y - scaled_pad;
+
+            dst->rect = src->base.rect;
+            dst->fill_color = src->params.fill_color;
+            dst->outline_color = src->params.outline_color;
+
+            ++dst;
+            ++len;
+        }
+    }
+
+    return len;
+}
 
 
 class main_window : public app::render_app_base
@@ -691,7 +493,7 @@ public:
         return buffer;
     }
 
-    app::image_codec::pixels_view load_image(tavros::core::string_view path, bool y_flip = false)
+    tavros::resources::image_codec::pixels_view load_image(tavros::core::string_view path, bool y_flip = false)
     {
         tavros::core::dynamic_buffer<uint8> buffer(&m_allocator);
 
@@ -709,9 +511,9 @@ public:
         return m_imcodec.decode(buffer, 4, y_flip);
     }
 
-    bool save_image(const app::image_codec::pixels_view& pixels, tavros::core::string_view path, bool y_flip = false)
+    bool save_image(const tavros::resources::image_codec::pixels_view& pixels, tavros::core::string_view path, bool y_flip = false)
     {
-        auto im_data = m_imcodec.encode(pixels, y_flip);
+        auto im_data = m_imcodec.encode(pixels, tavros::resources::image_codec::image_format::png, y_flip);
         if (im_data.empty()) {
             ::logger.error("Failed to save image '{}': im_data is empty()", path);
             return false;
@@ -730,60 +532,63 @@ public:
         return false;
     }
 
-    rhi::shader_binding_handle load_font_data(tavros::core::string_view path)
+    tavros::core::shared_ptr<tavros::text::font> load_ttf(tavros::core::string_view path, tavros::core::buffer_view<tavros::text::truetype_font::codepoint_range> ranges)
     {
+        if (!m_text_atlas) {
+            m_text_atlas = tavros::core::make_shared<tavros::text::font_atlas>();
+        }
+
         tavros::core::dynamic_buffer<uint8> font_data(&m_allocator);
 
-        auto res = m_resource_manager->open(path);
-        if (res) {
+        if (auto res = m_resource_manager->open(path)) {
             auto* reader = res->reader();
             if (reader->is_open()) {
                 auto size = reader->size();
                 font_data.reserve(size);
                 reader->read(font_data);
+
+                auto ttf = tavros::core::make_shared<tavros::text::truetype_font>();
+                ttf->init(std::move(font_data), ranges);
+                if (!ttf->is_init()) {
+                    ::logger.fatal("Failed to init font {}.", path);
+                    exit_fail();
+                }
+
+                m_text_atlas->register_font(ttf.get());
+
+                return ttf;
+            } else {
+                ::logger.fatal("Failed to load font {}.", path);
+                exit_fail();
             }
         } else {
-            ::logger.fatal("Failed to load font {}.", path);
+            ::logger.fatal("Failed to open font {}.", path);
             exit_fail();
         }
 
-        m_font.init(std::move(font_data));
-        if (!m_font.is_init()) {
-            ::logger.error("Failed to init font.");
-            exit_fail();
-        }
+        return nullptr;
+    }
 
-        m_font_atlas.begin_atlas();
-        for (uint32 codepoint = 0; codepoint < 0x80; ++codepoint) {
-            m_font_atlas.add_glyph_from(&m_font, codepoint, 64.0f, 8.0f);
-        }
-        m_font_atlas.end_atlas();
+    rhi::shader_binding_handle upload_font_data()
+    {
+        tavros::core::dynamic_buffer<uint8> atlas(&m_allocator);
+        auto                                new_atlas_pix = m_text_atlas->invalidate_old_and_bake_new_atlas(atlas, k_font_scale_pix, k_sdf_size_pix);
 
-        auto atlas_size = m_font_atlas.get_atlas_size();
-
-        std::vector<uint8>                   bitmap(atlas_size.width * atlas_size.height, 0);
-        tavros::ui::font_atlas::atlas_pixels pixels;
-        pixels.pixels = bitmap.data();
-        pixels.width = atlas_size.width;
-        pixels.height = atlas_size.height;
-        pixels.stride = atlas_size.width;
-
-        if (!m_font_atlas.bake_atlas(pixels)) {
-            ::logger.error("Failed to make atlas.");
-            exit_fail();
-        }
+        size_t                                      new_atlas_im_size = new_atlas_pix.width * new_atlas_pix.height;
+        tavros::resources::image_codec::pixels_view new_atlas_im{new_atlas_pix.width, new_atlas_pix.height, 1, new_atlas_pix.width, {new_atlas_pix.pixels, new_atlas_im_size}};
+        save_image(new_atlas_im, "font_atlas_new.png");
 
         // create texture
-        size_t tex_size = atlas_size.width * atlas_size.height;
+        size_t tex_size = new_atlas_im.width * new_atlas_im.height;
         auto   dst = m_graphics_device->map_buffer(m_stage_buffer);
-        dst.copy_from(bitmap.data(), tex_size);
+        dst.copy_from(new_atlas_pix.pixels, tex_size);
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
         rhi::texture_create_info tex_info;
         tex_info.type = rhi::texture_type::texture_2d;
         tex_info.format = rhi::pixel_format::r8un;
-        tex_info.width = atlas_size.width;
-        tex_info.height = atlas_size.height;
+        tex_info.width = new_atlas_im.width;
+        tex_info.height = new_atlas_im.height;
         tex_info.depth = 1;
         tex_info.usage = rhi::k_default_texture_usage;
         tex_info.mip_levels = 1;
@@ -799,41 +604,11 @@ public:
         auto* cbuf = m_composer->create_command_queue();
         cbuf->wait_for_fence(m_fence);
         rhi::texture_copy_region rgn;
-        rgn.width = atlas_size.width;
-        rgn.height = atlas_size.height;
+        rgn.width = new_atlas_im.width;
+        rgn.height = new_atlas_im.height;
         cbuf->copy_buffer_to_texture(m_stage_buffer, texture, rgn);
         cbuf->signal_fence(m_fence);
         m_composer->submit_command_queue(cbuf);
-
-        // Create SSBO
-
-        struct glyph_uv_data
-        {
-            tavros::math::vec2 min;
-            tavros::math::vec2 max;
-        };
-        std::vector<glyph_uv_data> uv_data;
-        uv_data.reserve(m_font_atlas.map().size());
-
-        uint32 index = 0;
-        for (auto& item : m_font_atlas.map()) {
-            auto& info = item.second;
-            uv_data.push_back({item.second.uv1, item.second.uv2});
-        }
-
-        size_t                  uv_size = uv_data.size() * sizeof(glyph_uv_data);
-        rhi::buffer_create_info uniform_buffer_desc{uv_size, rhi::buffer_usage::storage, rhi::buffer_access::cpu_to_gpu};
-        auto                    ssbo_uv = m_graphics_device->create_buffer(uniform_buffer_desc);
-        if (!ssbo_uv) {
-            ::logger.fatal("Failed to create ssbo uv buffer");
-            exit_fail();
-        }
-
-        cbuf->wait_for_fence(m_fence);
-        auto dst_uv = m_graphics_device->map_buffer(ssbo_uv);
-        dst_uv.copy_from(uv_data.data(), uv_size);
-        m_graphics_device->unmap_buffer(ssbo_uv);
-        cbuf->signal_fence(m_fence);
 
         rhi::sampler_create_info sampler_info;
         sampler_info.filter.mipmap_filter = rhi::mipmap_filter_mode::off;
@@ -848,15 +623,11 @@ public:
 
         rhi::shader_binding_create_info shader_binding_info;
         shader_binding_info.texture_bindings.push_back({texture, sampler, 0});
-        shader_binding_info.buffer_bindings.push_back({ssbo_uv, 0, 0, 1});
         auto sh_binding = m_graphics_device->create_shader_binding(shader_binding_info);
         if (!sh_binding) {
             ::logger.fatal("Failed to create shader binding pass");
             exit_fail();
         }
-
-        app::image_codec::pixels_view im{atlas_size.width, atlas_size.height, 1, atlas_size.width, bitmap.data()};
-        save_image(im, "font_atlas.png");
 
         return sh_binding;
     }
@@ -893,7 +664,8 @@ public:
             exit_fail();
         }
 
-        m_offscreen_rt = tavros::core::make_unique<render_target>(m_graphics_device.get(), rhi::pixel_format::rgba8un, rhi::pixel_format::depth32f);
+        m_offscreen_rt = tavros::core::make_unique<tavros::renderer::render_target>(rhi::pixel_format::rgba8un, rhi::pixel_format::depth32f);
+        m_offscreen_rt->init(m_graphics_device.get());
 
         auto fullscreen_quad_vertex_shader = m_graphics_device->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
         auto fullscreen_quad_fragment_shader = m_graphics_device->create_shader({fullscreen_quad_fragment_shader_source, rhi::shader_stage::fragment, "main"});
@@ -914,7 +686,7 @@ public:
         m_graphics_device->destroy_shader(fullscreen_quad_vertex_shader);
         m_graphics_device->destroy_shader(fullscreen_quad_fragment_shader);
 
-        m_stage_buffer = create_stage_buffer(1024 * 1024 * 32, rhi::buffer_access::cpu_to_gpu);
+        m_stage_buffer = create_stage_buffer(1024 * 1024 * 128, rhi::buffer_access::cpu_to_gpu);
 
         m_stage_upload_buffer = create_stage_buffer(1024 * 1024 * 64, rhi::buffer_access::gpu_to_cpu);
 
@@ -928,7 +700,7 @@ public:
 
         size_t tex_size = im_view.width * im_view.height * im_view.channels;
         auto   dst = m_graphics_device->map_buffer(m_stage_buffer);
-        dst.copy_from(im_view.data, tex_size);
+        dst.copy_from(im_view.pixels.data(), tex_size);
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
         rhi::texture_create_info tex_create_info;
@@ -1016,7 +788,7 @@ public:
         mesh_rendering_pipeline_info.depth_stencil.depth_test_enable = true;
         mesh_rendering_pipeline_info.depth_stencil.depth_write_enable = true;
         mesh_rendering_pipeline_info.depth_stencil.depth_compare = rhi::compare_op::less;
-        mesh_rendering_pipeline_info.rasterizer.cull = rhi::cull_face::off;
+        mesh_rendering_pipeline_info.rasterizer.cull = rhi::cull_face::back;
         mesh_rendering_pipeline_info.rasterizer.face = rhi::front_face::counter_clockwise;
         mesh_rendering_pipeline_info.rasterizer.polygon = rhi::polygon_mode::fill;
         mesh_rendering_pipeline_info.topology = rhi::primitive_topology::triangles;
@@ -1124,17 +896,35 @@ public:
 
         show();
 
-        m_font_shader_binding = load_font_data("fonts/Alice/Alice-Regular.ttf");
+        tavros::text::truetype_font::codepoint_range ranges[8];
+        ranges[0] = {0x0, 0x7f};
+        ranges[1] = {0xab, 0xbb};
+        ranges[2] = {0x401, 0x401};   // ru Ё
+        ranges[3] = {0x410, 0x44F};   // ru А–Яа–я
+        ranges[4] = {0x451, 0x451};   // ru ё
+        ranges[5] = {0x2012, 0x2014}; // dash
+        ranges[6] = {0x2022, 0x2026}; // circle, riangle, one dot, two dot, three dot
+        ranges[7] = {0xfffd, 0xfffd}; // replacement character
+
+
+        m_fonts.push_back(load_ttf("fonts/Consola-Mono.ttf", ranges));
+        m_fonts.push_back(load_ttf("fonts/DroidSans.ttf", ranges));
+        m_fonts.push_back(load_ttf("fonts/HomeVideo.ttf", ranges));
+        m_fonts.push_back(load_ttf("fonts/NotoSans-Regular.ttf", ranges));
+        m_fonts.push_back(load_ttf("fonts/Roboto-Medium.ttf", ranges));
+
+
+        m_font_shader_binding = upload_font_data();
 
         // SDF
         auto sdf_font_vertex_shader = m_graphics_device->create_shader({sdf_font_vertex_shader_source, rhi::shader_stage::vertex, "main"});
         auto sdf_font_fragment_shader = m_graphics_device->create_shader({sdf_font_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info sdf_font_pipeline_info;
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 0});
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 1});
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 4});
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 5});
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 0});
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::u32, false, 3});
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 4});
+        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 5});
         sdf_font_pipeline_info.shaders.push_back(sdf_font_vertex_shader);
         sdf_font_pipeline_info.shaders.push_back(sdf_font_fragment_shader);
         sdf_font_pipeline_info.depth_stencil.depth_test_enable = false;
@@ -1161,11 +951,11 @@ public:
         }
 
         rhi::geometry_create_info font_instance_data_info;
-        font_instance_data_info.vertex_buffer_layouts.push_back({m_font_buffer_info, 0, sizeof(font_instance_info)});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::glyph_index), 1, rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 0});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::mat), 1, rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 1});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::color), 1, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 4});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(font_instance_info, font_instance_info::outline_color), 1, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 5});
+        font_instance_data_info.vertex_buffer_layouts.push_back({m_font_buffer_info, 0, sizeof(glyph_instance)});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::mat), 1, rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 0});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::rect), 1, rhi::attribute_type::vec2, rhi::attribute_format::u32, false, 3});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::fill_color), 1, rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 4});
+        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::outline_color), 1, rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 5});
         font_instance_data_info.has_index_buffer = false;
 
         m_font_geometry = m_graphics_device->create_geometry(font_instance_data_info);
@@ -1173,125 +963,165 @@ public:
             ::logger.fatal("Failed to create font geometry instance binding");
             exit_fail();
         }
+
+        m_drenderer.init(m_graphics_device.get());
+
+        m_root_view.init(m_graphics_device.get());
+
+        m_root_view.root().insert_last_child(&m_view1);
+        m_root_view.root().insert_last_child(&m_view2);
+        m_root_view.root().insert_last_child(&m_view3);
+        m_root_view.root().insert_last_child(&m_view4);
+        m_root_view.root().insert_last_child(&m_view5);
+        m_root_view.root().insert_last_child(&m_btn0);
+
+        m_view5.insert_last_child(&m_view6);
+        m_view5.insert_last_child(&m_view7);
+        m_view5.insert_last_child(&m_view8);
+        m_view5.insert_last_child(&m_view9);
+        m_view5.insert_last_child(&m_btn1);
+        m_view5.set_enabled(false);
+
+        m_btn0.set_position({1400, 100});
+        m_btn0.set_size({240.0f, 80.0f});
+        m_btn0.set_text("Button0");
+
+        m_btn1.set_position({300, 100});
+        m_btn1.set_size({240.0f, 80.0f});
+        m_btn1.set_text("Button1");
+
+        m_view9.insert_last_child(&m_view10);
+        m_view9.insert_last_child(&m_view11);
+
+        m_view1.set_position({100, 100});
+        m_view1.set_size({100, 100});
+
+        m_view2.set_position({100, 300});
+        m_view2.set_size({100, 100});
+
+        m_view3.set_position({300, 100});
+        m_view3.set_size({150, 150});
+
+        m_view4.set_position({300, 300});
+        m_view4.set_size({200, 100});
+
+        m_view5.set_position({1250, 100});
+        m_view5.set_size({600, 600});
+        m_view5.set_padding({10.0f, 20.0f, 30.0f, 40.0f});
+
+        m_view6.set_position({10, 10});
+        m_view6.set_size({100, 100});
+
+        m_view7.set_position({250, 50});
+        m_view7.set_size({100, 150});
+        m_view7.set_padding({10.0f, 10.0f, 10.0f, 10.0f});
+
+        m_view8.set_position({50, 250});
+        m_view8.set_size({100, 150});
+
+        m_view9.set_position({250, 250});
+        m_view9.set_size({250, 300});
+
+        m_view10.set_position({50, 50});
+        m_view10.set_size({100, 50});
+
+        m_view11.set_position({50, 150});
+        m_view11.set_size({150, 100});
+
+        m_rich_line.set_text(lorem_ipsum_2, m_fonts[0].get(), 100.0f);
+
+        for (auto& it : m_rich_line.glyphs()) {
+            it.params.fill_color.set(255, 255, 255, 255);
+            it.params.outline_color.set(128, 128, 255, 0);
+        }
     }
 
     void shutdown() override
     {
+        m_drenderer.shutdown();
+        m_root_view.shutdown();
+        m_offscreen_rt->shutdown();
         m_graphics_device = nullptr;
     }
 
-    void process_events(app::event_queue_view events, double delta_time)
+    void process_events(tavros::input::event_args_queue_view events, double delta_time)
     {
-        m_input_manager.on_frame_started(tavros::system::application::instance().highp_time_us());
+        m_root_view.process_ui_events(events);
 
-        bool need_resize = false;
+        m_input_manager.begin_frame(tavros::system::application::instance().highp_time_us());
+        m_input_manager.process_events(events);
 
-        // Process all events
-        for (auto& it : events) {
-            switch (it.type) {
-            case app::event_type::key_down:
-                m_input_manager.on_key_press(it.key_info, it.event_time_us);
-                break;
-
-            case app::event_type::key_up:
-                m_input_manager.on_key_release(it.key_info, it.event_time_us);
-                break;
-
-            case app::event_type::mouse_move:
-                m_input_manager.on_mouse_move(it.vec_info, it.event_time_us);
-                break;
-
-            case app::event_type::mouse_button_down:
-                break;
-
-            case app::event_type::mouse_button_up:
-                break;
-
-            case app::event_type::window_resize:
-                m_current_frame_size = tavros::math::ivec2(static_cast<int32>(it.vec_info.width), static_cast<int32>(it.vec_info.height));
-                need_resize = true;
-                break;
-
-            case app::event_type::deactivate:
-                m_input_manager.clear_state();
-                break;
-
-            case app::event_type::activate:
-                m_input_manager.clear_state();
-                break;
-
-            default:
-                break;
-            }
-        }
-
-        if (m_input_manager.is_key_released(tavros::system::keys::k_F1)) {
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_F1)) {
             if (m_current_buffer_output_index != 0) {
                 m_current_buffer_output_index = 0;
             }
-        } else if (m_input_manager.is_key_released(tavros::system::keys::k_F2)) {
+        } else if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_F2)) {
             if (m_current_buffer_output_index != 1) {
                 m_current_buffer_output_index = 1;
             }
         }
 
-        if (m_input_manager.is_key_pressed(tavros::system::keys::k_minus)) {
-            m_font_height -= 2.0f;
+        if (m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_minus)) {
+            m_font_height -= 0.2f;
         }
 
-        if (m_input_manager.is_key_pressed(tavros::system::keys::k_equal)) {
-            m_font_height += 2.0f;
+        if (m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_equal)) {
+            m_font_height += 0.2f;
         }
 
-        if (need_resize && m_current_frame_size.width != 0 && m_current_frame_size.height != 0) {
-            m_offscreen_rt->recreate(static_cast<uint32>(m_current_frame_size.width), static_cast<uint32>(m_current_frame_size.height), 32);
 
-            if (m_color_shader_binding) {
-                m_graphics_device->destroy_shader_binding(m_color_shader_binding);
-                m_color_shader_binding = rhi::shader_binding_handle();
+        if (m_input_manager.is_window_resized()) {
+            auto sz = m_input_manager.get_window_size();
+            if (sz.width != 0 && sz.height != 0) {
+                m_offscreen_rt->recreate(static_cast<uint32>(sz.width), static_cast<uint32>(sz.height), 32);
+
+                if (m_color_shader_binding) {
+                    m_graphics_device->destroy_shader_binding(m_color_shader_binding);
+                    m_color_shader_binding = rhi::shader_binding_handle();
+                }
+
+                if (m_depth_stencil_shader_binding) {
+                    m_graphics_device->destroy_shader_binding(m_depth_stencil_shader_binding);
+                    m_depth_stencil_shader_binding = rhi::shader_binding_handle();
+                }
+
+                rhi::shader_binding_create_info color_quad_shader_binding_info;
+                color_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_color_attachment(0), m_sampler, 0});
+                m_color_shader_binding = m_graphics_device->create_shader_binding(color_quad_shader_binding_info);
+                if (!m_color_shader_binding) {
+                    ::logger.fatal("Failed to create color quad shader binding");
+                    exit_fail();
+                }
+
+                rhi::shader_binding_create_info depth_stencil_quad_shader_binding_info;
+                depth_stencil_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_depth_stencil_attachment(), m_sampler, 0});
+                m_depth_stencil_shader_binding = m_graphics_device->create_shader_binding(depth_stencil_quad_shader_binding_info);
+                if (!m_depth_stencil_shader_binding) {
+                    ::logger.fatal("Failed to create depth/stencil quad shader binding");
+                    exit_fail();
+                }
+
+                m_composer->resize(sz.width, sz.height);
+
+                constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
+                float           aspect_ratio = static_cast<float>(sz.width) / static_cast<float>(sz.height);
+                m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 1000.0f);
             }
-
-            if (m_depth_stencil_shader_binding) {
-                m_graphics_device->destroy_shader_binding(m_depth_stencil_shader_binding);
-                m_depth_stencil_shader_binding = rhi::shader_binding_handle();
-            }
-
-            rhi::shader_binding_create_info color_quad_shader_binding_info;
-            color_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_color_attachment(0), m_sampler, 0});
-            m_color_shader_binding = m_graphics_device->create_shader_binding(color_quad_shader_binding_info);
-            if (!m_color_shader_binding) {
-                ::logger.fatal("Failed to create color quad shader binding");
-                exit_fail();
-            }
-
-            rhi::shader_binding_create_info depth_stencil_quad_shader_binding_info;
-            depth_stencil_quad_shader_binding_info.texture_bindings.push_back({m_offscreen_rt->get_depth_stencil_attachment(), m_sampler, 0});
-            m_depth_stencil_shader_binding = m_graphics_device->create_shader_binding(depth_stencil_quad_shader_binding_info);
-            if (!m_depth_stencil_shader_binding) {
-                ::logger.fatal("Failed to create depth/stencil quad shader binding");
-                exit_fail();
-            }
-
-            m_composer->resize(m_current_frame_size.width, m_current_frame_size.height);
-
-            constexpr float fov_y = 60.0f * 3.14159265358979f / 180.0f; // 60 deg
-            float           aspect_ratio = static_cast<float>(m_current_frame_size.width) / static_cast<float>(m_current_frame_size.height);
-            m_camera.set_perspective(fov_y, aspect_ratio, 0.1f, 1000.0f);
         }
 
         // Update camera
-        auto factor = [&](tavros::system::keys key) -> float {
-            return static_cast<float>(m_input_manager.key_pressed_factor(key));
+        auto factor = [&](tavros::input::keyboard_key key) -> float {
+            return static_cast<float>(m_input_manager.key_hold_factor(key));
         };
 
         // clang-format off
         tavros::math::vec3 move_delta =
-            m_camera.forward() * factor(tavros::system::keys::k_W)
-            - m_camera.forward() * factor(tavros::system::keys::k_S)
-            + m_camera.right() * factor(tavros::system::keys::k_A)
-            - m_camera.right() * factor(tavros::system::keys::k_D) 
-            + m_camera.up() * factor(tavros::system::keys::k_space) 
-            - m_camera.up() * factor(tavros::system::keys::k_C);
+            m_camera.forward() * factor(tavros::input::keyboard_key::k_W)
+            - m_camera.forward() * factor(tavros::input::keyboard_key::k_S)
+            + m_camera.right() * factor(tavros::input::keyboard_key::k_A)
+            - m_camera.right() * factor(tavros::input::keyboard_key::k_D) 
+            + m_camera.up() * factor(tavros::input::keyboard_key::k_space) 
+            - m_camera.up() * factor(tavros::input::keyboard_key::k_C);
         // clang-format on
 
         float len = tavros::math::length(move_delta);
@@ -1299,8 +1129,8 @@ public:
             move_delta /= len;
         }
 
-        bool  is_shift_pressed = m_input_manager.is_key_pressed(tavros::system::keys::k_lshift);
-        bool  is_control_pressed = m_input_manager.is_key_pressed(tavros::system::keys::k_lcontrol);
+        bool  is_shift_pressed = m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_lshift);
+        bool  is_control_pressed = m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_lcontrol);
         float speed_factor = static_cast<float>(delta_time) * (is_shift_pressed ? 10.0f * (is_control_pressed ? 10.0f : 1.0f) : 2.0f);
         m_camera.move(move_delta * speed_factor);
 
@@ -1336,8 +1166,8 @@ public:
 
     void update_scene()
     {
-        auto w = static_cast<float>(m_current_frame_size.width);
-        auto h = static_cast<float>(m_current_frame_size.height);
+        auto w = static_cast<float>(m_input_manager.get_window_size().width);
+        auto h = static_cast<float>(m_input_manager.get_window_size().height);
         m_renderer_frame_data.view = m_camera.get_view_matrix();
         m_renderer_frame_data.perspective_projection = m_camera.get_projection_matrix();
         m_renderer_frame_data.view_projection = m_camera.get_view_projection_matrix();
@@ -1353,87 +1183,239 @@ public:
         m_renderer_frame_data.fov_y = m_camera.fov_y();
     }
 
-    void render(app::event_queue_view events, double delta_time) override
+    void render(tavros::input::event_args_queue_view events, double delta_time) override
     {
         process_events(events, delta_time);
 
         update_scene();
 
-        auto is_f10_released = m_input_manager.is_key_released(tavros::system::keys::k_F10);
+        m_drenderer.begin_frame(m_renderer_frame_data.orto_projection, m_renderer_frame_data.view_projection);
+
+        auto w = static_cast<float>(m_input_manager.get_window_size().width);
+        auto h = static_cast<float>(m_input_manager.get_window_size().height);
+
+        m_drenderer.point3d({1.0f, 1.0f, 1.0f}, 24.0f, {1.0f, 0.0f, 0.0f, 1.0f});
+
+        m_drenderer.line3d({1.0f, 1.0f, 1.0f}, {1.0f, 0.0f, 0.0f, 1.0f}, {2.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 0.0f});
+        m_drenderer.line3d({1.0f, 1.0f, 1.0f}, {0.0f, 1.0f, 0.0f, 1.0f}, {1.0f, 2.0f, 1.0f}, {1.0f, 1.0f, 1.0f, 0.0f});
+        m_drenderer.line3d({1.0f, 1.0f, 1.0f}, {0.0f, 0.0f, 1.0f, 1.0f}, {1.0f, 1.0f, 2.0f}, {1.0f, 1.0f, 1.0f, 0.0f});
+
+        m_drenderer.box3d(
+            tavros::geometry::aabb3{
+                {1.0f, 1.0f, 0.0f},
+                {2.5f, 2.5f, 1.5f}
+            },
+            {0.0f, 1.0f, 0.0f, 0.5f} // зелёный с лёгкой прозрачностью
+        );
+
+        m_drenderer.box3d(
+            tavros::geometry::aabb3{
+                {1.0f, 1.0f, 0.0f},
+                {2.5f, 2.5f, 1.5f}
+            },
+            {0.0f, 1.0f, 0.0f, 1.0f}, // зелёный с лёгкой прозрачностью
+            tavros::renderer::debug_renderer::draw_mode::edges
+        );
+
+        // Куб, вытянутый вдоль оси Z
+        m_drenderer.box3d(
+            tavros::geometry::aabb3{
+                {-2.0f, -1.0f, 0.0f},
+                {-1.0f, 0.0f, 3.0f}
+            },
+            {0.5f, 0.5f, 1.0f, 0.5f} // голубоватый
+        );
+
+        m_drenderer.box3d(
+            tavros::geometry::aabb3{
+                {-2.0f, -1.0f, 0.0f},
+                {-1.0f, 0.0f, 3.0f}
+            },
+            {0.5f, 0.5f, 1.0f, 1.0f}, // голубоватый
+            tavros::renderer::debug_renderer::draw_mode::points
+        );
+
+        m_drenderer.box3d(
+            tavros::geometry::aabb3{
+                {-2.0f, -1.0f, 0.0f},
+                {-1.0f, 0.0f, 3.0f}
+            },
+            {0.5f, 0.5f, 1.0f, 0.8f}, // голубоватый
+            tavros::renderer::debug_renderer::draw_mode::edges
+        );
+
+        auto obb1 = tavros::geometry::obb3(
+            {6.0f, 4.0f, 3.0f},
+            tavros::math::normalize(tavros::math::vec3(0.5f, 0.0f, 0.5f)), // forward (наклон 30° по Z)
+            tavros::math::normalize(tavros::math::vec3(0.0f, 1.0f, 0.0f)), // right
+            tavros::math::normalize(tavros::math::vec3(0.0f, 0.0f, 1.0f)), // up (перпендикуляр к forward)
+            {1.0f, 2.0f, 3.0f}                                             // half extents
+        );
+
+        m_drenderer.box3d(
+            obb1,
+            {1.0f, 0.5f, 1.0f, 0.75f},
+            tavros::renderer::debug_renderer::draw_mode::edges
+        );
+
+        m_drenderer.box3d(
+            obb1,
+            {0.9f, 0.7f, 1.0f, 0.2f}
+
+        );
+
+
+        m_drenderer.bezier_curve3d(
+            {0.0f, 0.0f, 0.0f},       // start
+            {1.0f, 0.0f, 3.0f},       // p2 (тянет вверх)
+            {3.0f, 0.0f, 3.0f},       // finish (перед вершиной)
+            {4.0f, 0.0f, 0.0f},       // p4 (конец)
+            32,                       // segments
+            {1.0f, 0.0f, 0.0f, 1.0f}, // красный
+            {1.0f, 1.0f, 0.0f, 1.0f}, // жёлтый
+            true,
+            32.0f
+        );
+
+        // 2. Волнообразная траектория
+        m_drenderer.bezier_curve3d(
+            {-2.0f, 0.0f, 0.0f},      // start
+            {-1.0f, 2.0f, 2.0f},      // p2
+            {2.0f, -2.0f, 2.0f},      // finish
+            {3.0f, 0.0f, 0.0f},       // p4
+            48,
+            {0.0f, 0.8f, 1.0f, 1.0f}, // голубой
+            {0.8f, 0.0f, 1.0f, 1.0f}, // фиолетовый
+            true,
+            32.0f
+        );
+
+        // 3. Спиралевидная дуга (наклон по XZ)
+        m_drenderer.bezier_curve3d(
+            {0.0f, 0.0f, 0.0f},       // start
+            {2.0f, 1.0f, 2.0f},       // p2
+            {3.0f, -1.0f, 4.0f},      // finish
+            {5.0f, 0.0f, 5.0f},       // p4
+            40,
+            {0.3f, 1.0f, 0.3f, 1.0f}, // зелёный
+            {1.0f, 0.5f, 0.0f, 1.0f}, // оранжевый
+            true,
+            32.0f
+        );
+
+        // 4. Диагональная линия в пространстве (почти прямая)
+        m_drenderer.bezier_curve3d(
+            {-1.0f, -1.0f, 0.0f},
+            {0.0f, 0.0f, 1.0f},
+            {1.0f, 1.0f, 2.0f},
+            {2.0f, 2.0f, 3.0f},
+            22,
+            {1.0f, 0.0f, 1.0f, 1.0f}, // пурпурный
+            {0.0f, 1.0f, 1.0f, 1.0f}, // бирюзовый
+            true,
+            32.0f
+        );
+
+
+        m_drenderer.bezier_curve3d(
+            {-10.0f, -10.0f, 2.0f},
+            {-13.0f, -7.0f, 5.0f},
+            {-3.0f, -7.0f, 5.0f},
+            {2.0f, 2.0f, 3.0f},
+            16,
+            {1.0f, 0.0f, 1.0f, 1.0f}, // пурпурный
+            {0.0f, 1.0f, 1.0f, 1.0f}, // бирюзовый
+            true,
+            32.0f
+        );
+
+        /*tavros::geometry::aabb2 text_rect = {100.0f, 100.0f, 900.0f, 500.0f};
+        m_drenderer.box2d(text_rect, {1.0f, 1.0f, 1.0f, 0.2f});
+
+        m_drenderer.draw_text2d(lorem_ipsum, 14.0f, tavros::renderer::debug_renderer::text_align::center_justify, text_rect, {0.6f, 0.8f, 1.0f, 0.8f});*/
+
+        m_drenderer.sphere3d({{-10.0f, 10.0f, 20.0f}, 10.0f}, {1.0f, 1.0f, 0.3f, 0.3f});
+        m_drenderer.sphere3d({{10.0f, -10.0f, 20.0f}, 3.0f}, {0.0f, 1.0f, 1.0f, 0.5f});
+        m_drenderer.sphere3d({{10.0f, 0.0f, 20.0f}, 2.0f}, {1.0f, 0.0f, 1.0f, 0.5f});
+        m_drenderer.sphere3d({{3.0f, 3.0f, -5.0f}, 1.0f}, {1.0f, 0.0f, 1.0f, 0.5f});
+        m_drenderer.sphere3d({{10.0f, 5.0f, 0.0f}, 2.0f}, {1.0f, 1.0f, 1.0f, 0.75f});
+
+
+        auto is_f10_released = m_input_manager.is_key_up(tavros::input::keyboard_key::k_F10);
 
         // update
         auto uniform_buffer_data_map = m_graphics_device->map_buffer(m_stage_buffer, 0, sizeof(m_renderer_frame_data));
         uniform_buffer_data_map.copy_from(&m_renderer_frame_data, sizeof(m_renderer_frame_data));
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
-        // Update text
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_right)) {
+            m_selected_font++;
+        }
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_left)) {
+            m_selected_font--;
+        }
+        m_text_pos_y -= m_input_manager.key_hold_factor(tavros::input::keyboard_key::k_up) * 4.0f;
+        m_text_pos_y += m_input_manager.key_hold_factor(tavros::input::keyboard_key::k_down) * 4.0f;
 
-        const char* text = "Hello, AVAWAT WAorld!;";
-        size_t      text_size = std::strlen(text);
-        const char* beg = text;
-        const char* tmp = text;
-        const char* end = text + text_size;
-        float       font_height_in_pixels = m_font_height; // Font height will be 120 pixels
 
-        std::vector<font_instance_info> instance_info;
-        auto                            aspect = m_camera.aspect();
-
-        tavros::math::vec2 pen = tavros::math::vec2(100.0f, m_current_frame_size.height - 100.0f);
-
-        auto cp_cur = extract_utf8_codepoint(beg, end, &beg);
-
-        while (beg < end) {
-            auto cp_next = extract_utf8_codepoint(beg, end, &beg);
-
-            auto it = m_font_atlas.map().find(cp_cur);
-            if (it == m_font_atlas.map().end()) {
-                it = m_font_atlas.map().find(0);
-                if (it == m_font_atlas.map().end()) {
-                    cp_cur = cp_next;
-                    continue;
-                }
-            }
-
-            const auto& g = it->second.metrics;
-
-            float font_scale = 2.0f * font_height_in_pixels;
-
-            if (cp_cur == ' ') {
-                pen.x += (g.advance_x * font_scale);
-                cp_cur = cp_next;
-                continue;
-            }
-
-            font_instance_info inst_info{};
-            inst_info.glyph_index = it->second.serial_index;
-
-            inst_info.color = tavros::math::vec3(1.0f);
-            inst_info.outline_color = tavros::math::vec3(1.0f, 0.0f, 0.0f);
-
-            // Размер quad’a
-            auto pad = it->second.sdf_padding / it->second.glyph_scale * font_scale;
-            inst_info.mat[0][0] = g.width * font_scale + pad * 2;
-            inst_info.mat[1][1] = g.height * font_scale + pad * 2;
-            // inst_info.mat[1][0] = -g.height * font_scale / 4.0f;
-
-            // Позиция quad’a (учитываем bearing)
-            inst_info.mat[2][0] = pen.x + g.bearing_x * font_scale - pad;
-            inst_info.mat[2][1] = pen.y - pad - (g.height - g.bearing_y) * font_scale; // bearing_y от baseline вверх
-
-            instance_info.push_back(inst_info);
-
-            // === advance & kerning ===
-            float kern = 0.0f;
-            if (auto it_next = m_font_atlas.map().find(cp_next); it_next != m_font_atlas.map().end()) {
-                kern = it->second.font->get_kerning(it->second.glyph, it_next->second.glyph) * 2.0;
-            }
-
-            pen.x += (g.advance_x + kern) * font_scale;
-
-            cp_cur = cp_next;
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_7)) {
+            m_rich_line_align = tavros::text::text_align::left;
+        }
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_8)) {
+            m_rich_line_align = tavros::text::text_align::center;
+        }
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_9)) {
+            m_rich_line_align = tavros::text::text_align::right;
+        }
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_0)) {
+            m_rich_line_align = tavros::text::text_align::justify;
         }
 
-        size_t size = instance_info.size() * sizeof(font_instance_info);
+
+        std::vector<glyph_instance> instance_info;
+        instance_info.reserve(m_rich_line.glyphs().size());
+
+        auto fnt = m_fonts[m_selected_font % m_fonts.size()];
+        m_rich_line.set_style(0, m_rich_line.glyphs().size(), fnt.get(), m_font_height);
+
+        float text_rect_width = 1200.0f;
+
+        auto layout_contaainer_size = tavros::text::text_layout::layout(m_rich_line.glyphs(), {text_rect_width, 1.5f, m_rich_line_align});
+
+        auto text_rect_pos = tavros::math::vec2(150.0f, m_text_pos_y);
+        auto text_rect_pos_max = text_rect_pos + tavros::math::vec2(text_rect_width, 700.0f);
+        auto text_rect = tavros::geometry::aabb2(text_rect_pos, text_rect_pos_max);
+
+        layout_contaainer_size.min += text_rect_pos;
+        layout_contaainer_size.max += text_rect_pos;
+        m_drenderer.box2d(layout_contaainer_size, {0.0f, 1.0f, 0.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
+
+        auto test_glyph_mouse_pos = m_input_manager.get_mouse_pos() - text_rect_pos;
+        for (auto& g : m_rich_line.glyphs()) {
+            if (g.base.bounds.contains_point(test_glyph_mouse_pos)) {
+                g.params.fill_color.set(255, 0, 0, 255);
+            }
+
+            /*auto dbox = g.base.bounds;
+            dbox.min += text_rect_pos;
+            dbox.max += text_rect_pos;
+            m_drenderer.box2d(dbox, {1.0f, 1.0f, 1.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
+
+            auto gbox = g.base.layout;
+            gbox.min += text_rect_pos;
+            gbox.max += text_rect_pos;
+            m_drenderer.box2d(gbox, {0.0f, 1.0f, 0.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);*/
+        }
+
+
+        m_drenderer.box2d(text_rect, {1.0f, 1.0f, 1.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
+
+        auto glyph_instances = tavros::core::buffer_span<glyph_instance>(instance_info.data(), m_rich_line.glyphs().size());
+        auto glyphs = tavros::core::buffer_view<tavros::text::glyph_data_param<glyph_params>>(m_rich_line.glyphs().data(), m_rich_line.glyphs().size());
+
+        auto text_draw_size = fill_glyphs_instances(m_rich_line.glyphs(), glyph_instances, text_rect_pos, k_sdf_size_pix / k_font_scale_pix);
+
+        size_t size = m_rich_line.glyphs().size() * sizeof(glyph_instance);
         auto   map_data = m_graphics_device->map_buffer(m_font_buffer_info, 0, size);
         map_data.copy_from(instance_info.data(), size);
         m_graphics_device->unmap_buffer(m_font_buffer_info);
@@ -1463,15 +1445,21 @@ public:
         cbuf->bind_shader_binding(m_font_shader_binding);
         cbuf->bind_shader_binding(m_scene_binding);
         cbuf->bind_geometry(m_font_geometry);
-        cbuf->draw(4, 0, text_size, 0);
+        cbuf->draw(4, 0, static_cast<uint32>(text_draw_size), 0);
+
+        m_drenderer.update();
+        m_drenderer.render(cbuf);
+        m_drenderer.end_frame();
+
+        m_root_view.on_frame(cbuf, static_cast<float>(delta_time));
 
 
         cbuf->end_render_pass();
 
         if (is_f10_released) {
             rhi::texture_copy_region copy_rgn;
-            copy_rgn.width = m_current_frame_size.width;
-            copy_rgn.height = m_current_frame_size.height;
+            copy_rgn.width = m_input_manager.get_window_size().width;
+            copy_rgn.height = m_input_manager.get_window_size().height;
             cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(0), m_stage_upload_buffer, copy_rgn);
             copy_rgn.buffer_offset = copy_rgn.width * copy_rgn.height * 4;
             cbuf->copy_texture_to_buffer(m_offscreen_rt->get_depth_stencil_attachment(), m_stage_upload_buffer, copy_rgn);
@@ -1498,8 +1486,8 @@ public:
         if (is_f10_released) {
             auto screenshot_pixels = m_graphics_device->map_buffer(m_stage_upload_buffer);
 
-            int width = static_cast<int>(m_current_frame_size.width);
-            int height = static_cast<int>(m_current_frame_size.height);
+            int width = static_cast<int>(m_input_manager.get_window_size().width);
+            int height = static_cast<int>(m_input_manager.get_window_size().height);
             int channels = 4;
             int stride = width * channels;
 
@@ -1512,15 +1500,17 @@ public:
             }
 
             // Save screenshot
-            app::image_codec::pixels_view im_color{static_cast<uint32>(width), static_cast<uint32>(height), channels, stride, screenshot_pixels.data()};
+            tavros::resources::image_codec::pixels_view im_color{static_cast<uint32>(width), static_cast<uint32>(height), channels, stride, {screenshot_pixels.data(), static_cast<size_t>(stride * height)}};
             save_image(im_color, "color.png", true);
-            app::image_codec::pixels_view im_depth{width, height, 1, width, depth_data.data()};
+            tavros::resources::image_codec::pixels_view im_depth{width, height, 1, width, {depth_data.data(), static_cast<size_t>(width * height)}};
             save_image(im_depth, "depth.png", true);
 
             m_graphics_device->unmap_buffer(m_stage_upload_buffer);
         }
 
-        // std::this_thread::sleep_for(std::chrono::milliseconds(330));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+
+        m_input_manager.end_frame();
     }
 
 private:
@@ -1530,9 +1520,9 @@ private:
     tavros::core::unique_ptr<rhi::graphics_device> m_graphics_device;
     rhi::frame_composer*                           m_composer = nullptr;
 
-    app::image_codec m_imcodec;
+    tavros::resources::image_codec m_imcodec;
 
-    tavros::core::unique_ptr<render_target> m_offscreen_rt;
+    tavros::core::unique_ptr<tavros::renderer::render_target> m_offscreen_rt;
 
     rhi::pipeline_handle       m_fullscreen_quad_pipeline;
     rhi::pipeline_handle       m_mesh_rendering_pipeline;
@@ -1555,14 +1545,14 @@ private:
     rhi::geometry_handle       m_font_geometry;
     rhi::fence_handle          m_fence;
 
-    uint32 m_current_buffer_output_index = 0;
+    tavros::renderer::debug_renderer m_drenderer;
 
-    tavros::math::ivec2 m_current_frame_size;
+    uint32 m_current_buffer_output_index = 0;
 
     tavros::core::shared_ptr<tavros::resources::resource_manager> m_resource_manager;
 
-    app::input_manager       m_input_manager;
-    tavros::renderer::camera m_camera;
+    tavros::input::input_manager m_input_manager;
+    tavros::renderer::camera     m_camera;
 
     struct alignas(16) frame_data
     {
@@ -1585,8 +1575,28 @@ private:
 
     frame_data m_renderer_frame_data;
 
-    tavros::ui::truetype_font m_font;
-    tavros::ui::font_atlas    m_font_atlas;
+    tavros::ui::root_view m_root_view;
+    tavros::ui::view      m_view1;
+    tavros::ui::view      m_view2;
+    tavros::ui::view      m_view3;
+    tavros::ui::view      m_view4;
+    tavros::ui::view      m_view5;
+    tavros::ui::view      m_view6;
+    tavros::ui::view      m_view7;
+    tavros::ui::view      m_view8;
+    tavros::ui::view      m_view9;
+    tavros::ui::view      m_view10;
+    tavros::ui::view      m_view11;
+    tavros::ui::button    m_btn0;
+    tavros::ui::button    m_btn1;
+
+    tavros::core::vector<tavros::core::shared_ptr<tavros::text::font>> m_fonts;
+    int32                                                              m_selected_font;
+    float                                                              m_text_pos_y = 50.0f;
+    tavros::core::shared_ptr<tavros::text::font_atlas>                 m_text_atlas;
+
+    tavros::text::rich_line<glyph_params> m_rich_line;
+    tavros::text::text_align              m_rich_line_align = tavros::text::text_align::left;
 };
 
 int main()
@@ -1594,9 +1604,8 @@ int main()
     tavros::core::logger::add_consumer([](auto lvl, auto tag, auto msg) { printf("%s\n", msg.data()); });
 
     auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
-    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/Tavros/assets", tavros::resources::resource_access::read_only);
-    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Work/q3pp_res/baseq3", tavros::resources::resource_access::read_only);
-    resource_manager->mount<tavros::resources::filesystem_provider>("C:/Users/Piotr/Desktop/TavrosOutput", tavros::resources::resource_access::write_only);
+    resource_manager->mount<tavros::resources::filesystem_provider>(TAV_ASSETS_PATH, tavros::resources::resource_access::read_only);
+    resource_manager->mount<tavros::resources::filesystem_provider>(TAV_OUTPUT_PATH, tavros::resources::resource_access::write_only);
 
     auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", resource_manager);
     wnd->run_render_loop();

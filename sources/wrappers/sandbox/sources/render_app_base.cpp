@@ -11,9 +11,9 @@ namespace app
         constexpr int32 initial_width = 1280 * 2;
         constexpr int32 initial_height = 720 * 2;
 
-        event_info initial_resize_event;
-        initial_resize_event.type = event_type::window_resize;
-        initial_resize_event.vec_info = tavros::math::vec2(static_cast<float>(initial_width), static_cast<float>(initial_height));
+        tavros::input::event_args initial_resize_event;
+        initial_resize_event.type = tavros::input::event_type::window_size;
+        initial_resize_event.vec = tavros::math::vec2(static_cast<float>(initial_width), static_cast<float>(initial_height));
         m_event_queue.push_event(initial_resize_event);
 
         set_client_size(initial_width, initial_height);
@@ -37,76 +37,101 @@ namespace app
 
     void render_app_base::on_activate()
     {
-        event_info ei;
-        ei.type = event_type::activate;
-        m_event_queue.push_event(ei);
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::activate;
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::on_deactivate()
     {
-        event_info ei;
-        ei.type = event_type::deactivate;
-        m_event_queue.push_event(ei);
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::deactivate;
+        m_event_queue.push_event(a);
+    }
+
+    void render_app_base::on_move(tavros::system::move_event_args& e)
+    {
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::window_move;
+        a.time_us = e.event_time_us;
+        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::on_resize(tavros::system::size_event_args& e)
     {
-        event_info ei;
-        ei.type = event_type::window_resize;
-        ei.vec_info = tavros::math::vec2(static_cast<float>(e.size.width), static_cast<float>(e.size.height));
-        ei.event_time_us = e.event_time_us;
-        m_event_queue.push_event(ei);
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::window_size;
+        a.time_us = e.event_time_us;
+        a.vec = tavros::math::vec2(static_cast<float>(e.size.width), static_cast<float>(e.size.height));
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::on_mouse_down(tavros::system::mouse_event_args& e)
     {
-        if (e.is_relative_move) {
-            event_info ei;
-            ei.type = event_type::mouse_button_down;
-            ei.mouse_button_info = e.button;
-            ei.event_time_us = e.event_time_us;
-            m_event_queue.push_event(ei);
-        }
+        tavros::input::event_args a;
+        a.button = e.button;
+        a.type = tavros::input::event_type::mouse_down;
+        a.time_us = e.event_time_us;
+        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.height));
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::on_mouse_move(tavros::system::mouse_event_args& e)
     {
-        if (e.is_relative_move) {
-            event_info ei;
-            ei.type = event_type::mouse_move;
-            ei.vec_info = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
-            ei.event_time_us = e.event_time_us;
-            m_event_queue.push_event(ei);
-        }
+        tavros::input::event_args a;
+        a.time_us = e.event_time_us;
+        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
+        a.type = e.is_relative_move ? tavros::input::event_type::mouse_move_delta : tavros::input::event_type::mouse_move;
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::on_mouse_up(tavros::system::mouse_event_args& e)
     {
-        if (e.is_relative_move) {
-            event_info ei;
-            ei.type = event_type::mouse_button_up;
-            ei.mouse_button_info = e.button;
-            ei.event_time_us = e.event_time_us;
-            m_event_queue.push_event(ei);
-        }
+        tavros::input::event_args a;
+        a.button = e.button;
+        a.type = tavros::input::event_type::mouse_up;
+        a.time_us = e.event_time_us;
+        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.height));
+        m_event_queue.push_event(a);
+    }
+
+    void render_app_base::on_mouse_wheel(tavros::system::mouse_event_args& e)
+    {
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::mouse_wheel;
+        a.time_us = e.event_time_us;
+        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
+        a.wheel = tavros::math::vec2(static_cast<float>(e.delta.x), static_cast<float>(e.delta.y));
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::on_key_down(tavros::system::key_event_args& e)
     {
-        event_info ei;
-        ei.type = event_type::key_down;
-        ei.key_info = e.key;
-        ei.event_time_us = e.event_time_us;
-        m_event_queue.push_event(ei);
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::key_down;
+        a.time_us = e.event_time_us;
+        a.key = e.key;
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::on_key_up(tavros::system::key_event_args& e)
     {
-        event_info ei;
-        ei.type = event_type::key_up;
-        ei.key_info = e.key;
-        ei.event_time_us = e.event_time_us;
-        m_event_queue.push_event(ei);
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::key_up;
+        a.time_us = e.event_time_us;
+        a.key = e.key;
+        m_event_queue.push_event(a);
+    }
+
+    void render_app_base::on_key_press(tavros::system::key_event_args& e)
+    {
+        tavros::input::event_args a;
+        a.repeats = e.repeats;
+        a.key_char = e.key_char;
+        a.time_us = e.event_time_us;
+        a.type = tavros::input::event_type::key_press;
+        m_event_queue.push_event(a);
     }
 
     void render_app_base::render_thread_main()
