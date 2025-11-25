@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
+#include <tavros/core/utf8.hpp>
 #include <tavros/core/math.hpp>
 #include <tavros/core/geometry/aabb2.hpp>
 #include <tavros/core/containers/vector.hpp>
@@ -82,20 +83,22 @@ namespace tavros::text
          * Clears existing glyphs, creates one glyph per codepoint, determines whitespace flags,
          * and applies the specified font and size to the entire range.
          *
-         * @param text  UTF-32 string view containing the text.
+         * @param text  UTF-8 string view containing the text.
          * @param fnt   Font used for glyph lookup and metrics.
          * @param size  Rendering size of all glyphs.
          */
-        void set_text(core::u32string_view text, const font* fnt, float size)
+        void set_text(core::string_view text, const font* fnt, float size)
         {
             TAV_ASSERT(fnt != nullptr);
 
             m_glyphs.clear(); // clear old data
             m_glyphs.reserve(text.length());
 
-            for (auto it = text.begin(); it < text.end(); ++it) {
-                auto cp = *it;
+            const char* it = text.data();
+            const char* end = text.data() + text.length();
 
+            char32 cp = 0;
+            while (0 != (cp = core::extract_utf8_codepoint(it, end, &it))) {
                 glyph_data g;
                 g.base.codepoint = cp;
                 g.base.is_space = static_cast<bool>(std::iswspace(cp));
