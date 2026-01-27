@@ -20,7 +20,7 @@ TEST_F(quat_test, default_constructor_produces_identity)
 TEST_F(quat_test, from_axis_angle_constructs_correct_quaternion)
 {
     vec3  axis = normalize(vec3{0.0f, 1.0f, 0.0f});
-    float angle_rad = k_pi / 2.0f; // 90 degrees
+    float angle_rad = k_pi<float> / 2.0f; // 90 degrees
 
     quat q = quat::from_axis_angle(axis, angle_rad);
 
@@ -34,15 +34,15 @@ TEST_F(quat_test, from_axis_angle_constructs_correct_quaternion)
 TEST_F(quat_test, from_euler_constructs_correct_quaternion)
 {
     // Rotate 90 degrees around X
-    euler3 euler{k_pi / 2.0f, 0.0f, 0.0f};
+    euler3 euler{k_pi<float> / 2.0f, 0.0f, 0.0f};
 
     quat q = quat::from_euler(euler);
 
     // Should be 90 degree rotation around X
-    EXPECT_NEAR(q.x, std::sin(k_pi / 4.0f), k_epsilon5);
+    EXPECT_NEAR(q.x, std::sin(k_pi<float> / 4.0f), k_epsilon5);
     EXPECT_NEAR(q.y, 0.0f, k_epsilon5);
     EXPECT_NEAR(q.z, 0.0f, k_epsilon5);
-    EXPECT_NEAR(q.w, std::cos(k_pi / 4.0f), k_epsilon5);
+    EXPECT_NEAR(q.w, std::cos(k_pi<float> / 4.0f), k_epsilon5);
 }
 
 TEST_F(quat_test, from_to_rotation_same_vector_returns_identity)
@@ -326,8 +326,8 @@ TEST_F(quat_test, subtraction_operator)
 
 TEST_F(quat_test, quaternion_multiplication_operator)
 {
-    quat a = quat::from_axis_angle(vec3(1.0f, 0.0f, 0.0f), k_pi); // 180 deg around X
-    quat b = quat::from_axis_angle(vec3(0.0f, 1.0f, 0.0f), k_pi); // 180 deg around Y
+    quat a = quat::from_axis_angle(vec3(1.0f, 0.0f, 0.0f), k_pi<float>); // 180 deg around X
+    quat b = quat::from_axis_angle(vec3(0.0f, 1.0f, 0.0f), k_pi<float>); // 180 deg around Y
     quat result = a * b;
     EXPECT_NEAR(result.x, 0.0f, k_epsilon5);
     EXPECT_NEAR(result.y, 0.0f, k_epsilon5);
@@ -337,9 +337,9 @@ TEST_F(quat_test, quaternion_multiplication_operator)
 
 TEST_F(quat_test, quaternion_multiplication_operator2)
 {
-    quat a = quat::from_axis_angle(vec3(1.0f, 0.0f, 0.0f), k_pi / 2.0f); // 90 deg around X
-    quat b = quat::from_axis_angle(vec3(0.0f, 1.0f, 0.0f), k_pi / 2.0f); // 90 deg around Y
-    quat c = quat::from_axis_angle(vec3(0.0f, 0.0f, 1.0f), k_pi / 2.0f); // 90 deg around z
+    quat a = quat::from_axis_angle(vec3(1.0f, 0.0f, 0.0f), k_pi<float> / 2.0f); // 90 deg around X
+    quat b = quat::from_axis_angle(vec3(0.0f, 1.0f, 0.0f), k_pi<float> / 2.0f); // 90 deg around Y
+    quat c = quat::from_axis_angle(vec3(0.0f, 0.0f, 1.0f), k_pi<float> / 2.0f); // 90 deg around z
     quat result = a * b * c;
     EXPECT_NEAR(result.x, 0.7071f, k_epsilon5);
     EXPECT_NEAR(result.y, 0.0f, k_epsilon5);
@@ -349,7 +349,7 @@ TEST_F(quat_test, quaternion_multiplication_operator2)
 
 TEST_F(quat_test, rotate_vector_operator)
 {
-    quat rotation{0.0f, 0.0f, std::sin(k_pi / 4.0f), std::cos(k_pi / 4.0f)}; // 90 deg around Z
+    quat rotation{0.0f, 0.0f, std::sinf(k_pi<float> / 4.0f), std::cos(k_pi<float> / 4.0f)}; // 90 deg around Z
     vec3 point{1.0f, 0.0f, 0.0f};
 
     vec3 rotated = rotation * point;

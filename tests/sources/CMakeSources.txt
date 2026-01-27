@@ -8,22 +8,24 @@ set(TAV_SOURCES_TEST_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/common.test.hpp
     ${CMAKE_CURRENT_LIST_DIR}/main.test.cpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/allocators/chunk_allocator.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/allocators/chunk_allocator.test.cpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/geometry/plane.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/geometry/ray3.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/geometry/sphere.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/geometry/plane.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/geometry/ray3.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/geometry/sphere.test.cpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/ids/index_allocator.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/ids/index_allocator.test.cpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/math/bitops.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/euler3.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/ivec2.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/mat3.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/mat4.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/quat.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/vec2.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/vec3.test.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/math/vec4.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/bitops.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/euler3.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/ivec2.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/mat3.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/mat4.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/quat.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/vec2.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/vec3.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/vec4.test.cpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/core_tests/utils/preproc_lexer.test.cpp
 )
 

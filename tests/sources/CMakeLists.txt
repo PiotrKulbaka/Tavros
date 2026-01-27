@@ -12,3 +12,4 @@ target_link_libraries(
 )
 
 target_include_directories(tav_tests PRIVATE ${CMAKE_CURRENT_LIST_DIR})
+group_sources_by_folder(tav_tests)
