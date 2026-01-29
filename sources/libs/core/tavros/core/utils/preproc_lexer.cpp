@@ -7,386 +7,459 @@
 
 namespace
 {
-	template <class CharT>
-	bool is_whitespace(CharT c) noexcept
-	{
-		return std::isspace(static_cast<int>(c)) != 0;
-	}
+    template<class CharT>
+    bool is_whitespace(CharT c) noexcept
+    {
+        return std::isspace(static_cast<int>(c)) != 0;
+    }
 
-	template <class CharT>
-	bool is_h_whitespace(CharT c) noexcept
-	{
-		return is_whitespace(c) && c != '\n';
-	}
+    template<class CharT>
+    bool is_start_identifier(CharT c) noexcept
+    {
+        return std::isalpha(static_cast<int>(c)) != 0 || c == '_';
+    }
 
-	template <class CharT>
-	bool is_start_identifier(CharT c) noexcept
-	{
-		return std::isalpha(static_cast<int>(c)) != 0 || c == '_';
-	}
+    template<class CharT>
+    bool is_part_identifier(CharT c) noexcept
+    {
+        return is_start_identifier(c) || std::isdigit(static_cast<int>(c)) != 0;
+    }
 
-	template <class CharT>
-	bool is_part_identifier(CharT c) noexcept
-	{
-		return is_start_identifier(c) || std::isdigit(static_cast<int>(c)) != 0;
-	}
+    template<class CharT>
+    bool is_start_number(CharT c) noexcept
+    {
+        return std::isdigit(static_cast<int>(c)) != 0;
+    }
 
-	template <class CharT>
-	bool is_start_number(CharT c) noexcept
-	{
-		return std::isdigit(static_cast<int>(c)) != 0;
-	}
-
-	template <class CharT>
-	bool is_part_number(CharT c) noexcept
-	{
-		return is_part_identifier(c);
-	}
-}
+    template<class CharT>
+    bool is_part_number(CharT c) noexcept
+    {
+        return is_part_identifier(c);
+    }
+} // namespace
 
 namespace tavros::core
 {
 
-	using tt = preproc_token::token_type;
+    using tt = preproc_token::token_type;
 
-	preproc_lexer::preproc_lexer(const char* begin, const char* end) noexcept
-		: m_begin(begin)
-		, m_end(end)
-		, m_forward(begin)
-		, m_line_begin(begin)
-		, m_line_end(begin)
-		, m_line(1)
-		, m_column(1)
-		, m_in_include_directive(false)
-	{
-		while (m_line_end < m_end && *m_line_end != '\n') {
-			++m_line_end;
-		}
-	}
+    preproc_lexer::preproc_lexer(const char* begin, const char* end) noexcept
+        : m_begin(begin)
+        , m_end(end)
+        , m_forward(begin)
+        , m_line_begin(begin)
+        , m_line_end(begin)
+        , m_row(1)
+        , m_col(1)
+        , m_in_dir(false)
+        , m_required_end_dir(false)
+        , m_header_name_expected(false)
+        , m_line_break(false)
+        , m_is_start_of_line(true)
+        , m_unclosed_multiline_comment(false)
+    {
+        update_end_of_line();
+    }
 
-	preproc_token preproc_lexer::next_token() noexcept
-	{
-		// Placeholder implementation: returns end_of_file token
-		if (end_of_source()) {
-			return {tt::end_of_file, m_end, m_end, m_line_begin, m_line_end, m_line, m_column};
-		}
+    preproc_token preproc_lexer::next_token() noexcept
+    {
+        // Placeholder implementation: returns end_of_source token
+        if (m_header_name_expected) {
+            return scan_header_name();
+        }
 
-		if (m_in_include_directive) {
-			return scan_header_name();
-		}
+        do {
+            skip_trivia();
 
-		const char* end = m_end;
+            if (m_required_end_dir) {
+                m_required_end_dir = false;
+                return {tt::end_of_directive, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
+            }
 
-		while (m_forward < end) {
-			skip_whitespace();
+            if (eos()) {
+                break;
+            }
 
-			const auto* beg = m_forward;
+            // Identifier
+            if (is_start_identifier(peek())) {
+                return scan_identifier();
+            }
 
-			switch (*m_forward)
-			{
-			case '#':
-				// Preprocessor directive or punctuation
-				++m_forward;
-				++m_column;
-				skip_h_whitespace();
-				
-				if (is_start_identifier(*m_forward)) {
-					beg = m_forward;
-					++m_forward;
-					++m_column;
+            // Number
+            if (is_start_number(peek())) {
+                return scan_number();
+            }
 
-					while (m_forward < end && is_part_identifier(*m_forward)) {
-						++m_forward;
-						++m_column;
-					}
+            // String literal or character literal
+            if (peek() == '\'' || peek() == '"') {
+                return scan_string_literal();
+            }
 
-					auto directive_len = static_cast<size_t>(m_forward - beg);
+            // Preprocessor directive or punctuation
+            if (m_is_start_of_line && peek() == '#') {
+                return scan_directive();
+            }
 
-					constexpr const char include_name[] = "include";
-					constexpr size_t include_name_len = sizeof(include_name) - 1;
+            const auto* beg = m_forward;
+            auto        col = m_col;
+            adv();
 
-					if (include_name_len == directive_len && strncmp(beg, include_name, directive_len) == 0) {
-						m_in_include_directive = true;
-					}
+            return {tt::punctuation, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+        } while (true);
 
-					return {tt::directive, beg, m_forward, m_line_begin, m_line_end, m_line, m_column};
-				}
-				return {tt::punctuation, beg, m_forward, m_line_begin, m_line_end, m_line, m_column};
+        if (m_unclosed_multiline_comment) {
+            m_unclosed_multiline_comment = false;
+            return {tt::error, m_end, m_end, m_line_begin, m_line_end, m_row, m_col, "Unclosed multi-line comment at end of source"};
+        }
 
-			case '/':
-				++m_forward;
-				++m_column;
+        if (m_in_dir) {
+            m_in_dir = false;
+            return {tt::end_of_directive, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
+        }
 
-				if (m_forward < end) {
-					if (*m_forward == '*') {
-						// Multi-line comment
-						++m_forward;
-						++m_column;
+        return {tt::end_of_source, m_end, m_end, m_line_begin, m_line_end, m_row, m_col};
+    }
 
-						skip_multi_line_comment();
-					} else if (*m_forward == '/') {
-						// Single-line comment
-						++m_forward;
-						++m_column;
+    void preproc_lexer::adv() noexcept
+    {
+        TAV_ASSERT(!eos());
+        TAV_ASSERT(peek() != '\n');
 
-						skip_single_line_comment();
-					} else {
-						// Just a division operator
-						return {tt::punctuation, beg, m_forward, m_line_begin, m_line_end, m_line, m_column};
-					}
-				} else {
-					// Just a division operator at end of source
-					return {tt::punctuation, beg, m_forward, m_line_begin, m_line_end, m_line, m_column};
-				}
+        ++m_forward;
+        ++m_col;
+    }
 
-				break;
+    void preproc_lexer::adv_ln() noexcept
+    {
+        TAV_ASSERT(!eos());
+        TAV_ASSERT(peek() == '\n');
 
-			case '"':
-				[[fallthrough]];
-			case '\'':
-				// String literal or character literal
-				return scan_string_literal();
-				
-			default:
-				
-				beg = m_forward;
+        m_col = 1;
+        ++m_row;
+        ++m_forward;
+        m_header_name_expected = false;
+        m_is_start_of_line = true;
+        m_line_begin = m_forward;
+        m_line_end = m_line_begin;
 
-				// Identifier
-				if (is_start_identifier(*m_forward)) {
-					auto col = m_column;
+        if (m_in_dir && m_last_nonspace_char != '\\') {
+            m_in_dir = false;
+            m_required_end_dir = true;
+        }
 
-					++m_forward;
-					++m_column;
-					while (m_forward < end && is_part_identifier(*m_forward)) {
-						++m_forward;
-						++m_column;
-					}
+        update_end_of_line();
+    }
 
-					return {tt::identifier, beg, m_forward, m_line_begin, m_line_end, m_line, col};
-				}
+    char preproc_lexer::peek() const noexcept
+    {
+        TAV_ASSERT(!eos());
+        return *m_forward;
+    }
 
-				// Number literal
-				if (is_start_number(*m_forward)) {
-					auto col = m_column;
+    char preproc_lexer::peek(size_t n) const noexcept
+    {
+        TAV_ASSERT(m_forward + n < m_end);
+        return *(m_forward + n);
+    }
 
-					++m_forward;
-					++m_column;
-					while (m_forward < end && is_part_number(*m_forward)) {
-						++m_forward;
-						++m_column;
-					}
+    bool preproc_lexer::eos() const noexcept
+    {
+        return m_forward >= m_end;
+    }
 
-					return {tt::number, beg, m_forward, m_line_begin, m_line_end, m_line, col};
-				}
+    bool preproc_lexer::eos(size_t n) const noexcept
+    {
+        return m_forward + n >= m_end;
+    }
 
-				if (m_forward == m_end) {
-					break;
-				}
+    preproc_token preproc_lexer::scan_identifier() noexcept
+    {
+        TAV_ASSERT(is_start_identifier(peek()));
 
-				++m_forward;
-				++m_column;
-				return {tt::punctuation, beg, m_forward, m_line_begin, m_line_end, m_line, m_column};
-			}
-		}
+        m_is_start_of_line = false;
+        auto        col = m_col;
+        const auto* beg = m_forward;
 
-		return {tt::end_of_file, m_end, m_end, m_line_begin, m_line_end, m_line, m_column};
-	}
+        do {
+            adv();
+        } while (!eos() && is_part_identifier(peek()));
 
-	bool preproc_lexer::end_of_source() const noexcept
-	{
-		return m_forward >= m_end;
-	}
+        return {tt::identifier, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+    }
 
-	preproc_token preproc_lexer::scan_string_literal()
-	{
-		TAV_ASSERT(*m_forward == '\'' || *m_forward == '"');
+    preproc_token preproc_lexer::scan_number() noexcept
+    {
+        TAV_ASSERT(is_start_number(peek()));
 
-		auto ln = m_line;
-		auto col = m_column;
+        m_is_start_of_line = false;
+        auto        col = m_col;
+        const auto* beg = m_forward;
 
-		// String literal or character literal
-		const char quote_char = *m_forward;
-		++m_forward;
-		++m_column;
-		const auto* beg = m_forward;
-		const char* end = m_end;
+        do {
+            adv();
+        } while (!eos() && is_part_number(peek()));
 
-		while (m_forward < end && *m_forward != '\n' && *m_forward != quote_char) {
-			if (*m_forward == '\\') {
-				// Escape sequence
-				++m_forward;
-				++m_column;
-				if (m_forward < end) {
-					++m_forward;
-					++m_column;
-				} else {
-					// Error: incomplete escape sequence
-					return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_line, m_column, "Incomplete escape sequence"};
-				}
-			} else {
-				++m_forward;
-				++m_column;
-			}
-		}
+        return {tt::number, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+    }
 
-		if (m_forward == end) {
-			if (quote_char == '"') {
-				return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_line, m_column, "Unexpected end of file in string literal"};
-			}
-			return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_line, m_column, "Unexpected end of file in character literal"};
-		}
+    preproc_token preproc_lexer::scan_string_literal() noexcept
+    {
+        TAV_ASSERT(peek() == '\'' || peek() == '"');
 
-		if (*m_forward == quote_char) {
-			// Closing quote found
-			const auto* end_of_str = m_forward;
-			++m_forward;
-			++m_column;
+        m_is_start_of_line = false;
+        auto ln = m_row;
+        auto col = m_col;
 
-			if (quote_char == '"') {
-				return {tt::string_literal, beg, end_of_str, m_line_begin, m_line_end, ln, col};
-			}
-			return {tt::character_literal, beg, end_of_str, m_line_begin, m_line_end, ln, col};
-		}
+        // String literal or character literal
+        const char quote_char = peek();
+        adv();
+        const auto* beg = m_forward;
+        const char* end = m_end;
 
-		// Error: unterminated string/character literal
-		if (quote_char == '"') {
-			return {tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_line, m_column, "Unterminated string literal"};
-		}
-		return {tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_line, m_column, "Unterminated character literal"};
-	}
+        while (!eos() && peek() != '\n' && peek() != quote_char) {
+            if (peek() == '\\') {
+                // Escape sequence
+                adv();
+                if (!eos()) {
+                    adv();
+                } else {
+                    // Error: incomplete escape sequence
+                    return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_row, m_col, "Incomplete escape sequence"};
+                }
+            } else {
+                adv();
+            }
+        }
 
-	preproc_token preproc_lexer::scan_header_name()
-	{
-		const auto* end = m_end;
-		skip_h_whitespace();
+        if (eos()) {
+            if (quote_char == '"') {
+                return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unexpected end of file in string literal"};
+            }
+            return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unexpected end of file in character literal"};
+        }
 
-		if (*m_forward == '<' || *m_forward == '"') {
-			// Header name
-			++m_forward;
-			++m_column;
-			const auto* beg = m_forward;
-			while (m_forward < end && *m_forward != '\n' && *m_forward != '"' && *m_forward != '>') {
-				++m_forward;
-				++m_column;
-			}
+        if (peek() == quote_char) {
+            // Closing quote found
+            const auto* end_of_str = m_forward;
+            adv();
 
-			if (m_forward == end) {
-				return { tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_line, m_column, "Unexpected end of file in header name" };
-			}
+            if (quote_char == '"') {
+                return {tt::string_literal, beg, end_of_str, m_line_begin, m_line_end, ln, col};
+            }
+            return {tt::character_literal, beg, end_of_str, m_line_begin, m_line_end, ln, col};
+        }
 
-			if (*m_forward == '\n') {
-				return { tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_line, m_column, "Unexpected end of line in header name" };
-			}
+        // Error: unterminated string/character literal
+        if (quote_char == '"') {
+            return {tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unterminated string literal"};
+        }
+        return {tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unterminated character literal"};
+    }
 
-			if (*m_forward == '"' || *m_forward == '>') {
-				const auto* end_header_name = m_forward;
+    preproc_token preproc_lexer::scan_directive() noexcept
+    {
+        TAV_ASSERT(peek() == '#');
 
-				// Closing quote found
-				++m_forward;
-				++m_column;
+        m_is_start_of_line = false;
+        // Maybe punctuation
+        const auto* line_beg = m_line_begin;
+        const auto* line_end = m_line_end;
+        const auto* punc_beg = m_forward;
+        auto        punc_col = m_col;
+        auto        punc_row = m_row;
 
-				// Skip to end of line
-				while (m_forward < end && is_h_whitespace(*m_forward)) {
-					++m_forward;
-					++m_column;
-				}
+        adv();
+        const char* punc_fwd = m_forward;
 
-				if (m_forward != end && *m_forward != '\n') {
-					// Error: unexpected characters after header name
-					auto ln = m_line;
-					auto col = m_column;
-					skip_to_end_line();
+        // Between # and directive name there can be whitespace or comments
+        skip_trivia();
 
-					return { tt::error, beg - 1, m_forward, m_line_begin, m_line_end, ln, col, "Unexpected characters after header name" };
-				}
+        // Check for single punctuation token
+        if (eos() || m_row != punc_row || !is_start_identifier(peek())) {
+            // Just a punctuation token
+            return {tt::punctuation, punc_beg, punc_fwd, line_beg, line_end, punc_row, punc_col};
+        }
 
-				m_in_include_directive = false;
+        constexpr string_view dir_include_name = "include";
+        const auto*           dir_beg = m_forward;
+        auto                  dir_col = m_col;
+        auto                  dir_row = m_row;
 
-				return {tt::header_name, beg, end_header_name, m_line_begin, m_line_end, m_line, m_column};
-			}
+        do {
+            adv();
+        } while (!eos() && is_part_identifier(peek()));
 
-			TAV_UNREACHABLE();
-		}
+        // Check if it's the "include" directive
+        string_view sv{dir_beg, m_forward};
+        if (sv == dir_include_name) {
+            m_header_name_expected = true;
+        }
 
-		// Error: expected header name
-		auto ln = m_line;
-		auto col = m_column;
-		const auto* beg = m_forward;
+        m_in_dir = true;
 
-		skip_to_end_line();
+        return {tt::directive, dir_beg, m_forward, m_line_begin, m_line_end, dir_row, dir_col};
+    }
 
-		return {tt::error, beg, m_forward, m_line_begin, m_line_end, ln, col, "Expected header name after #include"};
-	}
+    preproc_token preproc_lexer::scan_header_name() noexcept
+    {
+        m_header_name_expected = false;
+        m_is_start_of_line = false;
 
-	void preproc_lexer::skip_whitespace()
-	{
-		while (m_forward < m_end && is_whitespace(*m_forward)) {
-			if (*m_forward == '\n') {
-				process_new_line();
-			} else {
-				++m_column;
-				++m_forward;
-			}
-		}
-	}
+        auto        before_row = m_row;
+        auto        before_col = m_col;
+        const auto* before_beg = m_line_begin;
+        const auto* before_end = m_line_end;
+        skip_trivia();
 
-	void preproc_lexer::skip_h_whitespace()
-	{
-		while (m_forward < m_end && is_h_whitespace(*m_forward)) {
-			++m_column;
-			++m_forward;
-		}
-	}
+        // Check if we are still on the same line
+        if (m_row != before_row || eos()) {
+            return {tt::error, m_forward, m_forward, before_beg, before_end, before_row, before_col, "Unexpected end of line in header name"};
+        }
 
-	void preproc_lexer::skip_to_end_line()
-	{
-		while (m_forward < m_end && *m_forward != '\n') {
-			++m_forward;
-			++m_column;
-		}
-		m_in_include_directive = false;
-	}
+        // Header name must start with < or "
+        if (peek() != '<' && peek() != '"') {
+            // Error: expected header name
+            auto        ln = m_row;
+            auto        col = m_col;
+            const auto* beg = m_forward;
 
-	void preproc_lexer::skip_multi_line_comment()
-	{
-		while (m_forward < m_end) {
-			if (*m_forward == '*' && (m_forward + 1) < m_end && *(m_forward + 1) == '/') {
-				// End of comment found
-				m_forward += 2;
-				m_column += 2;
-				return;
-			} else {
-				if (*m_forward == '\n') {
-					process_new_line();
-				} else {
-					++m_column;
-					++m_forward;
-				}
-			}
-		}
-	}
+            skip_to_new_line();
 
-	void preproc_lexer::skip_single_line_comment()
-	{
-		while (m_forward < m_end && *m_forward != '\n') {
-			++m_forward;
-			++m_column;
-		}
-	}
+            return {tt::error, beg, m_forward, m_line_begin, m_line_end, ln, col, "Expected header name after #include directive"};
+        }
 
-	void preproc_lexer::process_new_line()
-	{
-		TAV_ASSERT(m_forward < m_end && *m_forward == '\n');
-		++m_line;
-		m_column = 1;
-		++m_forward;
-		m_line_begin = m_forward;
-		m_in_include_directive = false;
-		m_line_end = m_line_begin;
+        // Scan header name
+        const char closing_char = peek() == '<' ? '>' : '"';
 
-		while (m_line_end < m_end && *m_line_end != '\n') {
-			++m_line_end;
-		}
-	}
+        const auto* beg_err = m_forward;
+        auto        col_err = m_col;
 
-}
+        adv();
+
+        const auto* beg = m_forward;
+        const auto  col = m_col;
+
+        while (!eos() && peek() != '\n' && peek() != closing_char) {
+            adv();
+        }
+
+        if (eos()) {
+            return {tt::error, beg_err, m_forward, m_line_begin, m_line_end, m_row, col_err, "Unexpected end of source in header name"};
+        }
+
+        if (peek() == '\n') {
+            return {tt::error, beg_err, m_forward, m_line_begin, m_line_end, m_row, col_err, "Unexpected end of line in header name"};
+        }
+
+        const auto* end = m_forward;
+
+        // Closing quote found
+        adv();
+
+        auto row_before_skip = m_row;
+        skip_trivia();
+
+        if (m_row == row_before_skip && !eos()) {
+            // Error: unexpected characters after header name
+            const auto* fwd = m_forward;
+            const auto* lnbeg = m_line_begin;
+            const auto* lnend = m_line_end;
+            auto        row = m_row;
+            auto        col = m_col;
+
+            skip_to_new_line();
+            return {tt::error, beg, lnend, lnbeg, lnend, row, col, "Unexpected characters after header name"};
+        }
+
+        return {tt::header_name, beg, end, m_line_begin, m_line_end, m_row, col};
+    }
+
+    void preproc_lexer::skip_trivia() noexcept
+    {
+        while (!eos()) {
+            if (peek() == '\n') {
+                adv_ln();
+            } else if (is_whitespace(peek())) {
+                adv();
+            } else if (peek() == '/' && !eos(1)) {
+                if (peek(1) == '*') {
+                    // Multi-line comment started
+                    adv();
+                    adv();
+
+                    // necessary to check for an unclosed comment at EOF
+                    m_unclosed_multiline_comment = true;
+
+                    // Skip until end of comment
+                    while (!eos()) {
+                        if (peek() == '*' && !eos(1) && peek(1) == '/') {
+                            // End of multi-line comment found
+                            adv();
+                            adv();
+                            m_unclosed_multiline_comment = false;
+                            break;
+                        }
+                        if (peek() == '\n') {
+                            adv_ln();
+                        } else {
+                            adv();
+                        }
+                    }
+                } else if (peek(1) == '/') {
+                    // Single-line comment
+                    adv();
+                    adv();
+
+                    // Skip to end of line
+                    while (!eos()) {
+                        if (peek() == '\n') {
+                            auto ch = m_last_nonspace_char;
+                            adv_ln();
+                            if (ch != '\\') {
+                                if (m_in_dir) {
+                                    m_required_end_dir = true;
+                                }
+                                break;
+                            }
+                        } else {
+                            adv();
+                        }
+                    }
+                } else {
+                    // Not trivia
+                    return;
+                }
+            } else {
+                // Not trivia
+                return;
+            }
+        }
+    }
+
+    void preproc_lexer::update_end_of_line() noexcept
+    {
+        const auto* p = m_line_end;
+        m_last_nonspace_char = *p;
+
+        while (p < m_end && *p != '\n') {
+            if (!is_whitespace(*p)) {
+                m_last_nonspace_char = *p;
+            }
+            ++p;
+        }
+
+        m_line_end = p;
+    }
+
+    void preproc_lexer::skip_to_new_line()
+    {
+        while (!eos() && peek() != '\n') {
+            adv();
+        }
+
+        if (!eos() && peek() == '\n') {
+            adv_ln();
+        }
+    }
+
+} // namespace tavros::core
