@@ -1,17 +1,17 @@
 #include <common.test.hpp>
 
-#include <tavros/core/utils/preproc_lexer.hpp>
+#include <tavros/core/utils/pp_lexer.hpp>
 
 #include <vector>
 
 using namespace tavros::core;
 
-class preproc_lexer_test : public unittest_scope
+class pp_lexer_test : public unittest_scope
 {
 };
 
 
-using tt = preproc_token::token_type;
+using tt = pp_token::token_type;
 
 constexpr std::string_view to_str(tt type) noexcept
 {
@@ -19,12 +19,13 @@ constexpr std::string_view to_str(tt type) noexcept
 
     switch (type)
     {
-        case directive:         return "directive";
-        case end_of_directive:  return "end_of_directive";
+        case directive_hash:    return "directive_hash";
+        case directive_name:    return "directive_name";
         case header_name:       return "header_name";
+        case directive_end:     return "directive_end";
         case identifier:        return "identifier";
         case number:            return "number";
-        case punctuation:       return "punctuation";
+        case punctuator:        return "punctuator";
         case string_literal:    return "string_literal";
         case character_literal: return "character_literal";
         case error:             return "error";
@@ -34,12 +35,12 @@ constexpr std::string_view to_str(tt type) noexcept
     return "<unknown token_type>";
 }
 
-void print_tokens(const std::vector<preproc_token>& tokens)
+void print_tokens(const std::vector<pp_token>& tokens)
 {
     for (auto& tok : tokens) {
         std::cout << "TokenType: " << to_str(tok.type()) << std::endl; 
-        if (tok.type() != tt::end_of_source && tok.type() != tt::end_of_directive && tt::error != tok.type()) {
-            std::cout << "  TokenStr: '" << tok.token() << "'" << std::endl; 
+        if (tok.type() != tt::end_of_source && tok.type() != tt::directive_end && tt::error != tok.type()) {
+            std::cout << "  TokenStr: '" << tok.lexeme() << "'" << std::endl; 
         }
         if (tok.type() == tt::error) {
             std::cout << "  TokenError: '" << tok.error_string() << "'" << std::endl;
@@ -47,11 +48,11 @@ void print_tokens(const std::vector<preproc_token>& tokens)
     }
 }
 
-static std::vector<preproc_token> lex_all(string_view src)
+static std::vector<pp_token> lex_all(string_view src)
 {
-    preproc_lexer lexer(src.data(), src.data() + src.size());
+    pp_lexer lexer(src.data(), src.data() + src.size());
 
-    std::vector<preproc_token> tokens;
+    std::vector<pp_token> tokens;
     for (;;)
     {
         auto tok = lexer.next_token();
@@ -65,7 +66,7 @@ static std::vector<preproc_token> lex_all(string_view src)
     return tokens;
 }
 
-TEST_F(preproc_lexer_test, empty_source)
+TEST_F(pp_lexer_test, empty_source)
 {
     auto tokens = lex_all("");
 
@@ -75,7 +76,7 @@ TEST_F(preproc_lexer_test, empty_source)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, identifiers_and_numbers)
+TEST_F(pp_lexer_test, identifiers_and_numbers)
 {
     constexpr string_view src = "foo bar123 42";
 
@@ -84,20 +85,20 @@ TEST_F(preproc_lexer_test, identifiers_and_numbers)
     ASSERT_EQ(tokens.size(), 4);
 
     EXPECT_EQ(tokens[0].type(), tt::identifier);
-    EXPECT_EQ(tokens[0].token(), "foo");
+    EXPECT_EQ(tokens[0].lexeme(), "foo");
 
     EXPECT_EQ(tokens[1].type(), tt::identifier);
-    EXPECT_EQ(tokens[1].token(), "bar123");
+    EXPECT_EQ(tokens[1].lexeme(), "bar123");
 
     EXPECT_EQ(tokens[2].type(), tt::number);
-    EXPECT_EQ(tokens[2].token(), "42");
+    EXPECT_EQ(tokens[2].lexeme(), "42");
 
     EXPECT_EQ(tokens[3].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, identifiers_and_numbers2)
+TEST_F(pp_lexer_test, identifiers_and_numbers2)
 {
     constexpr string_view src = "/*z\n\nc*/foo/*abc*/bar123/*cde*///asd\n42";
 
@@ -106,199 +107,185 @@ TEST_F(preproc_lexer_test, identifiers_and_numbers2)
     ASSERT_EQ(tokens.size(), 4);
 
     EXPECT_EQ(tokens[0].type(), tt::identifier);
-    EXPECT_EQ(tokens[0].token(), "foo");
+    EXPECT_EQ(tokens[0].lexeme(), "foo");
 
     EXPECT_EQ(tokens[1].type(), tt::identifier);
-    EXPECT_EQ(tokens[1].token(), "bar123");
+    EXPECT_EQ(tokens[1].lexeme(), "bar123");
 
     EXPECT_EQ(tokens[2].type(), tt::number);
-    EXPECT_EQ(tokens[2].token(), "42");
+    EXPECT_EQ(tokens[2].lexeme(), "42");
 
     EXPECT_EQ(tokens[3].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, preproc_directives)
+TEST_F(pp_lexer_test, preproc_directive)
 {
     constexpr string_view src = R"(
-        #include <some/path.h>   
-        #    include   <  some/path2.h  >   
-        #define FOO 123    
-        #if __ABCD__    
+        #define FOO 123
     )";
 
     auto tokens = lex_all(src);
 
-    ASSERT_EQ(tokens.size(), 14);
+    ASSERT_EQ(tokens.size(), 6);
 
-    EXPECT_EQ(tokens[0].type(), tt::directive);
-    EXPECT_EQ(tokens[0].token(), "include");
+    EXPECT_EQ(tokens[0].type(), tt::directive_hash);
+    EXPECT_EQ(tokens[0].lexeme(), "#");
 
-    EXPECT_EQ(tokens[1].type(), tt::header_name);
-    EXPECT_EQ(tokens[1].token(), "some/path.h");
+    EXPECT_EQ(tokens[1].type(), tt::directive_name);
+    EXPECT_EQ(tokens[1].lexeme(), "define");
 
-    EXPECT_EQ(tokens[2].type(), tt::end_of_directive);
-    EXPECT_TRUE(tokens[2].token().empty());
+    EXPECT_EQ(tokens[2].type(), tt::identifier);
+    EXPECT_EQ(tokens[2].lexeme(), "FOO");
 
-    EXPECT_EQ(tokens[3].type(), tt::directive);
-    EXPECT_EQ(tokens[3].token(), "include");
+    EXPECT_EQ(tokens[3].type(), tt::number);
+    EXPECT_EQ(tokens[3].lexeme(), "123");
 
-    EXPECT_EQ(tokens[4].type(), tt::header_name);
-    EXPECT_EQ(tokens[4].token(), "  some/path2.h  ");
+    EXPECT_EQ(tokens[4].type(), tt::directive_end);
+    EXPECT_TRUE(tokens[4].lexeme().empty());
 
-    EXPECT_EQ(tokens[5].type(), tt::end_of_directive);
-    EXPECT_TRUE(tokens[5].token().empty());
-
-    EXPECT_EQ(tokens[6].type(), tt::directive);
-    EXPECT_EQ(tokens[6].token(), "define");
-
-    EXPECT_EQ(tokens[7].type(), tt::identifier);
-    EXPECT_EQ(tokens[7].token(), "FOO");
-
-    EXPECT_EQ(tokens[8].type(), tt::number);
-    EXPECT_EQ(tokens[8].token(), "123");
-
-    EXPECT_EQ(tokens[9].type(), tt::end_of_directive);
-    EXPECT_TRUE(tokens[9].token().empty());
-
-    EXPECT_EQ(tokens[10].type(), tt::directive);
-    EXPECT_EQ(tokens[10].token(), "if");
-
-    EXPECT_EQ(tokens[11].type(), tt::identifier);
-    EXPECT_EQ(tokens[11].token(), "__ABCD__");
-
-    EXPECT_EQ(tokens[12].type(), tt::end_of_directive);
-    EXPECT_TRUE(tokens[12].token().empty());
-
-    EXPECT_EQ(tokens[13].type(), tt::end_of_source);
+    EXPECT_EQ(tokens[5].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
 
-TEST_F(preproc_lexer_test, quoted_header_name)
+TEST_F(pp_lexer_test, quoted_header_name)
 {
     constexpr string_view src = "#   include      \"my_header.hpp\"";
 
     auto tokens = lex_all(src);
 
-    ASSERT_EQ(tokens.size(), 4);
+    ASSERT_EQ(tokens.size(), 5);
 
-    EXPECT_EQ(tokens[0].type(), tt::directive);
-    EXPECT_EQ(tokens[0].token(), "include");
+    EXPECT_EQ(tokens[0].type(), tt::directive_hash);
+
+    EXPECT_EQ(tokens[1].type(), tt::directive_name);
+    EXPECT_EQ(tokens[1].lexeme(), "include");
     
-    EXPECT_EQ(tokens[1].type(), tt::header_name);
-    EXPECT_EQ(tokens[1].token(), "my_header.hpp");
+    EXPECT_EQ(tokens[2].type(), tt::header_name);
+    EXPECT_EQ(tokens[2].lexeme(), "my_header.hpp");
     
-    EXPECT_EQ(tokens[2].type(), tt::end_of_directive);
-    EXPECT_TRUE(tokens[2].token().empty());
+    EXPECT_EQ(tokens[3].type(), tt::directive_end);
+    EXPECT_TRUE(tokens[3].lexeme().empty());
     
-	EXPECT_EQ(tokens[3].type(), tt::end_of_source);
+	EXPECT_EQ(tokens[4].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, comments_between_directive)
+TEST_F(pp_lexer_test, comments_between_directive)
 {
     constexpr string_view src =
         "/*comment*/#/*asd*/include/*comment2*/<my_header.hpp>//abc";
 
     auto tokens = lex_all(src);
     
-    ASSERT_EQ(tokens.size(), 4);
+    ASSERT_EQ(tokens.size(), 5);
 
-    EXPECT_EQ(tokens[0].type(), tt::directive);
-    EXPECT_EQ(tokens[0].token(), "include");
+    EXPECT_EQ(tokens[0].type(), tt::directive_hash);
+    EXPECT_EQ(tokens[0].lexeme(), "#");
     
-    EXPECT_EQ(tokens[1].type(), tt::header_name);
-    EXPECT_EQ(tokens[1].token(), "my_header.hpp");
-    
-    EXPECT_EQ(tokens[2].type(), tt::end_of_directive);
+    EXPECT_EQ(tokens[1].type(), tt::directive_name);
+    EXPECT_EQ(tokens[1].lexeme(), "include");
 
-	EXPECT_EQ(tokens[3].type(), tt::end_of_source);
+    EXPECT_EQ(tokens[2].type(), tt::header_name);
+    EXPECT_EQ(tokens[2].lexeme(), "my_header.hpp");
+
+    EXPECT_EQ(tokens[3].type(), tt::directive_end);
+
+	EXPECT_EQ(tokens[4].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
 
-TEST_F(preproc_lexer_test, comments_between_directive2)
+TEST_F(pp_lexer_test, comments_between_directive2)
 {
     constexpr string_view src =
-        "  /*com\nment*/#/**/include/*comment2*/<my_header.hpp>/*com\nment3*/   ";
+        "  /*com\nment*/#   include/*comment2*/<my_header.hpp>/*com\nment3*/   ";
 
     auto tokens = lex_all(src);
 
-    ASSERT_EQ(tokens.size(), 4);
+    ASSERT_EQ(tokens.size(), 5);
 
-    EXPECT_EQ(tokens[0].type(), tt::directive);
-    EXPECT_EQ(tokens[0].token(), "include");
-    
-    EXPECT_EQ(tokens[1].type(), tt::header_name);
-    EXPECT_EQ(tokens[1].token(), "my_header.hpp");
-    
-    EXPECT_EQ(tokens[2].type(), tt::end_of_directive);
+    EXPECT_EQ(tokens[0].type(), tt::directive_hash);
 
-	EXPECT_EQ(tokens[3].type(), tt::end_of_source);
+    EXPECT_EQ(tokens[1].type(), tt::directive_name);
+    EXPECT_EQ(tokens[1].lexeme(), "include");
+    
+    EXPECT_EQ(tokens[2].type(), tt::header_name);
+    EXPECT_EQ(tokens[2].lexeme(), "my_header.hpp");
+    
+    EXPECT_EQ(tokens[3].type(), tt::directive_end);
+
+	EXPECT_EQ(tokens[4].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, comment_inside_header_name)
+TEST_F(pp_lexer_test, comment_inside_header_name)
 {
     constexpr string_view src =
         "#include\"my/*comment*/header.hpp\"";
 
     auto tokens = lex_all(src);
 
-    ASSERT_EQ(tokens.size(), 4);
+    ASSERT_EQ(tokens.size(), 5);
 
-    EXPECT_EQ(tokens[0].type(), tt::directive);
-    EXPECT_EQ(tokens[0].token(), "include");
+    EXPECT_EQ(tokens[0].type(), tt::directive_hash);
 
-    EXPECT_EQ(tokens[1].type(), tt::header_name);
-    EXPECT_EQ(tokens[1].token(), "my/*comment*/header.hpp");
+    EXPECT_EQ(tokens[1].type(), tt::directive_name);
+    EXPECT_EQ(tokens[1].lexeme(), "include");
+
+    EXPECT_EQ(tokens[2].type(), tt::header_name);
+    EXPECT_EQ(tokens[2].lexeme(), "my/*comment*/header.hpp");
     
-    EXPECT_EQ(tokens[2].type(), tt::end_of_directive);
+    EXPECT_EQ(tokens[3].type(), tt::directive_end);
 
-    EXPECT_EQ(tokens[3].type(), tt::end_of_source);
+    EXPECT_EQ(tokens[4].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, include_without_header_name)
+TEST_F(pp_lexer_test, include_without_header_name)
 {
     constexpr string_view src =
         "#include\n#include";
 
     auto tokens = lex_all(src);
 
-    ASSERT_EQ(tokens.size(), 7);
+    ASSERT_EQ(tokens.size(), 9);
 
-    EXPECT_EQ(tokens[0].type(), tt::directive);
-    EXPECT_EQ(tokens[0].token(), "include");
+    EXPECT_EQ(tokens[0].type(), tt::directive_hash);
 
-    EXPECT_EQ(tokens[1].type(), tt::error);
-    EXPECT_FALSE(tokens[1].error_string().empty());
+    EXPECT_EQ(tokens[1].type(), tt::directive_name);
+    EXPECT_EQ(tokens[1].lexeme(), "include");
 
-    EXPECT_EQ(tokens[2].type(), tt::end_of_directive);
-    EXPECT_TRUE(tokens[2].error_string().empty());
+    EXPECT_EQ(tokens[2].type(), tt::error);
+    EXPECT_FALSE(tokens[2].error_string().empty());
 
-    EXPECT_EQ(tokens[3].type(), tt::directive);
-    EXPECT_EQ(tokens[3].token(), "include");
+    EXPECT_EQ(tokens[3].type(), tt::directive_end);
+    EXPECT_TRUE(tokens[3].error_string().empty());
 
-    EXPECT_EQ(tokens[4].type(), tt::error);
-    EXPECT_FALSE(tokens[4].error_string().empty());
+    EXPECT_EQ(tokens[4].type(), tt::directive_hash);
 
-    EXPECT_EQ(tokens[5].type(), tt::end_of_directive);
-    EXPECT_TRUE(tokens[5].error_string().empty());
+    EXPECT_EQ(tokens[5].type(), tt::directive_name);
+    EXPECT_EQ(tokens[5].lexeme(), "include");
 
-    EXPECT_EQ(tokens[6].type(), tt::end_of_source);
+    EXPECT_EQ(tokens[6].type(), tt::error);
+    EXPECT_FALSE(tokens[6].error_string().empty());
+
+    EXPECT_EQ(tokens[7].type(), tt::directive_end);
+    EXPECT_TRUE(tokens[7].error_string().empty());
+
+    EXPECT_EQ(tokens[8].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, hash_not_at_start_of_line)
+TEST_F(pp_lexer_test, hash_not_at_start_of_line)
 {
     constexpr string_view src =
         "foo#include<file>";
@@ -308,30 +295,30 @@ TEST_F(preproc_lexer_test, hash_not_at_start_of_line)
     ASSERT_EQ(tokens.size(), 7);
 
     EXPECT_EQ(tokens[0].type(), tt::identifier);
-    EXPECT_EQ(tokens[0].token(), "foo");
+    EXPECT_EQ(tokens[0].lexeme(), "foo");
     EXPECT_EQ(tokens[0].col(), 1);
 
-    EXPECT_EQ(tokens[1].type(), tt::punctuation);
-    EXPECT_EQ(tokens[1].token(), "#");
+    EXPECT_EQ(tokens[1].type(), tt::punctuator);
+    EXPECT_EQ(tokens[1].lexeme(), "#");
 
     EXPECT_EQ(tokens[2].type(), tt::identifier);
-    EXPECT_EQ(tokens[2].token(), "include");
+    EXPECT_EQ(tokens[2].lexeme(), "include");
 
-    EXPECT_EQ(tokens[3].type(), tt::punctuation);
-    EXPECT_EQ(tokens[3].token(), "<");
+    EXPECT_EQ(tokens[3].type(), tt::punctuator);
+    EXPECT_EQ(tokens[3].lexeme(), "<");
 
     EXPECT_EQ(tokens[4].type(), tt::identifier);
-    EXPECT_EQ(tokens[4].token(), "file");
+    EXPECT_EQ(tokens[4].lexeme(), "file");
 
-    EXPECT_EQ(tokens[5].type(), tt::punctuation);
-    EXPECT_EQ(tokens[5].token(), ">");
+    EXPECT_EQ(tokens[5].type(), tt::punctuator);
+    EXPECT_EQ(tokens[5].lexeme(), ">");
 
     EXPECT_EQ(tokens[6].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, string_literal)
+TEST_F(pp_lexer_test, string_literal)
 {
     constexpr string_view src = "\"hello\"";
 
@@ -340,14 +327,14 @@ TEST_F(preproc_lexer_test, string_literal)
     ASSERT_EQ(tokens.size(), 2);
 
     EXPECT_EQ(tokens[0].type(), tt::string_literal);
-    EXPECT_EQ(tokens[0].token(), "hello");
+    EXPECT_EQ(tokens[0].lexeme(), "hello");
 
     EXPECT_EQ(tokens[1].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, string_literal_with_comments)
+TEST_F(pp_lexer_test, string_literal_with_comments)
 {
     constexpr string_view src = "/*asdf*/\"hel/*sadf*/lo\"//lkajsdflkj";
 
@@ -356,14 +343,14 @@ TEST_F(preproc_lexer_test, string_literal_with_comments)
     ASSERT_EQ(tokens.size(), 2);
 
     EXPECT_EQ(tokens[0].type(), tt::string_literal);
-    EXPECT_EQ(tokens[0].token(), "hel/*sadf*/lo");
+    EXPECT_EQ(tokens[0].lexeme(), "hel/*sadf*/lo");
 
     EXPECT_EQ(tokens[1].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, unclosed_string_literal)
+TEST_F(pp_lexer_test, unclosed_string_literal)
 {
     constexpr string_view src = "/* 123 */ \"Hello world \n//asdf";
 
@@ -380,7 +367,7 @@ TEST_F(preproc_lexer_test, unclosed_string_literal)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, string_literal_with_escaped_quote)
+TEST_F(pp_lexer_test, string_literal_with_escaped_quote)
 {
     constexpr string_view src = R"("hello \"world\" test")";
 
@@ -389,14 +376,14 @@ TEST_F(preproc_lexer_test, string_literal_with_escaped_quote)
     ASSERT_EQ(tokens.size(), 2);
 
     EXPECT_EQ(tokens[0].type(), tt::string_literal);
-    EXPECT_EQ(tokens[0].token(), "hello \\\"world\\\" test");
+    EXPECT_EQ(tokens[0].lexeme(), "hello \\\"world\\\" test");
 
     EXPECT_EQ(tokens[1].type(), tt::end_of_source);
     
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, string_literal_with_escaped_close_quote)
+TEST_F(pp_lexer_test, string_literal_with_escaped_close_quote)
 {
     constexpr string_view src = R"( "hello\" )";
 
@@ -416,7 +403,7 @@ TEST_F(preproc_lexer_test, string_literal_with_escaped_close_quote)
 }
 
 
-TEST_F(preproc_lexer_test, two_unclosed_string_literals_and_identifier)
+TEST_F(pp_lexer_test, two_unclosed_string_literals_and_identifier)
 {
     constexpr string_view src = " \"hello\\\" foo // \n \"world\\\" bar /*asdf*/ \n /*asdf*/ foo //asdfd ";
 
@@ -433,7 +420,7 @@ TEST_F(preproc_lexer_test, two_unclosed_string_literals_and_identifier)
     EXPECT_FALSE(tokens[1].error_string().empty());
 
     EXPECT_EQ(tokens[2].type(), tt::identifier);
-    EXPECT_EQ(tokens[2].token(), "foo");
+    EXPECT_EQ(tokens[2].lexeme(), "foo");
     EXPECT_EQ(tokens[2].line(), " /*asdf*/ foo //asdfd ");
     EXPECT_TRUE(tokens[2].error_string().empty());
 
@@ -442,7 +429,7 @@ TEST_F(preproc_lexer_test, two_unclosed_string_literals_and_identifier)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, character_literal)
+TEST_F(pp_lexer_test, character_literal)
 {
     constexpr string_view src = "\'hello\'";
 
@@ -451,14 +438,14 @@ TEST_F(preproc_lexer_test, character_literal)
     ASSERT_EQ(tokens.size(), 2);
 
     EXPECT_EQ(tokens[0].type(), tt::character_literal);
-    EXPECT_EQ(tokens[0].token(), "hello");
+    EXPECT_EQ(tokens[0].lexeme(), "hello");
 
     EXPECT_EQ(tokens[1].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, comments_are_skipped)
+TEST_F(pp_lexer_test, comments_are_skipped)
 {
     constexpr string_view src =
         "foo//comment\n"
@@ -469,20 +456,20 @@ TEST_F(preproc_lexer_test, comments_are_skipped)
 
     ASSERT_EQ(tokens.size(), 4);
 
-    EXPECT_EQ(tokens[0].token(), "foo");
+    EXPECT_EQ(tokens[0].lexeme(), "foo");
     EXPECT_EQ(tokens[0].line(), "foo//comment");
     EXPECT_TRUE(tokens[0].error_string().empty());
     EXPECT_EQ(tokens[0].col(), 1);
 	EXPECT_EQ(tokens[0].row(), 1);
 
 
-    EXPECT_EQ(tokens[1].token(), "bar");
+    EXPECT_EQ(tokens[1].lexeme(), "bar");
     EXPECT_EQ(tokens[1].line(), "bar/* multi");
     EXPECT_TRUE(tokens[1].error_string().empty());
     EXPECT_EQ(tokens[1].col(), 1);
 	EXPECT_EQ(tokens[1].row(), 2);
 
-    EXPECT_EQ(tokens[2].token(), "baz");
+    EXPECT_EQ(tokens[2].lexeme(), "baz");
     EXPECT_EQ(tokens[2].line(), "line*/baz");
     EXPECT_TRUE(tokens[2].error_string().empty());
     EXPECT_EQ(tokens[2].col(), 7);
@@ -494,7 +481,7 @@ TEST_F(preproc_lexer_test, comments_are_skipped)
 }
 
 
-TEST_F(preproc_lexer_test, unclosed_comment_at_eos)
+TEST_F(pp_lexer_test, unclosed_comment_at_eos)
 {
     constexpr string_view src = "   /* com\nment ";
 
@@ -502,7 +489,7 @@ TEST_F(preproc_lexer_test, unclosed_comment_at_eos)
 
     ASSERT_EQ(tokens.size(), 2);
 
-    EXPECT_TRUE(tokens[0].token().empty());
+    EXPECT_TRUE(tokens[0].lexeme().empty());
     EXPECT_EQ(tokens[0].line(), "ment ");
     EXPECT_FALSE(tokens[0].error_string().empty());
     EXPECT_EQ(tokens[0].col(), 6);
@@ -514,7 +501,7 @@ TEST_F(preproc_lexer_test, unclosed_comment_at_eos)
 }
 
 
-TEST_F(preproc_lexer_test, unclosed_comment_at_eos2)
+TEST_F(pp_lexer_test, unclosed_comment_at_eos2)
 {
     constexpr string_view src = "/*/";
 
@@ -533,7 +520,7 @@ TEST_F(preproc_lexer_test, unclosed_comment_at_eos2)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, comment_with_a_new_line)
+TEST_F(pp_lexer_test, comment_with_a_new_line)
 {
     constexpr string_view src = " abc //def \\  \nqwe  \nzxc //comment\\\\\\\\";
 
@@ -542,17 +529,17 @@ TEST_F(preproc_lexer_test, comment_with_a_new_line)
     ASSERT_EQ(tokens.size(), 3);
 
     EXPECT_EQ(tokens[0].type(), tt::identifier);
-    EXPECT_EQ(tokens[0].token(), "abc");
+    EXPECT_EQ(tokens[0].lexeme(), "abc");
 
     EXPECT_EQ(tokens[1].type(), tt::identifier);
-    EXPECT_EQ(tokens[1].token(), "zxc");
+    EXPECT_EQ(tokens[1].lexeme(), "zxc");
 
     EXPECT_EQ(tokens[2].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, line_and_column_numbers)
+TEST_F(pp_lexer_test, line_and_column_numbers)
 {
     const char* src =
         "foo\n"
@@ -563,15 +550,15 @@ TEST_F(preproc_lexer_test, line_and_column_numbers)
 
     ASSERT_EQ(tokens.size(), 4);
 
-    EXPECT_EQ(tokens[0].token(), "foo");
+    EXPECT_EQ(tokens[0].lexeme(), "foo");
     EXPECT_EQ(tokens[0].row(), 1);
     EXPECT_EQ(tokens[0].col(), 1);
 
-    EXPECT_EQ(tokens[1].token(), "bar");
+    EXPECT_EQ(tokens[1].lexeme(), "bar");
     EXPECT_EQ(tokens[1].row(), 2);
     EXPECT_EQ(tokens[1].col(), 3);
 
-    EXPECT_EQ(tokens[2].token(), "123");
+    EXPECT_EQ(tokens[2].lexeme(), "123");
     EXPECT_EQ(tokens[2].row(), 3);
     EXPECT_EQ(tokens[2].col(), 5);
 
@@ -580,7 +567,7 @@ TEST_F(preproc_lexer_test, line_and_column_numbers)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, unterminated_string_literal)
+TEST_F(pp_lexer_test, unterminated_string_literal)
 {
     const char* src = "  \"unterminated \n   ";
 
@@ -589,7 +576,7 @@ TEST_F(preproc_lexer_test, unterminated_string_literal)
     ASSERT_EQ(tokens.size(), 2);
 
     EXPECT_EQ(tokens[0].type(), tt::error);
-    EXPECT_EQ(tokens[0].token(), "\"unterminated ");
+    EXPECT_EQ(tokens[0].lexeme(), "\"unterminated ");
     EXPECT_FALSE(tokens[0].error_string().empty());
 
     EXPECT_EQ(tokens[1].type(), tt::end_of_source);
@@ -597,7 +584,7 @@ TEST_F(preproc_lexer_test, unterminated_string_literal)
     EXPECT_FALSE(assert_was_called());
 }
 
-TEST_F(preproc_lexer_test, punctuation_tokens)
+TEST_F(pp_lexer_test, punctuation_tokens)
 {
     const char* src = "(){}[];,+-*/=!<>#";
 
@@ -607,10 +594,12 @@ TEST_F(preproc_lexer_test, punctuation_tokens)
 
     for (size_t i = 0; i + 1 < tokens.size(); ++i) {
 		string_view expected_token(&src[i], 1);
-        EXPECT_EQ(tokens[i].type(), tt::punctuation);
-        EXPECT_EQ(tokens[i].token(), expected_token);
-        EXPECT_EQ(tokens[i].token().size(), 1);
+        EXPECT_EQ(tokens[i].type(), tt::punctuator);
+        EXPECT_EQ(tokens[i].lexeme(), expected_token);
+        EXPECT_EQ(tokens[i].lexeme().size(), 1);
     }
+
+    EXPECT_EQ(tokens[17].type(), tt::end_of_source);
 
     EXPECT_FALSE(assert_was_called());
 }

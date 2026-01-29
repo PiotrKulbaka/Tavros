@@ -1,4 +1,4 @@
-#include <tavros/core/utils/preproc_lexer.hpp>
+#include <tavros/core/utils/pp_lexer.hpp>
 
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/unreachable.hpp>
@@ -41,9 +41,9 @@ namespace
 namespace tavros::core
 {
 
-    using tt = preproc_token::token_type;
+    using tt = pp_token::token_type;
 
-    preproc_lexer::preproc_lexer(const char* begin, const char* end) noexcept
+    pp_lexer::pp_lexer(const char* begin, const char* end) noexcept
         : m_begin(begin)
         , m_end(end)
         , m_forward(begin)
@@ -51,6 +51,7 @@ namespace tavros::core
         , m_line_end(begin)
         , m_row(1)
         , m_col(1)
+        , m_in_hash(false)
         , m_in_dir(false)
         , m_required_end_dir(false)
         , m_header_name_expected(false)
@@ -61,7 +62,7 @@ namespace tavros::core
         update_end_of_line();
     }
 
-    preproc_token preproc_lexer::next_token() noexcept
+    pp_token pp_lexer::next_token() noexcept
     {
         // Placeholder implementation: returns end_of_source token
         if (m_header_name_expected) {
@@ -73,15 +74,18 @@ namespace tavros::core
 
             if (m_required_end_dir) {
                 m_required_end_dir = false;
-                return {tt::end_of_directive, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
+                return {tt::directive_end, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
             }
 
             if (eos()) {
                 break;
             }
 
-            // Identifier
+            // Identifier or directive name
             if (is_start_identifier(peek())) {
+                if (m_in_hash) {
+                    return scan_directive();
+                }
                 return scan_identifier();
             }
 
@@ -96,15 +100,11 @@ namespace tavros::core
             }
 
             // Preprocessor directive or punctuation
-            if (m_is_start_of_line && peek() == '#') {
-                return scan_directive();
+            if (peek() == '#') {
+                return scan_hash();
             }
 
-            const auto* beg = m_forward;
-            auto        col = m_col;
-            adv();
-
-            return {tt::punctuation, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+            return scan_punctuation();
         } while (true);
 
         if (m_unclosed_multiline_comment) {
@@ -114,13 +114,13 @@ namespace tavros::core
 
         if (m_in_dir) {
             m_in_dir = false;
-            return {tt::end_of_directive, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
+            return {tt::directive_end, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
         }
 
         return {tt::end_of_source, m_end, m_end, m_line_begin, m_line_end, m_row, m_col};
     }
 
-    void preproc_lexer::adv() noexcept
+    void pp_lexer::adv() noexcept
     {
         TAV_ASSERT(!eos());
         TAV_ASSERT(peek() != '\n');
@@ -129,7 +129,7 @@ namespace tavros::core
         ++m_col;
     }
 
-    void preproc_lexer::adv_ln() noexcept
+    void pp_lexer::adv_ln() noexcept
     {
         TAV_ASSERT(!eos());
         TAV_ASSERT(peek() == '\n');
@@ -150,31 +150,32 @@ namespace tavros::core
         update_end_of_line();
     }
 
-    char preproc_lexer::peek() const noexcept
+    char pp_lexer::peek() const noexcept
     {
         TAV_ASSERT(!eos());
         return *m_forward;
     }
 
-    char preproc_lexer::peek(size_t n) const noexcept
+    char pp_lexer::peek(size_t n) const noexcept
     {
         TAV_ASSERT(m_forward + n < m_end);
         return *(m_forward + n);
     }
 
-    bool preproc_lexer::eos() const noexcept
+    bool pp_lexer::eos() const noexcept
     {
         return m_forward >= m_end;
     }
 
-    bool preproc_lexer::eos(size_t n) const noexcept
+    bool pp_lexer::eos(size_t n) const noexcept
     {
         return m_forward + n >= m_end;
     }
 
-    preproc_token preproc_lexer::scan_identifier() noexcept
+    pp_token pp_lexer::scan_identifier() noexcept
     {
         TAV_ASSERT(is_start_identifier(peek()));
+        TAV_ASSERT(!m_in_hash);
 
         m_is_start_of_line = false;
         auto        col = m_col;
@@ -187,7 +188,19 @@ namespace tavros::core
         return {tt::identifier, beg, m_forward, m_line_begin, m_line_end, m_row, col};
     }
 
-    preproc_token preproc_lexer::scan_number() noexcept
+    pp_token pp_lexer::scan_punctuation() noexcept
+    {
+        TAV_ASSERT(!eos());
+
+        const auto* beg = m_forward;
+        auto        col = m_col;
+        m_is_start_of_line = false;
+        adv();
+
+        return {tt::punctuator, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+    }
+
+    pp_token pp_lexer::scan_number() noexcept
     {
         TAV_ASSERT(is_start_number(peek()));
 
@@ -202,7 +215,7 @@ namespace tavros::core
         return {tt::number, beg, m_forward, m_line_begin, m_line_end, m_row, col};
     }
 
-    preproc_token preproc_lexer::scan_string_literal() noexcept
+    pp_token pp_lexer::scan_string_literal() noexcept
     {
         TAV_ASSERT(peek() == '\'' || peek() == '"');
 
@@ -256,29 +269,32 @@ namespace tavros::core
         return {tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unterminated character literal"};
     }
 
-    preproc_token preproc_lexer::scan_directive() noexcept
+    pp_token pp_lexer::scan_hash() noexcept
     {
         TAV_ASSERT(peek() == '#');
 
+        auto        is_start_line = m_is_start_of_line;
+        const auto* hash_beg = m_forward;
+        auto        hash_col = m_col;
         m_is_start_of_line = false;
-        // Maybe punctuation
-        const auto* line_beg = m_line_begin;
-        const auto* line_end = m_line_end;
-        const auto* punc_beg = m_forward;
-        auto        punc_col = m_col;
-        auto        punc_row = m_row;
-
         adv();
-        const char* punc_fwd = m_forward;
 
-        // Between # and directive name there can be whitespace or comments
-        skip_trivia();
-
-        // Check for single punctuation token
-        if (eos() || m_row != punc_row || !is_start_identifier(peek())) {
-            // Just a punctuation token
-            return {tt::punctuation, punc_beg, punc_fwd, line_beg, line_end, punc_row, punc_col};
+        if (is_start_line) {
+            // Directive hash can be only at the start of the line
+            m_in_hash = true;
+            return {tt::directive_hash, hash_beg, m_forward, m_line_begin, m_line_end, m_row, hash_col};
         }
+
+        // Just a punctuation token
+        return {tt::punctuator, hash_beg, m_forward, m_line_begin, m_line_end, m_row, hash_col};
+    }
+
+    pp_token pp_lexer::scan_directive() noexcept
+    {
+        TAV_ASSERT(m_in_hash);
+        TAV_ASSERT(!m_in_dir);
+        TAV_ASSERT(!eos());
+        TAV_ASSERT(is_start_identifier(peek()));
 
         constexpr string_view dir_include_name = "include";
         const auto*           dir_beg = m_forward;
@@ -296,11 +312,12 @@ namespace tavros::core
         }
 
         m_in_dir = true;
+        m_in_hash = false;
 
-        return {tt::directive, dir_beg, m_forward, m_line_begin, m_line_end, dir_row, dir_col};
+        return {tt::directive_name, dir_beg, m_forward, m_line_begin, m_line_end, dir_row, dir_col};
     }
 
-    preproc_token preproc_lexer::scan_header_name() noexcept
+    pp_token pp_lexer::scan_header_name() noexcept
     {
         m_header_name_expected = false;
         m_is_start_of_line = false;
@@ -374,7 +391,7 @@ namespace tavros::core
         return {tt::header_name, beg, end, m_line_begin, m_line_end, m_row, col};
     }
 
-    void preproc_lexer::skip_trivia() noexcept
+    void pp_lexer::skip_trivia() noexcept
     {
         while (!eos()) {
             if (peek() == '\n') {
@@ -436,7 +453,7 @@ namespace tavros::core
         }
     }
 
-    void preproc_lexer::update_end_of_line() noexcept
+    void pp_lexer::update_end_of_line() noexcept
     {
         const auto* p = m_line_end;
         m_last_nonspace_char = *p;
@@ -451,7 +468,7 @@ namespace tavros::core
         m_line_end = p;
     }
 
-    void preproc_lexer::skip_to_new_line()
+    void pp_lexer::skip_to_new_line()
     {
         while (!eos() && peek() != '\n') {
             adv();

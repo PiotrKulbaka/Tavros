@@ -6,19 +6,19 @@
 namespace tavros::core
 {
 
-    class preproc_lexer;
+    class pp_lexer;
 
     /**
      * @brief Represents a single token produced by the preprocessor lexer.
      *
-     * `preproc_token` is a lightweight, non-owning view into the original source
+     * `pp_token` is a lightweight, non-owning view into the original source
      * code. It stores the token type, its text range, and source location
      * (line and column). No dynamic memory allocations are performed.
      *
      * All returned string views reference the original source buffer, which must
      * remain valid while the token is in use.
      */
-    class preproc_token
+    class pp_token
     {
     public:
         /**
@@ -26,12 +26,13 @@ namespace tavros::core
          */
         enum class token_type
         {
-            directive,         /// Begining of preprocessor directive (e.g. #include, #define)
+            directive_hash,    /// The '#' character starting a preprocessor directive
+            directive_name,    /// Begining of preprocessor directive (e.g. #include, #define)
             header_name,       /// Header name only in include directive
-            end_of_directive,  /// End of preprocessor directive
+            directive_end,     /// End of preprocessor directive
             identifier,        /// Identifier
             number,            /// Numeric literal
-            punctuation,       /// Punctuation character
+            punctuator,        /// Punctuation character
             string_literal,    /// String literal
             character_literal, /// Character literal
             error,             /// Lexing error
@@ -48,7 +49,7 @@ namespace tavros::core
         }
 
         /**
-         * @brief Returns the token text.
+         * @brief Returns the lexeme text.
          *
          * The returned text depends on the token type:
          * - For string and character literals, the surrounding quotes (`"` or `'`)
@@ -57,7 +58,7 @@ namespace tavros::core
          *
          * The returned view always refers to the original source buffer.
          */
-        string_view token() const noexcept
+        string_view lexeme() const noexcept
         {
             return string_view(m_begin, m_end);
         }
@@ -95,7 +96,7 @@ namespace tavros::core
         }
 
     private:
-        preproc_token(
+        pp_token(
             token_type  type,
             const char* token_begin,
             const char* token_end,
@@ -126,7 +127,7 @@ namespace tavros::core
         size_t      m_col;
         string_view m_error_str;
 
-        friend class preproc_lexer;
+        friend class pp_lexer;
     };
 
 } // namespace tavros::core
