@@ -69,17 +69,21 @@ namespace tavros::core
 
         void skip_to_new_line();
 
+        static pp_token make_error(string_view line, int32 row, int32 col, tavros::core::string_view error) noexcept
+        {
+            return {pp_token::token_type::error, {}, line, row, col, error};
+        }
+
     private:
         const char* m_begin;
         const char* m_end;
         const char* m_forward;
 
-        const char* m_line_begin;
-        const char* m_line_end;
-        char        m_last_nonspace_char;
+        string_view m_line;
+        const char* m_last_nonspace_char;
 
-        size_t m_row;
-        size_t m_col;
+        int32 m_row;
+        int32 m_col;
 
         bool m_in_hash;          // Inside a '#' preprocessor hash
         bool m_in_dir;           // Inside the directive

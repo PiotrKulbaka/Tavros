@@ -60,7 +60,7 @@ namespace tavros::core
          */
         string_view lexeme() const noexcept
         {
-            return string_view(m_begin, m_end);
+            return m_lexeme;
         }
 
         /**
@@ -68,13 +68,13 @@ namespace tavros::core
          */
         string_view line() const noexcept
         {
-            return string_view(m_line_begin, m_line_end);
+            return m_line;
         }
 
         /**
          * @brief Returns the 1-based line number of the token.
          */
-        size_t row() const noexcept
+        int32 row() const noexcept
         {
             return m_row;
         }
@@ -82,7 +82,7 @@ namespace tavros::core
         /**
          * @brief Returns the 1-based column number of the token.
          */
-        size_t col() const noexcept
+        int32 col() const noexcept
         {
             return m_col;
         }
@@ -92,40 +92,34 @@ namespace tavros::core
          */
         string_view error_string() const noexcept
         {
-            return m_error_str;
+            return m_error;
         }
 
     private:
         pp_token(
             token_type  type,
-            const char* token_begin,
-            const char* token_end,
-            const char* line_begin,
-            const char* line_end,
-            size_t      row,
-            size_t      col,
-            string_view error_str = {}
+            string_view lexeme,
+            string_view line,
+            int32       row,
+            int32       col,
+            string_view error = {}
         ) noexcept
             : m_type(type)
-            , m_begin(token_begin)
-            , m_end(token_end)
-            , m_line_begin(line_begin)
-            , m_line_end(line_end)
+            , m_lexeme(lexeme)
+            , m_line(line)
             , m_row(row)
             , m_col(col)
-            , m_error_str(error_str)
+            , m_error(error)
         {
         }
 
     private:
         token_type  m_type;
-        const char* m_begin;
-        const char* m_end;
-        const char* m_line_begin;
-        const char* m_line_end;
-        size_t      m_row;
-        size_t      m_col;
-        string_view m_error_str;
+        string_view m_lexeme;
+        string_view m_line;
+        int32       m_row;
+        int32       m_col;
+        string_view m_error;
 
         friend class pp_lexer;
     };

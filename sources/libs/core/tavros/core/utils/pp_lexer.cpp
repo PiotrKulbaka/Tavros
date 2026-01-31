@@ -7,28 +7,36 @@
 
 namespace
 {
+#define CHK(x) (static_cast<int>(x) >= -1 && static_cast<int>(x) <= 255)
+
+    template<class CharT>
+    unsigned char char_cast(CharT c) noexcept
+    {
+        return static_cast<unsigned char>(c);
+    }
+
     template<class CharT>
     bool is_whitespace(CharT c) noexcept
     {
-        return std::isspace(static_cast<int>(c)) != 0;
+        return std::isspace(char_cast(c)) != 0;
     }
 
     template<class CharT>
     bool is_start_identifier(CharT c) noexcept
     {
-        return std::isalpha(static_cast<int>(c)) != 0 || c == '_';
+        return std::isalpha(char_cast(c)) != 0 || c == '_';
     }
 
     template<class CharT>
     bool is_part_identifier(CharT c) noexcept
     {
-        return is_start_identifier(c) || std::isdigit(static_cast<int>(c)) != 0;
+        return is_start_identifier(c) || std::isdigit(char_cast(c)) != 0;
     }
 
     template<class CharT>
     bool is_start_number(CharT c) noexcept
     {
-        return std::isdigit(static_cast<int>(c)) != 0;
+        return std::isdigit(char_cast(c)) != 0;
     }
 
     template<class CharT>
@@ -36,19 +44,25 @@ namespace
     {
         return is_part_identifier(c);
     }
+
+    template<class CharT>
+    bool is_punct(CharT c) noexcept
+    {
+        return std::ispunct(char_cast(c)) != 0;
+    }
+
+    using tt = tavros::core::pp_token::token_type;
+
 } // namespace
 
 namespace tavros::core
 {
 
-    using tt = pp_token::token_type;
-
     pp_lexer::pp_lexer(const char* begin, const char* end) noexcept
         : m_begin(begin)
         , m_end(end)
         , m_forward(begin)
-        , m_line_begin(begin)
-        , m_line_end(begin)
+        , m_line(begin, begin)
         , m_row(1)
         , m_col(1)
         , m_in_hash(false)
@@ -70,11 +84,15 @@ namespace tavros::core
         }
 
         do {
+            auto line = m_line;
+            auto row = m_row;
+
             skip_trivia();
 
             if (m_required_end_dir) {
                 m_required_end_dir = false;
-                return {tt::directive_end, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
+                auto col = static_cast<int>(line.size()) + 1;
+                return {tt::directive_end, {}, line, row, col};
             }
 
             if (eos()) {
@@ -104,20 +122,26 @@ namespace tavros::core
                 return scan_hash();
             }
 
+            // Line splicing
+            if ((m_in_dir || m_in_hash) && m_forward == m_last_nonspace_char && peek() == '\\') {
+                adv();
+                continue;
+            }
+
             return scan_punctuation();
         } while (true);
 
         if (m_unclosed_multiline_comment) {
             m_unclosed_multiline_comment = false;
-            return {tt::error, m_end, m_end, m_line_begin, m_line_end, m_row, m_col, "Unclosed multi-line comment at end of source"};
+            return make_error(m_line, m_row, m_col, "Unclosed multi-line comment at end of source");
         }
 
         if (m_in_dir) {
             m_in_dir = false;
-            return {tt::directive_end, m_forward, m_forward, m_line_begin, m_line_end, m_row, m_col};
+            return {tt::directive_end, {m_forward, m_forward}, m_line, m_row, m_col};
         }
 
-        return {tt::end_of_source, m_end, m_end, m_line_begin, m_line_end, m_row, m_col};
+        return {tt::end_of_source, {}, m_line, m_row, m_col};
     }
 
     void pp_lexer::adv() noexcept
@@ -139,10 +163,9 @@ namespace tavros::core
         ++m_forward;
         m_header_name_expected = false;
         m_is_start_of_line = true;
-        m_line_begin = m_forward;
-        m_line_end = m_line_begin;
+        m_line = {m_forward, m_forward};
 
-        if (m_in_dir && m_last_nonspace_char != '\\') {
+        if (m_in_dir && *m_last_nonspace_char != '\\') {
             m_in_dir = false;
             m_required_end_dir = true;
         }
@@ -185,7 +208,7 @@ namespace tavros::core
             adv();
         } while (!eos() && is_part_identifier(peek()));
 
-        return {tt::identifier, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+        return {tt::identifier, {beg, m_forward}, m_line, m_row, col};
     }
 
     pp_token pp_lexer::scan_punctuation() noexcept
@@ -195,9 +218,14 @@ namespace tavros::core
         const auto* beg = m_forward;
         auto        col = m_col;
         m_is_start_of_line = false;
+        m_in_hash = false;
         adv();
 
-        return {tt::punctuator, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+
+        if (is_punct(*beg)) {
+            return {tt::punctuator, {beg, m_forward}, m_line, m_row, col};
+        }
+        return {tt::error, {beg, m_forward}, m_line, m_row, col};
     }
 
     pp_token pp_lexer::scan_number() noexcept
@@ -212,7 +240,7 @@ namespace tavros::core
             adv();
         } while (!eos() && is_part_number(peek()));
 
-        return {tt::number, beg, m_forward, m_line_begin, m_line_end, m_row, col};
+        return {tt::number, {beg, m_forward}, m_line, m_row, col};
     }
 
     pp_token pp_lexer::scan_string_literal() noexcept
@@ -224,20 +252,20 @@ namespace tavros::core
         auto col = m_col;
 
         // String literal or character literal
-        const char quote_char = peek();
+        const auto quote_char = peek();
         adv();
         const auto* beg = m_forward;
-        const char* end = m_end;
+        const auto* end = m_end;
 
         while (!eos() && peek() != '\n' && peek() != quote_char) {
             if (peek() == '\\') {
                 // Escape sequence
                 adv();
-                if (!eos()) {
+                if (!eos() && peek() != '\n') {
                     adv();
                 } else {
                     // Error: incomplete escape sequence
-                    return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_row, m_col, "Incomplete escape sequence"};
+                    return make_error(m_line, m_row, m_col, "Incomplete escape sequence");
                 }
             } else {
                 adv();
@@ -245,10 +273,7 @@ namespace tavros::core
         }
 
         if (eos()) {
-            if (quote_char == '"') {
-                return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unexpected end of file in string literal"};
-            }
-            return {tt::error, beg, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unexpected end of file in character literal"};
+            return make_error(m_line, m_row, m_col, "Unexpected end of file");
         }
 
         if (peek() == quote_char) {
@@ -256,17 +281,13 @@ namespace tavros::core
             const auto* end_of_str = m_forward;
             adv();
 
-            if (quote_char == '"') {
-                return {tt::string_literal, beg, end_of_str, m_line_begin, m_line_end, ln, col};
-            }
-            return {tt::character_literal, beg, end_of_str, m_line_begin, m_line_end, ln, col};
+            return {quote_char == '"' ? tt::string_literal : tt::character_literal, {beg, end_of_str}, m_line, ln, col};
         }
 
         // Error: unterminated string/character literal
-        if (quote_char == '"') {
-            return {tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unterminated string literal"};
-        }
-        return {tt::error, beg - 1, m_forward, m_line_begin, m_line_end, m_row, m_col, "Unterminated character literal"};
+        TAV_ASSERT(peek() != quote_char);
+        string_view err_msg = quote_char == '"' ? "Unterminated string literal" : "Unterminated character literal";
+        return make_error(m_line, m_row, m_col, err_msg);
     }
 
     pp_token pp_lexer::scan_hash() noexcept
@@ -282,11 +303,11 @@ namespace tavros::core
         if (is_start_line) {
             // Directive hash can be only at the start of the line
             m_in_hash = true;
-            return {tt::directive_hash, hash_beg, m_forward, m_line_begin, m_line_end, m_row, hash_col};
+            return {tt::directive_hash, {hash_beg, m_forward}, m_line, m_row, hash_col};
         }
 
         // Just a punctuation token
-        return {tt::punctuator, hash_beg, m_forward, m_line_begin, m_line_end, m_row, hash_col};
+        return {tt::punctuator, {hash_beg, m_forward}, m_line, m_row, hash_col};
     }
 
     pp_token pp_lexer::scan_directive() noexcept
@@ -314,7 +335,7 @@ namespace tavros::core
         m_in_dir = true;
         m_in_hash = false;
 
-        return {tt::directive_name, dir_beg, m_forward, m_line_begin, m_line_end, dir_row, dir_col};
+        return {tt::directive_name, {dir_beg, m_forward}, m_line, dir_row, dir_col};
     }
 
     pp_token pp_lexer::scan_header_name() noexcept
@@ -322,50 +343,39 @@ namespace tavros::core
         m_header_name_expected = false;
         m_is_start_of_line = false;
 
-        auto        before_row = m_row;
-        auto        before_col = m_col;
-        const auto* before_beg = m_line_begin;
-        const auto* before_end = m_line_end;
+        auto before_row = m_row;
+        auto before_col = m_col;
+        auto before_line = m_line;
         skip_trivia();
 
         // Check if we are still on the same line
         if (m_row != before_row || eos()) {
-            return {tt::error, m_forward, m_forward, before_beg, before_end, before_row, before_col, "Unexpected end of line in header name"};
+            return make_error(before_line, before_row, before_col, "Unexpected end of line in header name");
         }
 
         // Header name must start with < or "
         if (peek() != '<' && peek() != '"') {
-            // Error: expected header name
-            auto        ln = m_row;
-            auto        col = m_col;
-            const auto* beg = m_forward;
-
+            auto err = make_error(m_line, m_row, m_col, "Expected header name after #include directive");
             skip_to_new_line();
-
-            return {tt::error, beg, m_forward, m_line_begin, m_line_end, ln, col, "Expected header name after #include directive"};
+            return err;
         }
 
         // Scan header name
         const char closing_char = peek() == '<' ? '>' : '"';
-
-        const auto* beg_err = m_forward;
-        auto        col_err = m_col;
-
+        const auto col = m_col;
         adv();
-
         const auto* beg = m_forward;
-        const auto  col = m_col;
 
         while (!eos() && peek() != '\n' && peek() != closing_char) {
             adv();
         }
 
         if (eos()) {
-            return {tt::error, beg_err, m_forward, m_line_begin, m_line_end, m_row, col_err, "Unexpected end of source in header name"};
+            return make_error(m_line, m_row, m_col, "Unexpected end of source in header name");
         }
 
         if (peek() == '\n') {
-            return {tt::error, beg_err, m_forward, m_line_begin, m_line_end, m_row, col_err, "Unexpected end of line in header name"};
+            return make_error(m_line, m_row, m_col, "Unexpected end of line in header name");
         }
 
         const auto* end = m_forward;
@@ -377,18 +387,12 @@ namespace tavros::core
         skip_trivia();
 
         if (m_row == row_before_skip && !eos()) {
-            // Error: unexpected characters after header name
-            const auto* fwd = m_forward;
-            const auto* lnbeg = m_line_begin;
-            const auto* lnend = m_line_end;
-            auto        row = m_row;
-            auto        col = m_col;
-
+            auto err = make_error(m_line, m_row, m_col, "Unexpected characters after header name");
             skip_to_new_line();
-            return {tt::error, beg, lnend, lnbeg, lnend, row, col, "Unexpected characters after header name"};
+            return err;
         }
 
-        return {tt::header_name, beg, end, m_line_begin, m_line_end, m_row, col};
+        return {tt::header_name, {beg, end}, m_line, m_row, col};
     }
 
     void pp_lexer::skip_trivia() noexcept
@@ -430,7 +434,7 @@ namespace tavros::core
                     // Skip to end of line
                     while (!eos()) {
                         if (peek() == '\n') {
-                            auto ch = m_last_nonspace_char;
+                            auto ch = *m_last_nonspace_char;
                             adv_ln();
                             if (ch != '\\') {
                                 if (m_in_dir) {
@@ -455,17 +459,17 @@ namespace tavros::core
 
     void pp_lexer::update_end_of_line() noexcept
     {
-        const auto* p = m_line_end;
-        m_last_nonspace_char = *p;
+        const auto* p = m_line.data();
+        m_last_nonspace_char = p;
 
         while (p < m_end && *p != '\n') {
             if (!is_whitespace(*p)) {
-                m_last_nonspace_char = *p;
+                m_last_nonspace_char = p;
             }
             ++p;
         }
 
-        m_line_end = p;
+        m_line = {m_line.data(), p};
     }
 
     void pp_lexer::skip_to_new_line()

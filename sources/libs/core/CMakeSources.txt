@@ -156,7 +156,6 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/raii/scope_exit.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/raii/scoped_owner.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/utils/pp_lexeme.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/utils/pp_lexer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/utils/pp_lexer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/utils/pp_token.hpp
