@@ -24,6 +24,8 @@ namespace tavros::resources
         bool   eos() const override;
         bool   good() const override;
 
+        content_result read_content() const override;
+
     private:
         mutable core::ifstream m_file;
         size_t                 m_size = 0;

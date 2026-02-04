@@ -18,6 +18,16 @@ namespace tavros::resources
     {
     public:
         /**
+         * @brief Result structure for reading the entire content of the resource.
+         */
+        struct content_result
+        {
+            bool         success = false;
+            core::string data;
+        };
+
+    public:
+        /**
          * @brief Virtual destructor.
          */
         virtual ~resource_reader() = default;
@@ -66,6 +76,12 @@ namespace tavros::resources
          * @return true if the reader is valid and can perform operations, false otherwise.
          */
         virtual [[nodiscard]] bool good() const = 0;
+
+        /**
+         * @brief Reads the content from the resource.
+         * @return A content_result indicating success and containing the read data.
+         */
+        virtual [[nodiscard]] content_result read_content() const = 0;
     };
 
 } // namespace tavros::resources

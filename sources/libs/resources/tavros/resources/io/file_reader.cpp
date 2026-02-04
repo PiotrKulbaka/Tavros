@@ -175,4 +175,58 @@ namespace tavros::resources
         return m_file.is_open() && m_file.good();
     }
 
+    file_reader::content_result file_reader::read_content() const
+    {
+        if (!good()) {
+            ::logger.error("File in bad state");
+            TAV_DEBUG_BREAK();
+            return {};
+        }
+
+        // Save current position
+        const auto current_pos = m_file.tellg();
+        if (current_pos < 0) {
+            ::logger.error("tellg() failed in read_content()");
+            TAV_DEBUG_BREAK();
+            return {};
+        }
+
+        // Move to beginning
+        m_file.seekg(0, std::ios::beg);
+        if (!m_file.good()) {
+            m_file.seekg(current_pos);
+            ::logger.error("tellg() failed in read_content()");
+            return {};
+        }
+
+        // Read whole content
+        try {
+            core::string data;
+            data.resize(m_size);
+            m_file.read(data.data(), static_cast<std::streamsize>(m_size));
+
+            if (m_file.bad()) {
+                ::logger.error("Read content failed");
+                m_file.clear();
+                m_file.seekg(current_pos);
+                TAV_DEBUG_BREAK();
+                return {};
+            }
+
+            m_file.clear();
+            m_file.seekg(current_pos);
+
+            return {true, data};
+
+        } catch (const std::exception& e) {
+            ::logger.error("Exception during read content: {}", e.what());
+            TAV_DEBUG_BREAK();
+            return {};
+        } catch (...) {
+            ::logger.error("Unknown exception during read content");
+            TAV_DEBUG_BREAK();
+            return {};
+        }
+    }
+
 } // namespace tavros::resources
