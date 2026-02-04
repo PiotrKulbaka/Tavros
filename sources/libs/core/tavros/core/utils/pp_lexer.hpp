@@ -44,7 +44,7 @@ namespace tavros::core
          */
         bool end_of_source() const noexcept
         {
-            return eos();
+            return m_end_of_source;
         }
 
     private:
@@ -88,6 +88,7 @@ namespace tavros::core
         bool m_in_hash;          // Inside a '#' preprocessor hash
         bool m_in_dir;           // Inside the directive
         bool m_required_end_dir; // Required directive end
+        bool m_end_of_source;
 
         bool m_header_name_expected;
         bool m_line_break;

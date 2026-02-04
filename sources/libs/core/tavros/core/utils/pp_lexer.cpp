@@ -68,6 +68,7 @@ namespace tavros::core
         , m_in_hash(false)
         , m_in_dir(false)
         , m_required_end_dir(false)
+        , m_end_of_source(false)
         , m_header_name_expected(false)
         , m_line_break(false)
         , m_is_start_of_line(true)
@@ -86,12 +87,13 @@ namespace tavros::core
         do {
             auto line = m_line;
             auto row = m_row;
+            auto col = m_col;
+            const auto* fwd = m_forward;
 
             skip_trivia();
 
             if (m_required_end_dir) {
                 m_required_end_dir = false;
-                auto col = static_cast<int>(line.size()) + 1;
                 return {tt::directive_end, {}, line, row, col};
             }
 
@@ -141,6 +143,7 @@ namespace tavros::core
             return {tt::directive_end, {m_forward, m_forward}, m_line, m_row, m_col};
         }
 
+        m_end_of_source = true;
         return {tt::end_of_source, {}, m_line, m_row, m_col};
     }
 
@@ -363,6 +366,8 @@ namespace tavros::core
         // Scan header name
         const char closing_char = peek() == '<' ? '>' : '"';
         const auto col = m_col;
+        const auto row = m_row;
+        auto line = m_line;
         adv();
         const auto* beg = m_forward;
 
@@ -383,16 +388,7 @@ namespace tavros::core
         // Closing quote found
         adv();
 
-        auto row_before_skip = m_row;
-        skip_trivia();
-
-        if (m_row == row_before_skip && !eos()) {
-            auto err = make_error(m_line, m_row, m_col, "Unexpected characters after header name");
-            skip_to_new_line();
-            return err;
-        }
-
-        return {tt::header_name, {beg, end}, m_line, m_row, col};
+        return {tt::header_name, {beg, end}, line, row, col};
     }
 
     void pp_lexer::skip_trivia() noexcept

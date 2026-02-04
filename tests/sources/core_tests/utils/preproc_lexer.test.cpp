@@ -73,10 +73,12 @@ public:
             auto tok = lexer.next_token();
             tokens.push_back(tok);
 
-            if (tok.type() == tt::end_of_source)
-            {
+            if (tok.type() == tt::end_of_source) {
+                ASSERT_TRUE(lexer.end_of_source());
                 break;
             }
+
+            ASSERT_FALSE(lexer.end_of_source());
         }
 
         ASSERT_LE(i, 128);
@@ -316,7 +318,7 @@ TEST_F(pp_lexer_test, preproc_directive_with_comments)
     tt tp[] = {tt::directive_hash, tt::directive_name, tt::identifier, tt::number, tt::directive_end, tt::end_of_source};
     string_view tl[] = {"#", "define", "FOO", "123", "", ""};
     string_view ln[] = {line2, line2, line2, line2, line2, ""};
-    row_col rc[] = {{2, 11}, {2, 22}, {2, 42}, {2, 53}, {2, 68}, {3, 1}};
+    row_col rc[] = {{2, 11}, {2, 22}, {2, 42}, {2, 53}, {2, 56}, {3, 1}};
 
     test_types(tp);
     test_lexemes(tl);
@@ -324,6 +326,20 @@ TEST_F(pp_lexer_test, preproc_directive_with_comments)
     test_positions(rc);
 }
 
+TEST_F(pp_lexer_test, directive_end_line_number)
+{
+    lex_all("\n\n#dir\n\nabc\n\n");
+
+    tt tp[] = {tt::directive_hash, tt::directive_name, tt::directive_end, tt::identifier, tt::end_of_source};
+    string_view tl[] = {"#", "dir", "", "abc", ""};
+    string_view ln[] = {"#dir", "#dir", "#dir", "abc", ""};
+    row_col rc[] = {{3, 1}, {3, 2}, {3, 5}, {5, 1}, {7, 1}};
+
+    test_types(tp);
+    test_lexemes(tl);
+    test_lines(ln);
+    test_positions(rc);
+}
 
 TEST_F(pp_lexer_test, quoted_header_name)
 {
@@ -341,6 +357,24 @@ TEST_F(pp_lexer_test, quoted_header_name)
     test_positions(rc);
 }
 
+TEST_F(pp_lexer_test, include_with_identifier)
+{
+    constexpr string_view str = "#include \"my_header.hpp\" //abcd \n\n\nabc ";
+    lex_all(str);
+    
+    constexpr string_view line1 = "#include \"my_header.hpp\" //abcd ";
+    constexpr string_view line4 = "abc ";
+
+    tt tp[] = {tt::directive_hash, tt::directive_name, tt::header_name, tt::directive_end, tt::identifier, tt::end_of_source};
+    string_view tl[] = {"#", "include", "my_header.hpp", "", "abc", ""};
+    string_view ln[] = {line1, line1, line1, line1, line4, line4};
+    row_col rc[] = {{1, 1}, {1, 2}, {1, 10}, {1, 25}, {4, 1}, {4, 5}};
+
+    test_types(tp);
+    test_lexemes(tl);
+    test_lines(ln);
+    test_positions(rc);
+}
 
 TEST_F(pp_lexer_test, quoted_header_name_with_comments)
 {
@@ -422,6 +456,38 @@ TEST_F(pp_lexer_test, include_without_header_name)
     test_positions(rc);
 }
 
+TEST_F(pp_lexer_test, include_in_single_comment)
+{
+    constexpr string_view str = "//#include <file>";
+    lex_all(str);
+
+    tt tp[] = {tt::end_of_source};
+    string_view tl[] = {""};
+    string_view ln[] = {str};
+    row_col rc[] = {{1, 18}};
+
+    test_types(tp);
+    test_lexemes(tl);
+    test_lines(ln);
+    test_positions(rc);
+}
+
+TEST_F(pp_lexer_test, include_in_multi_comment)
+{
+    constexpr string_view str = "/*#include <file>*/";
+    lex_all(str);
+
+    tt tp[] = {tt::end_of_source};
+    string_view tl[] = {""};
+    string_view ln[] = {str};
+    row_col rc[] = {{1, 20}};
+
+    test_types(tp);
+    test_lexemes(tl);
+    test_lines(ln);
+    test_positions(rc);
+}
+
 TEST_F(pp_lexer_test, hash_after_identifier)
 {
     constexpr string_view str = "foo #include <file>";
@@ -496,6 +562,22 @@ TEST_F(pp_lexer_test, unclosed_string_literal)
     string_view tl[] = {"", ""};
     string_view ln[] = {str, str};
     row_col rc[] = {{1, 7}, {1, 7}};
+
+    test_types(tp);
+    test_lexemes(tl);
+    test_lines(ln);
+    test_positions(rc);
+}
+
+TEST_F(pp_lexer_test, unclosed_string_literal_with_new_line)
+{
+    constexpr string_view str = "\"hello\n";
+    lex_all(str);
+
+    tt tp[] = {tt::error, tt::end_of_source};
+    string_view tl[] = {"", ""};
+    string_view ln[] = {"\"hello", ""};
+    row_col rc[] = {{1, 7}, {2, 1}};
 
     test_types(tp);
     test_lexemes(tl);
