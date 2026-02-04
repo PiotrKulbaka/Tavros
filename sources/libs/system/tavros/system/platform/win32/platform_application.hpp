@@ -29,8 +29,8 @@ namespace tavros::system::win32
         uint64 highp_time_us() override;
 
     private:
-        bool m_is_running;
-        int  m_exit_code;
+        std::atomic_bool m_is_running;
+        int              m_exit_code;
     };
 
 } // namespace tavros::system::win32

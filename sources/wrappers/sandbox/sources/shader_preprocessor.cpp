@@ -28,13 +28,13 @@ namespace tavros::renderer
 
         struct part_t
         {
-            int32 line_number = 0;
+            int32             line_number = 0;
             core::string_view path;
             core::string_view text;
         };
 
-        core::vector<part_t> parts;
-        size_t total_size = 0;
+        core::vector<part_t>                                        parts;
+        size_t                                                      total_size = 0;
         std::set<core::string, core::string_string_view_comparator> included;
 
         auto append_parts = [&](auto&& self, core::string_view cur_path) -> void {
@@ -43,7 +43,7 @@ namespace tavros::renderer
 
             const auto& file = it->second;
 
-            auto text_count     = file.text_parts_count();
+            auto text_count = file.text_parts_count();
             auto includes_count = file.includes_count();
 
             for (size_t i = 0; i < includes_count; ++i) {
@@ -72,7 +72,7 @@ namespace tavros::renderer
         core::string result;
         result.reserve(total_size);
 
-        
+
         static char buf[64] = {0};
 
         for (const auto& p : parts) {

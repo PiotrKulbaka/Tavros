@@ -8,7 +8,6 @@ namespace tavros::system
     application::application()
         : m_app(platform_application::create())
     {
-        m_app->run();
     }
 
     application::~application()

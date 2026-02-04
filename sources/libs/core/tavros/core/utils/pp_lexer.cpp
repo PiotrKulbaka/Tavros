@@ -85,9 +85,9 @@ namespace tavros::core
         }
 
         do {
-            auto line = m_line;
-            auto row = m_row;
-            auto col = m_col;
+            auto        line = m_line;
+            auto        row = m_row;
+            auto        col = m_col;
             const auto* fwd = m_forward;
 
             skip_trivia();
@@ -367,7 +367,7 @@ namespace tavros::core
         const char closing_char = peek() == '<' ? '>' : '"';
         const auto col = m_col;
         const auto row = m_row;
-        auto line = m_line;
+        auto       line = m_line;
         adv();
         const auto* beg = m_forward;
 

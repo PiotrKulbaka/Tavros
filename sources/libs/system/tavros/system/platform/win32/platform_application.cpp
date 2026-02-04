@@ -66,12 +66,12 @@ namespace tavros::system::win32
 
     void increase_windows_count()
     {
-        ++s_windows_count;
+        s_windows_count.fetch_add(1);
     }
 
     void decrease_windows_count()
     {
-        --s_windows_count;
+        s_windows_count.fetch_sub(1);
     }
 
     platform_application::platform_application()
@@ -87,18 +87,18 @@ namespace tavros::system::win32
 
     void platform_application::run()
     {
-        m_is_running = true;
+        m_is_running.store(true, std::memory_order_relaxed);
     }
 
     bool platform_application::is_running()
     {
-        return m_is_running && s_windows_count.load(std::memory_order_acquire);
+        return m_is_running.load(std::memory_order_relaxed) && s_windows_count.load(std::memory_order_relaxed) != 0;
     }
 
     void platform_application::request_exit(int exit_code)
     {
         m_exit_code = exit_code;
-        m_is_running = false;
+        m_is_running.store(false, std::memory_order_release);
     }
 
     int platform_application::exit_code()
