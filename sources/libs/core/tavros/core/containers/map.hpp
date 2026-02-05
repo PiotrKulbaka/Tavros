@@ -4,6 +4,6 @@
 
 namespace tavros::core
 {
-    template<typename K, typename V>
-    using map = std::map<K, V>;
+    template<class K, class V, class C = std::less<K>>
+    using map = std::map<K, V, C>;
 } // namespace tavros::core
