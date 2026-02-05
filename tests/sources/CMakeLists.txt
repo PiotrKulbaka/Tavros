@@ -8,6 +8,7 @@ target_link_libraries(
         tav_tests
     PRIVATE
         tav_core
+        tav_renderer
         gtest
 )
 

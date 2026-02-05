@@ -26,6 +26,6 @@ set(TAV_SOURCES_TEST_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/vec3.test.cpp
     ${CMAKE_CURRENT_LIST_DIR}/core_tests/math/vec4.test.cpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/core_tests/utils/preproc_lexer.test.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/renderer_tests/pp_lexer.test.cpp
 )
 

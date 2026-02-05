@@ -1,9 +1,10 @@
 #include <common.test.hpp>
 
-#include <tavros/core/utils/pp_lexer.hpp>
+#include <tavros/renderer/shaders/pp_lexer.hpp>
 
 #include <vector>
 
+using namespace tavros::renderer;
 using namespace tavros::core;
 
 using tt = pp_token::token_type;
@@ -369,6 +370,25 @@ TEST_F(pp_lexer_test, include_with_identifier)
     string_view tl[] = {"#", "include", "my_header.hpp", "", "abc", ""};
     string_view ln[] = {line1, line1, line1, line1, line4, line4};
     row_col rc[] = {{1, 1}, {1, 2}, {1, 10}, {1, 25}, {4, 1}, {4, 5}};
+
+    test_types(tp);
+    test_lexemes(tl);
+    test_lines(ln);
+    test_positions(rc);
+}
+
+TEST_F(pp_lexer_test, include_with_identifier_in_line)
+{
+    constexpr string_view str = "#include \"my_header.hpp\" abc cde\n\n\n qwe ";
+    lex_all(str);
+
+    constexpr string_view line1 = "#include \"my_header.hpp\" abc cde";
+    constexpr string_view line4 = " qwe ";
+
+    tt tp[] = {tt::directive_hash, tt::directive_name, tt::header_name, tt::identifier, tt::identifier, tt::directive_end, tt::identifier, tt::end_of_source};
+    string_view tl[] = {"#", "include", "my_header.hpp", "abc", "cde", "", "qwe", ""};
+    string_view ln[] = {line1, line1, line1, line1, line1, line1, line4, line4};
+    row_col rc[] = {{1, 1}, {1, 2}, {1, 10}, {1, 26}, {1, 30}, {1, 33}, {4, 2}, {4, 6}};
 
     test_types(tp);
     test_lexemes(tl);
