@@ -2,6 +2,7 @@
 
 #include "render_app_base.hpp"
 #include "built_in_meshes.hpp"
+#include <tavros/renderer/shaders/shader_loader.hpp>
 
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/memory/mallocator.hpp>
@@ -35,362 +36,6 @@
 #include <algorithm>
 
 namespace rhi = tavros::renderer::rhi;
-
-const char* fullscreen_quad_vertex_shader_source = R"(
-#version 430 core
-
-const vec2 quadVerts[4] = vec2[](
-    vec2(-1.0, -1.0),
-    vec2( 1.0, -1.0),
-    vec2(-1.0,  1.0),
-    vec2( 1.0,  1.0)
-);
-const vec2 quadUVs[4] = vec2[](
-    vec2(0.0, 0.0),
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 1.0)
-);
-out vec2 texCoord;
-
-void main()
-{
-    vec2 pos = quadVerts[gl_VertexID];
-    texCoord = quadUVs[gl_VertexID];
-    gl_Position = vec4(pos, 0.0, 1.0);
-}
-)";
-
-const char* fullscreen_quad_fragment_shader_source = R"(
-#version 430 core
-
-in vec2 texCoord;
-out vec4 FragColor;
-
-layout(binding = 0) uniform sampler2D uTex;
-
-void main()
-{
-    vec3 color = texture(uTex, texCoord).rgb;
-    FragColor = vec4(color, 1.0f);
-}
-)";
-
-const char* mesh_renderer_vertex_shader_source = R"(
-#version 430 core
-
-layout (location = 0) in vec3 a_pos;
-layout (location = 1) in vec3 a_normal;
-layout (location = 2) in vec2 a_uv;
-
-layout (std430, binding = 0) buffer Scene
-{
-    mat4 u_view;
-    mat4 u_perspective_projection;
-    mat4 u_view_perspective_projection;
-    mat4 u_inverse_view;
-    mat4 u_inverse_perspective_projection;
-    mat4 u_ortho;
-
-    float u_frame_width;
-    float u_frame_height;
-
-    float u_near_plane;
-    float u_far_plane;
-    float u_view_space_depth;
-    float u_aspect_ratio;
-    float u_fov_y;
-};
-
-out vec2 v_tex_coord;
-out vec3 v_normal;
-out vec3 v_to_camera;
-
-void main()
-{
-    vec4 world_pos = vec4(a_pos, 1.0); // u_model * vec4(a_pos, 1.0);
-
-    v_normal = a_normal; // mat3(u_model) * a_normal;
-
-    vec3 camera_pos = (u_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-    v_to_camera = normalize(camera_pos - world_pos.xyz);
-
-    v_tex_coord = a_uv;
-
-    gl_Position = u_view_perspective_projection * vec4(a_pos, 1.0);
-}
-)";
-
-const char* mesh_renderer_fragment_shader_source = R"(
-#version 430 core
-
-layout(binding = 0) uniform sampler2D uTex;
-
-in vec2 v_tex_coord;
-in vec3 v_normal;
-in vec3 v_to_camera;
-
-layout(location = 0) out vec4 out_color;
-
-void main()
-{
-    vec3 N = gl_FrontFacing ? v_normal : -v_normal;
-    vec3 L = normalize(v_to_camera);
-
-    float diffuse = max(dot(N, L), 0.0);
-    float ambient = 0.25;
-    float diffuse_intensity = ambient + diffuse * 1.25;
-    vec3 lighting = vec3(min(diffuse_intensity, 1.0f));
-
-    vec3 base_color = texture(uTex, v_tex_coord).rgb;
-
-    out_color = vec4(base_color * lighting, 1.0);
-}
-)";
-
-const char* world_grid_vertex_shader_source = R"(
-#version 430 core
-
-const vec2 xy_plane_verts[4] = vec2[](
-    vec2(-1.0, -1.0),
-    vec2( 1.0, -1.0),
-    vec2(-1.0,  1.0),
-    vec2( 1.0,  1.0)
-);
-
-layout (std430, binding = 0) buffer Scene
-{
-    mat4 u_view;
-    mat4 u_perspective_projection;
-    mat4 u_view_projection;
-    mat4 u_inverse_view;
-    mat4 u_inverse_projection;
-    mat4 u_ortho;
-    
-    float u_frame_width;
-    float u_frame_height;
-
-    float u_near_plane;
-    float u_far_plane;
-    float u_view_space_depth;
-    float u_aspect_ratio;
-    float u_fov_y;
-};
-
-out vec3 v_world_pos;
-out vec3 v_cam_pos;
-out float v_minor_grid_step;
-out float v_major_grid_step;
-out float v_line_width;
-out float v_view_space_depth;
-out float v_near;
-out float v_far;
-
-void main()
-{
-    v_near = u_near_plane;
-    v_far = u_far_plane;
-
-    const float SQRT2 = 1.4142135623730951;
-
-    float plane_scale = (u_view_space_depth) * SQRT2;
-    v_cam_pos = (u_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-
-    float minor_step_base = 1.0;
-    float major_step_base = 10.0;
-
-    v_view_space_depth = u_view_space_depth;
-
-    // thresholds
-    float t1 = u_view_space_depth * 0.03;
-    float t2 = u_view_space_depth * 0.3;
-
-    float cam_height = abs(v_cam_pos.z);
-    float mask1 = 1.0 - step(t1, cam_height);
-    float mask10 = step(t1, cam_height) * (1.0 - step(t2, cam_height));
-    float mask100 = step(t2, cam_height); 
-
-    float step1 = 1.0;
-    float step10 = 10.0;
-    float step100 = 100.0;
-
-    float scale_factor = step1 * mask1 + step10 * mask10 + step100 * mask100;
-    v_minor_grid_step = minor_step_base * scale_factor;
-    v_major_grid_step = major_step_base * scale_factor;
-    
-    v_line_width = 0.01 * pow(cam_height, 0.63);
-
-    vec2 pos = xy_plane_verts[gl_VertexID];
-    v_world_pos = vec3(pos.x * plane_scale + v_cam_pos.x, pos.y * plane_scale + v_cam_pos.y, 0.0);
-    gl_Position = u_view_projection * vec4(v_world_pos, 1.0);
-}
-)";
-
-const char* world_grid_fragment_shader_source = R"(
-#version 430 core
-
-in vec3 v_world_pos;
-in vec3 v_cam_pos;
-in float v_minor_grid_step;
-in float v_major_grid_step;
-in float v_line_width;
-in float v_view_space_depth;
-in float v_near;
-in float v_far;
-
-layout(location = 0) out vec4 out_color;
-
-void main()
-{
-    const vec3 x_axis_color = vec3(0.3, 1.0, 0.3);
-    const vec3 y_axis_color = vec3(1.0, 0.3, 0.3);
-    const vec3 minor_grid_color = vec3(0.3);
-    const vec3 major_grid_color = vec3(0.4);
-
-    vec2 world_xy = abs(v_world_pos.xy);
-
-    // axis lines
-    vec2 axis_mask = step(world_xy, vec2(v_line_width * 2.0));
-    float xy_mask = max(axis_mask.x, axis_mask.y);
-
-    // major lines
-    vec2 major_lines = step(mod(world_xy, v_major_grid_step), vec2(v_line_width * 2.0));
-    float major_mask = clamp(max(major_lines.x, major_lines.y) - xy_mask, 0.0, 1.0);
-
-    // minor lines
-    vec2 minor_lines = step(mod(world_xy, v_minor_grid_step), vec2(v_line_width));
-    float minor_mask = clamp(max(minor_lines.x, minor_lines.y) - major_mask, 0.0, 1.0);
-    
-    float final_mask = xy_mask + major_mask + minor_mask;
-    
-    vec3 final_color = x_axis_color * axis_mask.x + y_axis_color * axis_mask.y + minor_grid_color * minor_mask + major_grid_color * major_mask;
-
-    // fading by camera angle
-    vec3 view_dir = normalize(v_cam_pos - v_world_pos);
-    float angle_factor = clamp(abs(view_dir.z) * 2.2, 0.0, 1.0);
-
-    // fading by distance
-    float dist_factor = clamp(
-        1.0
-        - smoothstep(v_view_space_depth * 0.85, v_view_space_depth * 0.95, length(v_cam_pos.xy - v_world_pos.xy))
-        - smoothstep(v_view_space_depth * 0.45, v_view_space_depth * 0.5, v_cam_pos.z)
-        , 0.0, 1.0
-    );
-
-    float final_alpha = dist_factor *  angle_factor * final_mask * 0.8;
-
-    out_color = vec4(final_color, final_alpha);
-}
-)";
-
-const char* sdf_font_vertex_shader_source = R"(
-#version 430 core
-
-layout (location = 0) in mat3x2 a_gpyph_transform;  // per-instance transform
-layout (location = 3) in uvec2 a_bounds; // per-instance glyph uvs
-layout (location = 4) in uint a_gpyph_color;  // per-instance color
-layout (location = 5) in uint a_outline_color;  // per-instance color
-
-layout (std430, binding = 0) buffer Scene
-{
-    mat4 u_view;
-    mat4 u_perspective_projection;
-    mat4 u_view_projection;
-    mat4 u_inverse_view;
-    mat4 u_inverse_projection;
-    mat4 u_ortho;
-    
-    float u_frame_width;
-    float u_frame_height;
-
-    float u_near_plane;
-    float u_far_plane;
-    float u_view_space_depth;
-    float u_aspect_ratio;
-    float u_fov_y;
-};
-
-const vec2 plane_verts[4] = vec2[](
-    vec2(0.0, 0.0),
-    vec2(1.0, 0.0),
-    vec2(0.0, 1.0),
-    vec2(1.0, 1.0)
-);
-
-layout(binding = 0) uniform sampler2D u_sdf_atlas;
-
-out vec2 v_uv;
-out vec4 v_color;
-out vec4 v_outline_color;
-
-vec4 unpack_color(uint cl)
-{
-    return vec4(
-        float((cl >> 24) & 0xFFu) / 255.0,
-        float((cl >> 16) & 0xFFu) / 255.0,
-        float((cl >>  8) & 0xFFu) / 255.0,
-        float((cl >>  0) & 0xFFu) / 255.0
-    );
-}
-
-void main()
-{
-    int vid = gl_VertexID % 4;
-    vec2 local_pos = plane_verts[vid];
-
-    vec2 tex_size = textureSize(u_sdf_atlas, 0);
-    vec4 uv0uv1 = vec4(
-        float((a_bounds.x >> 0) & 0xffffu) / tex_size.x,
-        float((a_bounds.x >> 16 ) & 0xffffu) / tex_size.y,
-        float((a_bounds.y >> 0) & 0xffffu) / tex_size.x,
-        float((a_bounds.y >> 16) & 0xffffu) / tex_size.y
-    );
-
-    // Interpolate UVs (simple quad mapping)
-    v_uv = mix(uv0uv1.xy, uv0uv1.zw, local_pos);
-
-    // Transform to clip space
-    vec2 world_pos = a_gpyph_transform * vec3(local_pos, 1.0);
-    gl_Position = u_ortho * vec4(world_pos, 0.0, 1.0);
-
-    v_color = unpack_color(a_gpyph_color);
-    v_outline_color = unpack_color(a_outline_color);
-}
-)";
-
-const char* sdf_font_fragment_shader_source = R"(
-#version 430 core
-
-out vec4 frag_color;
-
-layout(binding = 0) uniform sampler2D u_sdf_atlas;
-
-in vec2 v_uv;
-in vec4 v_color;
-in vec4 v_outline_color;
-
-void main()
-{
-    float sdf = texture(u_sdf_atlas, v_uv).r;
-
-    // Thresholds and smoothing for SDF
-    float smooth_th = 0.05;
-    float text_th = 0.5;
-    float outline_th = 0.35;
-
-    // Alpha masks for text and outline
-    float text_alpha = smoothstep(text_th, text_th + smooth_th, sdf);
-    float outline_alpha = smoothstep(outline_th, outline_th + smooth_th, sdf);
-
-    // Color interpolation between outline and main text
-    vec4 color = mix(v_outline_color, v_color, text_alpha);
-
-    // Combine alpha channels properly
-    float final_alpha = max(outline_alpha * color.a, 0.0);
-
-    frag_color = vec4(color.rgb, final_alpha);
-}
-)";
 
 const tavros::core::string_view lorem_ipsum = R"(Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec commodo tellus eu urna fermentum, porta facilisis libero lobortis. Vestibulum est urna, fermentum sed fringilla sed, dignissim quis est. Donec tempus sed enim vitae aliquet. Nullam rhoncus, erat at eleifend consequat, dolor tellus aliquam orci, eget varius mi est ut turpis. In nec enim eu nisi lobortis euismod in a neque. Fusce interdum vel turpis sit amet sodales. Nam quis volutpat est. Duis interdum libero eget dui dapibus laoreet. Mauris condimentum elit turpis, a semper ex elementum eu. Nam finibus urna purus, sit amet pellentesque ante pharetra id. Vivamus nisl ligula, lacinia consequat lacinia id, scelerisque ac sem. Vivamus pellentesque, ligula in posuere sodales, sem ante condimentum purus, in laoreet velit quam ac ipsum. Pellentesque habitant morbi tristique senectus et netus et malesuada fames ac turpis egestas. Curabitur fermentum sit amet risus vitae aliquam. Aliquam id dapibus risus, et rhoncus tellus. Ut sit amet elementum leo.
 
@@ -464,6 +109,29 @@ size_t fill_glyphs_instances(tavros::core::buffer_span<GlyphData> glyphs, tavros
     return len;
 }
 
+class my_shader_provider : public tavros::renderer::shader_source_provider
+{
+public:
+    my_shader_provider(tavros::core::shared_ptr<tavros::resources::resource_manager> rm)
+        : m_rm(rm)
+    {
+    }
+
+    ~my_shader_provider() noexcept override = default;
+
+    tavros::core::string load(tavros::core::string_view path) override
+    {
+        auto [success, data] = m_rm->open(path)->reader()->read_content();
+        if (!success) {
+            throw std::runtime_error("Failed to load content" + tavros::core::string(path));
+        }
+
+        return data;
+    }
+
+private:
+    tavros::core::shared_ptr<tavros::resources::resource_manager> m_rm;
+};
 
 class main_window : public app::render_app_base
 {
@@ -472,6 +140,7 @@ public:
         : app::render_app_base(name)
         , m_imcodec(&m_allocator)
         , m_resource_manager(resource_manager)
+        , m_sl(std::move(tavros::core::make_unique<my_shader_provider>(resource_manager)))
     {
     }
 
@@ -632,6 +301,11 @@ public:
         return sh_binding;
     }
 
+    tavros::core::string load_shader(tavros::core::string_view path)
+    {
+        return m_sl.load(path, {tavros::renderer::shader_language::glsl_460, ""});
+    }
+
     void init() override
     {
         m_camera.set_orientation({1.0f, 1.0f, -0.25f}, {0.0f, 0.0f, 1.0f});
@@ -667,7 +341,9 @@ public:
         m_offscreen_rt = tavros::core::make_unique<tavros::renderer::render_target>(rhi::pixel_format::rgba8un, rhi::pixel_format::depth32f);
         m_offscreen_rt->init(m_graphics_device.get());
 
+        auto fullscreen_quad_vertex_shader_source = load_shader("tavros/shaders/fullscreen_quad.vert");
         auto fullscreen_quad_vertex_shader = m_graphics_device->create_shader({fullscreen_quad_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+        auto fullscreen_quad_fragment_shader_source = load_shader("tavros/shaders/fullscreen_quad.frag");
         auto fullscreen_quad_fragment_shader = m_graphics_device->create_shader({fullscreen_quad_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info fullscreen_quad_pipeline_info;
@@ -773,8 +449,9 @@ public:
             exit_fail();
         }
 
-
+        auto mesh_renderer_vertex_shader_source = load_shader("tavros/shaders/cube.vert");
         auto mesh_rendering_vertex_shader = m_graphics_device->create_shader({mesh_renderer_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+        auto mesh_renderer_fragment_shader_source = load_shader("tavros/shaders/cube.frag");
         auto mesh_rendering_fragment_shader = m_graphics_device->create_shader({mesh_renderer_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info mesh_rendering_pipeline_info;
@@ -855,7 +532,9 @@ public:
 
 
         // World grid
+        auto world_grid_vertex_shader_source = load_shader("tavros/shaders/world_grid.vert");
         auto world_grid_rendering_vertex_shader = m_graphics_device->create_shader({world_grid_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+        auto world_grid_fragment_shader_source = load_shader("tavros/shaders/world_grid.frag");
         auto world_grid_rendering_fragment_shader = m_graphics_device->create_shader({world_grid_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info world_grid_rendering_pipeline_info;
@@ -917,7 +596,9 @@ public:
         m_font_shader_binding = upload_font_data();
 
         // SDF
+        auto sdf_font_vertex_shader_source = load_shader("tavros/shaders/sdf_font.vert");
         auto sdf_font_vertex_shader = m_graphics_device->create_shader({sdf_font_vertex_shader_source, rhi::shader_stage::vertex, "main"});
+        auto sdf_font_fragment_shader_source = load_shader("tavros/shaders/sdf_font.frag");
         auto sdf_font_fragment_shader = m_graphics_device->create_shader({sdf_font_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info sdf_font_pipeline_info;
@@ -1607,6 +1288,7 @@ private:
 
     tavros::text::rich_line<glyph_params> m_rich_line;
     tavros::text::text_align              m_rich_line_align = tavros::text::text_align::left;
+    tavros::renderer::shader_loader       m_sl;
 };
 
 int main()
@@ -1615,6 +1297,7 @@ int main()
 
     auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
     resource_manager->mount<tavros::resources::filesystem_provider>(TAV_ASSETS_PATH, tavros::resources::resource_access::read_only);
+    resource_manager->mount<tavros::resources::filesystem_provider>(TAV_ASSETS_PATH "/shaders", tavros::resources::resource_access::read_only);
     resource_manager->mount<tavros::resources::filesystem_provider>(TAV_OUTPUT_PATH, tavros::resources::resource_access::write_only);
 
     auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", resource_manager);

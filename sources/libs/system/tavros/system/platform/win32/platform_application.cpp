@@ -75,7 +75,7 @@ namespace tavros::system::win32
     }
 
     platform_application::platform_application()
-        : m_is_running(false)
+        : m_is_running(true)
         , m_exit_code(0)
     {
         enable_high_dpi_awareness();
