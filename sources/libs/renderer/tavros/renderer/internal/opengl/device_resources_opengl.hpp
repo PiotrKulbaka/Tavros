@@ -38,6 +38,7 @@ namespace tavros::renderer::rhi
         pipeline_create_info info;
 
         GLuint program_obj = 0;
+        GLuint vao_obj = 0;
     };
 
     struct gl_framebuffer
@@ -58,13 +59,6 @@ namespace tavros::renderer::rhi
         GLenum gl_target = 0;
         GLenum gl_usage = 0;
         bool   is_mapped = false;
-    };
-
-    struct gl_geometry
-    {
-        geometry_create_info info;
-
-        GLuint vao_obj = 0;
     };
 
     struct gl_render_pass
@@ -111,7 +105,6 @@ namespace tavros::renderer::rhi
             , m_pipelines(alc)
             , m_framebuffers(alc)
             , m_buffers(alc)
-            , m_geometries(alc)
             , m_render_passes(alc)
             , m_fences(alc)
         {
@@ -152,7 +145,6 @@ namespace tavros::renderer::rhi
         core::object_pool<gl_pipeline>       m_pipelines;
         core::object_pool<gl_framebuffer>    m_framebuffers;
         core::object_pool<gl_buffer>         m_buffers;
-        core::object_pool<gl_geometry>       m_geometries;
         core::object_pool<gl_render_pass>    m_render_passes;
         core::object_pool<gl_fence>          m_fences;
     };
@@ -166,7 +158,6 @@ namespace tavros::renderer::rhi
     template<> struct device_resources_opengl::data_type_traits<pipeline_handle> { using type = gl_pipeline; };
     template<> struct device_resources_opengl::data_type_traits<framebuffer_handle> { using type = gl_framebuffer; };
     template<> struct device_resources_opengl::data_type_traits<buffer_handle> { using type = gl_buffer; };
-    template<> struct device_resources_opengl::data_type_traits<geometry_handle> { using type = gl_geometry; };
     template<> struct device_resources_opengl::data_type_traits<render_pass_handle> { using type = gl_render_pass; };
     template<> struct device_resources_opengl::data_type_traits<fence_handle> { using type = gl_fence; };
 
@@ -178,7 +169,6 @@ namespace tavros::renderer::rhi
     template<> struct device_resources_opengl::handle_type_traits<gl_pipeline> { using type = pipeline_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_framebuffer> { using type = framebuffer_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_buffer> { using type = buffer_handle; };
-    template<> struct device_resources_opengl::handle_type_traits<gl_geometry> { using type = geometry_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_render_pass> { using type = render_pass_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_fence> { using type = fence_handle; };
 
@@ -190,7 +180,6 @@ namespace tavros::renderer::rhi
     template<> inline core::object_pool<gl_pipeline>& device_resources_opengl::get_pool<gl_pipeline>() { return m_pipelines; }
     template<> inline core::object_pool<gl_framebuffer>& device_resources_opengl::get_pool<gl_framebuffer>() { return m_framebuffers; }
     template<> inline core::object_pool<gl_buffer>& device_resources_opengl::get_pool<gl_buffer>() { return m_buffers; }
-    template<> inline core::object_pool<gl_geometry>& device_resources_opengl::get_pool<gl_geometry>() { return m_geometries; }
     template<> inline core::object_pool<gl_render_pass>& device_resources_opengl::get_pool<gl_render_pass>() { return m_render_passes; }
     template<> inline core::object_pool<gl_fence>& device_resources_opengl::get_pool<gl_fence>() { return m_fences; }
     // clang-format on

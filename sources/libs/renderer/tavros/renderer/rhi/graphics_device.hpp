@@ -15,7 +15,6 @@
 #include <tavros/renderer/rhi/pipeline_create_info.hpp>
 #include <tavros/renderer/rhi/framebuffer_create_info.hpp>
 #include <tavros/renderer/rhi/buffer_create_info.hpp>
-#include <tavros/renderer/rhi/geometry_create_info.hpp>
 #include <tavros/renderer/rhi/render_pass_create_info.hpp>
 #include <tavros/renderer/rhi/shader_binding_create_info.hpp>
 #include <tavros/renderer/rhi/shader_create_info.hpp>
@@ -161,21 +160,6 @@ namespace tavros::renderer::rhi
         virtual void destroy_buffer(buffer_handle buffer) = 0;
 
         /**
-         * @brief Create a geometry resource (vertex and index buffers).
-         *
-         * @param info Geometry creation parameters.
-         * @return Handle to the created geometry.
-         */
-        virtual geometry_handle create_geometry(const geometry_create_info& info) = 0;
-
-        /**
-         * @brief Destroy a previously created geometry.
-         *
-         * @param geometry Handle to the geometry to destroy.
-         */
-        virtual void destroy_geometry(geometry_handle geometry) = 0;
-
-        /**
          * @brief Create a render pass.
          *
          * @param info Render pass creation parameters.
@@ -287,8 +271,6 @@ namespace tavros::renderer::rhi
                 destroy_framebuffer(h);
             } else if constexpr (std::is_same_v<T, buffer_handle>) {
                 destroy_buffer(h);
-            } else if constexpr (std::is_same_v<T, geometry_handle>) {
-                destroy_geometry(h);
             } else if constexpr (std::is_same_v<T, render_pass_handle>) {
                 destroy_render_pass(h);
             } else if constexpr (std::is_same_v<T, shader_binding_handle>) {

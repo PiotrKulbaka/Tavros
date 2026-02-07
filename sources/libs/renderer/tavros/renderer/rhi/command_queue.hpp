@@ -1,8 +1,9 @@
 #pragma once
 
 #include <tavros/renderer/rhi/handle.hpp>
-#include <tavros/renderer/rhi/texture_copy_region.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 #include <tavros/renderer/rhi/structs.hpp>
+#include <tavros/core/memory/buffer_view.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -53,15 +54,9 @@ namespace tavros::renderer::rhi
          */
         virtual void bind_pipeline(pipeline_handle pipeline) = 0;
 
-        /**
-         * @brief Bind a geometry object.
-         *
-         * Binds vertex and index buffers as defined by the geometry handle.
-         * The geometry layout describes how vertex attributes are organized across buffers.
-         *
-         * @param geometry Geometry handle to bind.
-         */
-        virtual void bind_geometry(geometry_handle geometry) = 0;
+        virtual void bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers) = 0;
+
+        virtual void bind_index_buffer(buffer_handle buffer, index_buffer_format format) = 0;
 
         /**
          * @brief Bind shader resources to the current pipeline.

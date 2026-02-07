@@ -3,7 +3,6 @@
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/flags.hpp>
 #include <tavros/core/containers/static_vector.hpp>
-#include <tavros/renderer/rhi/vertex_attribute.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 
@@ -158,6 +157,37 @@ namespace tavros::renderer::rhi
     };
 
     /**
+     * Defines a single vertex attribute within a vertex buffer layout
+     * Specifies how one attribute (e.g., position, color, normal) is stored and interpreted
+     */
+    struct vertex_attribute
+    {
+        /// Type of attribute
+        attribute_type type = attribute_type::scalar;
+
+        /// Format of each component
+        attribute_format format = attribute_format::f32;
+
+        /// Whether integer data should be normalized to [0,1] or [-1,1] (only applicable for integer types)
+        bool normalize = false;
+
+        /// Attribute location in the shader
+        uint32 location = 0;
+
+        /// Stride in bytes between consecutive vertices in the buffer
+        uint32 stride = 0;
+
+        /// Offset in bytes from the start of the vertex to this attribute (0 for densely packed)
+        uint32 offset = 0;
+
+        /// Specifies how often this attribute advances per instance when rendering with instancing
+        /// - 0: attribute is a per-vertex value (changes every vertex)
+        /// - 1: attribute is a per-instance value (changes once per instance)
+        /// - N (>1): attribute is reused for N consecutive instances before advancing
+        uint32 instance_divisor = 0;
+    };
+
+    /**
      * Describes the color attachments and depth attachment for a pipeline
      */
     struct render_targets
@@ -174,8 +204,8 @@ namespace tavros::renderer::rhi
         /// List with descriptions of shaders to be used in the pipeline
         core::static_vector<shader_handle, k_max_pipeline_shaders> shaders;
 
-        /// List of vertex attributes
-        core::static_vector<vertex_attribute, k_max_vertex_attributes> attributes;
+        /// Array of attribute bindings describing how vertex attributes are read from buffers
+        core::static_vector<vertex_attribute, k_max_vertex_attributes> bindings;
 
         /// Describes the properties of a blend state for a multiple render targets
         core::static_vector<blend_state, k_max_color_attachments> blend_states;
@@ -191,7 +221,6 @@ namespace tavros::renderer::rhi
 
         /// Describes the multisample state (MSAA) for a pipeline
         multisample_state multisample;
-
 
         render_targets targets;
     };

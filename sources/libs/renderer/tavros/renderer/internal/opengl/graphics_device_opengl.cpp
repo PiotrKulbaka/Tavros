@@ -222,8 +222,6 @@ namespace tavros::renderer::rhi
 
         destroy_for<buffer_handle>(m_resources, [this](auto h) { destroy_buffer(h); });
 
-        destroy_for<geometry_handle>(m_resources, [this](auto h) { destroy_geometry(h); });
-
         destroy_for<shader_binding_handle>(m_resources, [this](auto h) { destroy_shader_binding(h); });
 
         destroy_for<shader_handle>(m_resources, [this](auto h) { destroy_shader(h); });
@@ -774,8 +772,8 @@ namespace tavros::renderer::rhi
         // Validate attributes
 
         // Map attributes to location index, for fast search
-        tavros::core::unordered_map<uint32, vertex_attribute> mapped_attributes;
-        for (const auto& attr : info.attributes) {
+        tavros::core::unordered_map<uint32, vertex_attribute> mapped_attributes; // TODO: remove std::unordered_map
+        for (const auto& attr : info.bindings) {
             auto it = mapped_attributes.find(attr.location);
             if (it != mapped_attributes.end()) {
                 ::logger.error("Failed to create pipeline: attribute location {} is used multiple times", fmt::styled_param(attr.location));
@@ -839,18 +837,52 @@ namespace tavros::renderer::rhi
             total_gl_attributes++;
         }
 
-        if (total_gl_attributes != info.attributes.size()) {
+        if (total_gl_attributes != info.bindings.size()) {
             ::logger.warning(
                 "Pipeline creation: mismach attributes size. Provided {}, expected {}",
-                fmt::styled_param(info.attributes.size()),
+                fmt::styled_param(info.bindings.size()),
                 fmt::styled_param(total_gl_attributes)
             );
             // return {};
         }
 
+        // Create VAO
+        GLuint vao;
+        GL_CALL(glGenVertexArrays(1, &vao));
+
+        if (vao == 0) {
+            ::logger.error("Failed to create pipeline: failed to create VAO");
+            return {};
+        }
+
+        GL_CALL(glBindVertexArray(vao));
+
+        // Setup attribute bindings
+        for (auto attrib_i = 0; attrib_i < info.bindings.size(); ++attrib_i) {
+            auto& binding = info.bindings[attrib_i];
+
+            bool is_flt = attribute_format::f32 == binding.format || attribute_format::f16 == binding.format || attribute_format::f64 == binding.format;
+            auto gl_attrib_info = to_gl_attribute_info(binding.type, binding.format);
+            for (uint32 col = 0; col < gl_attrib_info.cols; ++col) {
+                GLuint location = binding.location + col;
+                GLuint offset = binding.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
+
+                // Enable attribute and set pointer
+                GL_CALL(glEnableVertexAttribArray(location));
+                if (is_flt) {
+                    GL_CALL(glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, binding.normalize, offset));
+                } else {
+                    GL_CALL(glVertexAttribIFormat(location, gl_attrib_info.rows, gl_attrib_info.type, offset));
+                }
+                GL_CALL(glVertexAttribBinding(location, attrib_i));
+            }
+            GL_CALL(glVertexBindingDivisor(attrib_i, binding.instance_divisor));
+        }
+
+        GL_CALL(glBindVertexArray(0));
 
         // create pipeline
-        auto h = m_resources.create(gl_pipeline{info, program_owner.release()});
+        auto h = m_resources.create(gl_pipeline{info, program_owner.release(), vao});
         ::logger.debug("Pipeline {} created", h);
         return h;
     }
@@ -859,6 +891,7 @@ namespace tavros::renderer::rhi
     {
         if (auto* p = m_resources.try_get(handle)) {
             GL_CALL(glDeleteProgram(p->program_obj));
+            GL_CALL(glDeleteVertexArrays(1, &p->vao_obj));
             m_resources.remove(handle);
             ::logger.debug("Pipeline {} destroyed", handle);
         } else {
@@ -1290,137 +1323,6 @@ namespace tavros::renderer::rhi
             ::logger.debug("Buffer ({}) {} destroyed", b->info.usage, buffer);
         } else {
             ::logger.error("Failed to destroy buffer {}: not found", buffer);
-        }
-    }
-
-    geometry_handle graphics_device_opengl::create_geometry(const geometry_create_info& info)
-    {
-        // Check vertex buffers
-        if (info.vertex_buffer_layouts.size() == 0) {
-            ::logger.error("Failed to create geometry: vertex buffer layout list is empty");
-            return {};
-        }
-
-        // Gather vertex buffers
-        core::static_vector<gl_buffer*, k_max_vertex_buffers> vert_bufs;
-        for (size_t i = 0; i < info.vertex_buffer_layouts.size(); ++i) {
-            auto& layout = info.vertex_buffer_layouts[i];
-
-            auto* vb = m_resources.try_get(layout.buffer);
-            if (!vb) {
-                ::logger.error(
-                    "Failed to create geometry: vertex buffer {} at layout index {} not found",
-                    layout.buffer,
-                    fmt::styled_param(i)
-                );
-                return {};
-            }
-
-            if (vb->info.usage != buffer_usage::vertex) {
-                ::logger.error(
-                    "Failed to create geometry: buffer {} at layout index {} has invalid usage (expected 'vertex', got '{}')",
-                    layout.buffer,
-                    fmt::styled_param(i),
-                    vb->info.usage
-                );
-                return {};
-            }
-
-            vert_bufs.push_back(vb);
-        }
-
-        // Gather index buffer
-        gl_buffer* ind_buf = nullptr;
-        if (info.has_index_buffer) {
-            auto* ib = m_resources.try_get(info.index_buffer);
-            if (!ib) {
-                ::logger.error("Failed to create geometry: index buffer {} not found", info.index_buffer);
-                return {};
-            }
-
-            if (ib->info.usage != buffer_usage::index) {
-                ::logger.error(
-                    "Failed to create geometry: buffer {} has invalid usage (expected 'index', got '{}')",
-                    info.index_buffer,
-                    ib->info.usage
-                );
-                return {};
-            }
-
-            ind_buf = ib;
-        } else if (info.index_buffer.valid()) {
-            ::logger.warning("Geometry creation: index buffer {} is provided but not enabled", info.index_buffer);
-        }
-
-        // Check attribute bindings
-        auto buffer_layouts_size = static_cast<uint32>(info.vertex_buffer_layouts.size());
-        for (auto i = 0; i < info.attribute_bindings.size(); ++i) {
-            auto buffer_layout_index = info.attribute_bindings[i].vertex_buffer_layout_index;
-            if (buffer_layout_index >= buffer_layouts_size) {
-                ::logger.error(
-                    "Geometry creation failed: attribute binding {} references invalid buffer layout index {} (valid range is 0–{})",
-                    fmt::styled_param(i),
-                    fmt::styled_param(buffer_layout_index),
-                    fmt::styled_param(buffer_layouts_size - 1)
-                );
-                return {};
-            }
-        }
-
-        // Create VAO
-        GLuint vao;
-        GL_CALL(glGenVertexArrays(1, &vao));
-
-        GL_CALL(glBindVertexArray(vao));
-
-        // Setup attribute bindings
-        for (auto attrib_i = 0; attrib_i < info.attribute_bindings.size(); ++attrib_i) {
-            auto& attrib_bind = info.attribute_bindings[attrib_i];
-            auto& attrib = attrib_bind.attribute;
-            auto  buf_layout = info.vertex_buffer_layouts[attrib_bind.vertex_buffer_layout_index];
-            auto* b = vert_bufs[attrib_bind.vertex_buffer_layout_index];
-
-            // Enable the vertex buffer
-            GL_CALL(glBindVertexBuffer(attrib_i, b->buffer_obj, buf_layout.base_offset, buf_layout.stride));
-
-            bool is_flt = attribute_format::f32 == attrib.format || attribute_format::f16 == attrib.format || attribute_format::f64 == attrib.format;
-            auto gl_attrib_info = to_gl_attribute_info(attrib.type, attrib.format);
-            for (uint32 col = 0; col < gl_attrib_info.cols; ++col) {
-                GLuint location = attrib.location + col;
-                GLuint offset = attrib_bind.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
-
-                // Enable attribute and set pointer
-                GL_CALL(glEnableVertexAttribArray(location));
-                if (is_flt) {
-                    GL_CALL(glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, attrib.normalize, offset));
-                } else {
-                    GL_CALL(glVertexAttribIFormat(location, gl_attrib_info.rows, gl_attrib_info.type, offset));
-                }
-                GL_CALL(glVertexAttribBinding(location, attrib_i));
-            }
-            GL_CALL(glVertexBindingDivisor(attrib_i, attrib_bind.instance_divisor));
-        }
-
-        // Bind index buffer if present
-        if (ind_buf) {
-            GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ind_buf->buffer_obj));
-        }
-
-        GL_CALL(glBindVertexArray(0));
-
-        auto h = m_resources.create(gl_geometry{info, vao});
-        ::logger.debug("Geometry {} created", h);
-        return h;
-    }
-
-    void graphics_device_opengl::destroy_geometry(geometry_handle geometry)
-    {
-        if (auto* g = m_resources.try_get(geometry)) {
-            GL_CALL(glDeleteVertexArrays(1, &g->vao_obj));
-            m_resources.remove(geometry);
-            ::logger.debug("Geometry {} destroyed", geometry);
-        } else {
-            ::logger.error("Failed to destroy geometry {}: not found", geometry);
         }
     }
 

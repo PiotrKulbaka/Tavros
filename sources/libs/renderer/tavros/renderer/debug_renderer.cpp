@@ -803,45 +803,53 @@ namespace tavros::renderer
         // Draw 3D geom (instanced)
         cmds->bind_shader_binding(m_scene_persp_binding);
 
-        cmds->bind_geometry(m_static_geom_binding);
-
         cmds->bind_pipeline(m_inst_mesh_pipeline);
+        rhi::bind_buffer_info draw_bufs_static[] = {{m_static_verts_buffer, 0}, {m_static_verts_buffer, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}};
+        cmds->bind_vertex_buffers(draw_bufs_static);
+        cmds->bind_index_buffer(m_static_inds_buffer, rhi::index_buffer_format::u32);
         draw(cmds, m_draw_cube_mesh_info);
         draw(cmds, m_draw_icosphere_mesh_info);
 
-        // Draw 3D geom (batch)
-        cmds->bind_geometry(m_batch_geom_binding);
 
+        // Draw 3D geom (batch)
         cmds->bind_pipeline(m_points3d_pipeline);
+        rhi::bind_buffer_info draw_bufs_batch[] = {{m_batch_geom_buffer, 0}, {m_batch_geom_buffer, 0}};
+        cmds->bind_vertex_buffers(draw_bufs_batch);
         draw(cmds, m_draw_points3d_info);
 
         cmds->bind_pipeline(m_lines3d_pipeline);
+        cmds->bind_vertex_buffers(draw_bufs_batch);
         draw(cmds, m_draw_lines3d_info);
 
         cmds->bind_pipeline(m_tris3d_pipeline);
+        cmds->bind_vertex_buffers(draw_bufs_batch);
         draw(cmds, m_draw_tris3d_info);
 
         // Draw 3D wireframe geom (instanced)
         cmds->bind_pipeline(m_inst_wireframe_mesh_pipeline);
-        cmds->bind_geometry(m_static_geom_binding);
+        cmds->bind_vertex_buffers(draw_bufs_static);
+        cmds->bind_index_buffer(m_static_inds_buffer, rhi::index_buffer_format::u32);
         draw(cmds, m_draw_icosphere_wireframe_info);
 
         // Draw 2D geom (batch)
-        cmds->bind_geometry(m_batch_geom_binding);
         cmds->bind_shader_binding(m_scene_orto_binding);
 
         cmds->bind_pipeline(m_points2d_pipeline);
+        cmds->bind_vertex_buffers(draw_bufs_batch);
         draw(cmds, m_draw_points2d_info);
 
         cmds->bind_pipeline(m_lines2d_pipeline);
+        cmds->bind_vertex_buffers(draw_bufs_batch);
         draw(cmds, m_draw_lines2d_info);
 
         cmds->bind_pipeline(m_tris2d_pipeline);
+        cmds->bind_vertex_buffers(draw_bufs_batch);
         draw(cmds, m_draw_tris2d_info);
 
         cmds->bind_pipeline(m_text2d_pipeline);
         cmds->bind_shader_binding(m_font_binding);
-        cmds->bind_geometry(m_static_geom_binding);
+        rhi::bind_buffer_info draw_bufs_text[] = {{m_inst_stream_data, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}};
+        cmds->bind_vertex_buffers(draw_bufs_text);
         draw(cmds, m_draw_text_info);
     }
 
@@ -908,8 +916,8 @@ namespace tavros::renderer
 
         auto create_simple_geom_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
             rhi::pipeline_create_info info;
-            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 0});
-            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 1});
+            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 0, sizeof(xyz_sz_cl_t), offsetof(xyz_sz_cl_t, xyz_sz_cl_t::pos), 0});
+            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 1, sizeof(xyz_sz_cl_t), offsetof(xyz_sz_cl_t, xyz_sz_cl_t::color), 0});
             info.shaders.push_back(vs);
             info.shaders.push_back(fs);
             info.depth_stencil.depth_test_enable = z_test;
@@ -925,11 +933,11 @@ namespace tavros::renderer
 
         auto create_instanced_geom_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, bool z_write, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
             tavros::renderer::rhi::pipeline_create_info info;
-            info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
-            info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
-            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2});
-            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3});
-            info.attributes.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4});
+            info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0, sizeof(xyz_norm_t), offsetof(xyz_norm_t, xyz_norm_t::pos), 0});
+            info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1, sizeof(xyz_norm_t), offsetof(xyz_norm_t, xyz_norm_t::norm), 0});
+            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::color), 1});
+            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::uv1_uv2), 1});
+            info.bindings.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
             info.shaders.push_back(vs);
             info.shaders.push_back(fs);
             info.depth_stencil.depth_test_enable = z_test;
@@ -945,9 +953,9 @@ namespace tavros::renderer
 
         auto create_instanced_text_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, bool z_write, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
             tavros::renderer::rhi::pipeline_create_info info;
-            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2});
-            info.attributes.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3});
-            info.attributes.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4});
+            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::color), 1});
+            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::uv1_uv2), 1});
+            info.bindings.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
             info.shaders.push_back(vs);
             info.shaders.push_back(fs);
             info.depth_stencil.depth_test_enable = z_test;
@@ -1106,25 +1114,6 @@ namespace tavros::renderer
         m_gdevice->unmap_buffer(m_static_verts_buffer);
         m_gdevice->unmap_buffer(m_static_inds_buffer);
 
-        // Geometry binding
-        rhi::geometry_create_info geom_info;
-        geom_info.vertex_buffer_layouts.push_back({m_static_verts_buffer, 0, sizeof(xyz_norm_t)});
-        geom_info.vertex_buffer_layouts.push_back({m_inst_stream_data, 0, sizeof(instance_data_t)});
-        geom_info.attribute_bindings.push_back({0, offsetof(xyz_norm_t, xyz_norm_t::pos), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
-        geom_info.attribute_bindings.push_back({0, offsetof(xyz_norm_t, xyz_norm_t::norm), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
-        geom_info.attribute_bindings.push_back({1, offsetof(instance_data_t, instance_data_t::color), 1, rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2});
-        geom_info.attribute_bindings.push_back({1, offsetof(instance_data_t, instance_data_t::uv1_uv2), 1, rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3});
-        geom_info.attribute_bindings.push_back({1, offsetof(instance_data_t, instance_data_t::model), 1, rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4});
-        geom_info.has_index_buffer = true;
-        geom_info.index_format = rhi::index_buffer_format::u32;
-        geom_info.index_buffer = m_static_inds_buffer;
-
-        m_static_geom_binding = m_gdevice->create_geometry(geom_info);
-        if (!m_static_geom_binding) {
-            ::logger.fatal("Failed to create static geometry");
-            return false;
-        }
-
         return true;
     }
 
@@ -1135,19 +1124,6 @@ namespace tavros::renderer
         m_batch_geom_buffer = m_gdevice->create_buffer(geom_buf_desc);
         if (!m_batch_geom_buffer) {
             ::logger.error("Failed to create batch buffer");
-            return false;
-        }
-
-        // Batch geom binding
-        rhi::geometry_create_info batch_geom_info;
-        batch_geom_info.vertex_buffer_layouts.push_back({m_batch_geom_buffer, 0, sizeof(xyz_sz_cl_t)});
-        batch_geom_info.attribute_bindings.push_back({0, offsetof(xyz_sz_cl_t, xyz_sz_cl_t::pos), 0, rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 0});
-        batch_geom_info.attribute_bindings.push_back({0, offsetof(xyz_sz_cl_t, xyz_sz_cl_t::color), 0, rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 1});
-        batch_geom_info.has_index_buffer = false;
-
-        m_batch_geom_binding = m_gdevice->create_geometry(batch_geom_info);
-        if (!m_batch_geom_binding) {
-            ::logger.fatal("Failed to create batch binding");
             return false;
         }
 
@@ -1239,8 +1215,6 @@ namespace tavros::renderer
         m_gdevice->safe_destroy(m_static_inds_buffer);
         m_gdevice->safe_destroy(m_scene_orto_binding);
         m_gdevice->safe_destroy(m_scene_persp_binding);
-        m_gdevice->safe_destroy(m_batch_geom_binding);
-        m_gdevice->safe_destroy(m_static_geom_binding);
         m_gdevice->safe_destroy(m_inst_mesh_pipeline);
         m_gdevice->safe_destroy(m_inst_wireframe_mesh_pipeline);
         m_gdevice->safe_destroy(m_points3d_pipeline);

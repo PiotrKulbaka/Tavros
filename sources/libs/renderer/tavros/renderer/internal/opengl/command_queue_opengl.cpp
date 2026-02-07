@@ -60,10 +60,14 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::bind_pipeline(pipeline_handle pipeline)
     {
+        m_current_index_buffer = {};
+        m_current_pipeline = {};
+
         auto* p = m_device->get_resources()->try_get(pipeline);
         if (!p) {
             ::logger.error("Failed to bind pipeline {}: not found", pipeline);
             GL_CALL(glUseProgram(0));
+            GL_CALL(glBindVertexArray(0));
             return;
         }
 
@@ -73,6 +77,7 @@ namespace tavros::renderer::rhi
         if (!pass) {
             ::logger.error("Failed to bind pipeline {}: render pass {} not found", pipeline, m_current_render_pass);
             GL_CALL(glUseProgram(0));
+            GL_CALL(glBindVertexArray(0));
             return;
         }
 
@@ -85,6 +90,7 @@ namespace tavros::renderer::rhi
                 fmt::styled_param(info.blend_states.size())
             );
             GL_CALL(glUseProgram(0));
+            GL_CALL(glBindVertexArray(0));
             return;
         }
 
@@ -240,18 +246,87 @@ namespace tavros::renderer::rhi
         }
 
         GL_CALL(glUseProgram(p->program_obj));
+
+        GL_CALL(glBindVertexArray(p->vao_obj));
     }
 
-    void command_queue_opengl::bind_geometry(geometry_handle geometry)
+    void command_queue_opengl::bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers)
     {
-        if (auto* g = m_device->get_resources()->try_get(geometry)) {
-            GL_CALL(glBindVertexArray(g->vao_obj));
-            m_current_geometry = geometry;
-        } else {
-            ::logger.error("Failed to bind geometry binding {}: not found", geometry);
-            GL_CALL(glBindVertexArray(0));
-            m_current_geometry = geometry_handle();
+        auto* p = m_device->get_resources()->try_get(m_current_pipeline);
+        if (!p) {
+            if (!m_current_pipeline) {
+                ::logger.error("Failed to bind vertex buffers: no pipeline is bound");
+            } else {
+                ::logger.error("Failed to bind vertex buffers: pipeline {} not found", m_current_pipeline);
+            }
+            return;
         }
+
+        if (buffers.size() != p->info.bindings.size()) {
+            ::logger.error(
+                "Failed to bind vertex buffers: buffers size {} mismatch with pipeline bindings size {}",
+                fmt::styled_param(buffers.size()),
+                fmt::styled_param(p->info.bindings.size())
+            );
+            return;
+        }
+
+        GLuint attrib_i = 0;
+        for (auto& buf : buffers) {
+            auto* b = m_device->get_resources()->try_get(buf.buffer);
+            if (!b) {
+                ::logger.error(
+                    "Failed to bind vertex buffers: buffer {} not found",
+                    buf.buffer
+                );
+                return;
+            }
+
+            if (b->info.usage != buffer_usage::vertex) {
+                ::logger.error(
+                    "Failed to bind vertex buffers: buffer {} not an vertex buffer",
+                    buf.buffer
+                );
+                return;
+            }
+
+            auto& binding = p->info.bindings[static_cast<size_t>(attrib_i)];
+
+            // Enable the vertex buffer
+            GL_CALL(glBindVertexBuffer(
+                attrib_i,
+                b->buffer_obj,
+                static_cast<GLintptr>(buf.base_offset),
+                static_cast<GLsizei>(binding.stride)
+            ));
+
+            ++attrib_i;
+        }
+    }
+
+    void command_queue_opengl::bind_index_buffer(buffer_handle buffer, index_buffer_format format)
+    {
+        auto* b = m_device->get_resources()->try_get(buffer);
+        if (!b) {
+            ::logger.error(
+                "Failed to bind index buffer: buffer {} not found",
+                buffer
+            );
+            return;
+        }
+
+        if (b->info.usage != buffer_usage::index) {
+            ::logger.error(
+                "Failed to bind index buffer: buffer {} not an index buffer",
+                buffer
+            );
+            return;
+        }
+
+        m_current_index_buffer = buffer;
+        m_current_index_buffer_format = format;
+
+        GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj));
     }
 
     void command_queue_opengl::bind_shader_binding(shader_binding_handle shader_binding)
@@ -556,7 +631,6 @@ namespace tavros::renderer::rhi
             m_current_framebuffer = framebuffer_handle();
             m_current_render_pass = render_pass_handle();
             GL_CALL(glBindVertexArray(0));
-            m_current_geometry = geometry_handle();
 
             return;
         }
@@ -663,7 +737,6 @@ namespace tavros::renderer::rhi
         m_current_framebuffer = framebuffer_handle();
         m_current_render_pass = render_pass_handle();
         GL_CALL(glBindVertexArray(0));
-        m_current_geometry = geometry_handle();
     }
 
     void command_queue_opengl::set_viewport(const viewport_info& viewport)
@@ -747,22 +820,12 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        auto* g = m_device->get_resources()->try_get(m_current_geometry);
-        if (!g) {
-            if (!m_current_geometry) {
-                ::logger.error("Failed to draw indexed: no geometry binding is bound");
-            } else {
-                ::logger.error("Failed to draw indexed: geometry binding {} not found", m_current_geometry);
-            }
+        if (!m_current_index_buffer) {
+            ::logger.error("Failed to draw indexed: index buffer not bound");
             return;
         }
 
-        if (!g->info.has_index_buffer) {
-            ::logger.error("Failed to draw indexed: current geometry binding {} has no index buffer", m_current_geometry);
-            return;
-        }
-
-        auto  gl_index_format = to_gl_index_format(g->info.index_format);
+        auto  gl_index_format = to_gl_index_format(m_current_index_buffer_format);
         auto  gl_topology = to_gl_topology(p->info.topology);
         auto* gl_index_offset = reinterpret_cast<const void*>(static_cast<size_t>(first_index * gl_index_format.size));
         auto  gl_index_count = static_cast<GLsizei>(index_count);

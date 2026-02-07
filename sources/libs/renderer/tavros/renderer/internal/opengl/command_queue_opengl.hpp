@@ -19,7 +19,9 @@ namespace tavros::renderer::rhi
 
         void bind_pipeline(pipeline_handle pipeline) override;
 
-        void bind_geometry(geometry_handle geometry) override;
+        void bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers) override;
+
+        void bind_index_buffer(buffer_handle buffer, index_buffer_format format) override;
 
         void bind_shader_binding(shader_binding_handle shader_binding) override;
 
@@ -50,7 +52,8 @@ namespace tavros::renderer::rhi
         pipeline_handle         m_current_pipeline;
         render_pass_handle      m_current_render_pass;
         framebuffer_handle      m_current_framebuffer;
-        geometry_handle         m_current_geometry;
+        buffer_handle           m_current_index_buffer;
+        index_buffer_format     m_current_index_buffer_format = index_buffer_format::u16;
 
         GLuint m_resolve_fbo = 0;
 

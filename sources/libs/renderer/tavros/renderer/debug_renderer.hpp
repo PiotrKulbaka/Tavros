@@ -154,14 +154,12 @@ namespace tavros::renderer
         rhi::shader_binding_handle m_scene_persp_binding;
 
         // Batching geom
-        rhi::buffer_handle   m_batch_geom_buffer;
-        rhi::geometry_handle m_batch_geom_binding;
+        rhi::buffer_handle m_batch_geom_buffer;
 
         // Instanced geom
-        rhi::buffer_handle   m_inst_stream_data;
-        rhi::buffer_handle   m_static_verts_buffer;
-        rhi::buffer_handle   m_static_inds_buffer;
-        rhi::geometry_handle m_static_geom_binding;
+        rhi::buffer_handle m_inst_stream_data;
+        rhi::buffer_handle m_static_verts_buffer;
+        rhi::buffer_handle m_static_inds_buffer;
 
         // Meshes draw info
         mesh_view m_draw_cube_mesh_info;

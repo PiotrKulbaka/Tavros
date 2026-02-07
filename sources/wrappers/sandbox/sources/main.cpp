@@ -9,6 +9,7 @@
 #include <tavros/core/memory/buffer.hpp>
 #include <tavros/core/utf8.hpp>
 #include <tavros/core/geometry/aabb2.hpp>
+#include <tavros/core/exception.hpp>
 
 #include <tavros/renderer/rhi/command_queue.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
@@ -54,7 +55,7 @@ namespace rhi = tavros::renderer::rhi;
 
 static tavros::core::logger logger("main");
 
-constexpr float k_sdf_size_pix = 6.0f;
+constexpr float k_sdf_size_pix = 8.0f;
 constexpr float k_font_scale_pix = 96.0f;
 
 [[noreturn]] void exit_fail()
@@ -76,6 +77,41 @@ struct glyph_instance
     tavros::math::rgba8      fill_color;
     tavros::math::rgba8      outline_color;
 };
+
+
+struct mat32_component
+{
+    float mat[3][2] = {0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f};
+};
+
+struct atlas_rect_component
+{
+    tavros::text::atlas_rect rect;
+};
+
+struct color_component
+{
+    tavros::math::rgba8 color;
+};
+
+
+template<class T>
+class gpu_draw_stream
+{
+public:
+    gpu_draw_stream();
+    ~gpu_draw_stream();
+
+    void reset();
+
+    void begin_stream() const noexcept;
+
+    void end_stream() const noexcept;
+
+private:
+    rhi::buffer_handle m_gpu_buffer;
+};
+
 
 template<class GlyphData>
 size_t fill_glyphs_instances(tavros::core::buffer_span<GlyphData> glyphs, tavros::core::buffer_span<glyph_instance> buf, tavros::math::vec2 pos_text, float pad)
@@ -121,12 +157,7 @@ public:
 
     tavros::core::string load(tavros::core::string_view path) override
     {
-        auto [success, data] = m_rm->open(path)->reader()->read_content();
-        if (!success) {
-            throw std::runtime_error("Failed to load content" + tavros::core::string(path));
-        }
-
-        return data;
+        return m_rm->open(path)->reader()->read_as_text();
     }
 
 private:
@@ -166,14 +197,12 @@ public:
     {
         tavros::core::dynamic_buffer<uint8> buffer(&m_allocator);
 
-        auto res = m_resource_manager->open(path, tavros::resources::resource_access::read_only);
-        if (res) {
-            auto* reader = res->reader();
-            if (reader->is_open()) {
-                auto size = reader->size();
-                buffer.reserve(size);
-                reader->read(buffer);
-            }
+        try {
+            auto reader = m_resource_manager->open(path, tavros::resources::resource_access::read_only)->reader();
+            buffer.reserve(reader->size());
+            reader->read(buffer);
+        } catch (tavros::core::file_error& e) {
+            ::logger.error("Failed to open image '{}'", e.path());
         }
 
         // buffer.data() can be nullptr; decode_image will return fallback with white pixel
@@ -188,16 +217,13 @@ public:
             return false;
         }
 
-        auto res = m_resource_manager->open(path, tavros::resources::resource_access::write_only);
-        if (res) {
-            auto* writer = res->writer();
-            if (writer->is_open()) {
-                writer->write(im_data);
-                return true;
-            }
+        try {
+            m_resource_manager->open(path, tavros::resources::resource_access::write_only)->writer()->write(im_data);
+            return true;
+        } catch (const tavros::core::file_error& e) {
+            ::logger.error("Failed to save image: '{}'", e.path());
         }
 
-        ::logger.error("Failed to save image: '{}'", path);
         return false;
     }
 
@@ -209,33 +235,19 @@ public:
 
         tavros::core::dynamic_buffer<uint8> font_data(&m_allocator);
 
-        if (auto res = m_resource_manager->open(path)) {
-            auto* reader = res->reader();
-            if (reader->is_open()) {
-                auto size = reader->size();
-                font_data.reserve(size);
-                reader->read(font_data);
+        auto reader = m_resource_manager->open(path)->reader();
+        font_data.reserve(reader->size());
+        reader->read(font_data);
 
-                auto ttf = tavros::core::make_shared<tavros::text::truetype_font>();
-                ttf->init(std::move(font_data), ranges);
-                if (!ttf->is_init()) {
-                    ::logger.fatal("Failed to init font {}.", path);
-                    exit_fail();
-                }
-
-                m_text_atlas->register_font(ttf.get());
-
-                return ttf;
-            } else {
-                ::logger.fatal("Failed to load font {}.", path);
-                exit_fail();
-            }
-        } else {
-            ::logger.fatal("Failed to open font {}.", path);
+        auto ttf = tavros::core::make_shared<tavros::text::truetype_font>();
+        ttf->init(std::move(font_data), ranges);
+        if (!ttf->is_init()) {
+            ::logger.fatal("Failed to init font {}.", path);
             exit_fail();
         }
 
-        return nullptr;
+        m_text_atlas->register_font(ttf.get());
+        return ttf;
     }
 
     rhi::shader_binding_handle upload_font_data()
@@ -456,9 +468,9 @@ public:
 
         rhi::pipeline_create_info mesh_rendering_pipeline_info;
 
-        mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
-        mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
-        mesh_rendering_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
+        mesh_rendering_pipeline_info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0, sizeof(app::vertex_type), offsetof(app::vertex_type, app::vertex_type::pos), 0});
+        mesh_rendering_pipeline_info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1, sizeof(app::vertex_type), offsetof(app::vertex_type, app::vertex_type::normal), 0});
+        mesh_rendering_pipeline_info.bindings.push_back({rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2, sizeof(app::vertex_type), offsetof(app::vertex_type, app::vertex_type::uv), 0});
 
         mesh_rendering_pipeline_info.shaders.push_back(mesh_rendering_vertex_shader);
         mesh_rendering_pipeline_info.shaders.push_back(mesh_rendering_fragment_shader);
@@ -485,41 +497,26 @@ public:
 
 
         rhi::buffer_create_info mesh_vertices_buffer_info{1024 * 1024 * 16, rhi::buffer_usage::vertex, rhi::buffer_access::cpu_to_gpu};
-        auto                    mesh_vertices_buffer = m_graphics_device->create_buffer(mesh_vertices_buffer_info);
-        if (!mesh_vertices_buffer) {
+        m_mesh_vertices_buffer = m_graphics_device->create_buffer(mesh_vertices_buffer_info);
+        if (!m_mesh_vertices_buffer) {
             ::logger.fatal("Failed to create mesh vertices buffer");
             exit_fail();
         }
 
         rhi::buffer_create_info mesh_indices_buffer_info{1024 * 128, rhi::buffer_usage::index, rhi::buffer_access::cpu_to_gpu};
-        auto                    mesh_indices_buffer = m_graphics_device->create_buffer(mesh_indices_buffer_info);
-        if (!mesh_indices_buffer) {
+        m_mesh_indices_buffer = m_graphics_device->create_buffer(mesh_indices_buffer_info);
+        if (!m_mesh_indices_buffer) {
             ::logger.fatal("Failed to create mesh indices buffer");
             exit_fail();
         }
 
-        rhi::geometry_create_info mesh_geometry_info;
-        mesh_geometry_info.vertex_buffer_layouts.push_back({mesh_vertices_buffer, 0, sizeof(app::vertex_type)});
-        mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::pos), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0});
-        mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::normal), 0, rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1});
-        mesh_geometry_info.attribute_bindings.push_back({0, offsetof(app::vertex_type, app::vertex_type::uv), 0, rhi::attribute_type::vec2, rhi::attribute_format::f32, false, 2});
-        mesh_geometry_info.has_index_buffer = true;
-        mesh_geometry_info.index_format = rhi::index_buffer_format::u32;
-        mesh_geometry_info.index_buffer = mesh_indices_buffer;
-
-        m_mesh_geometry = m_graphics_device->create_geometry(mesh_geometry_info);
-        if (!m_mesh_geometry) {
-            ::logger.fatal("Failed to create mesh geometry");
-            exit_fail();
-        }
-
-        auto verts_map = m_graphics_device->map_buffer(mesh_vertices_buffer);
+        auto verts_map = m_graphics_device->map_buffer(m_mesh_vertices_buffer);
         verts_map.copy_from(app::cube_vertices, sizeof(app::cube_vertices));
-        m_graphics_device->unmap_buffer(mesh_vertices_buffer);
+        m_graphics_device->unmap_buffer(m_mesh_vertices_buffer);
 
-        auto inds_map = m_graphics_device->map_buffer(mesh_indices_buffer);
+        auto inds_map = m_graphics_device->map_buffer(m_mesh_indices_buffer);
         inds_map.copy_from(app::cube_indices, sizeof(app::cube_indices));
-        m_graphics_device->unmap_buffer(mesh_indices_buffer);
+        m_graphics_device->unmap_buffer(m_mesh_indices_buffer);
 
         rhi::shader_binding_create_info mesh_shader_binding_info;
         mesh_shader_binding_info.texture_bindings.push_back({m_texture, m_sampler, 0});
@@ -602,10 +599,13 @@ public:
         auto sdf_font_fragment_shader = m_graphics_device->create_shader({sdf_font_fragment_shader_source, rhi::shader_stage::fragment, "main"});
 
         rhi::pipeline_create_info sdf_font_pipeline_info;
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 0});
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::vec2, rhi::attribute_format::u32, false, 3});
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 4});
-        sdf_font_pipeline_info.attributes.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 5});
+
+
+        sdf_font_pipeline_info.bindings.push_back({rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 0, sizeof(glyph_instance), offsetof(glyph_instance, glyph_instance::mat), 1});
+        sdf_font_pipeline_info.bindings.push_back({rhi::attribute_type::vec2, rhi::attribute_format::u32, false, 3, sizeof(glyph_instance), offsetof(glyph_instance, glyph_instance::rect), 1});
+        sdf_font_pipeline_info.bindings.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 4, sizeof(glyph_instance), offsetof(glyph_instance, glyph_instance::fill_color), 1});
+        sdf_font_pipeline_info.bindings.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 5, sizeof(glyph_instance), offsetof(glyph_instance, glyph_instance::outline_color), 1});
+
         sdf_font_pipeline_info.shaders.push_back(sdf_font_vertex_shader);
         sdf_font_pipeline_info.shaders.push_back(sdf_font_fragment_shader);
         sdf_font_pipeline_info.depth_stencil.depth_test_enable = false;
@@ -626,23 +626,9 @@ public:
         }
 
         rhi::buffer_create_info font_instance_buffer_info{1024 * 1024, rhi::buffer_usage::vertex, rhi::buffer_access::cpu_to_gpu};
-        m_font_buffer_info = m_graphics_device->create_buffer(font_instance_buffer_info);
-        if (!m_font_buffer_info) {
+        m_font_buffer = m_graphics_device->create_buffer(font_instance_buffer_info);
+        if (!m_font_buffer) {
             ::logger.fatal("Failed to create font instance buffer");
-            exit_fail();
-        }
-
-        rhi::geometry_create_info font_instance_data_info;
-        font_instance_data_info.vertex_buffer_layouts.push_back({m_font_buffer_info, 0, sizeof(glyph_instance)});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::mat), 1, rhi::attribute_type::mat3x2, rhi::attribute_format::f32, false, 0});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::rect), 1, rhi::attribute_type::vec2, rhi::attribute_format::u32, false, 3});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::fill_color), 1, rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 4});
-        font_instance_data_info.attribute_bindings.push_back({0, offsetof(glyph_instance, glyph_instance::outline_color), 1, rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 5});
-        font_instance_data_info.has_index_buffer = false;
-
-        m_font_geometry = m_graphics_device->create_geometry(font_instance_data_info);
-        if (!m_font_geometry) {
-            ::logger.fatal("Failed to create font geometry instance binding");
             exit_fail();
         }
 
@@ -1098,9 +1084,9 @@ public:
         auto text_draw_size = fill_glyphs_instances(m_rich_line.glyphs(), glyph_instances, text_rect_pos, k_sdf_size_pix / k_font_scale_pix);
 
         size_t size = m_rich_line.glyphs().size() * sizeof(glyph_instance);
-        auto   map_data = m_graphics_device->map_buffer(m_font_buffer_info, 0, size);
+        auto   map_data = m_graphics_device->map_buffer(m_font_buffer, 0, size);
         map_data.copy_from(instance_info.data(), size);
-        m_graphics_device->unmap_buffer(m_font_buffer_info);
+        m_graphics_device->unmap_buffer(m_font_buffer);
 
         auto* cbuf = m_composer->create_command_queue();
         m_composer->begin_frame();
@@ -1112,7 +1098,9 @@ public:
 
         // Draw cube
         cbuf->bind_pipeline(m_mesh_rendering_pipeline);
-        cbuf->bind_geometry(m_mesh_geometry);
+        rhi::bind_buffer_info vert_bufs[] = {{m_mesh_vertices_buffer, 0}, {m_mesh_vertices_buffer, 0}, {m_mesh_vertices_buffer, 0}};
+        cbuf->bind_vertex_buffers(vert_bufs);
+        cbuf->bind_index_buffer(m_mesh_indices_buffer, rhi::index_buffer_format::u32);
         cbuf->bind_shader_binding(m_scene_binding);
         cbuf->bind_shader_binding(m_mesh_shader_binding);
         cbuf->draw_indexed(6 * 6);
@@ -1126,7 +1114,9 @@ public:
         cbuf->bind_pipeline(m_sdf_font_pipeline);
         cbuf->bind_shader_binding(m_font_shader_binding);
         cbuf->bind_shader_binding(m_scene_binding);
-        cbuf->bind_geometry(m_font_geometry);
+        rhi::bind_buffer_info font_vert_bufs[] = {{m_font_buffer, 0}, {m_font_buffer, 0}, {m_font_buffer, 0}, {m_font_buffer, 0}};
+        cbuf->bind_vertex_buffers(font_vert_bufs);
+        cbuf->bind_index_buffer(m_mesh_indices_buffer, rhi::index_buffer_format::u32);
 
         rhi::scissor_info text_scissor = {
             static_cast<int32>(tavros::math::floor(text_lay_rect.left)),
@@ -1229,11 +1219,11 @@ private:
     rhi::texture_handle        m_texture;
     rhi::buffer_handle         m_stage_buffer;
     rhi::buffer_handle         m_stage_upload_buffer;
+    rhi::buffer_handle         m_mesh_vertices_buffer;
+    rhi::buffer_handle         m_mesh_indices_buffer;
     rhi::sampler_handle        m_sampler;
     rhi::buffer_handle         m_uniform_buffer;
-    rhi::buffer_handle         m_font_buffer_info;
-    rhi::geometry_handle       m_mesh_geometry;
-    rhi::geometry_handle       m_font_geometry;
+    rhi::buffer_handle         m_font_buffer;
     rhi::fence_handle          m_fence;
 
     tavros::renderer::debug_renderer m_drenderer;
