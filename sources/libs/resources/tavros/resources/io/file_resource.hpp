@@ -9,20 +9,20 @@
 namespace tavros::resources
 {
 
-    class file_resource : public resource
+    class file_resource : public resource, public std::enable_shared_from_this<file_resource>
     {
     public:
         explicit file_resource(core::string_view path, resource_access access);
 
-        ~file_resource() override;
+        ~file_resource() noexcept override;
 
-        [[nodiscard]] resource_reader* reader() override;
+        [[nodiscard]] core::shared_ptr<resource_reader> reader() override;
 
-        [[nodiscard]] resource_writer* writer() override;
+        [[nodiscard]] core::shared_ptr<resource_writer> writer() override;
 
-        [[nodiscard]] core::string_view path() const override;
+        [[nodiscard]] core::string_view path() const noexcept override;
 
-        [[nodiscard]] bool is_open() const override;
+        [[nodiscard]] bool is_open() const noexcept override;
 
         void close() override;
 

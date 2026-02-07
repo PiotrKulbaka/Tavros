@@ -72,7 +72,7 @@ namespace tavros::resources
         m_file.close();
     }
 
-    bool file_writer::is_open() const
+    bool file_writer::is_open() const noexcept
     {
         return m_file.is_open();
     }

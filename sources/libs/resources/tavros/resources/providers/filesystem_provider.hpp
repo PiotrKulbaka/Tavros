@@ -12,11 +12,11 @@ namespace tavros::resources
     public:
         filesystem_provider(core::string_view path, resource_access access);
 
-        ~filesystem_provider() override;
+        ~filesystem_provider() noexcept override;
 
-        [[nodiscard]] bool available_for_read(core::string_view path) const override;
+        [[nodiscard]] bool available_for_read(core::string_view path) const noexcept override;
 
-        [[nodiscard]] bool available_for_write(core::string_view path) const override;
+        [[nodiscard]] bool available_for_write(core::string_view path) const noexcept override;
 
         [[nodiscard]] bool exists(core::string_view path) const override;
 

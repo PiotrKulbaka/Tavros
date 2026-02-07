@@ -16,7 +16,7 @@ namespace tavros::resources
         void open(core::string_view path);
         void close();
 
-        bool   is_open() const override;
+        bool   is_open() const noexcept override;
         size_t read(core::buffer_span<uint8> buffer) override;
         bool   seek(size_t offset, seek_dir dir = seek_dir::begin) override;
         size_t tell() const override;
@@ -24,10 +24,11 @@ namespace tavros::resources
         bool   eos() const override;
         bool   good() const override;
 
-        content_result read_content() const override;
+        core::string read_as_text() const override;
 
     private:
         mutable core::ifstream m_file;
+        core::string_view      m_path;
         size_t                 m_size = 0;
     };
 

@@ -18,16 +18,6 @@ namespace tavros::resources
     {
     public:
         /**
-         * @brief Result structure for reading the entire content of the resource.
-         */
-        struct content_result
-        {
-            bool         success = false;
-            core::string data;
-        };
-
-    public:
-        /**
          * @brief Virtual destructor.
          */
         virtual ~resource_reader() = default;
@@ -36,7 +26,7 @@ namespace tavros::resources
          * @brief Checks if the resource is currently open.
          * @return true if the resource is open, false otherwise.
          */
-        virtual [[nodiscard]] bool is_open() const = 0;
+        virtual [[nodiscard]] bool is_open() const noexcept = 0;
 
         /**
          * @brief Reads data from the resource into the provided buffer.
@@ -78,10 +68,15 @@ namespace tavros::resources
         virtual [[nodiscard]] bool good() const = 0;
 
         /**
-         * @brief Reads the content from the resource.
-         * @return A content_result indicating success and containing the read data.
+         * @brief Reads the content of the file as a text string.
+         *
+         * @return core::string The contents of the file as a string.
+         *
+         * @throws file_error If there is a problem accessing or reading the file.
+         * @throws std::ios_base::failure If an error occurs during stream operations
+         *         (as thrown by std::ifstream).
          */
-        virtual [[nodiscard]] content_result read_content() const = 0;
+        virtual [[nodiscard]] core::string read_as_text() const = 0;
     };
 
 } // namespace tavros::resources

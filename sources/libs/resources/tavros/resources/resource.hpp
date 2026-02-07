@@ -1,9 +1,10 @@
 #pragma once
 
 #include <tavros/core/noncopyable.hpp>
+#include <tavros/core/string_view.hpp>
+#include <tavros/core/memory/memory.hpp>
 #include <tavros/resources/resource_reader.hpp>
 #include <tavros/resources/resource_writer.hpp>
-#include <tavros/core/string_view.hpp>
 
 namespace tavros::resources
 {
@@ -21,31 +22,31 @@ namespace tavros::resources
         /**
          * @brief Virtual destructor.
          */
-        virtual ~resource() = default;
+        virtual ~resource() noexcept = default;
 
         /**
          * @brief Returns a reader interface for the resource.
-         * @return Pointer to a resource_reader, or nullptr if reading is not supported.
+         * @return Reference to a resource_reader.
          */
-        virtual [[nodiscard]] resource_reader* reader() = 0;
+        virtual [[nodiscard]] core::shared_ptr<resource_reader> reader() = 0;
 
         /**
          * @brief Returns a writer interface for the resource.
-         * @return Pointer to a resource_writer, or nullptr if writing is not supported.
+         * @return Reference to a resource_writer.
          */
-        virtual [[nodiscard]] resource_writer* writer() = 0;
+        virtual [[nodiscard]] core::shared_ptr<resource_writer> writer() = 0;
 
         /**
          * @brief Returns the logical or physical path of the resource.
          * @return The resource path as a string view.
          */
-        virtual [[nodiscard]] core::string_view path() const = 0;
+        virtual [[nodiscard]] core::string_view path() const noexcept = 0;
 
         /**
          * @brief Checks whether the resource is currently open.
          * @return true if the resource is open, false otherwise.
          */
-        virtual [[nodiscard]] bool is_open() const = 0;
+        virtual [[nodiscard]] bool is_open() const noexcept = 0;
 
         /**
          * @brief Closes the resource and releases associated handles or buffers.

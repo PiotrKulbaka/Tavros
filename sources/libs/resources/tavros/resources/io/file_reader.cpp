@@ -3,6 +3,7 @@
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/debug_break.hpp>
 #include <tavros/core/debug/unreachable.hpp>
+#include <tavros/core/exception.hpp>
 #include <string>
 
 namespace
@@ -73,7 +74,7 @@ namespace tavros::resources
         m_file.close();
     }
 
-    bool file_reader::is_open() const
+    bool file_reader::is_open() const noexcept
     {
         return m_file.is_open();
     }
@@ -175,58 +176,38 @@ namespace tavros::resources
         return m_file.is_open() && m_file.good();
     }
 
-    file_reader::content_result file_reader::read_content() const
+    core::string file_reader::read_as_text() const
     {
         if (!good()) {
-            ::logger.error("File in bad state");
-            TAV_DEBUG_BREAK();
-            return {};
+            throw core::file_error(core::file_error_tag::read_error, m_path, "File in bad state");
         }
 
         // Save current position
         const auto current_pos = m_file.tellg();
         if (current_pos < 0) {
-            ::logger.error("tellg() failed in read_content()");
-            TAV_DEBUG_BREAK();
-            return {};
+            throw core::file_error(core::file_error_tag::read_error, m_path, "tellg() failed in read_as_text()");
         }
 
         // Move to beginning
         m_file.seekg(0, std::ios::beg);
-        if (!m_file.good()) {
-            m_file.seekg(current_pos);
-            ::logger.error("tellg() failed in read_content()");
-            return {};
+        if (m_file.bad()) {
+            throw core::file_error(core::file_error_tag::read_error, m_path, "File in bad state");
         }
 
-        // Read whole content
-        try {
-            core::string data;
-            data.resize(m_size);
-            m_file.read(data.data(), static_cast<std::streamsize>(m_size));
+        core::string result;
+        result.resize(m_size);
+        m_file.read(result.data(), static_cast<std::streamsize>(m_size));
 
-            if (m_file.bad()) {
-                ::logger.error("Read content failed");
-                m_file.clear();
-                m_file.seekg(current_pos);
-                TAV_DEBUG_BREAK();
-                return {};
-            }
-
+        if (m_file.bad()) {
             m_file.clear();
             m_file.seekg(current_pos);
-
-            return {true, data};
-
-        } catch (const std::exception& e) {
-            ::logger.error("Exception during read content: {}", e.what());
-            TAV_DEBUG_BREAK();
-            return {};
-        } catch (...) {
-            ::logger.error("Unknown exception during read content");
-            TAV_DEBUG_BREAK();
-            return {};
+            throw core::file_error(core::file_error_tag::read_error, m_path, "File in bad state");
         }
+
+        m_file.clear();
+        m_file.seekg(current_pos);
+
+        return result;
     }
 
 } // namespace tavros::resources

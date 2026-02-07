@@ -15,13 +15,15 @@ namespace tavros::core
      */
     enum class file_error_tag
     {
-        not_found,         /// File does not exist at the specified path.
+        not_found,         /// File or directory does not exist at the specified path.
         permission_denied, /// Access to the file is denied due to insufficient permissions.
         open_failed,       /// File could not be opened for reading or writing.
         read_error,        /// An error occurred while reading from the file.
         write_error,       /// An error occurred while writing to the file.
         invalid_path,      /// The provided file path is invalid or malformed.
+        invalid_argument,  /// The argument passed is invalid.
         is_directory,      /// The path refers to a directory where a file was expected.
+        other,             /// Anything else, less important
     };
 
     /// Returns a string representation of the tag

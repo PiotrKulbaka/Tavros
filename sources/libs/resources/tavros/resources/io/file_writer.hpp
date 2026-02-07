@@ -16,7 +16,7 @@ namespace tavros::resources
         void open(core::string_view path, bool append = false);
         void close();
 
-        bool   is_open() const override;
+        bool   is_open() const noexcept override;
         size_t write(core::buffer_view<uint8> buffer) override;
         bool   seek(size_t offset, seek_dir dir = seek_dir::begin) override;
         size_t tell() const override;

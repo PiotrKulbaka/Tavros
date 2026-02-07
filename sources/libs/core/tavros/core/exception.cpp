@@ -21,8 +21,12 @@ namespace tavros::core
             return "write_error";
         case invalid_path:
             return "invalid_path";
+        case invalid_argument:
+            return "invalid_argument";
         case is_directory:
             return "is_directory";
+        case other:
+            "other";
         }
 
         TAV_UNREACHABLE();

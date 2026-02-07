@@ -20,26 +20,29 @@ namespace tavros::resources
         /**
          * @brief Virtual destructor.
          */
-        virtual ~resource_provider() = default;
+        virtual ~resource_provider() noexcept = default;
 
         /**
          * @brief Checks if the provider allows reading from the specified path.
          * @param path The path to the resource.
          * @return true if the resource is readable, false otherwise.
          */
-        virtual [[nodiscard]] bool available_for_read(core::string_view path) const = 0;
+        virtual [[nodiscard]] bool available_for_read(core::string_view path) const noexcept = 0;
 
         /**
          * @brief Checks if the provider allows writing to the specified path.
          * @param path The path to the resource.
          * @return true if the resource is writable, false otherwise.
          */
-        virtual [[nodiscard]] bool available_for_write(core::string_view path) const = 0;
+        virtual [[nodiscard]] bool available_for_write(core::string_view path) const noexcept = 0;
 
         /**
          * @brief Checks whether a resource exists at the specified path.
          * @param path The path to the resource.
          * @return true if the resource exists, false otherwise.
+         *
+         * @throws file_error If there is a problem accessing the resource.
+         * @throws std::ios_base::failure If an error occurs during stream operations.
          */
         virtual [[nodiscard]] bool exists(core::string_view path) const = 0;
 
@@ -47,6 +50,9 @@ namespace tavros::resources
          * @brief Opens the specified resource for reading or writing.
          * @param path The path to the resource.
          * @return A shared pointer to the opened resource, or nullptr if opening failed.
+         *
+         * @throws file_error If there is a problem opening the resource.
+         * @throws std::ios_base::failure If an error occurs during stream operations.
          */
         virtual [[nodiscard]] core::shared_ptr<resource> open(core::string_view path) = 0;
     };
