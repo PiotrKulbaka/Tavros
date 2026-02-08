@@ -149,6 +149,40 @@ namespace tavros::core
         }
 
         /**
+         * @brief Creates a view of the buffer starting at the specified offset.
+         *
+         * Returns a non-owning view over the range [offset, size).
+         * The caller must ensure that @p offset is within the buffer bounds.
+         *
+         * @param offset Starting index of the slice.
+         *
+         * @return A view covering elements from @p offset to the end of the buffer.
+         */
+        [[nodiscard]] buffer_view<T> slice(size_t offset) const noexcept
+        {
+            TAV_ASSERT(offset <= m_size);
+            return {m_data + offset, m_size - offset};
+        }
+
+        /**
+         * @brief Creates a view of a subrange of the buffer.
+         *
+         * Returns a non-owning view over the range [offset, offset + count).
+         * The caller must ensure that the specified range is fully contained
+         * within the buffer bounds.
+         *
+         * @param offset Starting index of the slice.
+         * @param count Number of elements in the slice.
+         *
+         * @return A view covering the specified subrange of the buffer.
+         */
+        [[nodiscard]] buffer_view<T> slice(size_t offset, size_t count) const noexcept
+        {
+            TAV_ASSERT(offset + count <= m_size);
+            return {m_data + offset, count};
+        }
+
+        /**
          * @brief Allows checking for empty.
          */
         explicit operator bool() const noexcept

@@ -1,6 +1,7 @@
 #pragma once
 
 #include <memory>
+#include <tavros/core/memory/raw_ptr.hpp>
 
 namespace tavros::core
 {
