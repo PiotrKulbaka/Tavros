@@ -253,7 +253,7 @@ namespace tavros::renderer::rhi
          * @param h Reference to the handle to destroy.
          */
         template<class T>
-        void safe_destroy(T& h)
+        void safe_destroy(T& h) noexcept
         {
             if (!h.valid()) {
                 return;

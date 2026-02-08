@@ -10,7 +10,9 @@ namespace tavros::renderer::rhi
     template<typename ObjectTag>
     struct handle_base
     {
-        uint64 id = 0xffffffffffffffffui64;
+        static constexpr uint64 invalid_value_id = 0xffffffffffffffffui64;
+
+        uint64 id = invalid_value_id;
 
         handle_base() noexcept = default;
 
@@ -19,9 +21,49 @@ namespace tavros::renderer::rhi
         {
         }
 
+        ~handle_base() noexcept
+        {
+            id = invalid_value_id;
+        }
+
+        handle_base(const handle_base&) noexcept = default;
+
+        handle_base& operator=(const handle_base&) noexcept = default;
+
+        /**
+         * @brief Move constructor.
+         *
+         * Takes ownership of the handle from another object.
+         * The moved-from handle is left in an invalid state.
+         */
+        handle_base(handle_base&& other) noexcept
+            : id(other.id)
+        {
+            // Explicitly release ownership from the source
+            other.id = invalid_value_id;
+        }
+
+        /**
+         * @brief Move assignment operator.
+         *
+         * Transfers ownership of the handle.
+         * The moved-from handle is left in an invalid state.
+         */
+        handle_base& operator=(handle_base&& other) noexcept
+        {
+            if (this != &other) {
+                id = other.id;
+
+                // Explicitly release ownership from the source
+                other.id = invalid_value_id;
+            }
+
+            return *this;
+        }
+
         bool constexpr valid() const noexcept
         {
-            return id != 0xffffffffffffffffui64;
+            return id != invalid_value_id;
         }
 
         /**

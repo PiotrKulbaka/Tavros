@@ -936,19 +936,13 @@ namespace tavros::renderer::rhi
         }
 
         // Make copy data
-        GL_CALL(glBindBuffer(GL_COPY_READ_BUFFER, src->buffer_obj));
-        GL_CALL(glBindBuffer(GL_COPY_WRITE_BUFFER, dst->buffer_obj));
-
-        GL_CALL(glCopyBufferSubData(
-            GL_COPY_READ_BUFFER,
-            GL_COPY_WRITE_BUFFER,
+        GL_CALL(glCopyNamedBufferSubData(
+            src->buffer_obj,
+            dst->buffer_obj,
             static_cast<GLintptr>(src_offset),
             static_cast<GLintptr>(dst_offset),
             static_cast<GLsizeiptr>(size)
         ));
-
-        GL_CALL(glBindBuffer(GL_COPY_READ_BUFFER, 0));
-        GL_CALL(glBindBuffer(GL_COPY_WRITE_BUFFER, 0));
     }
 
     void command_queue_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, const texture_copy_region& region)
