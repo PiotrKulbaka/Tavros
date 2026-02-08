@@ -55,10 +55,11 @@ namespace tavros::renderer::rhi
     {
         buffer_create_info info;
 
-        GLuint buffer_obj = 0;
-        GLenum gl_target = 0;
-        GLenum gl_usage = 0;
-        bool   is_mapped = false;
+        GLuint     buffer_obj = 0;
+        GLenum     gl_target = 0;
+        GLenum     gl_usage = 0;
+        GLbitfield gl_flags = 0;
+        bool       is_mapped = false;
     };
 
     struct gl_render_pass

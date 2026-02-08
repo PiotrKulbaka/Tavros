@@ -1167,8 +1167,9 @@ namespace tavros::renderer::rhi
             return {};
         }
 
-        GLenum gl_target = 0;
-        GLenum gl_usage = 0;
+        GLenum     gl_target = 0;
+        GLenum     gl_usage = 0;
+        GLbitfield gl_flags = 0;
 
         switch (info.usage) {
         case buffer_usage::stage:
@@ -1177,16 +1178,19 @@ namespace tavros::renderer::rhi
             case buffer_access::cpu_to_gpu:
                 gl_target = GL_COPY_WRITE_BUFFER;
                 gl_usage = GL_STREAM_DRAW;
+                gl_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
                 break;
 
             case buffer_access::gpu_only:
                 gl_target = GL_COPY_WRITE_BUFFER;
                 gl_usage = GL_STREAM_COPY;
+                gl_flags = GL_CLIENT_STORAGE_BIT;
                 break;
 
             case buffer_access::gpu_to_cpu:
                 gl_target = GL_COPY_READ_BUFFER;
                 gl_usage = GL_STREAM_READ;
+                gl_flags = GL_MAP_READ_BIT;
                 break;
 
             default:
@@ -1201,11 +1205,13 @@ namespace tavros::renderer::rhi
             case buffer_access::cpu_to_gpu:
                 gl_target = GL_ELEMENT_ARRAY_BUFFER;
                 gl_usage = GL_DYNAMIC_DRAW;
+                gl_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
                 break;
 
             case buffer_access::gpu_only:
                 gl_target = GL_ELEMENT_ARRAY_BUFFER;
                 gl_usage = GL_STREAM_COPY; // GL_STREAM_COPY, GL_STATIC_COPY, GL_STATIC_DRAW - is also possible
+                gl_flags = GL_CLIENT_STORAGE_BIT;
                 break;
 
             case buffer_access::gpu_to_cpu:
@@ -1223,10 +1229,12 @@ namespace tavros::renderer::rhi
             case buffer_access::cpu_to_gpu:
                 gl_target = GL_ARRAY_BUFFER;
                 gl_usage = GL_DYNAMIC_DRAW;
+                gl_flags |= GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
                 break;
             case buffer_access::gpu_only:
                 gl_target = GL_ARRAY_BUFFER;
                 gl_usage = GL_STREAM_COPY;
+                gl_flags = GL_CLIENT_STORAGE_BIT;
                 break;
             case buffer_access::gpu_to_cpu:
                 ::logger.error("Failed to create buffer: {} can't be {}", info.usage, info.access);
@@ -1243,10 +1251,12 @@ namespace tavros::renderer::rhi
             case buffer_access::cpu_to_gpu:
                 gl_target = GL_UNIFORM_BUFFER;
                 gl_usage = GL_DYNAMIC_DRAW;
+                gl_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
                 break;
             case buffer_access::gpu_only:
                 gl_target = GL_UNIFORM_BUFFER;
                 gl_usage = GL_STATIC_DRAW;
+                gl_flags = GL_CLIENT_STORAGE_BIT;
                 break;
             case buffer_access::gpu_to_cpu:
                 ::logger.error("Failed to create buffer: {} can't be {}", info.usage, info.access);
@@ -1263,14 +1273,17 @@ namespace tavros::renderer::rhi
             case buffer_access::cpu_to_gpu:
                 gl_target = GL_SHADER_STORAGE_BUFFER;
                 gl_usage = GL_DYNAMIC_DRAW;
+                gl_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
                 break;
             case buffer_access::gpu_only:
                 gl_target = GL_SHADER_STORAGE_BUFFER;
                 gl_usage = GL_STATIC_DRAW;
+                gl_flags = GL_CLIENT_STORAGE_BIT;
                 break;
             case buffer_access::gpu_to_cpu:
                 gl_target = GL_SHADER_STORAGE_BUFFER;
                 gl_usage = GL_DYNAMIC_READ;
+                gl_flags = GL_MAP_READ_BIT;
                 break;
             default:
                 TAV_UNREACHABLE();
@@ -1301,16 +1314,13 @@ namespace tavros::renderer::rhi
             }
         }
 
-        GLuint bo;
-        GL_CALL(glGenBuffers(1, &bo));
-
         auto gl_size = static_cast<GLsizeiptr>(info.size);
 
-        GL_CALL(glBindBuffer(gl_target, bo));
-        GL_CALL(glBufferData(gl_target, gl_size, nullptr, gl_usage));
-        GL_CALL(glBindBuffer(gl_target, 0));
+        GLuint bo;
+        GL_CALL(glCreateBuffers(1, &bo));
+        GL_CALL(glNamedBufferStorage(bo, gl_size, nullptr, gl_flags));
 
-        auto h = m_resources.create(gl_buffer{info, bo, gl_target, gl_usage});
+        auto h = m_resources.create(gl_buffer{info, bo, gl_target, gl_usage, gl_flags});
         ::logger.debug("Buffer ({}) {} created", info.usage, h);
         return h;
     }
@@ -1626,7 +1636,7 @@ namespace tavros::renderer::rhi
 
         if (!(b->info.access == buffer_access::cpu_to_gpu || b->info.access == buffer_access::gpu_to_cpu)) {
             ::logger.error(
-                "Failed to map buffer {}: buffer has invalid access (expected cpu_to_gpu, got {})",
+                "Failed to map buffer {}: buffer has invalid access {}",
                 buffer,
                 b->info.access
             );
@@ -1638,14 +1648,14 @@ namespace tavros::renderer::rhi
             size = b->info.size;
         }
 
-        GLenum access = b->info.access == buffer_access::cpu_to_gpu
-                          ? GL_MAP_WRITE_BIT | GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT
-                          : GL_MAP_READ_BIT;
-        GLenum target = b->gl_target;
+        GLbitfield gl_additional_access = b->info.access == buffer_access::cpu_to_gpu
+                                            ? GL_MAP_INVALIDATE_RANGE_BIT | GL_MAP_UNSYNCHRONIZED_BIT
+                                            : 0;
+        GLintptr   gl_offset = static_cast<GLintptr>(offset);
+        GLsizeiptr gl_size = static_cast<GLsizeiptr>(size);
 
-        GL_CALL(glBindBuffer(target, b->buffer_obj));
-        void* ptr = glMapBufferRange(target, static_cast<GLintptr>(offset), static_cast<GLsizeiptr>(size), access);
-        GL_CALL(glBindBuffer(target, 0));
+        void* ptr = nullptr;
+        GL_CALL(ptr = glMapNamedBufferRange(b->buffer_obj, gl_offset, gl_size, b->gl_flags | gl_additional_access));
 
         if (!ptr) {
             ::logger.error("Failed to map buffer {}: glMapBufferRange returned nullptr", buffer);
@@ -1663,10 +1673,7 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        auto target = b->gl_target;
-        GL_CALL(glBindBuffer(target, b->buffer_obj));
-        GL_CALL(glUnmapBuffer(target));
-        GL_CALL(glBindBuffer(target, 0));
+        GL_CALL(glUnmapNamedBuffer(b->buffer_obj));
     }
 
     device_resources_opengl* graphics_device_opengl::get_resources()
