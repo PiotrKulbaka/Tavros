@@ -54,8 +54,21 @@ namespace tavros::renderer::rhi
          */
         virtual void bind_pipeline(pipeline_handle pipeline) = 0;
 
+        /**
+         * @brief Binds one or more vertex buffers that will be used as sources of vertex attributes
+         * for subsequent draw calls.
+         *
+         * @param buffers A view over buffer binding descriptions, defining buffers,
+         *                binding indices, offsets, and strides.
+         */
         virtual void bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers) = 0;
 
+        /**
+         * @brief Bind an index buffer to the current command context.
+         *
+         * @param buffer Index buffer handle to bind.
+         * @param format Format of indices stored in the buffer (e.g. uint16, uint32).
+         */
         virtual void bind_index_buffer(buffer_handle buffer, index_buffer_format format) = 0;
 
         /**

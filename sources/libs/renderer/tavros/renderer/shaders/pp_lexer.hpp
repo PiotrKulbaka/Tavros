@@ -16,6 +16,9 @@ namespace tavros::renderer
      * @note The lexer does not own the memory it scans and performs no dynamic
      *       memory allocations. It is the caller's responsibility to ensure
      *       that the source memory remains valid for the lifetime of the lexer.
+     *
+     * See also: https://www.open-std.org/jtc1/sc22/open/n2356/lex.html#lex.pptoken
+     * And: https://gcc.gnu.org/onlinedocs/cpp/Tokenization.html
      */
     class pp_lexer
     {

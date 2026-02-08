@@ -60,7 +60,6 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::bind_pipeline(pipeline_handle pipeline)
     {
-        m_current_index_buffer = {};
         m_current_pipeline = {};
 
         auto* p = m_device->get_resources()->try_get(pipeline);
@@ -817,11 +816,6 @@ namespace tavros::renderer::rhi
             } else {
                 ::logger.error("Failed to draw indexed: pipeline {} not found", m_current_pipeline);
             }
-            return;
-        }
-
-        if (!m_current_index_buffer) {
-            ::logger.error("Failed to draw indexed: index buffer not bound");
             return;
         }
 

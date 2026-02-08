@@ -109,6 +109,8 @@ namespace tavros::renderer
 
     core::string shader_loader::preprocess(core::string_view path, const shader_load_args& args) const
     {
+        // More info: https://www.open-std.org/jtc1/sc22/open/n2356/cpp.html#cpp
+
         struct part_t
         {
             int32             line_number = 0;
