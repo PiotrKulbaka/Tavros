@@ -85,14 +85,9 @@ namespace tavros::text
 
     public:
         /**
-         * @brief Constructs an empty font instance.
-         */
-        font() noexcept;
-
-        /**
          * @brief Destroys the font instance.
          */
-        virtual ~font() noexcept;
+        virtual ~font() noexcept = default;
 
         /**
          * @brief Finds the glyph index for a given Unicode codepoint.
@@ -160,8 +155,7 @@ namespace tavros::text
     protected:
         friend font_atlas;
 
-        font_metrics m_font_metrics;
-
+        font_metrics             m_font_metrics;
         core::vector<glyph_info> m_glyphs; /// Sorted by glyph_info::codepoint
     };
 

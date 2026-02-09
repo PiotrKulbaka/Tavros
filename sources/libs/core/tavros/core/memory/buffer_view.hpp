@@ -63,7 +63,7 @@ namespace tavros::core
          * @param arr Reference to the array.
          */
         template<size_t N>
-        constexpr buffer_view(T (&arr)[N]) noexcept
+        constexpr buffer_view(const T (&arr)[N]) noexcept
             : m_data(arr)
             , m_size(N)
         {
@@ -79,8 +79,11 @@ namespace tavros::core
          * @param c Reference to the container.
          */
         template<class Container>
-            requires requires(Container c) { c.data(); c.size(); }
-        constexpr buffer_view(Container& c) noexcept
+            requires requires(Container c) {
+                { c.data() } -> std::convertible_to<const T*>;
+                { c.size() } -> std::convertible_to<size_t>;
+            }
+        constexpr buffer_view(const Container& c) noexcept
             : m_data(c.data())
             , m_size(c.size())
         {

@@ -2,6 +2,8 @@
 
 #include <memory>
 #include <tavros/core/memory/raw_ptr.hpp>
+#include <tavros/core/memory/buffer_span.hpp>
+#include <tavros/core/memory/buffer_view.hpp>
 
 namespace tavros::core
 {

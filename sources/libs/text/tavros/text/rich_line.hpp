@@ -22,6 +22,7 @@ namespace tavros::text
     {
         char32 codepoint = 0;                /// Unicode codepoint.
         bool   is_space = false;             /// True if the glyph is whitespace.
+        bool   is_new_line = false;          /// True if the glyph is new line.
 
         const font*       font = nullptr;    /// Pointer to the font used for this glyph.
         font::glyph_index idx = 0;           /// Index of the glyph in the font.
@@ -102,6 +103,7 @@ namespace tavros::text
                 glyph_data g;
                 g.base.codepoint = cp;
                 g.base.is_space = static_cast<bool>(std::iswspace(cp));
+                g.base.is_new_line = cp == static_cast<char32>('\n');
 
                 m_glyphs.push_back(g);
             }

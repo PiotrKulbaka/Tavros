@@ -210,4 +210,38 @@ namespace tavros::resources
         return result;
     }
 
+    core::vector<uint8> file_reader::read_as_binary() const
+    {
+        if (!good()) {
+            throw core::file_error(core::file_error_tag::read_error, m_path, "File in bad state");
+        }
+
+        // Save current position
+        const auto current_pos = m_file.tellg();
+        if (current_pos < 0) {
+            throw core::file_error(core::file_error_tag::read_error, m_path, "tellg() failed in read_as_binary()");
+        }
+
+        // Move to beginning
+        m_file.seekg(0, std::ios::beg);
+        if (m_file.bad()) {
+            throw core::file_error(core::file_error_tag::read_error, m_path, "File in bad state");
+        }
+
+        core::vector<uint8> result;
+        result.resize(m_size, 0);
+        m_file.read(reinterpret_cast<char*>(result.data()), static_cast<std::streamsize>(m_size));
+
+        if (m_file.bad()) {
+            m_file.clear();
+            m_file.seekg(current_pos);
+            throw core::file_error(core::file_error_tag::read_error, m_path, "File in bad state");
+        }
+
+        m_file.clear();
+        m_file.seekg(current_pos);
+
+        return result;
+    }
+
 } // namespace tavros::resources

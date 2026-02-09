@@ -44,6 +44,8 @@ namespace tavros::core
             return "invalid_type";
         case invalid_value:
             return "invalid_value";
+        case invalid_data:
+            return "invalid_data";
         case unsupported:
             return "unsupported";
         }

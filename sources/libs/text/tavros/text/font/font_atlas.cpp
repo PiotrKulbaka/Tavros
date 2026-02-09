@@ -33,7 +33,7 @@ namespace tavros::text
         return m_need_to_recreate;
     }
 
-    font_atlas::atlas_pixels font_atlas::invalidate_old_and_bake_new_atlas(core::dynamic_buffer<uint8>& storage, float glyph_scale_pix, float glyph_sdf_pad_pix)
+    font_atlas::atlas_pixels font_atlas::invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix)
     {
         // 1. The first step is packing the rectangles
 
@@ -45,7 +45,7 @@ namespace tavros::text
 
         if (0 == total_glyphs) {
             ::logger.error("Atlas is empty");
-            return {nullptr, 0, 0, 0};
+            return {};
         }
 
         // Init rects
@@ -75,7 +75,7 @@ namespace tavros::text
         while (true) {
             if (pack_side_size >= 32768) {
                 ::logger.error("The atlas size is too big");
-                return {nullptr, 0, 0, 0};
+                return {};
             }
 
             // Does nothing the first time
@@ -107,12 +107,12 @@ namespace tavros::text
             }
         }
 
-        auto atlas_size = static_cast<size_t>(atlas_width) * static_cast<size_t>(atlas_height);
-        storage.reserve(atlas_size);
-        storage.fill(0, atlas_size, 0);
+
+        auto                atlas_size = static_cast<size_t>(atlas_width) * static_cast<size_t>(atlas_height);
+        auto                stride = atlas_width;
+        core::vector<uint8> pixels(atlas_size, 0);
 
         // Bake atlas
-        auto   atlas = atlas_pixels{storage.data(), atlas_width, atlas_height, atlas_width};
         size_t rect_idx = 0;
         for (auto* fnt : m_fonts) {
             auto num_glyphs = static_cast<font::glyph_index>(fnt->m_glyphs.size());
@@ -126,14 +126,14 @@ namespace tavros::text
                 g.entry.bottom = static_cast<uint16>(rect.y + rect.h);
 
                 // Bake glyph
-                auto offset = static_cast<size_t>(rect.y + 1) * static_cast<size_t>(atlas.stride) + static_cast<size_t>(rect.x + 1);
-                auto dst = core::buffer_span<uint8>(atlas.pixels + offset, atlas_size - offset);
+                auto offset = static_cast<size_t>(rect.y + 1) * static_cast<size_t>(stride) + static_cast<size_t>(rect.x + 1);
+                auto dst = core::buffer_span<uint8>(pixels.data() + offset, atlas_size - offset);
 
                 fnt->bake_glyph_bitmap(glyph_idx, glyph_scale_pix, glyph_sdf_pad_pix, dst, atlas_width);
             }
         }
 
-        return atlas;
+        return {pixels, atlas_width, atlas_height, stride};
     }
 
 } // namespace tavros::text

@@ -2,6 +2,7 @@
 
 #include <tavros/core/types.hpp>
 #include <tavros/core/noncopyable.hpp>
+#include <tavros/core/containers/vector.hpp>
 #include <tavros/core/containers/static_vector.hpp>
 
 #include <tavros/text/font/font.hpp>
@@ -24,20 +25,16 @@ namespace tavros::text
      * A rebuild is required whenever glyph sets change or when any font signals
      * modifications that affect its atlas placement.
      */
-    class font_atlas : core::noncopyable
+    class font_atlas
     {
     public:
         /**
-         * @brief Describes a baked atlas bitmap stored inside an external buffer.
-         *
-         * The @p pixels pointer references memory owned by the caller-provided
-         * dynamic buffer passed to invalidate_old_and_bake_new_atlas(). It remains
-         * valid until that buffer is resized.
+         * @brief Describes a baked atlas bitmap.
          */
         struct atlas_pixels
         {
             /// Pointer to 8-bit grayscale pixel data.
-            uint8* pixels = nullptr;
+            core::vector<uint8> pixels;
 
             /// Atlas width in pixels.
             uint32 width = 0;
@@ -48,6 +45,13 @@ namespace tavros::text
             /// Number of bytes per row.
             uint32 stride = 0;
         };
+
+        /// Maximum number of fonts the atlas can store without dynamic allocation.
+        /// A fixed-capacity container is used because typical usage rarely requires
+        /// many fonts in a single atlas, and this avoids heap overhead entirely.
+        /// If a project needs to support more fonts, the capacity may be increased
+        /// or the container can be replaced with a dynamically sized core::vector.
+        constexpr static size_t k_max_fonts = 128;
 
     public:
         /**
@@ -81,38 +85,21 @@ namespace tavros::text
         bool need_to_recreate_atlas() const noexcept;
 
         /**
-         * @brief Rebuilds the font atlas and writes its pixel data into @p storage.
+         * @brief Rebuilds the font atlas and writes its pixel data.
          *
          * This function recreates the atlas for all registered fonts, updates UV coordinates
-         * in these fonts, and writes the resulting single-channel (8-bit) grayscale/SDF bitmap
-         * into the supplied @p storage buffer.
+         * in these fonts, and writes the resulting single-channel (8-bit) grayscale/SDF bitmap.
          *
-         * If @p storage does not have enough capacity, it will be resized to the minimum
-         * required size. Pixel data is written starting from the beginning of the buffer.
-         *
-         * The returned atlas_pixels structure contains metadata and a pointer to the pixel
-         * data inside @p storage. The pointer remains valid until @p storage is resized again.
-         *
-         * @param storage          Dynamic buffer used as the memory for the atlas bitmap.
-         *                         Will be resized if its capacity is insufficient.
          * @param glyph_scale_pix  Glyph size in pixels used during baking.
          * @param glyph_sdf_pad_pix  Amount of SDF padding around each glyph, in pixels.
          *
-         * @return atlas_pixels     View describing the baked atlas data stored in @p storage.
+         * @return atlas_pixels     View describing the baked atlas.
          */
-        atlas_pixels invalidate_old_and_bake_new_atlas(core::dynamic_buffer<uint8>& storage, float glyph_scale_pix, float glyph_sdf_pad_pix);
+        atlas_pixels invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix);
 
     private:
-        /// Maximum number of fonts the atlas can store without dynamic allocation.
-        /// A fixed-capacity container is used because typical usage rarely requires
-        /// many fonts in a single atlas, and this avoids heap overhead entirely.
-        /// If a project needs to support more fonts, the capacity may be increased
-        /// or the container can be replaced with a dynamically sized core::vector.
-        constexpr static size_t k_max_fonts = 128;
-
         core::static_vector<font*, k_max_fonts> m_fonts;
-
-        bool m_need_to_recreate;
+        bool                                    m_need_to_recreate;
     };
 
 } // namespace tavros::text

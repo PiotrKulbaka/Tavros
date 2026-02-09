@@ -96,6 +96,7 @@ namespace tavros::core
         missing_field, /// Required field is missing from the input data.
         invalid_type,  /// Data type does not match the expected type.
         invalid_value, /// Value is outside the allowed or expected range.
+        invalid_data,  /// Data is corrupted or incorrect.
         unsupported,   /// Format or version is not supported.
     };
 

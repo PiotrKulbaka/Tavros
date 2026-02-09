@@ -5,15 +5,6 @@
 namespace tavros::text
 {
 
-    font::font() noexcept
-        : m_font_metrics(0.0f, 0.0f, 0.0f)
-    {
-    }
-
-    font::~font() noexcept
-    {
-    }
-
     font::glyph_index font::find_glyph(char32 codepoint) const noexcept
     {
         auto it = std::lower_bound(

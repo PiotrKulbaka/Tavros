@@ -113,6 +113,7 @@ namespace tavros::text
                     }
 
                     // While space
+                    bool new_line = false;
                     while (it < end && it->base.is_space) {
                         auto  scale = it->base.glyph_size;
                         auto& font_info = it->base.font->get_font_metrics();
@@ -123,6 +124,12 @@ namespace tavros::text
                         cur_word.line_gap_y = max_abs(cur_word.line_gap_y, font_info.line_gap_y * scale);
                         if (!is_leading_spaces) {
                             ++gaps_num;
+                        }
+
+                        if (it->base.is_new_line) {
+                            new_line = true;
+                            ++it;
+                            break;
                         }
 
                         ++it;
@@ -152,6 +159,10 @@ namespace tavros::text
 
                     } else {
                         return line.end;
+                    }
+
+                    if (new_line) {
+                        return it;
                     }
 
                     is_first_word_in_line = false;

@@ -3,11 +3,13 @@
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/defines.hpp>
 #include <tavros/core/math/functions/clamp.hpp>
+#include <tavros/core/exception.hpp>
 #include <stb/stb_truetype.h>
 
 namespace
 {
     tavros::core::logger logger("truetype_font");
+
 }
 
 namespace tavros::text
@@ -18,25 +20,11 @@ namespace tavros::text
         stbtt_fontinfo info;
     };
 
-    truetype_font::truetype_font() noexcept
-        : m_font_data(nullptr)
-        , m_is_init(false)
+    truetype_font::truetype_font(core::vector<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges)
+        : m_font_data(std::move(font_data))
         , m_scale(0.0f)
+        , m_impl()
     {
-    }
-
-    truetype_font::~truetype_font()
-    {
-        shutdown();
-    }
-
-    void truetype_font::init(core::dynamic_buffer<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges) noexcept
-    {
-        if (m_is_init) {
-            ::logger.error("Font already initialized");
-            return;
-        }
-
 #if TAV_DEBUG
         // Verify ranges
         TAV_ASSERT(codepoint_ranges.size() > 0);
@@ -53,12 +41,9 @@ namespace tavros::text
         }
 #endif
 
-        if (stbtt_InitFont(&m_impl->info, font_data.data(), 0) == 0) {
-            ::logger.error("Failed to init font data");
-            return;
+        if (stbtt_InitFont(&m_impl->info, m_font_data.data(), 0) == 0) {
+            throw core::format_error(core::format_error_tag::invalid_data, "Failed to init font data");
         }
-
-        m_font_data = std::move(font_data);
 
         int32 ascent, descent, line_gap;
         stbtt_GetFontVMetrics(&m_impl->info, &ascent, &descent, &line_gap);
@@ -104,23 +89,10 @@ namespace tavros::text
                 m_glyphs.emplace_back(cp, atlas_rect{}, glyph_metrics{advance, bearing, size});
             }
         }
-
-        m_is_init = true;
     }
 
-    bool truetype_font::is_init() const noexcept
+    truetype_font::~truetype_font() noexcept
     {
-        return m_is_init;
-    }
-
-    void truetype_font::shutdown() noexcept
-    {
-        if (m_is_init) {
-            m_is_init = false;
-            m_glyphs.clear();
-            m_font_metrics = {0.0f, 0.0f, 0.0f};
-            m_font_data = nullptr;
-        }
     }
 
     math::isize2 truetype_font::glyph_bitmap_size(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept

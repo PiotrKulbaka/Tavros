@@ -1132,28 +1132,21 @@ namespace tavros::renderer
 
     bool debug_renderer::create_font_atlas()
     {
-        auto ttf_data = core::dynamic_buffer<uint8>(&m_alc);
-        ttf_data.reserve(g_consola_mono_ttf_uncompressed_size);
-        auto compressed_ttf_data = core::buffer_view<uint8>(g_consola_mono_ttf_compressed_data, g_consola_mono_ttf_compressed_size);
+        core::vector<uint8> ttf_data(g_consola_mono_ttf_uncompressed_size, 0);
+        auto                compressed_ttf_data = core::buffer_view<uint8>(g_consola_mono_ttf_compressed_data, g_consola_mono_ttf_compressed_size);
         if (!core::uncompress_data(compressed_ttf_data, ttf_data)) {
             ::logger.fatal("Failed to uncompress ttf");
             return false;
         }
 
-        auto                                 ttf = core::make_shared<text::truetype_font>();
         text::truetype_font::codepoint_range glyph_range = {0, 0xffff};
-        ttf->init(std::move(ttf_data), glyph_range);
-        if (!ttf->is_init()) {
-            ::logger.fatal("Failed to init ttf");
-            return false;
-        }
+        auto                                 ttf = core::make_shared<text::truetype_font>(std::move(ttf_data), glyph_range);
         m_font = ttf;
 
         text::font_atlas atlas;
         atlas.register_font(m_font.get());
 
-        auto atlas_buffer = core::dynamic_buffer<uint8>(&m_alc);
-        auto atlas_pixels = atlas.invalidate_old_and_bake_new_atlas(atlas_buffer, k_atlas_font_scale_pix, k_atlas_sdf_size_pix);
+        auto atlas_pixels = atlas.invalidate_old_and_bake_new_atlas(k_atlas_font_scale_pix, k_atlas_sdf_size_pix);
         m_atlas_texture_size.set(atlas_pixels.width, atlas_pixels.height);
 
         rhi::texture_create_info tex_info;
@@ -1195,7 +1188,7 @@ namespace tavros::renderer
         }
 
         auto map = m_gdevice->map_buffer(m_stage, 0, atlas_pixels.width * atlas_pixels.height);
-        map.copy_from(atlas_pixels.pixels, atlas_pixels.width * atlas_pixels.height);
+        map.copy_from(atlas_pixels.pixels.data(), atlas_pixels.width * atlas_pixels.height);
         m_gdevice->unmap_buffer(m_stage);
 
         m_texture_copy_rgn.width = atlas_pixels.width;

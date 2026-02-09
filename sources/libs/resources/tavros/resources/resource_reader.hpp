@@ -4,6 +4,7 @@
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/resources/seek_dir.hpp>
 #include <tavros/core/memory/buffer.hpp>
+#include <tavros/core/containers/vector.hpp>
 
 namespace tavros::resources
 {
@@ -77,6 +78,17 @@ namespace tavros::resources
          *         (as thrown by std::ifstream).
          */
         virtual [[nodiscard]] core::string read_as_text() const = 0;
+
+        /**
+         * @brief Reads the content of the file as a binary data.
+         *
+         * @return core::vector<uint8> The contents of the file as a binary.
+         *
+         * @throws file_error If there is a problem accessing or reading the file.
+         * @throws std::ios_base::failure If an error occurs during stream operations
+         *         (as thrown by std::ifstream).
+         */
+        virtual [[nodiscard]] core::vector<uint8> read_as_binary() const = 0;
     };
 
 } // namespace tavros::resources

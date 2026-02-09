@@ -26,6 +26,8 @@ namespace tavros::resources
 
         core::string read_as_text() const override;
 
+        core::vector<uint8> read_as_binary() const override;
+
     private:
         mutable core::ifstream m_file;
         core::string_view      m_path;

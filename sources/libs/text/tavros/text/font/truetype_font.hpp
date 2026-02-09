@@ -2,7 +2,7 @@
 
 #include <tavros/text/font/font.hpp>
 #include <tavros/core/pimpl.hpp>
-#include <tavros/core/memory/buffer.hpp>
+#include <tavros/core/containers/vector.hpp>
 
 namespace tavros::text
 {
@@ -36,19 +36,7 @@ namespace tavros::text
 
     public:
         /**
-         * @brief Constructs an empty TrueType font object.
-         *
-         * The font is not initialized until @ref init is called.
-         */
-        truetype_font() noexcept;
-
-        /**
-         * @brief Destroys the font object and releases all allocated resources.
-         */
-        ~truetype_font() override;
-
-        /**
-         * @brief Initializes the font from raw TrueType data.
+         * @brief Constructs the font from raw TrueType data.
          *
          * The font data is expected to contain a full TTF or OTF file.
          * Only glyphs from the specified codepoint ranges are loaded.
@@ -62,20 +50,12 @@ namespace tavros::text
          * @param font_data         Raw font file stored in a dynamic buffer.
          * @param codepoint_ranges  List of Unicode ranges to load glyphs from.
          */
-        void init(core::dynamic_buffer<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges) noexcept;
+        truetype_font(core::vector<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges);
 
         /**
-         * @brief Checks whether the font has been successfully initialized.
-         *
-         * @return True if initialization completed successfully, false otherwise.
+         * @brief Destroys the font object.
          */
-        bool is_init() const noexcept;
-
-        /**
-         * @brief Releases all font-related resources and returns the object
-         * to an uninitialized state.
-         */
-        void shutdown() noexcept;
+        ~truetype_font() noexcept override;
 
     protected:
         math::isize2 glyph_bitmap_size(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept override;
@@ -85,9 +65,8 @@ namespace tavros::text
         float get_kerning_internal(char32 cp1, char32 cp2) const noexcept override;
 
     private:
-        core::dynamic_buffer<uint8> m_font_data;
-        bool                        m_is_init;
-        float                       m_scale;
+        core::vector<uint8> m_font_data;
+        float               m_scale;
 
         // Internal implementation details (stb_truetype state).
         struct impl;
