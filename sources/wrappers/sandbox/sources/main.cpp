@@ -2,6 +2,8 @@
 
 #include "render_app_base.hpp"
 #include "built_in_meshes.hpp"
+#include "fps_meter.hpp"
+
 #include <tavros/renderer/shaders/shader_loader.hpp>
 
 #include <tavros/core/memory/memory.hpp>
@@ -10,12 +12,14 @@
 #include <tavros/core/utf8.hpp>
 #include <tavros/core/geometry/aabb2.hpp>
 #include <tavros/core/exception.hpp>
+#include <tavros/core/timer.hpp>
 
 #include <tavros/renderer/rhi/command_queue.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/camera/camera.hpp>
 #include <tavros/renderer/debug_renderer.hpp>
 #include <tavros/renderer/render_target.hpp>
+#include <tavros/renderer/gpu_stream_buffer.hpp>
 
 #include <tavros/input/input_manager.hpp>
 
@@ -27,9 +31,7 @@
 #include <tavros/ui/button/button.hpp>
 #include <tavros/ui/root_view.hpp>
 
-#include <tavros/text/font/font.hpp>
-#include <tavros/text/font/truetype_font.hpp>
-#include <tavros/text/font/font_atlas.hpp>
+#include <tavros/text/font/font_library.hpp>
 #include <tavros/text/text_layout.hpp>
 
 #include <tavros/system/application.hpp>
@@ -95,28 +97,10 @@ struct color_component
 };
 
 
-template<class T>
-class gpu_draw_stream
-{
-public:
-    gpu_draw_stream();
-    ~gpu_draw_stream();
-
-    void reset();
-
-    void begin_stream() const noexcept;
-
-    void end_stream() const noexcept;
-
-private:
-    rhi::buffer_handle m_gpu_buffer;
-};
-
-
 template<class GlyphData>
 size_t fill_glyphs_instances(tavros::core::buffer_span<GlyphData> glyphs, tavros::core::buffer_span<glyph_instance> buf, tavros::math::vec2 pos_text, float pad)
 {
-    TAV_ASSERT(buf.size() == glyphs.size());
+    TAV_ASSERT(buf.size() >= glyphs.size());
 
     size_t len = 0;
     auto*  dst = buf.begin();
@@ -164,6 +148,25 @@ private:
     tavros::core::shared_ptr<tavros::resources::resource_manager> m_rm;
 };
 
+class my_font_data_provider : public tavros::text::font_data_provider
+{
+public:
+    my_font_data_provider(tavros::core::shared_ptr<tavros::resources::resource_manager> rm)
+        : m_rm(rm)
+    {
+    }
+
+    ~my_font_data_provider() noexcept override = default;
+
+    tavros::core::vector<uint8> load(tavros::core::string_view path) override
+    {
+        return m_rm->open(path)->reader()->read_as_binary();
+    }
+
+private:
+    tavros::core::shared_ptr<tavros::resources::resource_manager> m_rm;
+};
+
 class main_window : public app::render_app_base
 {
 public:
@@ -172,6 +175,7 @@ public:
         , m_imcodec(&m_allocator)
         , m_resource_manager(resource_manager)
         , m_sl(std::move(tavros::core::make_unique<my_shader_provider>(resource_manager)))
+        , m_font_lib(std::move(tavros::core::make_unique<my_font_data_provider>(resource_manager)))
     {
     }
 
@@ -227,42 +231,18 @@ public:
         return false;
     }
 
-    tavros::core::shared_ptr<tavros::text::font> load_ttf(tavros::core::string_view path, tavros::core::buffer_view<tavros::text::truetype_font::codepoint_range> ranges)
-    {
-        if (!m_text_atlas) {
-            m_text_atlas = tavros::core::make_shared<tavros::text::font_atlas>();
-        }
-
-        tavros::core::dynamic_buffer<uint8> font_data(&m_allocator);
-
-        auto reader = m_resource_manager->open(path)->reader();
-        font_data.reserve(reader->size());
-        reader->read(font_data);
-
-        auto ttf = tavros::core::make_shared<tavros::text::truetype_font>();
-        ttf->init(std::move(font_data), ranges);
-        if (!ttf->is_init()) {
-            ::logger.fatal("Failed to init font {}.", path);
-            exit_fail();
-        }
-
-        m_text_atlas->register_font(ttf.get());
-        return ttf;
-    }
-
     rhi::shader_binding_handle upload_font_data()
     {
-        tavros::core::dynamic_buffer<uint8> atlas(&m_allocator);
-        auto                                new_atlas_pix = m_text_atlas->invalidate_old_and_bake_new_atlas(atlas, k_font_scale_pix, k_sdf_size_pix);
+        auto new_atlas_pix = m_font_lib.invalidate_old_and_bake_new_atlas(k_font_scale_pix, k_sdf_size_pix);
 
         size_t                                      new_atlas_im_size = new_atlas_pix.width * new_atlas_pix.height;
-        tavros::resources::image_codec::pixels_view new_atlas_im{new_atlas_pix.width, new_atlas_pix.height, 1, new_atlas_pix.width, {new_atlas_pix.pixels, new_atlas_im_size}};
-        save_image(new_atlas_im, "font_atlas_new.png");
+        tavros::resources::image_codec::pixels_view new_atlas_im{new_atlas_pix.width, new_atlas_pix.height, 1, new_atlas_pix.width, {new_atlas_pix.pixels.data(), new_atlas_im_size}};
+        // save_image(new_atlas_im, "font_atlas_new.png");
 
         // create texture
         size_t tex_size = new_atlas_im.width * new_atlas_im.height;
         auto   dst = m_graphics_device->map_buffer(m_stage_buffer);
-        dst.copy_from(new_atlas_pix.pixels, tex_size);
+        dst.copy_from(new_atlas_pix.pixels.data(), tex_size);
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
         rhi::texture_create_info tex_info;
@@ -349,6 +329,10 @@ public:
             ::logger.fatal("Failed to get main frame composer.");
             exit_fail();
         }
+
+
+        m_stream_draw = tavros::core::make_unique<tavros::renderer::gpu_stream_buffer>(m_graphics_device.get(), 1024ull * 1024ull * 128ull, rhi::buffer_usage::vertex);
+
 
         m_offscreen_rt = tavros::core::make_unique<tavros::renderer::render_target>(rhi::pixel_format::rgba8un, rhi::pixel_format::depth32f);
         m_offscreen_rt->init(m_graphics_device.get());
@@ -572,23 +556,11 @@ public:
 
         show();
 
-        tavros::text::truetype_font::codepoint_range ranges[8];
-        ranges[0] = {0x0, 0x7f};
-        ranges[1] = {0xab, 0xbb};
-        ranges[2] = {0x401, 0x401};   // ru Ё
-        ranges[3] = {0x410, 0x44F};   // ru А–Яа–я
-        ranges[4] = {0x451, 0x451};   // ru ё
-        ranges[5] = {0x2012, 0x2014}; // dash
-        ranges[6] = {0x2022, 0x2026}; // circle, riangle, one dot, two dot, three dot
-        ranges[7] = {0xfffd, 0xfffd}; // replacement character
-
-
-        m_fonts.push_back(load_ttf("fonts/Consola-Mono.ttf", ranges));
-        m_fonts.push_back(load_ttf("fonts/DroidSans.ttf", ranges));
-        m_fonts.push_back(load_ttf("fonts/HomeVideo.ttf", ranges));
-        m_fonts.push_back(load_ttf("fonts/NotoSans-Regular.ttf", ranges));
-        m_fonts.push_back(load_ttf("fonts/Roboto-Medium.ttf", ranges));
-
+        m_font_lib.load("fonts/Consola-Mono.ttf", "Consola-Mono");
+        m_font_lib.load("fonts/DroidSans.ttf", "DroidSans");
+        m_font_lib.load("fonts/HomeVideo.ttf", "HomeVideo");
+        m_font_lib.load("fonts/NotoSans-Regular.ttf", "NotoSans-Regular");
+        m_font_lib.load("fonts/Roboto-Medium.ttf", "Roboto-Medium");
 
         m_font_shader_binding = upload_font_data();
 
@@ -622,13 +594,6 @@ public:
         m_sdf_font_pipeline = m_graphics_device->create_pipeline(sdf_font_pipeline_info);
         if (!m_sdf_font_pipeline) {
             ::logger.fatal("Failed to create sdf font rendering pipeline");
-            exit_fail();
-        }
-
-        rhi::buffer_create_info font_instance_buffer_info{1024 * 1024, rhi::buffer_usage::vertex, rhi::buffer_access::cpu_to_gpu};
-        m_font_buffer = m_graphics_device->create_buffer(font_instance_buffer_info);
-        if (!m_font_buffer) {
-            ::logger.fatal("Failed to create font instance buffer");
             exit_fail();
         }
 
@@ -696,7 +661,7 @@ public:
         m_view11.set_position({50, 150});
         m_view11.set_size({150, 100});
 
-        m_rich_line.set_text(lorem_ipsum_2, m_fonts[0].get(), 100.0f);
+        m_rich_line.set_text(lorem_ipsum_2, m_font_lib.fonts()[0].font.get(), 100.0f);
 
         for (auto& it : m_rich_line.glyphs()) {
             it.params.fill_color.set(255, 255, 255, 255);
@@ -706,6 +671,7 @@ public:
 
     void shutdown() override
     {
+        m_stream_draw = nullptr;
         m_drenderer.shutdown();
         m_root_view.shutdown();
         m_offscreen_rt->shutdown();
@@ -853,9 +819,15 @@ public:
 
     void render(tavros::input::event_args_queue_view events, double delta_time) override
     {
+        tavros::core::timer frame_timer;
+
         process_events(events, delta_time);
+        m_fps_meter.tick(delta_time);
 
         update_scene();
+
+        m_stream_draw->begin_frame();
+        m_frame_number++;
 
         m_drenderer.begin_frame(m_renderer_frame_data.orto_projection, m_renderer_frame_data.view_projection);
 
@@ -1039,11 +1011,7 @@ public:
             m_rich_line_align = tavros::text::text_align::justify;
         }
 
-
-        std::vector<glyph_instance> instance_info;
-        instance_info.reserve(m_rich_line.glyphs().size());
-
-        auto fnt = m_fonts[m_selected_font % m_fonts.size()];
+        auto fnt = m_font_lib.fonts()[m_selected_font % m_font_lib.fonts().size()].font;
         m_rich_line.set_style(0, m_rich_line.glyphs().size(), fnt.get(), m_font_height);
 
         float text_rect_width = 1200.0f;
@@ -1075,18 +1043,33 @@ public:
             m_drenderer.box2d(gbox, {0.0f, 1.0f, 0.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
         }*/
 
-        auto text_lay_rect = tavros::geometry::aabb2(150.0f, 50.0f, 150.0f + text_rect_width, 700.0f);
+        auto text_lay_rect = tavros::geometry::aabb2(150.0f, 300.0f, 150.0f + text_rect_width, 700.0f);
         m_drenderer.box2d(text_lay_rect, {1.0f, 1.0f, 1.0f, 1.0f}, tavros::renderer::debug_renderer::draw_mode::edges);
 
-        auto glyph_instances = tavros::core::buffer_span<glyph_instance>(instance_info.data(), m_rich_line.glyphs().size());
-        auto glyphs = tavros::core::buffer_view<tavros::text::glyph_data_param<glyph_params>>(m_rich_line.glyphs().data(), m_rich_line.glyphs().size());
+        tavros::core::string str_info;
+        str_info.reserve(1024);
+        str_info.append("Frame number: ");
+        str_info.append(std::to_string(m_frame_number));
+        str_info.append("\nAverage FPS: ");
+        str_info.append(std::to_string(m_fps_meter.average_fps()));
+        str_info.append("\nMedian FPS: ");
+        str_info.append(std::to_string(m_fps_meter.median_fps()));
+        str_info.append("\nLast frame time: ");
+        str_info.append(std::to_string(m_frame_time));
 
-        auto text_draw_size = fill_glyphs_instances(m_rich_line.glyphs(), glyph_instances, text_rect_pos, k_sdf_size_pix / k_font_scale_pix);
+        m_fps_line.set_text(str_info, m_font_lib.fonts()[0].font.get(), 48.0f);
+        for (auto& it : m_fps_line.glyphs()) {
+            it.params.fill_color.set(255, 200, 255, 255);
+            it.params.outline_color.set(255, 255, 255, 0);
+        }
+        tavros::text::text_layout::layout(m_fps_line.glyphs(), {10000.0f, 1.5f, tavros::text::text_align::left});
 
-        size_t size = m_rich_line.glyphs().size() * sizeof(glyph_instance);
-        auto   map_data = m_graphics_device->map_buffer(m_font_buffer, 0, size);
-        map_data.copy_from(instance_info.data(), size);
-        m_graphics_device->unmap_buffer(m_font_buffer);
+        auto glyph_instance_text_draw_slice = m_stream_draw->slice<glyph_instance>(m_rich_line.glyphs().size());
+        auto glyph_instance_fps_line_slice = m_stream_draw->slice<glyph_instance>(m_rich_line.glyphs().size());
+
+        auto text_draw_size = fill_glyphs_instances(m_rich_line.glyphs(), glyph_instance_text_draw_slice.data(), text_rect_pos, k_sdf_size_pix / k_font_scale_pix);
+        auto fps_text_draw_size = fill_glyphs_instances(m_fps_line.glyphs(), glyph_instance_fps_line_slice.data(), {16.0f, 16.0f}, k_sdf_size_pix / k_font_scale_pix);
+
 
         auto* cbuf = m_composer->create_command_queue();
         m_composer->begin_frame();
@@ -1114,9 +1097,14 @@ public:
         cbuf->bind_pipeline(m_sdf_font_pipeline);
         cbuf->bind_shader_binding(m_font_shader_binding);
         cbuf->bind_shader_binding(m_scene_binding);
-        rhi::bind_buffer_info font_vert_bufs[] = {{m_font_buffer, 0}, {m_font_buffer, 0}, {m_font_buffer, 0}, {m_font_buffer, 0}};
+        rhi::bind_buffer_info font_vert_bufs[] = {
+            {glyph_instance_text_draw_slice.gpu_buffer(), glyph_instance_text_draw_slice.offset_bytes()},
+            {glyph_instance_text_draw_slice.gpu_buffer(), glyph_instance_text_draw_slice.offset_bytes()},
+            {glyph_instance_text_draw_slice.gpu_buffer(), glyph_instance_text_draw_slice.offset_bytes()},
+            {glyph_instance_text_draw_slice.gpu_buffer(), glyph_instance_text_draw_slice.offset_bytes()}
+        };
         cbuf->bind_vertex_buffers(font_vert_bufs);
-        cbuf->bind_index_buffer(m_mesh_indices_buffer, rhi::index_buffer_format::u32);
+        // cbuf->bind_index_buffer(m_mesh_indices_buffer, rhi::index_buffer_format::u32);
 
         rhi::scissor_info text_scissor = {
             static_cast<int32>(tavros::math::floor(text_lay_rect.left)),
@@ -1127,6 +1115,18 @@ public:
         cbuf->set_scissor(text_scissor);
 
         cbuf->draw(4, 0, static_cast<uint32>(text_draw_size), 0);
+
+
+        rhi::bind_buffer_info font_vert_bufs_2[] = {
+            {glyph_instance_fps_line_slice.gpu_buffer(), glyph_instance_fps_line_slice.offset_bytes()},
+            {glyph_instance_fps_line_slice.gpu_buffer(), glyph_instance_fps_line_slice.offset_bytes()},
+            {glyph_instance_fps_line_slice.gpu_buffer(), glyph_instance_fps_line_slice.offset_bytes()},
+            {glyph_instance_fps_line_slice.gpu_buffer(), glyph_instance_fps_line_slice.offset_bytes()}
+        };
+        cbuf->bind_vertex_buffers(font_vert_bufs_2);
+
+        cbuf->set_scissor({0, 0, static_cast<int32>(m_composer->width()), static_cast<int32>(m_composer->height())});
+        cbuf->draw(4, 0, static_cast<uint32>(fps_text_draw_size), 0);
 
         m_drenderer.update();
         m_drenderer.render(cbuf);
@@ -1161,6 +1161,8 @@ public:
 
         m_composer->submit_command_queue(cbuf);
         m_composer->end_frame();
+
+        m_frame_time = static_cast<float>(frame_timer.elapsed_seconds());
         m_composer->wait_for_frame_complete();
         m_composer->present();
 
@@ -1189,7 +1191,7 @@ public:
             m_graphics_device->unmap_buffer(m_stage_upload_buffer);
         }
 
-        // std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        // std::this_thread::sleep_for(std::chrono::milliseconds(1));
 
         m_input_manager.end_frame();
     }
@@ -1223,7 +1225,6 @@ private:
     rhi::buffer_handle         m_mesh_indices_buffer;
     rhi::sampler_handle        m_sampler;
     rhi::buffer_handle         m_uniform_buffer;
-    rhi::buffer_handle         m_font_buffer;
     rhi::fence_handle          m_fence;
 
     tavros::renderer::debug_renderer m_drenderer;
@@ -1271,14 +1272,22 @@ private:
     tavros::ui::button    m_btn0;
     tavros::ui::button    m_btn1;
 
-    tavros::core::vector<tavros::core::shared_ptr<tavros::text::font>> m_fonts;
-    int32                                                              m_selected_font;
-    float                                                              m_text_pos_y = 50.0f;
-    tavros::core::shared_ptr<tavros::text::font_atlas>                 m_text_atlas;
+    int32 m_selected_font = 0;
+    float m_text_pos_y = 300.0f;
 
     tavros::text::rich_line<glyph_params> m_rich_line;
     tavros::text::text_align              m_rich_line_align = tavros::text::text_align::left;
     tavros::renderer::shader_loader       m_sl;
+
+    tavros::text::rich_line<glyph_params> m_fps_line;
+
+    size_t    m_frame_number = 0;
+    fps_meter m_fps_meter;
+    float     m_frame_time = 0.0f;
+
+    tavros::text::font_library m_font_lib;
+
+    tavros::core::unique_ptr<tavros::renderer::gpu_stream_buffer> m_stream_draw;
 };
 
 int main()
