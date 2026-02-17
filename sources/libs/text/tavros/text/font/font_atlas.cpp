@@ -133,6 +133,12 @@ namespace tavros::text
             }
         }
 
+        // 3. The last step is updating the sdf_padding_pix in font_metrics for all registered fonts
+        const float sdf_pad = glyph_sdf_pad_pix / glyph_scale_pix;
+        for (auto* fnt : m_fonts) {
+            fnt->m_font_metrics.sdf_padding_pix = sdf_pad;
+        }
+
         return {pixels, atlas_width, atlas_height, stride};
     }
 

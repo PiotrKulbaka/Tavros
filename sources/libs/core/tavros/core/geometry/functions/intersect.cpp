@@ -3,6 +3,7 @@
 #include <tavros/core/geometry/plane.hpp>
 #include <tavros/core/geometry/sphere.hpp>
 #include <tavros/core/geometry/ray3.hpp>
+#include <tavros/core/geometry/aabb2.hpp>
 
 namespace tavros::geometry
 {
@@ -34,6 +35,13 @@ namespace tavros::geometry
         auto       t = (dist_sq < radius_sq) ? (projection + delta) : (projection - delta);
 
         return t < 0.0f ? 0.0f : t;
+    }
+
+    bool intersects(const aabb2& box1, const aabb2& box2) noexcept
+    {
+        auto overlap_x = box1.min.x < box2.max.x && box1.max.x > box2.min.x;
+        auto overlap_y = box1.min.y < box2.max.y && box1.max.y > box2.min.y;
+        return overlap_x && overlap_y;
     }
 
 } // namespace tavros::geometry

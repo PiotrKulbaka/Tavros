@@ -5,6 +5,11 @@
 namespace tavros::text
 {
 
+    bool font::equals(const font& other) const noexcept
+    {
+        return this == &other;
+    }
+
     font::glyph_index font::find_glyph(char32 codepoint) const noexcept
     {
         auto it = std::lower_bound(
@@ -32,11 +37,9 @@ namespace tavros::text
         return m_glyphs[idx];
     }
 
-    float font::get_kerning(glyph_index left, glyph_index right) const noexcept
+    float font::get_kerning(char32 left_codepoint, char32 right_codepoint) const noexcept
     {
-        auto& l = get_glyph_info(left);
-        auto& r = get_glyph_info(right);
-        return get_kerning_internal(l.codepoint, r.codepoint);
+        return get_kerning_internal(left_codepoint, right_codepoint);
     }
 
 } // namespace tavros::text

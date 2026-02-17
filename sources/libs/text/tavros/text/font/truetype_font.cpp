@@ -49,7 +49,11 @@ namespace tavros::text
         stbtt_GetFontVMetrics(&m_impl->info, &ascent, &descent, &line_gap);
         m_scale = stbtt_ScaleForPixelHeight(&m_impl->info, 1.0f);
 
-        m_font_metrics = {static_cast<float>(ascent) * m_scale, static_cast<float>(descent) * m_scale, static_cast<float>(line_gap) * m_scale};
+        m_font_metrics.ascent_y = static_cast<float>(ascent) * m_scale;
+        m_font_metrics.descent_y = static_cast<float>(descent) * m_scale;
+        m_font_metrics.line_gap_y = static_cast<float>(line_gap) * m_scale;
+        m_font_metrics.sdf_padding_pix = 0.0f; // Set externally during calling 'invalidate_old_and_bake_new_atlas' method in 'font_atlas' class
+
 
         // Null glyph
         m_glyphs.emplace_back(0, atlas_rect{}, glyph_metrics{math::vec2(0.5f), math::vec2(0.0f), math::size2(0.4f, 0.5f)});

@@ -81,6 +81,9 @@ namespace tavros::text
 
             /// Additional space between lines. Usually positive.
             float line_gap_y = 0.0f;
+
+            /// Additional padding in pixels used when generating SDF bitmaps.
+            float sdf_padding_pix = 0.0f;
         };
 
     public:
@@ -88,6 +91,8 @@ namespace tavros::text
          * @brief Destroys the font instance.
          */
         virtual ~font() noexcept = default;
+
+        bool equals(const font& other) const noexcept;
 
         /**
          * @brief Finds the glyph index for a given Unicode codepoint.
@@ -117,11 +122,11 @@ namespace tavros::text
         /**
          * @brief Returns kerning adjustment between two glyphs.
          *
-         * @param left  Index of the left glyph.
-         * @param right Index of the right glyph.
+         * @param left_codepoint  left glyph codepoint.
+         * @param right_codepoint right glyph codepoint.
          * @return Horizontal kerning offset.
          */
-        float get_kerning(glyph_index left, glyph_index right) const noexcept;
+        float get_kerning(char32 left_codepoint, char32 right_codepoint) const noexcept;
 
     protected:
         /**

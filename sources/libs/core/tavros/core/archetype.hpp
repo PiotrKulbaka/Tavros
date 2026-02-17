@@ -130,6 +130,16 @@ namespace tavros::core
         {
         }
 
+        auto operator[](size_t index) noexcept
+        {
+            return std::forward_as_tuple(get_component_at<Components>(index)...);
+        }
+
+        const auto operator[](size_t index) const noexcept
+        {
+            return std::forward_as_tuple(get_component_at<Components>(index)...);
+        }
+
         /**
          * @brief Get a specific component at given index.
          *
@@ -175,6 +185,15 @@ namespace tavros::core
             }
         }
 
+        template<class Func>
+        void each_n(size_t first, size_t count, Func&& func)
+        {
+            size_t end = first + count;
+            for (size_t i = first; i < end; ++i) {
+                std::forward<Func>(func)(get_component_at<Components>(i)...);
+            }
+        }
+
         /**
          * @brief Iterate over all elements with index, invoking a callable for each.
          *
@@ -186,6 +205,15 @@ namespace tavros::core
         {
             const size_t n = m_container.size();
             for (size_t i = 0; i < n; ++i) {
+                std::forward<Func>(func)(i, get_component_at<Components>(i)...);
+            }
+        }
+
+        template<class Func>
+        void each_n_indexed(size_t first, size_t count, Func&& func)
+        {
+            size_t end = first + count;
+            for (size_t i = first; i < end; ++i) {
                 std::forward<Func>(func)(i, get_component_at<Components>(i)...);
             }
         }
@@ -233,7 +261,7 @@ namespace tavros::core
          */
         void reserve(size_t new_capacity)
         {
-            (get<Components>(m_storage).reserve(new_capacity), ...);
+            (get<Components>().reserve(new_capacity), ...);
         }
 
         /**
@@ -244,7 +272,7 @@ namespace tavros::core
          */
         void resize(size_t count)
         {
-            (get<Components>(m_storage).resize(count), ...);
+            (get<Components>().resize(count), ...);
         }
 
         /**
@@ -254,7 +282,7 @@ namespace tavros::core
          */
         void clear() noexcept
         {
-            (get<Components>(m_storage).clear(), ...);
+            (get<Components>().clear(), ...);
         }
 
         /**
@@ -295,7 +323,7 @@ namespace tavros::core
          * @note Static assertion fails if T is not part of the archetype.
          */
         template<class T>
-        auto& get()
+        auto& get() noexcept
         {
             static_assert(
                 (std::is_same_v<T, Components> || ...),
@@ -312,7 +340,7 @@ namespace tavros::core
          * @note Static assertion fails if T is not part of the archetype.
          */
         template<class T>
-        const auto& get() const
+        const auto& get() const noexcept
         {
             static_assert(
                 (std::is_same_v<T, Components> || ...),
@@ -327,9 +355,56 @@ namespace tavros::core
          * @param ts Component values to emplace.
          * @note Each component is forwarded to its respective vector.
          */
-        void emplace_back(Components&&... ts)
+        /*void emplace_back(Components&&... ts)
         {
             (get<Components>().emplace_back(std::forward<Components>(ts)), ...);
+        }*/
+
+        template<class C>
+        C&& select_arg(C&& arg)
+        {
+            return std::forward<C>(arg);
+        }
+
+        template<class C, class T, class... Rest>
+        decltype(auto) select_arg(T&& first, Rest&&... rest)
+        {
+            if constexpr (std::is_same_v<C, std::remove_cvref_t<T>>) {
+                return std::forward<T>(first);
+            } else {
+                return select_arg<C>(std::forward<Rest>(rest)...);
+            }
+        }
+
+        template<class C, class... Ts>
+        decltype(auto) get_arg_or_default(Ts&&... args)
+        {
+            if constexpr ((std::is_same_v<C, std::remove_cvref_t<Ts>> || ...)) {
+                return select_arg<C>(std::forward<Ts>(args)...);
+            } else {
+                return C{};
+            }
+        }
+
+        template<class... Ts>
+        void emplace_back(Ts&&... args)
+        {
+            static_assert(unique_types<std::remove_cvref_t<Ts>...>::value, "Duplicate component types passed");
+
+            static_assert((contains_type_v<std::remove_reference_t<Ts>, components> && ...), "One of the types is not in the archetype");
+
+            ([&] {
+                using C = Components;
+
+                if constexpr ((std::is_same_v<C, std::remove_cvref_t<Ts>> || ...)) {
+                    get<C>().emplace_back(
+                        get_arg_or_default<C>(std::forward<Ts>(args)...)
+                    );
+                } else {
+                    get<C>().emplace_back();
+                }
+            }(),
+             ...);
         }
 
         /**
