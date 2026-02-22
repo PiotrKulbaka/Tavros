@@ -9,9 +9,9 @@
 #include <tavros/core/memory/buffer.hpp>
 #include <tavros/core/containers/vector.hpp>
 
-#include <tavros/text/font/atlas_rect.hpp>
+#include <tavros/renderer/components/atlas_rect.hpp>
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     class font_atlas;
@@ -56,7 +56,7 @@ namespace tavros::text
             char32 codepoint = 0;
 
             /// Atlas entry describing UV placement.
-            atlas_rect entry;
+            atlas_rect_t entry;
 
             /// Layout and rendering metrics.
             glyph_metrics metrics;
@@ -164,4 +164,4 @@ namespace tavros::text
         core::vector<glyph_info> m_glyphs; /// Sorted by glyph_info::codepoint
     };
 
-} // namespace tavros::text
+} // namespace tavros::renderer

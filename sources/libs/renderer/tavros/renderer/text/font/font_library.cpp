@@ -1,9 +1,9 @@
-#include <tavros/text/font/font_library.hpp>
+#include <tavros/renderer/text/font/font_library.hpp>
 
 #include <tavros/core/exception.hpp>
-#include <tavros/text/font/truetype_font.hpp>
+#include <tavros/renderer/text/font/truetype_font.hpp>
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     font_library::font_library(core::unique_ptr<font_data_provider> dp) noexcept
@@ -62,4 +62,4 @@ namespace tavros::text
         return m_vector;
     }
 
-} // namespace tavros::text
+} // namespace tavros::renderer

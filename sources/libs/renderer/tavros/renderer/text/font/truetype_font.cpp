@@ -1,4 +1,4 @@
-#include <tavros/text/font/truetype_font.hpp>
+#include <tavros/renderer/text/font/truetype_font.hpp>
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/defines.hpp>
@@ -12,7 +12,7 @@ namespace
 
 }
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     struct truetype_font::impl
@@ -56,7 +56,7 @@ namespace tavros::text
 
 
         // Null glyph
-        m_glyphs.emplace_back(0, atlas_rect{}, glyph_metrics{math::vec2(0.5f), math::vec2(0.0f), math::size2(0.4f, 0.5f)});
+        m_glyphs.emplace_back(0, atlas_rect_t{}, glyph_metrics{math::vec2(0.5f), math::vec2(0.0f), math::size2(0.4f, 0.5f)});
 
         for (auto& range : codepoint_ranges) {
             char32 beg = range.first_codepoint;
@@ -90,7 +90,7 @@ namespace tavros::text
                     size = math::size2(x1f - x0f, y1f - y0f);
                 }
 
-                m_glyphs.emplace_back(cp, atlas_rect{}, glyph_metrics{advance, bearing, size});
+                m_glyphs.emplace_back(cp, atlas_rect_t{}, glyph_metrics{advance, bearing, size});
             }
         }
     }
@@ -158,4 +158,4 @@ namespace tavros::text
         return stbtt_GetCodepointKernAdvance(&m_impl->info, cp1, cp2) * m_scale;
     }
 
-} // namespace tavros::text
+} // namespace tavros::renderer

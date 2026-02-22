@@ -5,9 +5,9 @@
 #include <tavros/core/containers/vector.hpp>
 #include <tavros/core/containers/static_vector.hpp>
 
-#include <tavros/text/font/font.hpp>
+#include <tavros/renderer/text/font/font.hpp>
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     /**
@@ -102,4 +102,4 @@ namespace tavros::text
         bool                                    m_need_to_recreate;
     };
 
-} // namespace tavros::text
+} // namespace tavros::renderer

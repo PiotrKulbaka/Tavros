@@ -1,10 +1,10 @@
 #pragma once
 
-#include <tavros/text/font/font.hpp>
 #include <tavros/core/pimpl.hpp>
 #include <tavros/core/containers/vector.hpp>
+#include <tavros/renderer/text/font/font.hpp>
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     /**
@@ -73,4 +73,4 @@ namespace tavros::text
         core::pimpl<impl, 160, 8> m_impl;
     };
 
-} // namespace tavros::text
+} // namespace tavros::renderer

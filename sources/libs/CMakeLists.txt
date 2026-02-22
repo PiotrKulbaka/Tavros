@@ -1,5 +1,4 @@
 add_subdirectory(core)
-add_subdirectory(text)
 add_subdirectory(input)
 add_subdirectory(resources)
 add_subdirectory(renderer)

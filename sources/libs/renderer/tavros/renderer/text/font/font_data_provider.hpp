@@ -4,7 +4,7 @@
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/containers/vector.hpp>
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     /**
@@ -30,4 +30,4 @@ namespace tavros::text
         virtual core::vector<uint8> load(core::string_view path) = 0;
     };
 
-} // namespace tavros::text
+} // namespace tavros::renderer

@@ -1,4 +1,4 @@
-#include <tavros/text/font/font_atlas.hpp>
+#include <tavros/renderer/text/font/font_atlas.hpp>
 
 #include <tavros/core/math/bitops.hpp>
 #include <tavros/core/logger/logger.hpp>
@@ -10,7 +10,7 @@ namespace
     tavros::core::logger logger("font_atlas");
 }
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     font_atlas::font_atlas()
@@ -142,4 +142,4 @@ namespace tavros::text
         return {pixels, atlas_width, atlas_height, stride};
     }
 
-} // namespace tavros::text
+} // namespace tavros::renderer

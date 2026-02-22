@@ -5,11 +5,11 @@
 #include <tavros/core/string.hpp>
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/utils/string_string_view_comparator.hpp>
-#include <tavros/text/font/font.hpp>
-#include <tavros/text/font/font_atlas.hpp>
-#include <tavros/text/font/font_data_provider.hpp>
+#include <tavros/renderer/text/font/font.hpp>
+#include <tavros/renderer/text/font/font_atlas.hpp>
+#include <tavros/renderer/text/font/font_data_provider.hpp>
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     /**
@@ -113,4 +113,4 @@ namespace tavros::text
         font_atlas         m_atlas;
     };
 
-} // namespace tavros::text
+} // namespace tavros::renderer

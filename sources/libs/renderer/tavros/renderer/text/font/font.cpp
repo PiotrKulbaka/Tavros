@@ -1,8 +1,8 @@
-#include <tavros/text/font/font.hpp>
+#include <tavros/renderer/text/font/font.hpp>
 
 #include <algorithm>
 
-namespace tavros::text
+namespace tavros::renderer
 {
 
     bool font::equals(const font& other) const noexcept
@@ -42,4 +42,4 @@ namespace tavros::text
         return get_kerning_internal(left_codepoint, right_codepoint);
     }
 
-} // namespace tavros::text
+} // namespace tavros::renderer
