@@ -14,7 +14,6 @@ target_link_libraries(
         tav_system
         tav_resources
         tav_ui
-        tav_text
         tinyobjloader
         stb
 )

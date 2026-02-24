@@ -2,10 +2,10 @@
 
 #include <tavros/renderer/geometry/builtin_geometry_generator.hpp>
 #include <tavros/renderer/resources/consola_mono_ttf.hpp>
-#include <tavros/text/text_layout.hpp>
-#include <tavros/text/rich_line.hpp>
-#include <tavros/text/font/truetype_font.hpp>
-#include <tavros/text/font/font_atlas.hpp>
+#include <tavros/renderer/text/text_layouter.hpp>
+#include <tavros/renderer/text/text_builder.hpp>
+#include <tavros/renderer/text/font/truetype_font.hpp>
+#include <tavros/renderer/text/font/font_atlas.hpp>
 
 #include <tavros/core/raii/scoped_owner.hpp>
 #include <tavros/core/debug/unreachable.hpp>
@@ -417,47 +417,51 @@ namespace tavros::renderer
         }
     }
 
-    void debug_renderer::draw_text2d(core::string_view text, float text_size, text_layout text_layout_p, geometry::aabb2 rect, math::color color)
+    void debug_renderer::draw_text2d(core::string_view str, float text_size, geometry::aabb2 rect, math::color color, text_align h_align, vertical_align v_align, float line_spacing)
     {
-        text::rich_line line;
-        line.set_text(text, m_font.get(), text_size);
-
-        text::layout_params params;
-        params.width = rect.size().width;
-        params.line_spacing = text_layout_p.line_spacing;
-        params.align = text_layout_p.text_align;
-        auto  glyphs_bbox = text::text_layout::layout(line.glyphs(), params);
-        float pad = k_atlas_sdf_size_pix / k_atlas_font_scale_pix;
+        using text_t = tavros::core::archetype_base<glyph_c, atlas_rect_t, rect_layout_c, pos2_c>;
+        text_t text;
+        text_builder::append_text(text, str, m_font.get(), text_size);
+        auto text_bbox = text_layouter::layout(text, 0.0f, h_align, line_spacing);
 
         float y_off = 0.0f;
-        switch (text_layout_p.vert_align) {
+        switch (v_align) {
         case vertical_align::top:
             break;
         case vertical_align::center:
-            y_off = (rect.size().height - glyphs_bbox.size().height) / 2.0f;
+            y_off = (rect.height() - text_bbox.height()) / 2.0f;
             break;
         case vertical_align::bottom:
-            y_off = (rect.size().height - glyphs_bbox.size().height);
+            y_off = (rect.height() - text_bbox.height());
             break;
         }
 
-        for (const auto& it : line.glyphs()) {
-            instance_data_t d;
+        float x_off = 0.0f;
+        switch (h_align) {
+        case text_align::left:
+            break;
+        case text_align::center:
+            x_off = rect.width() / 2.0f;
+            break;
+        case text_align::right:
+            x_off = rect.width();
+            break;
+        }
 
+        auto base = rect.min + math::vec2(x_off, y_off);
+        text.view<atlas_rect_t, rect_layout_c, pos2_c>().each([&](const atlas_rect_t& r, const auto& l, const auto& p) {
+            instance_data_t d;
             d.color = color;
             d.uv1_uv2 = math::vec4(
-                static_cast<float>(it.base.rect.left) / m_atlas_texture_size.width,
-                static_cast<float>(it.base.rect.top) / m_atlas_texture_size.height,
-                static_cast<float>(it.base.rect.right) / m_atlas_texture_size.width,
-                static_cast<float>(it.base.rect.bottom) / m_atlas_texture_size.height
+                static_cast<float>(r.left) / m_atlas_texture_size.width,
+                static_cast<float>(r.top) / m_atlas_texture_size.height,
+                static_cast<float>(r.right) / m_atlas_texture_size.width,
+                static_cast<float>(r.bottom) / m_atlas_texture_size.height
             );
 
-            auto scaled_pad = pad * it.base.glyph_size;
-            auto size = it.base.layout.size();
-            d.model = math::mat4::scale_translate(size + scaled_pad * 2.0f, rect.min + it.base.layout.min - scaled_pad + math::vec2(0.0f, y_off));
-
+            d.model = math::mat4::scale_translate(l.size(), base + l.min + p);
             m_text.emplace_back(d);
-        }
+        });
     }
 
     void debug_renderer::point3d(const math::vec3& p, float point_size, const math::color& color)
@@ -1139,11 +1143,11 @@ namespace tavros::renderer
             return false;
         }
 
-        text::truetype_font::codepoint_range glyph_range = {0, 0xffff};
-        auto                                 ttf = core::make_shared<text::truetype_font>(std::move(ttf_data), glyph_range);
+        truetype_font::codepoint_range glyph_range = {0, 0xffff};
+        auto                           ttf = core::make_shared<truetype_font>(std::move(ttf_data), glyph_range);
         m_font = ttf;
 
-        text::font_atlas atlas;
+        font_atlas atlas;
         atlas.register_font(m_font.get());
 
         auto atlas_pixels = atlas.invalidate_old_and_bake_new_atlas(k_atlas_font_scale_pix, k_atlas_sdf_size_pix);

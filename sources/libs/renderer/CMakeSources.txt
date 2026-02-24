@@ -14,6 +14,11 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.hpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/components/aabb2_based.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/components/all.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/components/atlas_rect.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/components/vec2_based.hpp
+
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/geometry/builtin_geometry_generator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/geometry/builtin_geometry_generator.hpp
 
@@ -62,6 +67,22 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shaders/shader_source.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shaders/shader_source.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shaders/shader_source_provider.hpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/glyph_data.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/line_data.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/text_builder.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/text_layouter.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/text_line_breaker.hpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font_atlas.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font_atlas.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font_data_provider.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font_library.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font_library.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/truetype_font.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/truetype_font.hpp
 )
 
 set(TAV_RENDERER_MACOS_SOURCES

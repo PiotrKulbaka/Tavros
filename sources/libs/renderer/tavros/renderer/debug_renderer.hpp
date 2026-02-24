@@ -7,8 +7,8 @@
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/core/containers/vector.hpp>
 
-#include <tavros/text/font/font.hpp>
-#include <tavros/text/text_layout.hpp>
+#include <tavros/renderer/text/font/font.hpp>
+#include <tavros/renderer/text/text_layouter.hpp>
 
 namespace tavros::renderer
 {
@@ -30,13 +30,6 @@ namespace tavros::renderer
             bottom,
         };
 
-        struct text_layout
-        {
-            text::text_align text_align = text::text_align::left;
-            vertical_align   vert_align = vertical_align::top;
-            float            line_spacing = 1.0f;
-        };
-
         debug_renderer();
         ~debug_renderer();
 
@@ -55,7 +48,7 @@ namespace tavros::renderer
         void tri2d(math::vec2 p1, math::vec2 p2, math::vec2 p3, math::color color, draw_mode mode = draw_mode::faces);
         void box2d(geometry::aabb2 rect, math::color color, draw_mode mode = draw_mode::faces);
         void box2d(geometry::obb2 box, math::color color, draw_mode mode = draw_mode::faces);
-        void draw_text2d(core::string_view text, float text_size, text_layout layout_params, geometry::aabb2 rect, math::color color);
+        void draw_text2d(core::string_view str, float size, geometry::aabb2 rect, math::color color, text_align h_align = text_align::left, vertical_align v_align = vertical_align::top, float line_spacing = 1.0f);
 
         void point3d(const math::vec3& p, float point_size, const math::color& color);
         void line3d(const math::vec3& p1, const math::vec3& p2, const math::color& color);
@@ -192,7 +185,7 @@ namespace tavros::renderer
         rhi::texture_copy_region   m_texture_copy_rgn;
         math::vec2                 m_atlas_texture_size;
 
-        core::shared_ptr<text::font> m_font;
+        core::shared_ptr<font> m_font;
     };
 
 } // namespace tavros::renderer

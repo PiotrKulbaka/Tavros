@@ -36,6 +36,16 @@ math::vec2 aabb2::size() const noexcept
     return max - min;
 }
 
+float aabb2::width() const noexcept
+{
+    return max.x - min.x;
+}
+
+float aabb2::height() const noexcept
+{
+    return max.y - min.y;
+}
+
 float aabb2::area() const noexcept
 {
     const math::vec2 s = size();
