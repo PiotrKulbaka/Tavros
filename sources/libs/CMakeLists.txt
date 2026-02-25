@@ -1,6 +1,6 @@
 add_subdirectory(core)
 add_subdirectory(input)
-add_subdirectory(resources)
+add_subdirectory(assets)
 add_subdirectory(renderer)
 add_subdirectory(ui)
 add_subdirectory(system)

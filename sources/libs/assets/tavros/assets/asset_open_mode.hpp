@@ -1,6 +1,6 @@
 #pragma once
 
-namespace tavros::resources
+namespace tavros::assets
 {
 
     /**
@@ -9,16 +9,13 @@ namespace tavros::resources
      * Specifies whether a resource is opened for reading, writing,
      * or both. Used when creating or opening resources through a provider.
      */
-    enum class resource_access
+    enum class asset_open_mode
     {
-        /// Resource is opened in read-only mode.
+        /// Asset is opened in read-only mode.
         read_only,
 
         ///  Resource is opened in write-only mode.
         write_only,
-
-        ///  Resource is opened in both read and write mode.
-        read_write,
     };
 
-} // namespace tavros::resources
+} // namespace tavros::assets

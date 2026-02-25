@@ -40,12 +40,12 @@ namespace tavros::geometry
          * @brief Returns the size (width and height) of the AABB.
          */
         math::vec2 size() const noexcept;
-        
+
         /**
          * @brief Returns the width of the AABB.
          */
         float width() const noexcept;
-        
+
         /**
          * @brief Returns the height of the AABB.
          */

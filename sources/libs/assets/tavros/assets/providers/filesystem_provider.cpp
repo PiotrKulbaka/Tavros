@@ -1,9 +1,9 @@
-#include <tavros/resources/providers/filesystem_provider.hpp>
+#include <tavros/assets/providers/filesystem_provider.hpp>
 
-#include <tavros/resources/io/file_resource.hpp>
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/debug_break.hpp>
 #include <tavros/core/exception.hpp>
+#include <tavros/assets/io/file_stream.hpp>
 
 #include <filesystem>
 
@@ -12,35 +12,35 @@ namespace
     tavros::core::logger logger("filesystem_provider");
 }
 
-namespace tavros::resources
+namespace tavros::assets
 {
 
-    filesystem_provider::filesystem_provider(core::string_view path, resource_access access)
+    filesystem_provider::filesystem_provider(core::string_view path, asset_open_mode open_mode)
         : m_base(path)
-        , m_access(access)
+        , m_open_mode(open_mode)
     {
         if (!exists(path)) {
-            ::logger.warning("Filesystem provider for `{}` created, but path is invalid", path);
+            ::logger.error("Filesystem provider for `{}` created, but path is invalid", path);
         }
     }
 
     filesystem_provider::~filesystem_provider() = default;
 
-    bool filesystem_provider::available_for_read(core::string_view path) const noexcept
+    bool filesystem_provider::can_read(core::string_view path) const noexcept
     {
-        return resource_access::read_only == m_access || resource_access::read_write == m_access;
+        return asset_open_mode::read_only == m_open_mode;
     }
 
-    bool filesystem_provider::available_for_write(core::string_view path) const noexcept
+    bool filesystem_provider::can_write(core::string_view path) const noexcept
     {
-        return resource_access::write_only == m_access || resource_access::read_write == m_access;
+        return asset_open_mode::write_only == m_open_mode;
     }
 
     bool filesystem_provider::exists(core::string_view path) const
     {
-        std::filesystem::path full_path = std::filesystem::path(m_base) / std::filesystem::path(path);
-        std::error_code       ec;
-        auto                  ret = std::filesystem::exists(full_path, ec);
+        auto            full_path = std::filesystem::path(m_base) / std::filesystem::path(path);
+        std::error_code ec;
+        auto            ret = std::filesystem::exists(full_path, ec);
         if (ec.value() == 0) {
             return ret;
         }
@@ -64,11 +64,14 @@ namespace tavros::resources
         throw core::file_error(core::file_error_tag::permission_denied, full_path.string(), ec.message());
     }
 
-    core::shared_ptr<resource> filesystem_provider::open(core::string_view path)
+    core::unique_ptr<asset_stream> filesystem_provider::open(core::string_view path, asset_open_mode open_mode)
     {
         auto full_path = std::filesystem::path(m_base) / std::filesystem::path(path);
+        if (open_mode != m_open_mode) {
+            throw core::file_error(core::file_error_tag::open_failed, full_path.string(), "incorrect opening mode");
+        }
         auto native_path = full_path.string();
-        return core::make_shared<file_resource>(native_path, m_access);
+        return core::make_unique<file_stream>(native_path, open_mode);
     }
 
-} // namespace tavros::resources
+} // namespace tavros::assets

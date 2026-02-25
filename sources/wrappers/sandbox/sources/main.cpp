@@ -24,9 +24,9 @@
 
 #include <tavros/input/input_manager.hpp>
 
-#include <tavros/resources/resource_manager.hpp>
-#include <tavros/resources/providers/filesystem_provider.hpp>
-#include <tavros/resources/codecs/image_codec.hpp>
+#include <tavros/assets/asset_manager.hpp>
+#include <tavros/assets/providers/filesystem_provider.hpp>
+#include <tavros/assets/codecs/image_codec.hpp>
 
 #include <tavros/ui/view.hpp>
 #include <tavros/ui/button/button.hpp>
@@ -102,8 +102,7 @@ using my_text_t = tavros::core::archetype_base<
     tavros::renderer::rect_layout_c,
     tavros::renderer::pos2_c,
     tavros::renderer::primary_color_c,
-    tavros::renderer::outline_color_c
->;
+    tavros::renderer::outline_color_c>;
 using my_text_lines_t = tavros::core::archetype_base<tavros::renderer::text_line_c>;
 
 
@@ -162,8 +161,8 @@ void append_text_colored(Text& text, tavros::core::string_view str, const tavros
 class my_shader_provider : public tavros::renderer::shader_source_provider
 {
 public:
-    my_shader_provider(tavros::core::shared_ptr<tavros::resources::resource_manager> rm)
-        : m_rm(rm)
+    my_shader_provider(tavros::core::shared_ptr<tavros::assets::asset_manager> am)
+        : m_am(am)
     {
     }
 
@@ -171,18 +170,18 @@ public:
 
     tavros::core::string load(tavros::core::string_view path) override
     {
-        return m_rm->open(path)->reader()->read_as_text();
+        return m_am->read_text(path);
     }
 
 private:
-    tavros::core::shared_ptr<tavros::resources::resource_manager> m_rm;
+    tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
 };
 
 class my_font_data_provider : public tavros::renderer::font_data_provider
 {
 public:
-    my_font_data_provider(tavros::core::shared_ptr<tavros::resources::resource_manager> rm)
-        : m_rm(rm)
+    my_font_data_provider(tavros::core::shared_ptr<tavros::assets::asset_manager> am)
+        : m_am(am)
     {
     }
 
@@ -190,22 +189,22 @@ public:
 
     tavros::core::vector<uint8> load(tavros::core::string_view path) override
     {
-        return m_rm->open(path)->reader()->read_as_binary();
+        return m_am->read_binary(path);
     }
 
 private:
-    tavros::core::shared_ptr<tavros::resources::resource_manager> m_rm;
+    tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
 };
 
 class main_window : public app::render_app_base
 {
 public:
-    main_window(tavros::core::string_view name, tavros::core::shared_ptr<tavros::resources::resource_manager> resource_manager)
+    main_window(tavros::core::string_view name, tavros::core::shared_ptr<tavros::assets::asset_manager> am)
         : app::render_app_base(name)
         , m_imcodec(&m_allocator)
-        , m_resource_manager(resource_manager)
-        , m_sl(std::move(tavros::core::make_unique<my_shader_provider>(resource_manager)))
-        , m_font_lib(std::move(tavros::core::make_unique<my_font_data_provider>(resource_manager)))
+        , m_resource_manager(am)
+        , m_sl(std::move(tavros::core::make_unique<my_shader_provider>(am)))
+        , m_font_lib(std::move(tavros::core::make_unique<my_font_data_provider>(am)))
     {
     }
 
@@ -227,14 +226,14 @@ public:
         return buffer;
     }
 
-    tavros::resources::image_codec::pixels_view load_image(tavros::core::string_view path, bool y_flip = false)
+    tavros::assets::image_codec::pixels_view load_image(tavros::core::string_view path, bool y_flip = false)
     {
         tavros::core::dynamic_buffer<uint8> buffer(&m_allocator);
 
         try {
-            auto reader = m_resource_manager->open(path, tavros::resources::resource_access::read_only)->reader();
-            buffer.reserve(reader->size());
-            reader->read(buffer);
+            auto stream = m_resource_manager->open(path, tavros::assets::asset_open_mode::read_only);
+            buffer.reserve(stream->size());
+            stream->read(buffer);
         } catch (tavros::core::file_error& e) {
             ::logger.error("Failed to open image '{}'", e.path());
         }
@@ -243,16 +242,16 @@ public:
         return m_imcodec.decode(buffer, 4, y_flip);
     }
 
-    bool save_image(const tavros::resources::image_codec::pixels_view& pixels, tavros::core::string_view path, bool y_flip = false)
+    bool save_image(const tavros::assets::image_codec::pixels_view& pixels, tavros::core::string_view path, bool y_flip = false)
     {
-        auto im_data = m_imcodec.encode(pixels, tavros::resources::image_codec::image_format::png, y_flip);
+        auto im_data = m_imcodec.encode(pixels, tavros::assets::image_codec::image_format::png, y_flip);
         if (im_data.empty()) {
             ::logger.error("Failed to save image '{}': im_data is empty()", path);
             return false;
         }
 
         try {
-            m_resource_manager->open(path, tavros::resources::resource_access::write_only)->writer()->write(im_data);
+            m_resource_manager->open(path, tavros::assets::asset_open_mode::write_only)->write(im_data);
             return true;
         } catch (const tavros::core::file_error& e) {
             ::logger.error("Failed to save image: '{}'", e.path());
@@ -265,9 +264,9 @@ public:
     {
         auto new_atlas_pix = m_font_lib.invalidate_old_and_bake_new_atlas(96.0f, 8.0f);
 
-        size_t new_atlas_im_size = new_atlas_pix.width * new_atlas_pix.height;
-        tavros::resources::image_codec::pixels_view new_atlas_im{new_atlas_pix.width, new_atlas_pix.height, 1, new_atlas_pix.width, {new_atlas_pix.pixels.data(), new_atlas_im_size}};
-        //save_image(new_atlas_im, "font_atlas_new.png");
+        size_t                                   new_atlas_im_size = new_atlas_pix.width * new_atlas_pix.height;
+        tavros::assets::image_codec::pixels_view new_atlas_im{new_atlas_pix.width, new_atlas_pix.height, 1, new_atlas_pix.width, {new_atlas_pix.pixels.data(), new_atlas_im_size}};
+        // save_image(new_atlas_im, "font_atlas_new.png");
 
         // create texture
         size_t tex_size = new_atlas_im.width * new_atlas_im.height;
@@ -865,14 +864,14 @@ public:
         m_graphics_device->unmap_buffer(m_stage_buffer);
 
         m_fps_line.clear();
-		append_text_colored(m_fps_line, "Frame number: ", m_font_lib.fonts()[0].font.get(), 36.0f, {1.0, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
-		append_text_colored(m_fps_line, std::to_string(m_frame_number), m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
-		append_text_colored(m_fps_line, "\nAverage FPS: ", m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
-		append_text_colored(m_fps_line, std::to_string(m_fps_meter.average_fps()), m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
-		append_text_colored(m_fps_line, "\nMedian FPS: ", m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
-		append_text_colored(m_fps_line, std::to_string(m_fps_meter.median_fps()), m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
-		append_text_colored(m_fps_line, "\nLast frame time: ", m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
-		append_text_colored(m_fps_line, std::to_string(m_frame_time), m_font_lib.fonts()[0].font.get(), 36.0f, {1.0, 1.0, 1.0, 1.0}, {0.5, 1.0, 0.5, 0.0});
+        append_text_colored(m_fps_line, "Frame number: ", m_font_lib.fonts()[0].font.get(), 36.0f, {1.0, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
+        append_text_colored(m_fps_line, std::to_string(m_frame_number), m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
+        append_text_colored(m_fps_line, "\nAverage FPS: ", m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
+        append_text_colored(m_fps_line, std::to_string(m_fps_meter.average_fps()), m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
+        append_text_colored(m_fps_line, "\nMedian FPS: ", m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
+        append_text_colored(m_fps_line, std::to_string(m_fps_meter.median_fps()), m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
+        append_text_colored(m_fps_line, "\nLast frame time: ", m_font_lib.fonts()[0].font.get(), 36.0f, {0.8, 0.2, 1.0, 1.0}, {1.0, 1.0, 1.0, 0.0});
+        append_text_colored(m_fps_line, std::to_string(m_frame_time), m_font_lib.fonts()[0].font.get(), 36.0f, {1.0, 1.0, 1.0, 1.0}, {0.5, 1.0, 0.5, 0.0});
 
         tavros::renderer::text_layouter::layout(m_fps_line);
 
@@ -907,7 +906,7 @@ public:
         cbuf->bind_pipeline(m_sdf_font_pipeline);
         cbuf->bind_shader_binding(m_font_shader_binding);
         cbuf->bind_shader_binding(m_scene_binding);
-        
+
         rhi::bind_buffer_info font_vert_bufs_2[] = {
             {glyph_instance_fps_line_slice.gpu_buffer(), glyph_instance_fps_line_slice.offset_bytes()},
             {glyph_instance_fps_line_slice.gpu_buffer(), glyph_instance_fps_line_slice.offset_bytes()},
@@ -974,9 +973,9 @@ public:
             }
 
             // Save screenshot
-            tavros::resources::image_codec::pixels_view im_color{static_cast<uint32>(width), static_cast<uint32>(height), channels, stride, {screenshot_pixels.data(), static_cast<size_t>(stride * height)}};
+            tavros::assets::image_codec::pixels_view im_color{static_cast<uint32>(width), static_cast<uint32>(height), channels, stride, {screenshot_pixels.data(), static_cast<size_t>(stride * height)}};
             save_image(im_color, "color.png", true);
-            tavros::resources::image_codec::pixels_view im_depth{width, height, 1, width, {depth_data.data(), static_cast<size_t>(width * height)}};
+            tavros::assets::image_codec::pixels_view im_depth{width, height, 1, width, {depth_data.data(), static_cast<size_t>(width * height)}};
             save_image(im_depth, "depth.png", true);
 
             m_graphics_device->unmap_buffer(m_stage_upload_buffer);
@@ -992,7 +991,7 @@ private:
     tavros::core::unique_ptr<rhi::graphics_device> m_graphics_device;
     rhi::frame_composer*                           m_composer = nullptr;
 
-    tavros::resources::image_codec m_imcodec;
+    tavros::assets::image_codec m_imcodec;
 
     tavros::core::unique_ptr<tavros::renderer::render_target> m_offscreen_rt;
 
@@ -1020,7 +1019,7 @@ private:
 
     uint32 m_current_buffer_output_index = 0;
 
-    tavros::core::shared_ptr<tavros::resources::resource_manager> m_resource_manager;
+    tavros::core::shared_ptr<tavros::assets::asset_manager> m_resource_manager;
 
     tavros::input::input_manager m_input_manager;
     tavros::renderer::camera     m_camera;
@@ -1061,7 +1060,7 @@ private:
     tavros::ui::button    m_btn0;
     tavros::ui::button    m_btn1;
 
-    my_text_t                       m_fps_line;
+    my_text_t m_fps_line;
 
     tavros::renderer::shader_loader m_sl;
 
@@ -1078,10 +1077,10 @@ int main()
 {
     tavros::core::logger::add_consumer([](auto lvl, auto tag, auto msg) { printf("%s\n", msg.data()); });
 
-    auto resource_manager = tavros::core::make_shared<tavros::resources::resource_manager>();
-    resource_manager->mount<tavros::resources::filesystem_provider>(TAV_ASSETS_PATH, tavros::resources::resource_access::read_only);
-    resource_manager->mount<tavros::resources::filesystem_provider>(TAV_ASSETS_PATH "/shaders", tavros::resources::resource_access::read_only);
-    resource_manager->mount<tavros::resources::filesystem_provider>(TAV_OUTPUT_PATH, tavros::resources::resource_access::write_only);
+    auto resource_manager = tavros::core::make_shared<tavros::assets::asset_manager>();
+    resource_manager->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH, tavros::assets::asset_open_mode::read_only);
+    resource_manager->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH "/shaders", tavros::assets::asset_open_mode::read_only);
+    resource_manager->mount<tavros::assets::filesystem_provider>(TAV_OUTPUT_PATH, tavros::assets::asset_open_mode::write_only);
 
     auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", resource_manager);
     wnd->run_render_loop();

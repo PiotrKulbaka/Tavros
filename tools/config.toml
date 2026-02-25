@@ -13,7 +13,7 @@ lib_core = "${path.libs}/core"
 lib_input = "${path.libs}/input"
 lib_renderer = "${path.libs}/renderer"
 lib_system = "${path.libs}/system"
-lib_resources = "${path.libs}/resources"
+lib_assets = "${path.libs}/assets"
 lib_ui = "${path.libs}/ui"
 
 
@@ -26,7 +26,7 @@ include = [
     "${path.lib_input}",
     "${path.lib_renderer}",
     "${path.lib_system}",
-    "${path.lib_resources}",
+    "${path.lib_assets}",
     "${path.lib_ui}",
     "${path.wrappers}/sandbox",
 ]
@@ -40,7 +40,7 @@ collect_paths = [
     "${path.lib_input}",
     "${path.lib_renderer}",
     "${path.lib_system}",
-    "${path.lib_resources}",
+    "${path.lib_assets}",
     "${path.lib_ui}",
     "${path.wrappers}/sandbox",
     "${path.tests}/sources",

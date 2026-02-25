@@ -1,4 +1,4 @@
-#include <tavros/resources/codecs/image_codec.hpp>
+#include <tavros/assets/codecs/image_codec.hpp>
 
 #include <tavros/core/debug/unreachable.hpp>
 #include <tavros/core/logger/logger.hpp>
@@ -10,7 +10,7 @@ namespace
     tavros::core::logger logger("image_codec");
 }
 
-namespace tavros::resources
+namespace tavros::assets
 {
 
     image_codec::image_codec(tavros::core::allocator* alc)
@@ -125,4 +125,4 @@ namespace tavros::resources
         return {m_buffer.data(), ctx.size};
     }
 
-} // namespace tavros::resources
+} // namespace tavros::assets

@@ -3,7 +3,7 @@
 #include <tavros/core/memory/dynamic_buffer.hpp>
 #include <tavros/core/memory/buffer_view.hpp>
 
-namespace tavros::resources
+namespace tavros::assets
 {
 
     /**
@@ -95,4 +95,4 @@ namespace tavros::resources
         core::dynamic_buffer<uint8> m_buffer;
     };
 
-} // namespace tavros::resources
+} // namespace tavros::assets
