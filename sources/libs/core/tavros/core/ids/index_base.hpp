@@ -4,10 +4,11 @@
 
 namespace tavros::core
 {
+
     /// @brief Represents the type used for indices.
-    using index_type = uint64;
+    using index_t = uint32;
 
     /// @brief Special constant representing an invalid or uninitialized index.
-    constexpr index_type invalid_index = 0xffffffffffffffffui64;
+    constexpr index_t invalid_index = 0xffffffffui32;
 
 } // namespace tavros::core

@@ -6,7 +6,12 @@
 namespace tavros::core
 {
 
-    index_type l3_bitmap_index_allocator::allocate() noexcept
+    l3_bitmap_index_allocator::l3_bitmap_index_allocator() noexcept
+    {
+        reset();
+    }
+
+    index_t l3_bitmap_index_allocator::allocate() noexcept
     {
         const size_t l1_base_index = 0; // Always 0
         const uint64 l1_word = m_l1_map[l1_base_index];
@@ -26,7 +31,7 @@ namespace tavros::core
 
                     TAV_ASSERT(index < k_max_index);
 
-                    --m_remaining;
+                    ++m_size;
 
                     // Update l3 map
                     m_l3_map[l3_base_index] |= (1ull << l3_free_bit);
@@ -43,7 +48,7 @@ namespace tavros::core
                         }
                     }
 
-                    return static_cast<index_type>(index);
+                    return static_cast<index_t>(index);
                 }
             }
         }
@@ -51,15 +56,7 @@ namespace tavros::core
         return invalid_index;
     }
 
-    void l3_bitmap_index_allocator::deallocate(index_type index) noexcept
-    {
-        TAV_ASSERT(index < k_max_index);
-        auto deallocated = try_deallocate(index);
-        TAV_ASSERT(deallocated);
-        (void) deallocated;
-    }
-
-    bool l3_bitmap_index_allocator::try_deallocate(index_type index) noexcept
+    bool l3_bitmap_index_allocator::deallocate(index_t index) noexcept
     {
         if (index >= k_max_index) {
             return false;
@@ -81,9 +78,9 @@ namespace tavros::core
             return false;
         }
 
-        ++m_remaining;
+        --m_size;
 
-        TAV_ASSERT(m_remaining <= k_max_index);
+        TAV_ASSERT(m_size < k_max_index);
 
         m_l3_map[l3_base_index] &= ~(1ull << l3_bit_idx);
         if (l3_word == UINT64_MAX) {
@@ -104,7 +101,7 @@ namespace tavros::core
         return true;
     }
 
-    bool l3_bitmap_index_allocator::allocated(index_type index) const noexcept
+    bool l3_bitmap_index_allocator::contains(index_t index) const noexcept
     {
         if (index >= k_max_index) {
             return false;
@@ -123,18 +120,17 @@ namespace tavros::core
         memset(m_l1_map, 0, sizeof(m_l1_map));
         memset(m_l2_map, 0, sizeof(m_l2_map));
         memset(m_l3_map, 0, sizeof(m_l3_map));
-
-        m_remaining = k_max_index;
+        m_size = 0;
     }
 
-    size_t l3_bitmap_index_allocator::max_index() const noexcept
+    size_t l3_bitmap_index_allocator::capacity() const noexcept
     {
         return k_max_index;
     }
 
-    size_t l3_bitmap_index_allocator::remaining() const noexcept
+    size_t l3_bitmap_index_allocator::size() const noexcept
     {
-        return m_remaining;
+        return m_size;
     }
 
 } // namespace tavros::core

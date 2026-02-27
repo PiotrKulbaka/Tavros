@@ -68,8 +68,10 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/functions/project.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/functions/project.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/index.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/handle_allocator.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/handle_base.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/index_allocator.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/index_base.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/l2_bitmap_index_allocator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/l2_bitmap_index_allocator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ids/l3_bitmap_index_allocator.cpp

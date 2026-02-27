@@ -60,8 +60,8 @@ namespace tavros::core
         {
             // m_idx_alc can be in dirty state and m_res can be nullptr, because this object was moved
             if (m_res) {
-                for (index_type i = 0; i <= m_max_idx; ++i) {
-                    if (m_idx_alc.allocated(i)) {
+                for (index_t i = 0; i <= m_max_idx; ++i) {
+                    if (m_idx_alc.contains(i)) {
                         std::destroy_at(m_res + i);
                     }
                 }
@@ -110,8 +110,8 @@ namespace tavros::core
             if (this != &other) {
                 if (m_mem) {
                     // Destroy existing objects and free memory
-                    for (index_type i = 0; i <= m_max_idx; ++i) {
-                        if (m_idx_alc.allocated(i)) {
+                    for (index_t i = 0; i <= m_max_idx; ++i) {
+                        if (m_idx_alc.contains(i)) {
                             std::destroy_at(m_res + i);
                         }
                     }
@@ -148,8 +148,8 @@ namespace tavros::core
         template<typename Fn>
         void for_each(Fn&& fun)
         {
-            for (index_type i = 0; i <= m_max_idx; ++i) {
-                if (m_idx_alc.allocated(i)) {
+            for (index_t i = 0; i <= m_max_idx; ++i) {
+                if (m_idx_alc.contains(i)) {
                     handle_type h = make_handle(i);
                     T&          res = m_res[i];
                     fun(h, res);
@@ -174,7 +174,7 @@ namespace tavros::core
         {
             auto idx = extract_index(h.id);
             if (idx < m_capacity && (extract_gen(h.id) == current_gen(idx))) {
-                return m_idx_alc.allocated(idx);
+                return m_idx_alc.contains(idx);
             }
             return false;
         }
@@ -217,7 +217,7 @@ namespace tavros::core
                 return nullptr;
             }
 
-            if (!m_idx_alc.allocated(idx)) {
+            if (!m_idx_alc.contains(idx)) {
                 return nullptr;
             }
 
@@ -298,15 +298,15 @@ namespace tavros::core
                 return false;
             }
 
-            auto success = m_idx_alc.try_deallocate(idx);
+            auto success = m_idx_alc.deallocate(idx);
             if (!success) {
                 return false;
             }
 
             if (m_max_idx == idx && idx > 0) {
-                index_type i = idx - 1;
+                index_t i = idx - 1;
                 while (i > 0) {
-                    if (m_idx_alc.allocated(i)) {
+                    if (m_idx_alc.contains(i)) {
                         break;
                     }
                     --i;
@@ -327,7 +327,7 @@ namespace tavros::core
          */
         void clear()
         {
-            for (index_type i = 0; i <= m_max_idx; ++i) {
+            for (index_t i = 0; i <= m_max_idx; ++i) {
                 if (m_idx_alc.allocated(i)) {
                     m_res[i].~T();
                 }
@@ -338,7 +338,7 @@ namespace tavros::core
         }
 
     private:
-        void ensure_allocation(index_type idx)
+        void ensure_allocation(index_t idx)
         {
             auto new_capacity = adapt_capacity(static_cast<size_t>(idx) + 1);
             if (m_capacity < new_capacity) {
@@ -373,7 +373,7 @@ namespace tavros::core
                 return 2;
             }
             size_t adapted = static_cast<size_t>(math::ceil_power_of_two(capacity));
-            size_t max_idx = static_cast<size_t>(m_idx_alc.max_index());
+            size_t max_idx = static_cast<size_t>(m_idx_alc.capacity());
 
             if (adapted > max_idx) {
                 return max_idx;
@@ -388,8 +388,8 @@ namespace tavros::core
             std::fill(new_gen + m_capacity, new_gen + new_capacity, 0);
 
             // Move objects
-            for (index_type i = 0; i <= m_max_idx; ++i) {
-                if (m_idx_alc.allocated(i)) {
+            for (index_t i = 0; i <= m_max_idx; ++i) {
+                if (m_idx_alc.contains(i)) {
                     // Move to new object
                     new (new_objects + i) T(std::move(m_res[i]));
                     // Deallocate old object
@@ -398,23 +398,23 @@ namespace tavros::core
             }
         }
 
-        handle_type make_handle(index_type idx) const
+        handle_type make_handle(index_t idx) const
         {
             uint64 gen = static_cast<uint64>(current_gen(idx));
             return handle_type{(gen << 32) | idx};
         }
 
-        uint8 current_gen(index_type idx) const
+        uint8 current_gen(index_t idx) const
         {
             return m_gen[idx];
         }
 
-        void increase_gen(index_type idx)
+        void increase_gen(index_t idx)
         {
             ++m_gen[idx];
         }
 
-        static index_type extract_index(uint64 h_id)
+        static index_t extract_index(uint64 h_id)
         {
             return h_id & 0xffffffffu;
         }
@@ -427,7 +427,7 @@ namespace tavros::core
     private:
         allocator* m_mem_alc = nullptr; // Dynamic memory allocator
         idx_alc_t  m_idx_alc;           // TODO: upgrade to dynamic index allocator
-        index_type m_max_idx = 0;       // Optimization for loops
+        index_t    m_max_idx = 0;       // Optimization for loops
 
         void*  m_mem = nullptr;         // memory pointer
         uint8* m_gen = nullptr;         // generation

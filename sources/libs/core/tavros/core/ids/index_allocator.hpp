@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/ids/index.hpp>
+#include <tavros/core/ids/index_base.hpp>
 #include <tavros/core/noncopyable.hpp>
 
 namespace tavros::core
@@ -8,11 +8,10 @@ namespace tavros::core
 
     /**
      * @class index_allocator
-     * @brief Base interface for all index allocators.
+     * @brief Abstract base for index allocators.
      *
-     * This class defines the fundamental operations for index allocation
-     * and management. It does not provide an implementation, only the API
-     * contract to be followed by derived classes.
+     * Manages a set of integer indices in range [0, capacity()).
+     * All operations are noexcept - errors reported via return values.
      *
      * @note All indices are 0-based.
      */
@@ -20,66 +19,72 @@ namespace tavros::core
     {
     public:
         /**
-         * @brief Virtual destructor for safe polymorphic destruction.
+         * @brief Virtual destructor.
          */
         virtual ~index_allocator() noexcept = default;
 
         /**
-         * @brief Allocates and returns a free index from the allocator.
+         * @brief Allocate the next free index.
          *
-         * @return index_type A valid index if available; otherwise, returns `invalid_index`.
-         * @note The caller is responsible for eventually deallocating the returned index.
+         * @return Valid index, or invalid_index if capacity exhausted.
          */
-        virtual [[nodiscard]] index_type allocate() noexcept = 0;
+        [[nodiscard]] virtual index_t allocate() noexcept = 0;
 
         /**
-         * @brief Releases a previously allocated index back to the allocator.
+         * @brief Deallocate a previously allocated index.
          *
-         * @param index The index to deallocate. Must have been previously returned by `allocate()`.
-         * @note Behavior is undefined if the index was not allocated or has already been deallocated.
+         * @param index the index to deallocate.
+         * @return true if deallocated, false if index was not allocated.
+         * @note Safe to call with invalid or already-freed index.
          */
-        virtual void deallocate(index_type index) noexcept = 0;
+        virtual bool deallocate(index_t index) noexcept = 0;
 
         /**
-         * @brief Attempts to deallocate a previously allocated index.
-         *
-         * @param index The index to deallocate. Must have been previously returned by `allocate()`.
-         * @return `true` if the index was successfully deallocated, or `false` if the index
-         *         was not currently allocated.
-         */
-        virtual [[nodiscard]] bool try_deallocate(index_type index) noexcept = 0;
-
-        /**
-         * @brief Checks whether the given index is currently allocated.
+         * @brief Check if index is currently allocated.
          *
          * @param index The index to check.
          * @return `true` if the index is currently allocated, or `false` otherwise.
          */
-        virtual [[nodiscard]] bool allocated(index_type index) const noexcept = 0;
+        [[nodiscard]] virtual bool contains(index_t index) const noexcept = 0;
 
         /**
-         * @brief Resets the allocator, marking all indices as free.
-         *
-         * @note After calling this function, `remaining()` will equal `max_index()`.
-         * @note All previously allocated indices become invalid.
+         * @brief Reset all indices to free state.
          */
         virtual void reset() noexcept = 0;
 
         /**
-         * @brief Returns the total capacity of the allocator.
-         *
-         * @return size_t The maximum number of indices that can ever be allocated.
-         * @note This value is constant for the lifetime of the allocator instance.
+         * @brief Returns the maximum number of indices.
          */
-        virtual [[nodiscard]] size_t max_index() const noexcept = 0;
+        [[nodiscard]] virtual size_t capacity() const noexcept = 0;
 
         /**
-         * @brief Returns the number of indices currently available for allocation.
-         *
-         * @return size_t The number of free indices remaining.
-         * @note After construction or `reset()`, this will equal `max_index()`.
+         * @brief Returns the number of currently allocated indices.
          */
-        virtual [[nodiscard]] size_t remaining() const noexcept = 0;
+        [[nodiscard]] virtual size_t size() const noexcept = 0;
+
+        /**
+         * @brief Returns 'true' if no index is allocated.
+         */
+        [[nodiscard]] bool empty() const noexcept
+        {
+            return size() == 0;
+        }
+
+        /**
+         * @brief Returns 'true' if the allocator has allocated all possible indices.
+         */
+        [[nodiscard]] bool full() const noexcept
+        {
+            return size() == capacity();
+        }
+
+        /**
+         * @brief Returns the number of free indexes.
+         */
+        [[nodiscard]] size_t available() const noexcept
+        {
+            return capacity() - size();
+        }
     };
 
 } // namespace tavros::core
