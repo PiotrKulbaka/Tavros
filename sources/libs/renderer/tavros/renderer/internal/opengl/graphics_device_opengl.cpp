@@ -123,17 +123,8 @@ namespace
     template<class HandleT, class Del>
     void destroy_for(tavros::renderer::rhi::device_resources_opengl& res, Del deleter)
     {
-        static_assert(sizeof(uint64) == sizeof(HandleT));
-
         auto& pool = res.get_pool<tavros::renderer::rhi::device_resources_opengl::object_type_of<HandleT>>();
-
-        tavros::core::vector<HandleT> handles;
-        handles.reserve(pool.size());
-        pool.for_each([&](auto h, auto&) {
-            handles.push_back(HandleT(h.id));
-        });
-
-        for (auto h : handles) {
+        for (auto [h, obj] : pool) {
             deleter(h);
         }
     }
@@ -145,7 +136,7 @@ namespace tavros::renderer::rhi
 
     graphics_device_opengl::graphics_device_opengl()
         : graphics_device()
-        , m_resources(&m_internal_allocator)
+        , m_resources()
     {
         ::logger.debug("graphics_device_opengl created");
     }
@@ -238,7 +229,13 @@ namespace tavros::renderer::rhi
         bool has_native_handle = false;
 
         auto& pool = m_resources.get_pool<gl_composer>();
-        pool.for_each([&](auto h, auto& v) { if (info.native_handle == v.info.native_handle) { has_native_handle = true; } });
+        for (auto [handle, obj] : pool) {
+            if (info.native_handle == obj->info.native_handle) {
+                has_native_handle = true;
+                break;
+            }
+        }
+
         if (has_native_handle) {
             ::logger.error("Failed to create frame composer: native handle {} already exists", info.native_handle);
             return {};

@@ -110,17 +110,17 @@ namespace tavros::renderer::rhi
         using handle_of = typename handle_type_traits<T>::type;
 
     public:
-        explicit device_resources_opengl(core::allocator* alc)
-            : m_samplers(alc)
-            , m_composers(alc)
-            , m_shader_bindings(alc)
-            , m_shaders(alc)
-            , m_textures(alc)
-            , m_pipelines(alc)
-            , m_framebuffers(alc)
-            , m_buffers(alc)
-            , m_render_passes(alc)
-            , m_fences(alc)
+        explicit device_resources_opengl()
+            : m_samplers()
+            , m_composers()
+            , m_shader_bindings()
+            , m_shaders()
+            , m_textures()
+            , m_pipelines()
+            , m_framebuffers()
+            , m_buffers()
+            , m_render_passes()
+            , m_fences()
         {
         }
 

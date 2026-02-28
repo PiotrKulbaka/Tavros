@@ -1,6 +1,5 @@
 #pragma once
 
-#include <tavros/core/memory/mallocator.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/internal/opengl/device_resources_opengl.hpp>
 
@@ -85,7 +84,6 @@ namespace tavros::renderer::rhi
             uint32 max_framebuffer_height = 0;
         };
 
-        core::mallocator        m_internal_allocator;
         device_resources_opengl m_resources;
         gl_limits               m_limits;
     };

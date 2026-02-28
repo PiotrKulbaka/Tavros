@@ -4,6 +4,7 @@
 #include <tavros/core/debug/verify.hpp>
 #include <tavros/core/math/bitops.hpp>
 #include <tavros/core/memory/raw_ptr.hpp>
+#include <tavros/core/containers/vector.hpp>
 #include <tavros/core/ids/handle_allocator.hpp>
 #include <tavros/core/ids/l3_bitmap_index_allocator.hpp>
 
@@ -15,20 +16,25 @@ namespace tavros::core
     /**
      * @brief Pool that manages objects of type T with stable handles.
      *
-     * Objects are stored in contiguous memory, and handles are used to access them.
-     * Moving the pool does not invalidate handles for the moved objects.
+     * Objects are stored in contiguous memory indexed by handle slots.
+     * Handles remain valid across memory expansions - moving the pool
+     * does not invalidate any issued handle.
      *
-     * The pool allocates memory in powers-of-two sizes to efficiently grow
-     * and always keeps objects in a single contiguous block of memory,
-     * minimizing fragmentation. At any given time, the pool uses at most
-     * one contiguous dynamic memory block. Full defragmentation is the
-     * responsibility of the allocator provided to the pool.
+     * Storage grows in powers of two. At any given time a single contiguous
+     * block is used, minimising fragmentation.
      *
-     * The type T must be nothrow-move-constructible, because objects
-     * may be relocated during memory expansion.
+     * @par Complexity
+     * - `emplace` / `push` - O(1) amortized; O(n) on expansion (moves all live objects)
+     * - `erase`            - O(1)
+     * - `find`             - O(1)
+     * - iteration          - O(allocated slots)
      *
-     * Accessing objects is extremely fast, typically O(1), except in rare
-     * cases when memory expansion and object relocation occur.
+     * @par Requirements
+     * T must be nothrow-move-constructible so that objects can be safely
+     * relocated when the storage buffer is expanded.
+     *
+     * @tparam T    Type of managed objects.
+     * @tparam Tag  Handle tag type satisfying @ref handle_tagged.
      */
     template<class T, handle_tagged Tag>
     class object_pool final : noncopyable
@@ -37,29 +43,98 @@ namespace tavros::core
         using handle_type = handle_base<Tag>;
         using handle_allocator_type = handle_allocator<Tag, l3_bitmap_index_allocator>;
 
-        static_assert(handle_allocator_type::k_capacity < 0xffffffffu, "index allocator supports more indices than 32 bits");
-        static_assert(std::is_nothrow_move_constructible_v<T>, "object_pool requires noexcept move for exception-safety when expanding");
+        static_assert(handle_allocator_type::k_capacity < 0xffffffffu, 
+            "index allocator supports more indices than 32 bits");
+        static_assert(std::is_nothrow_move_constructible_v<T>,
+            "object_pool requires noexcept move for exception-safety when expanding");
 
     public:
         /**
-         * @brief Construct a object pool with a memory allocator.
-         * @param alc Memory allocator to use for internal allocations.
+         * @brief Forward iterator over live objects in the pool.
+         *
+         * Dereferencing yields `std::pair<handle_type, T*>` — the handle and
+         * a pointer to the corresponding object.
+         *
+         * @tparam IsConst  If @c true, the pointer in the pair is @c const T*.
          */
-        object_pool(allocator* alc) noexcept
-            : m_mem_alc(alc)
+        template<bool IsConst>
+        class iterator_base
         {
-            TAV_VERIFY(alc);
-        }
+            using pool_ptr = std::conditional_t<IsConst, const object_pool*, object_pool*>;
+            using handle_iter = std::conditional_t<IsConst, typename handle_allocator_type::const_iterator, typename handle_allocator_type::iterator>;
+            using object_ptr = std::conditional_t<IsConst, const T*, T*>;
+
+        public:
+            using iterator_category = std::forward_iterator_tag;
+            using value_type = std::pair<handle_type, object_ptr>;
+            using difference_type = std::ptrdiff_t;
+            using reference = value_type;
+            using pointer = void;
+
+            iterator_base() noexcept = default;
+
+            iterator_base(pool_ptr pool, handle_iter it) noexcept
+                : m_pool(pool)
+                , m_it(it)
+            {
+            }
+
+            /// @brief Implicit conversion from non-const to const iterator.
+            operator iterator_base<true>() const noexcept
+                requires(!IsConst)
+            {
+                return {m_pool, m_it};
+            }
+
+            reference operator*() const noexcept
+            {
+                auto h = *m_it;
+                return {h, m_pool->slot_ptr(h.index())};
+            }
+
+            iterator_base& operator++() noexcept
+            {
+                ++m_it;
+                return *this;
+            }
+
+            iterator_base operator++(int) noexcept
+            {
+                auto copy = *this;
+                ++m_it;
+                return copy;
+            }
+
+            bool operator==(const iterator_base& other) const noexcept
+            {
+                return m_it == other.m_it;
+            }
+
+            bool operator!=(const iterator_base& other) const noexcept
+            {
+                return m_it != other.m_it;
+            }
+
+        private:
+            pool_ptr    m_pool = nullptr;
+            handle_iter m_it = {};
+        };
+
+        using iterator = iterator_base<false>;
+        using const_iterator = iterator_base<true>;
+
+    public:
+        /**
+         * @brief Construct an object pool.
+         */
+        object_pool() noexcept = default;
 
         /**
-         * @brief Destructor destroys all allocated objects and frees memory.
+         * @brief Destroys all live objects and releases storage.
          */
         ~object_pool() noexcept
         {
-            if (m_mem) {
-                destroy_all();
-                m_mem_alc->deallocate(m_mem.get());
-            }
+            destroy_all();
         }
 
         /**
@@ -73,24 +148,11 @@ namespace tavros::core
         object_pool& operator=(object_pool&& other) noexcept = default;
 
         /**
-         * @brief Iterate over all allocated objects and apply a function.
-         * @param fun Function to call for each handle and object reference.
-         */
-        template<typename Func>
-        void for_each(Func&& func)
-        {
-            for (auto h : m_h_alc) {
-                auto i = h.index();
-                func(h, m_res.get()[i]);
-            }
-        }
-
-        /**
          * @brief Returns the number of currently allocated objects.
          */
         [[nodiscard]] size_t size() const noexcept
         {
-            return m_h_alc.size();
+            return m_handle_alloc.size();
         }
 
         /**
@@ -98,7 +160,7 @@ namespace tavros::core
          */
         [[nodiscard]] bool empty() const noexcept
         {
-            return m_h_alc.empty();
+            return m_handle_alloc.empty();
         }
 
         /**
@@ -109,7 +171,7 @@ namespace tavros::core
          */
         [[nodiscard]] size_t capacity() const noexcept
         {
-            return m_capacity;
+            return m_storage.capacity();
         }
 
         /**
@@ -133,36 +195,28 @@ namespace tavros::core
          */
         [[nodiscard]] bool contains(handle_type handle) const noexcept
         {
-            return m_h_alc.contains(handle);
+            return m_handle_alloc.contains(handle);
         }
 
         /**
          * @brief Returns a pointer to the object identified by @p handle, or @c nullptr if invalid.
-         * @param handle Handle to look up.
-         * @return Pointer to the object, or @c nullptr if the handle is stale or invalid.
          */
         [[nodiscard]] T* find(handle_type handle) noexcept
         {
-            return m_h_alc.contains(handle) ? m_res.get() + handle.index() : nullptr;
+            return m_handle_alloc.contains(handle) ? slot_ptr(handle.index()) : nullptr;
         }
 
         /**
          * @brief Returns a const pointer to the object identified by @p handle, or @c nullptr if invalid.
-         * @param handle Handle to look up.
-         * @return Const pointer to the object, or @c nullptr if the handle is stale or invalid.
          */
         [[nodiscard]] const T* find(handle_type handle) const noexcept
         {
-            return m_h_alc.contains(handle) ? m_res.get() + handle.index() : nullptr;
+            return m_handle_alloc.contains(handle) ? slot_ptr(handle.index()) : nullptr;
         }
 
         /**
-         * @brief Inserts a copy of @p res into the pool.
-         *
-         * May trigger memory expansion and relocation of all existing objects.
-         *
-         * @param res Object to copy.
-         * @return Handle to the newly inserted object, or a null handle if the pool is full.
+         * @brief Copies @p res into the pool.
+         * @return Handle to the inserted object, or null if the pool is full.
          */
         [[nodiscard]] handle_type push(const T& res)
         {
@@ -171,11 +225,7 @@ namespace tavros::core
 
         /**
          * @brief Moves @p res into the pool.
-         *
-         * May trigger memory expansion and relocation of all existing objects.
-         *
-         * @param res Object to move.
-         * @return Handle to the newly inserted object, or a null handle if the pool is full.
+         * @return Handle to the inserted object, or null if the pool is full.
          */
         [[nodiscard]] handle_type push(T&& res)
         {
@@ -185,40 +235,42 @@ namespace tavros::core
         /**
          * @brief Constructs an object in-place inside the pool.
          *
-         * Arguments are forwarded directly to the constructor of T.
-         * May trigger memory expansion and relocation of all existing objects.
+         * If storage expansion or construction throws, the allocated handle
+         * is released and the exception is re-thrown. The pool remains valid.
          *
-         * @tparam Args Constructor argument types.
-         * @param args  Arguments forwarded to `T(args...)`.
-         * @return Handle to the newly constructed object, or a null handle if the pool is full.
+         * @return Handle to the constructed object, or null if the pool is full.
          */
         template<typename... Args>
         [[nodiscard]] handle_type emplace(Args&&... args)
         {
-            auto h = m_h_alc.allocate();
-            if (h) {
-                auto idx = h.index();
+            auto h = m_handle_alloc.allocate();
+            if (!h) {
+                return {};
+            }
+
+            auto idx = h.index();
+            try {
                 ensure_allocation(idx);
-                std::construct_at(m_res.get() + idx, std::forward<Args>(args)...);
+                std::construct_at(slot_ptr(h.index()), std::forward<Args>(args)...);
+            } catch (...) {
+                m_handle_alloc.deallocate(h);
+                throw;
             }
 
             return h;
         }
 
         /**
-         * @brief Removes the object identified by @p handle from the pool.
+         * @brief Destroys the object identified by @p handle and frees its slot.
          *
-         * The handle becomes invalid immediately. Any other copies of the handle
-         * will also be considered stale.
+         * All copies of @p handle become stale immediately.
          *
-         * @param handle Handle of the object to erase.
-         * @return @c true if the object was found and erased; @c false if the handle was invalid.
+         * @return @c true if erased, @c false if the handle was invalid.
          */
         bool erase(handle_type handle)
         {
-            if (m_h_alc.deallocate(handle)) {
-                auto idx = handle.index();
-                std::destroy_at(m_res.get() + idx);
+            if (m_handle_alloc.deallocate(handle)) {
+                std::destroy_at(slot_ptr(handle.index()));
                 return true;
             }
             return false;
@@ -227,69 +279,73 @@ namespace tavros::core
         /**
          * @brief Destroys all objects and resets the pool to an empty state.
          *
-         * Allocated memory is retained. All previously issued handles become invalid.
+         * Storage capacity is retained. All issued handles become invalid.
          */
         void clear()
         {
             destroy_all();
-            m_h_alc.reset();
+            m_handle_alloc.reset();
+        }
+
+        [[nodiscard]] iterator begin() noexcept
+        {
+            return {this, m_handle_alloc.begin()};
+        }
+
+        [[nodiscard]] iterator end() noexcept
+        {
+            return {this, m_handle_alloc.end()};
+        }
+
+        [[nodiscard]] const_iterator begin() const noexcept
+        {
+            return {this, m_handle_alloc.begin()};
+        }
+
+        [[nodiscard]] const_iterator end() const noexcept
+        {
+            return {this, m_handle_alloc.end()};
         }
 
     private:
         void destroy_all() noexcept
         {
-            if (m_res) {
-                for (auto h : m_h_alc) {
-                    std::destroy_at(m_res.get() + h.index());
-                }
+            for (auto h : m_handle_alloc) {
+                std::destroy_at(slot_ptr(h.index()));
             }
         }
 
         void ensure_allocation(index_t idx)
         {
-            auto new_capacity = adapt_capacity(static_cast<size_t>(idx) + 1);
-            if (m_capacity >= new_capacity) {
+            if (idx < m_storage.size()) {
                 return;
             }
 
-            auto  required_size = new_capacity * sizeof(T) + alignof(T);
-            auto* new_mem = static_cast<uint8*>(m_mem_alc->allocate(required_size, 8, "object_pool"));
-            TAV_ASSERT(new_mem);
-
-            auto res_addr = math::align_up(reinterpret_cast<size_t>(new_mem), alignof(T));
-            T*   new_res = reinterpret_cast<T*>(res_addr);
-
-            if (m_mem != nullptr) {
-                for (auto h : m_h_alc) {
-                    auto i = h.index();
-                    new (new_res + i) T(std::move(m_res.get()[i]));
-                    std::destroy_at(m_res.get() + i);
-                }
-                m_mem_alc->deallocate(m_mem.get());
-            }
-
-            m_mem = new_mem;
-            m_res = new_res;
-            m_capacity = new_capacity;
-        }
-
-        size_t adapt_capacity(size_t capacity) noexcept
-        {
-            if (capacity < 2) {
-                return 2;
-            }
-            auto adapted = static_cast<size_t>(math::ceil_power_of_two(capacity));
-            auto max_capacity = static_cast<size_t>(m_h_alc.capacity());
-            return adapted < max_capacity ? adapted : max_capacity;
+            size_t required = static_cast<size_t>(idx + 1);
+            auto max_capacity = static_cast<size_t>(m_handle_alloc.capacity());
+            size_t new_capacity = required <= 2 ? 2 : std::min(static_cast<size_t>(math::ceil_power_of_two(required)), max_capacity);
+            m_storage.resize(new_capacity);
         }
 
     private:
-        raw_ptr<allocator>    m_mem_alc;
-        handle_allocator_type m_h_alc;
+        struct alignas(T) slot_t
+        {
+            uint8 data[sizeof(T)];
+        };
 
-        raw_ptr<uint8> m_mem;
-        raw_ptr<T>     m_res;
-        size_t         m_capacity = 0;
+        T* slot_ptr(index_t idx) noexcept
+        {
+            return std::launder(reinterpret_cast<T*>(m_storage[idx].data));
+        }
+
+        const T* slot_ptr(index_t idx) const noexcept
+        {
+            return std::launder(reinterpret_cast<const T*>(m_storage[idx].data));
+        }
+
+    private:
+        handle_allocator_type m_handle_alloc;
+        vector<slot_t>        m_storage;
     };
 
 } // namespace tavros::core
