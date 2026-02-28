@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tavros/core/memory/mallocator.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/internal/opengl/device_resources_opengl.hpp>
 

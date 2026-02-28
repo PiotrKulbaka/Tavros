@@ -62,7 +62,7 @@ namespace tavros::renderer::rhi
     {
         m_current_pipeline = {};
 
-        auto* p = m_device->get_resources()->try_get(pipeline);
+        auto* p = m_device->get_resources()->find(pipeline);
         if (!p) {
             ::logger.error("Failed to bind pipeline {}: not found", pipeline);
             GL_CALL(glUseProgram(0));
@@ -72,7 +72,7 @@ namespace tavros::renderer::rhi
 
         auto& info = p->info;
 
-        auto* pass = m_device->get_resources()->try_get(m_current_render_pass);
+        auto* pass = m_device->get_resources()->find(m_current_render_pass);
         if (!pass) {
             ::logger.error("Failed to bind pipeline {}: render pass {} not found", pipeline, m_current_render_pass);
             GL_CALL(glUseProgram(0));
@@ -251,7 +251,7 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers)
     {
-        auto* p = m_device->get_resources()->try_get(m_current_pipeline);
+        auto* p = m_device->get_resources()->find(m_current_pipeline);
         if (!p) {
             if (!m_current_pipeline) {
                 ::logger.error("Failed to bind vertex buffers: no pipeline is bound");
@@ -272,7 +272,7 @@ namespace tavros::renderer::rhi
 
         GLuint attrib_i = 0;
         for (auto& buf : buffers) {
-            auto* b = m_device->get_resources()->try_get(buf.buffer);
+            auto* b = m_device->get_resources()->find(buf.buffer);
             if (!b) {
                 ::logger.error(
                     "Failed to bind vertex buffers: buffer {} not found",
@@ -305,7 +305,7 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::bind_index_buffer(buffer_handle buffer, index_buffer_format format)
     {
-        auto* b = m_device->get_resources()->try_get(buffer);
+        auto* b = m_device->get_resources()->find(buffer);
         if (!b) {
             ::logger.error(
                 "Failed to bind index buffer: buffer {} not found",
@@ -330,7 +330,7 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::bind_shader_binding(shader_binding_handle shader_binding)
     {
-        auto* sb = m_device->get_resources()->try_get(shader_binding);
+        auto* sb = m_device->get_resources()->find(shader_binding);
         if (!sb) {
             ::logger.error("Failed to bind shader binding {}: shader binding not found", shader_binding);
             return;
@@ -343,7 +343,7 @@ namespace tavros::renderer::rhi
             auto& binding = info.texture_bindings[i];
 
             // Bind texture
-            if (auto* t = m_device->get_resources()->try_get(binding.texture)) {
+            if (auto* t = m_device->get_resources()->find(binding.texture)) {
                 if (!t->info.usage.has_flag(texture_usage::sampled)) {
                     ::logger.error("Failed to bind shader binding {}: texture {} is not sampled", shader_binding, binding.texture);
                     return;
@@ -356,7 +356,7 @@ namespace tavros::renderer::rhi
             }
 
             // Bind sampler
-            if (auto* s = m_device->get_resources()->try_get(binding.sampler)) {
+            if (auto* s = m_device->get_resources()->find(binding.sampler)) {
                 GL_CALL(glBindSampler(binding.binding, s->sampler_obj));
             } else {
                 ::logger.error("Failed to bind shader binding {}: sampler {} not found", shader_binding, binding.sampler);
@@ -369,7 +369,7 @@ namespace tavros::renderer::rhi
             auto& binding = info.buffer_bindings[i];
 
             auto buf_h = binding.buffer;
-            if (auto* b = m_device->get_resources()->try_get(buf_h)) {
+            if (auto* b = m_device->get_resources()->find(buf_h)) {
                 TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER || b->gl_target == GL_SHADER_STORAGE_BUFFER);
 
                 if (binding.size == 0) {
@@ -399,13 +399,13 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        gl_render_pass* rp = m_device->get_resources()->try_get(render_pass);
+        gl_render_pass* rp = m_device->get_resources()->find(render_pass);
         if (!rp) {
             ::logger.error("Failed to begin render pass {}: render pass not found", render_pass);
             return;
         }
 
-        gl_framebuffer* fb = m_device->get_resources()->try_get(framebuffer);
+        gl_framebuffer* fb = m_device->get_resources()->find(framebuffer);
         if (!fb) {
             ::logger.error("Failed to begin render pass {}: framebuffer {} not found", render_pass, framebuffer);
             return;
@@ -496,7 +496,7 @@ namespace tavros::renderer::rhi
             if (attachment.store == store_op::resolve) {
                 // Validate that the resolve target attachment texture is single-sampled
                 auto resolve_h = attachment.resolve_target;
-                if (auto* dst_tex = m_device->get_resources()->try_get(resolve_h)) {
+                if (auto* dst_tex = m_device->get_resources()->find(resolve_h)) {
                     if (dst_tex->info.sample_count != 1) {
                         ::logger.error("Failed to begin render pass {}: resolve texture {} must be single-sampled", render_pass, resolve_h);
                         return;
@@ -507,7 +507,7 @@ namespace tavros::renderer::rhi
                 }
 
                 auto source_texture_h = fb->info.color_attachments[i];
-                if (auto* tex = m_device->get_resources()->try_get(source_texture_h)) {
+                if (auto* tex = m_device->get_resources()->find(source_texture_h)) {
                     if (attachment.format != tex->info.format) {
                         ::logger.error("Failed to begin render pass {}: color attachment format mismatch with framebuffer {}", render_pass, framebuffer);
                         return;
@@ -534,7 +534,7 @@ namespace tavros::renderer::rhi
 
         gl_texture* ds_attachment = nullptr;
         if (provided_depth_stencil) {
-            ds_attachment = m_device->get_resources()->try_get(fb->info.depth_stencil_attachment);
+            ds_attachment = m_device->get_resources()->find(fb->info.depth_stencil_attachment);
             if (!ds_attachment) {
                 ::logger.error("Failed to begin render pass {}: depth/stencil attachment {} not found", render_pass, fb->info.depth_stencil_attachment);
                 return;
@@ -611,13 +611,13 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        auto* rp = m_device->get_resources()->try_get(m_current_render_pass);
+        auto* rp = m_device->get_resources()->find(m_current_render_pass);
         if (!rp) {
             ::logger.error("Failed to end render pass {}: render pass not found", m_current_render_pass);
             return;
         }
 
-        auto* fb = m_device->get_resources()->try_get(m_current_framebuffer);
+        auto* fb = m_device->get_resources()->find(m_current_framebuffer);
         if (fb == nullptr) {
             ::logger.error("Failed to end render pass {}: framebuffer {} not found", m_current_render_pass, m_current_framebuffer);
             return;
@@ -646,7 +646,7 @@ namespace tavros::renderer::rhi
 
             if (store_op::resolve == rp_attachment.store) {
                 // Find resolve resolve destination textures
-                auto* dst = m_device->get_resources()->try_get(rp->info.color_attachments[i].resolve_target);
+                auto* dst = m_device->get_resources()->find(rp->info.color_attachments[i].resolve_target);
                 TAV_ASSERT(dst);
 
                 blit_data.push_back({GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i), dst});
@@ -665,7 +665,7 @@ namespace tavros::renderer::rhi
         // Get resolve texture
         gl_texture* depth_stencil_resolve_dst = nullptr;
         if (depth_stencil_blit_mask != 0) {
-            auto* dst = m_device->get_resources()->try_get(rp->info.depth_stencil_attachment.resolve_target);
+            auto* dst = m_device->get_resources()->find(rp->info.depth_stencil_attachment.resolve_target);
             TAV_ASSERT(dst);
             depth_stencil_resolve_dst = dst;
         }
@@ -753,7 +753,7 @@ namespace tavros::renderer::rhi
     {
         TAV_ASSERT(scissor.width >= 0 && scissor.height >= 0);
 
-        auto* fb = m_device->get_resources()->try_get(m_current_framebuffer);
+        auto* fb = m_device->get_resources()->find(m_current_framebuffer);
         if (!fb) {
             ::logger.error("Failed to set scissor: no framebuffer is bound");
             return;
@@ -768,7 +768,7 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)
     {
-        auto* p = m_device->get_resources()->try_get(m_current_pipeline);
+        auto* p = m_device->get_resources()->find(m_current_pipeline);
         if (!p) {
             if (!m_current_pipeline) {
                 ::logger.error("Failed to draw: no pipeline is bound");
@@ -809,7 +809,7 @@ namespace tavros::renderer::rhi
             return;
         }
 
-        auto* p = m_device->get_resources()->try_get(m_current_pipeline);
+        auto* p = m_device->get_resources()->find(m_current_pipeline);
         if (!p) {
             if (!m_current_pipeline) {
                 ::logger.error("Failed to draw indexed: no pipeline is bound");
@@ -852,7 +852,7 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::signal_fence(fence_handle fence)
     {
-        auto* f = m_device->get_resources()->try_get(fence);
+        auto* f = m_device->get_resources()->find(fence);
         if (!f) {
             ::logger.error("Failed to signal fence {}: fence not found", fence);
             return;
@@ -867,7 +867,7 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::wait_for_fence(fence_handle fence)
     {
-        auto* f = m_device->get_resources()->try_get(fence);
+        auto* f = m_device->get_resources()->find(fence);
         if (!f) {
             ::logger.error("Failed to wait for fence {}: fence not found", fence);
             return;
@@ -884,13 +884,13 @@ namespace tavros::renderer::rhi
     void command_queue_opengl::copy_buffer(buffer_handle src_buffer, buffer_handle dst_buffer, size_t size, size_t src_offset, size_t dst_offset)
     {
         // Get dst and src buffers
-        auto* src = m_device->get_resources()->try_get(src_buffer);
+        auto* src = m_device->get_resources()->find(src_buffer);
         if (!src) {
             ::logger.error("Failed to copy buffer {}: source buffer not found", src_buffer);
             return;
         }
 
-        auto* dst = m_device->get_resources()->try_get(dst_buffer);
+        auto* dst = m_device->get_resources()->find(dst_buffer);
         if (!dst) {
             ::logger.error("Failed to copy buffer {}: destination buffer not found", dst_buffer);
             return;
@@ -947,13 +947,13 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::copy_buffer_to_texture(buffer_handle src_buffer, texture_handle dst_texture, const texture_copy_region& region)
     {
-        auto* b = m_device->get_resources()->try_get(src_buffer);
+        auto* b = m_device->get_resources()->find(src_buffer);
         if (!b) {
             ::logger.error("Failed to copy buffer {} to texture {}: source buffer not found", src_buffer, dst_texture);
             return;
         }
 
-        auto* tex = m_device->get_resources()->try_get(dst_texture);
+        auto* tex = m_device->get_resources()->find(dst_texture);
         if (!tex) {
             ::logger.error("Failed to copy buffer {} to texture {}: destination buffer not found", src_buffer, dst_texture);
             return;
@@ -1154,13 +1154,13 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, const texture_copy_region& region)
     {
-        auto* tex = m_device->get_resources()->try_get(src_texture);
+        auto* tex = m_device->get_resources()->find(src_texture);
         if (!tex) {
             ::logger.error("Failed to copy texture {} to buffer {}: source texture not found", src_texture, dst_buffer);
             return;
         }
 
-        auto* b = m_device->get_resources()->try_get(dst_buffer);
+        auto* b = m_device->get_resources()->find(dst_buffer);
         if (!b) {
             ::logger.error("Failed to copy texture {} to buffer {}: destination buffer not found", src_texture, dst_buffer);
             return;

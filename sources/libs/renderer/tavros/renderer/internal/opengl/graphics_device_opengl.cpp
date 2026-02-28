@@ -207,7 +207,7 @@ namespace tavros::renderer::rhi
         destroy_for<pipeline_handle>(m_resources, [this](auto h) { destroy_pipeline(h); });
 
         destroy_for<framebuffer_handle>(m_resources, [this](auto h) {
-            if (auto* fb = m_resources.try_get(framebuffer_handle(h))) {
+            if (auto* fb = m_resources.find(framebuffer_handle(h))) {
                 if (!fb->is_default) {
                     // We only delete non default framebuffers
                     // Default ones should be deleted elsewhere, in frame_composer
@@ -261,14 +261,14 @@ namespace tavros::renderer::rhi
 
         GL_CALL(glEnable(GL_PROGRAM_POINT_SIZE));
 
-        frame_composer_handle handle = m_resources.create(gl_composer{info, std::move(composer)});
-        ::logger.debug("Frame composer {} created", handle);
-        return handle;
+        auto h = m_resources.create(gl_composer{info, std::move(composer)});
+        ::logger.debug("Frame composer {} created", h);
+        return h;
     }
 
     void graphics_device_opengl::destroy_frame_composer(frame_composer_handle composer)
     {
-        if (auto* fc = m_resources.try_get(composer)) {
+        if (auto* fc = m_resources.find(composer)) {
             m_resources.remove(composer);
             ::logger.debug("Frame composer {} destroyed", composer);
         } else {
@@ -278,7 +278,7 @@ namespace tavros::renderer::rhi
 
     frame_composer* graphics_device_opengl::get_frame_composer_ptr(frame_composer_handle composer)
     {
-        if (auto* fc = m_resources.try_get(composer)) {
+        if (auto* fc = m_resources.find(composer)) {
             return fc->composer_ptr.get();
         } else {
             ::logger.error("Failed to get frame composer {}: not found", composer);
@@ -309,7 +309,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_shader(shader_handle shader)
     {
-        if (auto* s = m_resources.try_get(shader)) {
+        if (auto* s = m_resources.find(shader)) {
             GL_CALL(glDeleteShader(s->shader_obj));
             s->shader_obj = 0;
             m_resources.remove(shader);
@@ -355,7 +355,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_sampler(sampler_handle sampler)
     {
-        if (auto* s = m_resources.try_get(sampler)) {
+        if (auto* s = m_resources.find(sampler)) {
             GL_CALL(glDeleteSamplers(1, &s->sampler_obj));
             m_resources.remove(sampler);
             ::logger.debug("Sampler {} destroyed", sampler);
@@ -691,7 +691,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_texture(texture_handle texture)
     {
-        if (auto* tex = m_resources.try_get(texture)) {
+        if (auto* tex = m_resources.find(texture)) {
             auto is_texture = tex->texture_obj != 0;
             if (is_texture) {
                 TAV_ASSERT(tex->renderbuffer_obj == 0);
@@ -723,7 +723,7 @@ namespace tavros::renderer::rhi
         gl_shader* vs = nullptr;
         gl_shader* fs = nullptr;
         for (size_t i = 0; i < info.shaders.size(); ++i) {
-            auto* s = m_resources.try_get(info.shaders[i]);
+            auto* s = m_resources.find(info.shaders[i]);
             if (!s) {
                 ::logger.error("Failed to create pipeline: shader {} not found", info.shaders[i]);
                 return {};
@@ -889,7 +889,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_pipeline(pipeline_handle handle)
     {
-        if (auto* p = m_resources.try_get(handle)) {
+        if (auto* p = m_resources.find(handle)) {
             GL_CALL(glDeleteProgram(p->program_obj));
             GL_CALL(glDeleteVertexArrays(1, &p->vao_obj));
             m_resources.remove(handle);
@@ -935,7 +935,7 @@ namespace tavros::renderer::rhi
         for (size_t i = 0; i < info.color_attachments.size(); ++i) {
             auto tex_h = info.color_attachments[i];
 
-            auto* tex = m_resources.try_get(tex_h);
+            auto* tex = m_resources.find(tex_h);
             if (!tex) {
                 ::logger.error(
                     "Failed to create framebuffer: color attachment {} at index {} not found",
@@ -1002,7 +1002,7 @@ namespace tavros::renderer::rhi
         if (info.has_depth_stencil_attachment) {
             auto ds_h = info.depth_stencil_attachment;
 
-            auto* tex = m_resources.try_get(ds_h);
+            auto* tex = m_resources.find(ds_h);
             if (!tex) {
                 ::logger.error("Failed to create framebuffer: depth/stencil attachment {} not found", ds_h);
                 return {};
@@ -1151,7 +1151,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_framebuffer(framebuffer_handle framebuffer)
     {
-        if (auto* fb = m_resources.try_get(framebuffer)) {
+        if (auto* fb = m_resources.find(framebuffer)) {
             GL_CALL(glDeleteFramebuffers(1, &fb->framebuffer_obj));
             m_resources.remove(framebuffer);
             ::logger.debug("Framebuffer {} destroyed", framebuffer);
@@ -1327,7 +1327,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_buffer(buffer_handle buffer)
     {
-        if (auto* b = m_resources.try_get(buffer)) {
+        if (auto* b = m_resources.find(buffer)) {
             GL_CALL(glDeleteBuffers(1, &b->buffer_obj));
             m_resources.remove(buffer);
             ::logger.debug("Buffer ({}) {} destroyed", b->info.usage, buffer);
@@ -1366,7 +1366,7 @@ namespace tavros::renderer::rhi
         for (auto i = 0; i < info.color_attachments.size(); ++i) {
             auto& attachment = info.color_attachments[i];
             if (store_op::resolve == attachment.store) {
-                auto* resolve_tex = m_resources.try_get(attachment.resolve_target);
+                auto* resolve_tex = m_resources.find(attachment.resolve_target);
                 if (!resolve_tex) {
                     ::logger.error(
                         "Failed to create render pass: resolve attachment {} texture {} not found",
@@ -1413,7 +1413,7 @@ namespace tavros::renderer::rhi
         bool  need_depth_resolve = store_op::resolve == ds_attachment.depth_store;
         bool  need_stencil_resolve = store_op::resolve == ds_attachment.stencil_store;
         if (need_depth_resolve || need_stencil_resolve) {
-            auto* resolve_tex = m_resources.try_get(ds_attachment.resolve_target);
+            auto* resolve_tex = m_resources.find(ds_attachment.resolve_target);
             if (!resolve_tex) {
                 ::logger.error(
                     "Failed to create render pass: resolve depth/stencil attachment texture {} not found",
@@ -1476,7 +1476,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_render_pass(render_pass_handle render_pass)
     {
-        if (auto* rp = m_resources.try_get(render_pass)) {
+        if (auto* rp = m_resources.find(render_pass)) {
             m_resources.remove(render_pass);
             ::logger.debug("Render pass {} destroyed", render_pass);
         } else {
@@ -1490,7 +1490,7 @@ namespace tavros::renderer::rhi
         for (size_t i = 0; i < info.texture_bindings.size(); ++i) {
             auto& binding = info.texture_bindings[i];
 
-            auto* tex = m_resources.try_get(binding.texture);
+            auto* tex = m_resources.find(binding.texture);
             if (!tex) {
                 ::logger.error(
                     "Failed to create shader binding: texture {} binding {} not found",
@@ -1500,7 +1500,7 @@ namespace tavros::renderer::rhi
                 return {};
             }
 
-            auto* smp = m_resources.try_get(binding.sampler);
+            auto* smp = m_resources.find(binding.sampler);
             if (!smp) {
                 ::logger.error(
                     "Failed to create shader binding: sampler {} binding {} not found",
@@ -1515,7 +1515,7 @@ namespace tavros::renderer::rhi
         for (size_t i = 0; i < info.buffer_bindings.size(); ++i) {
             auto& binding = info.buffer_bindings[i];
 
-            auto* b = m_resources.try_get(binding.buffer);
+            auto* b = m_resources.find(binding.buffer);
             if (!b) {
                 ::logger.error(
                     "Failed to create shader binding: buffer {} binding {} not found",
@@ -1543,7 +1543,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_shader_binding(shader_binding_handle shader_binding)
     {
-        if (auto* sb = m_resources.try_get(shader_binding)) {
+        if (auto* sb = m_resources.find(shader_binding)) {
             m_resources.remove(shader_binding);
             ::logger.debug("Shader binding {} destroyed", shader_binding);
         } else {
@@ -1560,7 +1560,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::destroy_fence(fence_handle fence)
     {
-        if (auto* f = m_resources.try_get(fence)) {
+        if (auto* f = m_resources.find(fence)) {
             if (f->fence_obj) {
                 GL_CALL(glDeleteSync(f->fence_obj));
             }
@@ -1573,7 +1573,7 @@ namespace tavros::renderer::rhi
 
     bool graphics_device_opengl::is_fence_signaled(fence_handle fence)
     {
-        auto* f = m_resources.try_get(fence);
+        auto* f = m_resources.find(fence);
         if (!f) {
             ::logger.error("Failed to get fence status {}: fence not found", fence);
             return false;
@@ -1590,7 +1590,7 @@ namespace tavros::renderer::rhi
 
     bool graphics_device_opengl::wait_for_fence(fence_handle fence, uint64 timeout_ns)
     {
-        auto* f = m_resources.try_get(fence);
+        auto* f = m_resources.find(fence);
         if (!f) {
             ::logger.error("Failed to wait for fence {}: fence not found", fence);
             return false;
@@ -1607,7 +1607,7 @@ namespace tavros::renderer::rhi
 
     core::buffer_span<uint8> graphics_device_opengl::map_buffer(buffer_handle buffer, size_t offset, size_t size)
     {
-        auto* b = m_resources.try_get(buffer);
+        auto* b = m_resources.find(buffer);
         if (!b) {
             ::logger.error("Failed to map buffer {}: buffer not found", buffer);
             return nullptr;
@@ -1667,7 +1667,7 @@ namespace tavros::renderer::rhi
 
     void graphics_device_opengl::unmap_buffer(buffer_handle buffer)
     {
-        auto* b = m_resources.try_get(buffer);
+        auto* b = m_resources.find(buffer);
         if (!b) {
             ::logger.error("Failed to unmap buffer {}: buffer not found", buffer);
             return;

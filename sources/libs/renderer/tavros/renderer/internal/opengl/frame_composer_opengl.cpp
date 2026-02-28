@@ -67,7 +67,7 @@ namespace tavros::renderer::rhi
         // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
         auto& pool = m_device->get_resources()->get_pool<gl_framebuffer>();
         if (pool.size() != 0) {
-            if (auto* fb = m_device->get_resources()->try_get(m_backbuffer)) {
+            if (auto* fb = m_device->get_resources()->find(m_backbuffer)) {
                 m_device->get_resources()->remove(m_backbuffer);
                 ::logger.debug("Frame composer framebuffer {} destroyed", m_backbuffer);
             } else {
@@ -90,7 +90,7 @@ namespace tavros::renderer::rhi
         m_info.height = h;
 
         // Update framebuffer size
-        if (auto* fb = m_device->get_resources()->try_get(m_backbuffer)) {
+        if (auto* fb = m_device->get_resources()->find(m_backbuffer)) {
             fb->info.width = w;
             fb->info.height = h;
         } else {
