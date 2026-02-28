@@ -1,7 +1,8 @@
 #pragma once
 
-#include <tavros/core/ids/index_base.hpp>
 #include <concepts>
+#include <fmt/fmt.hpp>
+#include <tavros/core/ids/index_base.hpp>
 
 namespace tavros::core
 {
@@ -12,29 +13,23 @@ namespace tavros::core
 
     static_assert(sizeof(handle_type_t) + sizeof(handle_gen_t) + sizeof(index_t) == sizeof(handle_id_t));
 
-    template<class T>
-    struct type_id_of
-    {
-        static_assert(sizeof(T) == 0 && "Type is not registered as handle type");
-    };
-
     template<handle_type_t Id>
     struct handle_type_registration
     {
         static_assert(Id != 0);
         using is_handle_type_registrator = void;
-        static constexpr handle_type_t value = Id;
+        static constexpr handle_type_t type_id_value = Id;
     };
 
     template<class T>
     concept handle_tagged =
         requires {
-            typename type_id_of<T>::is_handle_type_registrator;
-            requires std::same_as<decltype(type_id_of<T>::value), const handle_type_t>;
+            typename T::is_handle_type_registrator;
+            requires std::same_as<decltype(T::type_id_value), const handle_type_t>;
         };
 
     template<handle_tagged T>
-    constexpr handle_type_t type_id_v = type_id_of<T>::value;
+    constexpr handle_type_t type_id_v = T::type_id_value;
 
 
     constexpr handle_id_t make_handle_id(handle_type_t type_id, handle_gen_t generation, index_t index) noexcept
@@ -75,7 +70,7 @@ namespace tavros::core
         }
 
         explicit handle_base(handle_gen_t gen, index_t index)
-            : id(make_handle_id(tid, gen, index))
+            : id(make_handle_id(k_type_id, gen, index))
         {
         }
 
@@ -94,13 +89,18 @@ namespace tavros::core
             return handle_index_of(id);
         }
 
+        constexpr bool valid() const noexcept
+        {
+            return id != 0;
+        }
+
         /**
          * @brief Allows checking validity in boolean context.
          * @example if (handle) { ... }
          */
         explicit operator bool() const noexcept
         {
-            return id != 0;
+            return valid();
         }
     };
 
@@ -118,3 +118,50 @@ namespace tavros::core
     }
 
 } // namespace tavros::core
+
+template<class Tag>
+struct fmt::formatter<tavros::core::handle_base<Tag>>
+{
+    fmt::formatter<uint64_t> m_base;
+
+    constexpr auto parse(fmt::format_parse_context& ctx)
+    {
+        return m_base.parse(ctx);
+    }
+
+    static void to_hex(uint64 num, size_t count, char* dst)
+    {
+        static const char alpha[] = "0123456789abcdef";
+        for (size_t i = 0; i < count; ++i) {
+            dst[count - i - 1] = alpha[num & 0xf];
+            num >>= 4;
+        }
+        dst[count] = 0;
+    }
+
+    static string_view uint64_to_base64(uint64 u) noexcept
+    {
+        static const char        base64_alpha[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+        thread_local static char s[] = "000000000000";
+        for (auto i = 0; i < 12; ++i) {
+            s[12 - i - 1] = base64_alpha[u & 0x3f];
+            u >>= 6;
+        }
+        return string_view(s, 12);
+    }
+
+    template<typename FormatContext>
+    auto format(const tavros::core::handle_base<Tag>& h, FormatContext& ctx) const
+    {
+        char ty[5] = {0};
+        char gen[5] = {0};
+        char idx[9] = {0};
+        to_hex(h.type(), 4, ty);
+        to_hex(h.generation(), 4, gen);
+        to_hex(h.index(), 8, idx);
+        if (!h) {
+            return fmt::format_to(ctx.out(), "(invalid) {}:{}:{}", fmt::styled_error(ty), fmt::styled_error(gen), fmt::styled_error(idx));
+        }
+        return fmt::format_to(ctx.out(), "{}:{}:{}", fmt::styled_important(ty), fmt::styled_name(gen), fmt::styled_important(idx));
+    }
+};

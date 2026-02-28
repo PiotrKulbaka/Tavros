@@ -8,6 +8,20 @@
 namespace tavros::core
 {
 
+    /**
+     * @brief Allocator for typed handles with generation-based validity tracking.
+     *
+     * Manages allocation and deallocation of @ref handle_base handles backed by
+     * a bitmap index allocator. Each handle carries a generation counter so that
+     * stale handles (referring to already-deallocated slots) can be detected via
+     * @ref contains.
+     *
+     * @tparam Tag  Tag type that uniquely identifies the handle type family.
+     *              Must satisfy the @ref handle_tagged concept.
+     *
+     * @note The allocator is non-copyable. Maximum capacity is fixed at compile
+     *       time by @ref k_capacity.
+     */
     template<handle_tagged Tag>
     class handle_allocator final : noncopyable
     {
@@ -18,8 +32,26 @@ namespace tavros::core
 
     public:
         handle_allocator() noexcept = default;
+
         ~handle_allocator() noexcept = default;
 
+        handle_type at(index_t idx) const noexcept
+        {
+            if (m_bitmap.contains(idx)) {
+                return handle_type(m_gen[idx], idx);
+            }
+            return {};
+        }
+
+        /**
+         * @brief Allocates a new handle.
+         *
+         * Finds a free slot in the bitmap, marks it as allocated, and returns a
+         * handle with the current generation for that slot.
+         *
+         * @return Valid handle on success, null handle if the allocator is full.
+         * @note   Asserts in debug builds if no free slot is available.
+         */
         [[nodiscard]] handle_type allocate() noexcept
         {
             auto idx = m_bitmap.allocate();
@@ -27,23 +59,52 @@ namespace tavros::core
             if (idx == invalid_index) {
                 return {};
             }
-            return handle_type(m_gen[idx], static_cast<handle_index_t>(idx));
+            return handle_type(m_gen[idx], static_cast<index_t>(idx));
         }
 
+        /**
+         * @brief Deallocates a previously allocated handle.
+         *
+         * Marks the slot as free and increments the generation counter so that
+         * any surviving copies of @p handle become stale and fail @ref contains.
+         *
+         * @param handle  Handle to deallocate.
+         * @return        @c true if the handle was valid and has been freed,
+         *                @c false if the handle was already stale or invalid.
+         */
         bool deallocate(handle_type handle) noexcept
         {
-            auto idx = handle.index();
-            if (m_bitmap.deallocate(idx)) {
-                ++m_gen[idx];
+            if (!contains(handle)) {
+                return false;
             }
+
+            auto idx = handle.index();
+            m_bitmap.deallocate(idx);
+            ++m_gen[idx];
+            return true;
         }
 
+        /**
+         * @brief Checks whether a handle is currently valid.
+         *
+         * A handle is valid if its index is allocated and its generation matches
+         * the current generation stored for that index.
+         *
+         * @param handle  Handle to test.
+         * @return        @c true if the handle is live, @c false otherwise.
+         */
         [[nodiscard]] bool contains(handle_type handle) const noexcept
         {
             auto idx = handle.index();
             return m_bitmap.contains(idx) && m_gen[idx] == handle.generation();
         }
 
+        /**
+         * @brief Resets the allocator to its initial state.
+         *
+         * Frees all allocated slots and zeroes all generation counters.
+         * All previously issued handles become invalid.
+         */
         void reset() noexcept
         {
             m_bitmap.reset();
@@ -53,7 +114,7 @@ namespace tavros::core
         /**
          * @brief Returns the maximum number of handles.
          */
-        [[nodiscard]] virtual size_t capacity() const noexcept
+        [[nodiscard]] size_t capacity() const noexcept
         {
             return m_bitmap.capacity();
         }
@@ -61,7 +122,7 @@ namespace tavros::core
         /**
          * @brief Returns the number of currently allocated indices.
          */
-        [[nodiscard]] virtual size_t size() const noexcept
+        [[nodiscard]] size_t size() const noexcept
         {
             return m_bitmap.size();
         }
