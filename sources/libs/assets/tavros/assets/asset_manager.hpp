@@ -5,6 +5,7 @@
 #include <tavros/core/string.hpp>
 #include <tavros/core/containers/vector.hpp>
 #include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/ids/handle_allocator.hpp>
 
 #include <tavros/assets/asset_provider.hpp>
 
@@ -24,15 +25,6 @@ namespace tavros::assets
      */
     class asset_manager : core::noncopyable
     {
-    public:
-        /**
-         * @brief Maximum number of mounted providers.
-         *
-         * Having more providers increases search time for assets. If you need
-         * more providers, the search algorithm should be revised.
-         */
-        constexpr static size_t k_max_providers = 16;
-
     public:
         /**
          * @brief Constructs an empty asset manager.
@@ -85,6 +77,23 @@ namespace tavros::assets
         core::unique_ptr<asset_stream> open(core::string_view path, asset_open_mode open_mode = asset_open_mode::read_only) const;
 
         /**
+         * @brief Attempts to open a stream to the specified asset.
+         *
+         * The first provider that allows access to the asset will be used.
+         * Unlike open(), this function does not throw on failure.
+         *
+         * @param path The path to the asset.
+         * @param open_mode The desired access mode (read-only by default).
+         * @return A unique pointer to the opened stream, or nullptr if the asset
+         *         could not be opened for any reason.
+         *
+         * @note This function is noexcept and will return nullptr instead of
+         *       throwing if the asset is not found, access is denied,
+         *       the open mode is invalid, or any I/O error occurs.
+         */
+        core::unique_ptr<asset_stream> try_open(core::string_view path, asset_open_mode open_mode = asset_open_mode::read_only) const noexcept;
+
+        /**
          * @brief Reads the entire asset as text.
          *
          * Convenience function that opens the asset and reads all bytes as UTF-8 text.
@@ -109,8 +118,7 @@ namespace tavros::assets
         core::vector<uint8> read_binary(core::string_view path) const;
 
     private:
-        using providers_vector = core::static_vector<core::unique_ptr<asset_provider>, k_max_providers>;
-        providers_vector m_providers;
+        core::vector<core::unique_ptr<asset_provider>> m_providers;
     };
 
 } // namespace tavros::assets

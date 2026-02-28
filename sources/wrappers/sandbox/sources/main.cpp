@@ -242,22 +242,19 @@ public:
         return m_imcodec.decode(buffer, 4, y_flip);
     }
 
-    bool save_image(const tavros::assets::image_codec::pixels_view& pixels, tavros::core::string_view path, bool y_flip = false)
+    void save_image(const tavros::assets::image_codec::pixels_view& pixels, tavros::core::string_view path, bool y_flip = false)
     {
         auto im_data = m_imcodec.encode(pixels, tavros::assets::image_codec::image_format::png, y_flip);
         if (im_data.empty()) {
             ::logger.error("Failed to save image '{}': im_data is empty()", path);
-            return false;
+            return;
         }
 
         try {
             m_resource_manager->open(path, tavros::assets::asset_open_mode::write_only)->write(im_data);
-            return true;
         } catch (const tavros::core::file_error& e) {
             ::logger.error("Failed to save image: '{}'", e.path());
         }
-
-        return false;
     }
 
     rhi::shader_binding_handle upload_font_data()
@@ -974,9 +971,9 @@ public:
 
             // Save screenshot
             tavros::assets::image_codec::pixels_view im_color{static_cast<uint32>(width), static_cast<uint32>(height), channels, stride, {screenshot_pixels.data(), static_cast<size_t>(stride * height)}};
-            save_image(im_color, "color.png", true);
+            save_image(im_color, "output://color.png", true);
             tavros::assets::image_codec::pixels_view im_depth{width, height, 1, width, {depth_data.data(), static_cast<size_t>(width * height)}};
-            save_image(im_depth, "depth.png", true);
+            save_image(im_depth, "output://depth.png", true);
 
             m_graphics_device->unmap_buffer(m_stage_upload_buffer);
         }
@@ -1077,12 +1074,14 @@ int main()
 {
     tavros::core::logger::add_consumer([](auto lvl, auto tag, auto msg) { printf("%s\n", msg.data()); });
 
-    auto resource_manager = tavros::core::make_shared<tavros::assets::asset_manager>();
-    resource_manager->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH, tavros::assets::asset_open_mode::read_only);
-    resource_manager->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH "/shaders", tavros::assets::asset_open_mode::read_only);
-    resource_manager->mount<tavros::assets::filesystem_provider>(TAV_OUTPUT_PATH, tavros::assets::asset_open_mode::write_only);
+    auto am = tavros::core::make_shared<tavros::assets::asset_manager>();
+    am->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH, "", tavros::assets::asset_open_mode::read_only);
+    am->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH, "file", tavros::assets::asset_open_mode::read_only);
+    am->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH "/shaders", "", tavros::assets::asset_open_mode::read_only);
+    am->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH "/shaders", "file", tavros::assets::asset_open_mode::read_only);
+    am->mount<tavros::assets::filesystem_provider>(TAV_OUTPUT_PATH, "output", tavros::assets::asset_open_mode::write_only);
 
-    auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", resource_manager);
+    auto wnd = tavros::core::make_unique<main_window>("TavrosEngine", am);
     wnd->run_render_loop();
 
     return tavros::system::application::instance().run();

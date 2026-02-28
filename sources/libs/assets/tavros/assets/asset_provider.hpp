@@ -24,12 +24,25 @@ namespace tavros::assets
         virtual ~asset_provider() noexcept = default;
 
         /**
+         * @brief Returns the URI scheme this provider handles.
+         *
+         * For scheme-based routing: "pack", "file", "http", "memory", etc.
+         * Returns empty string_view if the provider handles generic paths
+         * (no scheme) and participates in the fallback chain.
+         *
+         * @example
+         *   "pack"   matches "pack://textures/grass.png"
+         *   ""       matches "/textures/grass.png" (fallback chain)
+         */
+        [[nodiscard]] virtual core::string_view scheme() const noexcept = 0;
+
+        /**
          * @brief Checks if the provider allows reading from the specified path.
          *
          * @param path The path to the asset.
          * @return true if the asset can be opened for reading, false otherwise.
          */
-        virtual [[nodiscard]] bool can_read(core::string_view path) const noexcept = 0;
+        [[nodiscard]] virtual bool can_read(core::string_view path) const noexcept = 0;
 
         /**
          * @brief Checks if the provider allows writing to the specified path.
@@ -37,7 +50,7 @@ namespace tavros::assets
          * @param path The path to the asset.
          * @return true if the asset can be opened for writing, false otherwise.
          */
-        virtual [[nodiscard]] bool can_write(core::string_view path) const noexcept = 0;
+        [[nodiscard]] virtual bool can_write(core::string_view path) const noexcept = 0;
 
         /**
          * @brief Checks whether an asset exists at the specified path.
@@ -47,7 +60,7 @@ namespace tavros::assets
          *
          * @throws core::file_error If the asset cannot be accessed due to permissions or other I/O errors.
          */
-        virtual [[nodiscard]] bool exists(core::string_view path) const = 0;
+        [[nodiscard]] virtual bool exists(core::string_view path) const = 0;
 
         /**
          * @brief Opens a stream to the specified asset for reading or writing.
@@ -58,7 +71,7 @@ namespace tavros::assets
          *
          * @throws core::file_error If opening fails due to I/O errors, permission issues, or invalid access mode.
          */
-        virtual [[nodiscard]] core::unique_ptr<asset_stream> open(core::string_view path, asset_open_mode access) = 0;
+        [[nodiscard]] virtual core::unique_ptr<asset_stream> open(core::string_view path, asset_open_mode access) = 0;
     };
 
 } // namespace tavros::assets

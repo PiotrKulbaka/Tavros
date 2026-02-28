@@ -10,7 +10,7 @@
 namespace tavros::assets
 {
 
-    class file_stream : public asset_stream
+    class file_stream final : public asset_stream
     {
     public:
         file_stream(core::string_view path, asset_open_mode open_mode);

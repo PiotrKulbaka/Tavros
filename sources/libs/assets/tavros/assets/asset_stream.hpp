@@ -70,21 +70,45 @@ namespace tavros::assets
          *
          * @return The current offset in bytes, or -1 on error.
          */
-        virtual [[nodiscard]] ssize_t tell() const noexcept = 0;
+        [[nodiscard]] virtual ssize_t tell() const noexcept = 0;
 
         /**
          * @brief Returns the total size of the stream in bytes.
          *
          * @return Size of the stream.
          */
-        virtual [[nodiscard]] size_t size() const noexcept = 0;
+        [[nodiscard]] virtual size_t size() const noexcept = 0;
 
         /**
          * @brief Checks whether the end of the stream has been reached.
          *
          * @return true if end-of-stream is reached, false otherwise.
          */
-        virtual [[nodiscard]] bool eos() const noexcept = 0;
+        [[nodiscard]] virtual bool eos() const noexcept = 0;
+
+        /**
+         * @brief Reads all remaining bytes from the current position as text.
+         *
+         * Convenience function reads all bytes as UTF-8 text.
+         *
+         * @param path The path to the asset.
+         * @return A string containing the asset's contents.
+         *
+         * @throws core::file_error If opening or reading the asset fails.
+         */
+        core::string read_text();
+
+        /**
+         * @brief Reads all remaining bytes from the current position as vector of bytes.
+         *
+         * Convenience function reads all bytes as a vector of bytes.
+         *
+         * @param path The path to the asset.
+         * @return A vector containing the raw bytes of the asset.
+         *
+         * @throws core::file_error If opening or reading the asset fails.
+         */
+        core::vector<uint8> read_binary();
     };
 
 } // namespace tavros::assets

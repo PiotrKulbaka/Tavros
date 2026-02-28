@@ -43,10 +43,8 @@ namespace tavros::core
         using handle_type = handle_base<Tag>;
         using handle_allocator_type = handle_allocator<Tag, l3_bitmap_index_allocator>;
 
-        static_assert(handle_allocator_type::k_capacity < 0xffffffffu, 
-            "index allocator supports more indices than 32 bits");
-        static_assert(std::is_nothrow_move_constructible_v<T>,
-            "object_pool requires noexcept move for exception-safety when expanding");
+        static_assert(handle_allocator_type::k_capacity < 0xffffffffu, "index allocator supports more indices than 32 bits");
+        static_assert(std::is_nothrow_move_constructible_v<T>, "object_pool requires noexcept move for exception-safety when expanding");
 
     public:
         /**
@@ -322,7 +320,7 @@ namespace tavros::core
             }
 
             size_t required = static_cast<size_t>(idx + 1);
-            auto max_capacity = static_cast<size_t>(m_handle_alloc.capacity());
+            auto   max_capacity = static_cast<size_t>(m_handle_alloc.capacity());
             size_t new_capacity = required <= 2 ? 2 : std::min(static_cast<size_t>(math::ceil_power_of_two(required)), max_capacity);
             m_storage.resize(new_capacity);
         }

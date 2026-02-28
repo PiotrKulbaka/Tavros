@@ -7,12 +7,14 @@
 namespace tavros::assets
 {
 
-    class filesystem_provider : public asset_provider
+    class filesystem_provider final : public asset_provider
     {
     public:
-        filesystem_provider(core::string_view path, asset_open_mode access);
+        filesystem_provider(core::string_view path, core::string_view scheme, asset_open_mode access);
 
         ~filesystem_provider() noexcept override;
+
+        [[nodiscard]] core::string_view scheme() const noexcept override;
 
         [[nodiscard]] bool can_read(core::string_view path) const noexcept override;
 
@@ -24,6 +26,7 @@ namespace tavros::assets
 
     private:
         core::string    m_base;
+        core::string    m_scheme;
         asset_open_mode m_open_mode;
     };
 

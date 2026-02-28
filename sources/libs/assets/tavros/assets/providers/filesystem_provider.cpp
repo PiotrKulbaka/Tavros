@@ -15,8 +15,9 @@ namespace
 namespace tavros::assets
 {
 
-    filesystem_provider::filesystem_provider(core::string_view path, asset_open_mode open_mode)
+    filesystem_provider::filesystem_provider(core::string_view path, core::string_view scheme, asset_open_mode open_mode)
         : m_base(path)
+        , m_scheme(scheme)
         , m_open_mode(open_mode)
     {
         if (!exists(path)) {
@@ -25,6 +26,11 @@ namespace tavros::assets
     }
 
     filesystem_provider::~filesystem_provider() = default;
+
+    core::string_view filesystem_provider::scheme() const noexcept
+    {
+        return m_scheme;
+    }
 
     bool filesystem_provider::can_read(core::string_view path) const noexcept
     {
