@@ -10,6 +10,7 @@
 
 using namespace tavros::core;
 
+using index_type = index_t;
 
 template <typename Allocator>
 class index_allocator_test
@@ -37,17 +38,17 @@ using l4_bitmap_index_allocator_test = index_allocator_test<l4_bitmap_index_allo
 
 TEST_F(l2_bitmap_index_allocator_test, capacity_works)
 {
-    EXPECT_EQ(alc->max_index(), 64ull * 64ull);
+    EXPECT_EQ(alc->capacity(), 64ull * 64ull);
 }
 
 TEST_F(l3_bitmap_index_allocator_test, capacity_works)
 {
-    EXPECT_EQ(alc->max_index(), 64ull * 64ull * 64ull);
+    EXPECT_EQ(alc->capacity(), 64ull * 64ull * 64ull);
 }
 
 TEST_F(l4_bitmap_index_allocator_test, capacity_works)
 {
-    EXPECT_EQ(alc->max_index(), 64ull * 64ull * 64ull * 64ull);
+    EXPECT_EQ(alc->capacity(), 64ull * 64ull * 64ull * 64ull);
 }
 
 using Implementations = ::testing::Types<l4_bitmap_index_allocator, l3_bitmap_index_allocator, l2_bitmap_index_allocator>;
@@ -80,33 +81,15 @@ TYPED_TEST(index_allocator_test, deallocate_works)
     }
 
     for (auto idx : allocated_indices) {
-        this->alc->deallocate(idx);
-        ASSERT_FALSE(this->alc->allocated(idx)) << "Index should be marked as free after deallocate";
+        bool deallocated_first = this->alc->deallocate(idx);
+        ASSERT_TRUE(deallocated_first) << "deallocate should return true on first deallocation";
+        ASSERT_FALSE(this->alc->contains(idx)) << "Index should be marked as free after deallocate";
+
+        bool deallocated_second = this->alc->deallocate(idx);
+        ASSERT_FALSE(deallocated_second) << "deallocate should return false if index is already free";
     }
 
-    ASSERT_EQ(this->alc->remaining(), this->alc->max_index());
-}
-
-TYPED_TEST(index_allocator_test, try_deallocate_works)
-{
-    constexpr size_t capacity = 345;
-    std::set<index_type> allocated_indices;
-
-    for (size_t i = 0; i < capacity; ++i) {
-        index_type idx = this->alc->allocate();
-        allocated_indices.insert(idx);
-    }
-
-    for (auto idx : allocated_indices) {
-        bool deallocated_first = this->alc->try_deallocate(idx);
-        ASSERT_TRUE(deallocated_first) << "try_deallocate should return true on first deallocation";
-        ASSERT_FALSE(this->alc->allocated(idx)) << "Index should be marked as free after try_deallocate";
-
-        bool deallocated_second = this->alc->try_deallocate(idx);
-        ASSERT_FALSE(deallocated_second) << "try_deallocate should return false if index is already free";
-    }
-
-    ASSERT_EQ(this->alc->remaining(), this->alc->max_index());
+    ASSERT_EQ(this->alc->available(), this->alc->capacity());
 }
 
 TYPED_TEST(index_allocator_test, allocated_works)
@@ -120,32 +103,142 @@ TYPED_TEST(index_allocator_test, allocated_works)
     }
 
     for (auto idx : allocated_indices) {
-        ASSERT_TRUE(this->alc->allocated(idx));
+        ASSERT_TRUE(this->alc->contains(idx));
         this->alc->deallocate(idx);
-        ASSERT_FALSE(this->alc->allocated(idx));
+        ASSERT_FALSE(this->alc->contains(idx));
     }
 
-    ASSERT_FALSE(this->alc->allocated(capacity + 1));
-    ASSERT_FALSE(this->alc->allocated(this->alc->max_index()));
-    ASSERT_FALSE(this->alc->allocated(invalid_index));
-    ASSERT_FALSE(this->alc->allocated(0));
+    ASSERT_FALSE(this->alc->contains(capacity + 1));
+    ASSERT_FALSE(this->alc->contains(this->alc->capacity()));
+    ASSERT_FALSE(this->alc->contains(invalid_index));
+    ASSERT_FALSE(this->alc->contains(0));
 }
 
 TYPED_TEST(index_allocator_test, reset_works)
 {
 
     constexpr size_t capacity = 345;
-    auto initial_remaining = this->alc->remaining();
+    auto initial_remaining = this->alc->available();
     for (uint32 i = 0; i < capacity; ++i) {
         index_type idx = this->alc->allocate();
         ASSERT_NE(idx, invalid_index);
     }
 
-    EXPECT_EQ(this->alc->remaining(), initial_remaining - capacity);
+    EXPECT_EQ(this->alc->available(), initial_remaining - capacity);
 
     this->alc->reset();
-    EXPECT_EQ(this->alc->remaining(), this->alc->max_index());
-    EXPECT_EQ(this->alc->remaining(), initial_remaining);
+    EXPECT_EQ(this->alc->available(), this->alc->capacity());
+    EXPECT_EQ(this->alc->available(), initial_remaining);
+}
+
+TYPED_TEST(index_allocator_test, iterator_empty)
+{
+    EXPECT_EQ(this->alc->begin(), this->alc->end());
+}
+
+TYPED_TEST(index_allocator_test, iterator_after_deallocate)
+{
+    for (int i = 0; i < 10; ++i) {
+        this->alc->allocate();
+    }
+
+    this->alc->deallocate(0);
+    this->alc->deallocate(5);
+    this->alc->deallocate(9);
+
+    std::set<index_type> actual;
+    for (auto idx : *this->alc) {
+        actual.insert(idx);
+    }
+
+    std::set<index_type> expected = { 1, 2, 3, 4, 6, 7, 8 };
+    EXPECT_EQ(actual, expected);
+}
+
+TYPED_TEST(index_allocator_test, iterator_across_block_boundaries)
+{
+    for (int i = 0; i < 200; ++i) {
+        this->alc->allocate();
+    }
+
+    for (int i = 0; i < 200; ++i) {
+        if (i != 63 && i != 64 && i != 128) {
+            this->alc->deallocate(i);
+        }
+    }
+
+    std::vector<index_type> result;
+    for (auto idx : *this->alc) {
+        result.push_back(idx);
+    }
+
+    ASSERT_EQ(result.size(), 3u);
+    EXPECT_EQ(result[0], 63);
+    EXPECT_EQ(result[1], 64);
+    EXPECT_EQ(result[2], 128);
+}
+
+TYPED_TEST(index_allocator_test, size_consistency)
+{
+    EXPECT_EQ(this->alc->size(), 0u);
+    EXPECT_EQ(this->alc->available(), this->alc->capacity());
+    EXPECT_TRUE(this->alc->empty());
+    EXPECT_FALSE(this->alc->full());
+
+    for (size_t i = 0; i < 10; ++i) {
+        this->alc->allocate();
+        EXPECT_EQ(this->alc->size(), i + 1);
+        EXPECT_EQ(this->alc->available(), this->alc->capacity() - i - 1);
+        EXPECT_FALSE(this->alc->empty());
+    }
+
+    for (size_t i = 0; i < 10; ++i) {
+        this->alc->deallocate(static_cast<index_type>(i));
+        EXPECT_EQ(this->alc->size(), 9 - i);
+    }
+
+    EXPECT_TRUE(this->alc->empty());
+}
+
+TYPED_TEST(index_allocator_test, iterator_matches_contains)
+{
+    std::mt19937 rng(42);
+    std::uniform_int_distribution<int> dist(0, 1);
+
+    for (int i = 0; i < 200; ++i) {
+        this->alc->allocate();
+    }
+    for (int i = 0; i < 200; ++i) {
+        if (dist(rng)) {
+            this->alc->deallocate(i);
+        }
+    }
+
+    std::set<index_type> from_iterator;
+    for (auto idx : *this->alc) {
+        EXPECT_TRUE(this->alc->contains(idx)) << "idx=" << idx;
+        from_iterator.insert(idx);
+    }
+
+    EXPECT_EQ(from_iterator.size(), this->alc->size());
+}
+
+TYPED_TEST(index_allocator_test, boundary_indices)
+{
+    constexpr index_type boundaries[] = { 63, 64, 65, 127, 128, 129 };
+
+    for (int i = 0; i < 130; ++i) {
+        this->alc->allocate();
+    }
+
+    for (auto idx : boundaries) {
+        ASSERT_TRUE(this->alc->contains(idx)) << "idx=" << idx;
+        ASSERT_TRUE(this->alc->deallocate(idx)) << "idx=" << idx;
+        ASSERT_FALSE(this->alc->contains(idx)) << "idx=" << idx;
+
+        auto reallocated = this->alc->allocate();
+        EXPECT_EQ(reallocated, idx) << "Expected smallest free index=" << idx;
+    }
 }
 
 TYPED_TEST(index_allocator_test, stress_reset_works)
@@ -154,7 +247,7 @@ TYPED_TEST(index_allocator_test, stress_reset_works)
         GTEST_SKIP();
     }
 
-    auto max_idx = this->alc->max_index();
+    auto max_idx = this->alc->capacity();
     for (uint32 i = 0; i < max_idx; ++i) {
         (void)this->alc->allocate();
     }
@@ -162,16 +255,16 @@ TYPED_TEST(index_allocator_test, stress_reset_works)
     // Last idx should be invalid_index
     auto idx = this->alc->allocate();
     EXPECT_EQ(idx, invalid_index);
-    EXPECT_EQ(this->alc->remaining(), 0);
+    EXPECT_EQ(this->alc->available(), 0);
     this->alc->reset();
 
-    EXPECT_EQ(this->alc->remaining(), max_idx);
+    EXPECT_EQ(this->alc->available(), max_idx);
 
     for (uint32 i = 0; i < max_idx; ++i) {
         auto idx = this->alc->allocate();
         ASSERT_NE(idx, invalid_index);
         ASSERT_EQ(idx, i);
-        ASSERT_EQ(this->alc->remaining(), this->alc->max_index() - i - 1);
+        ASSERT_EQ(this->alc->available(), this->alc->capacity() - i - 1);
     }
 }
 
@@ -181,12 +274,12 @@ TYPED_TEST(index_allocator_test, stress_allocate_all_indices_after_dealocate_wor
         GTEST_SKIP();
     }
 
-    auto max_idx = this->alc->max_index();
+    auto max_idx = this->alc->capacity();
     for (uint32 i = 0; i < max_idx; ++i) {
         auto idx = this->alc->allocate();
         ASSERT_NE(idx, invalid_index);
         ASSERT_EQ(idx, i);
-        ASSERT_EQ(this->alc->remaining(), this->alc->max_index() - i - 1);
+        ASSERT_EQ(this->alc->available(), this->alc->capacity() - i - 1);
     }
 
     ASSERT_FALSE(assert_was_called());
@@ -200,7 +293,7 @@ TYPED_TEST(index_allocator_test, stress_allocate_all_indices_after_dealocate_wor
         auto idx = this->alc->allocate();
         ASSERT_NE(idx, invalid_index);
         ASSERT_EQ(idx, i);
-        ASSERT_EQ(this->alc->remaining(), this->alc->max_index() - i - 1);
+        ASSERT_EQ(this->alc->available(), this->alc->capacity() - i - 1);
     }
 }
 
@@ -210,7 +303,7 @@ TYPED_TEST(index_allocator_test, stress_random_allocate_deallocate)
         GTEST_SKIP();
     }
 
-    auto max_idx = this->alc->max_index();
+    auto max_idx = this->alc->capacity();
     std::vector<bool> allocated(max_idx, false);
 
     std::mt19937 rng(12345);
@@ -238,14 +331,14 @@ TYPED_TEST(index_allocator_test, stress_random_allocate_deallocate)
             // deallocate random index
             auto idx = idx_dist(rng);
             if (allocated[idx]) {
-                ASSERT_TRUE(this->alc->allocated(idx));
-                auto first_deallocate = this->alc->try_deallocate(idx);
+                ASSERT_TRUE(this->alc->contains(idx));
+                auto first_deallocate = this->alc->deallocate(idx);
                 ASSERT_TRUE(first_deallocate);
                 
-                auto second_deallocate = this->alc->try_deallocate(idx);
+                auto second_deallocate = this->alc->deallocate(idx);
                 ASSERT_FALSE(second_deallocate);
 
-                ASSERT_FALSE(this->alc->allocated(idx));
+                ASSERT_FALSE(this->alc->contains(idx));
                 EXPECT_FALSE(assert_was_called());
                 allocated[idx] = false;
             }
