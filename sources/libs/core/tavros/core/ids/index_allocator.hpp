@@ -3,87 +3,220 @@
 #include <tavros/core/ids/index_base.hpp>
 #include <tavros/core/noncopyable.hpp>
 
+#include <concepts>
+#include <iterator>
+
 namespace tavros::core
 {
 
     /**
-     * @class index_allocator
-     * @brief Abstract base for index allocators.
+     * @brief Concept that constrains a type to be a valid index allocator.
      *
-     * Manages a set of integer indices in range [0, capacity()).
-     * All operations are noexcept - errors reported via return values.
+     * A type satisfies this concept if it provides the full set of allocation,
+     * query, and iteration operations expected by the index allocator contract.
      *
-     * @note All indices are 0-based.
+     * @tparam T  Type to check.
      */
-    class index_allocator
+    template<typename T>
+    concept index_allocator_concept =
+        requires(T a, const T ca, index_t idx) {
+            { a.allocate() } -> std::same_as<index_t>;
+            { a.deallocate(idx) } -> std::same_as<bool>;
+            { ca.contains(idx) } -> std::same_as<bool>;
+            { a.reset() };
+            { ca.capacity() } -> std::same_as<size_t>;
+            { ca.size() } -> std::same_as<size_t>;
+            { ca.empty() } -> std::same_as<bool>;
+            { ca.full() } -> std::same_as<bool>;
+            { ca.available() } -> std::same_as<size_t>;
+            { a.begin() };
+            { ca.begin() };
+            { a.end() };
+            { ca.end() };
+        };
+
+    /**
+     * @brief CRTP base class for index allocators.
+     *
+     * Provides a default implementation of common query methods (@ref empty,
+     * @ref full, @ref available) and STL-compatible forward iterators, so that
+     * concrete allocators only need to implement the core allocation primitives
+     * and two navigation helpers:
+     *
+     * - `index_t find_first() const noexcept` — index of the first allocated slot,
+     *   or `capacity()` if none are allocated.
+     * - `index_t next_after(index_t pos) const noexcept` — index of the next
+     *   allocated slot after @p pos, or `capacity()` if there are no more.
+     *
+     * @par Iterator invalidation
+     * Iterators are invalidated by any call to @ref allocate, @ref deallocate,
+     * or @ref reset on the owning allocator.
+     *
+     * @tparam Derived  Concrete allocator type. Must expose `size()`, `capacity()`,
+     *                  `find_first()`, and `next_after()`.
+     */
+    template<class Derived>
+    class index_allocator_base : noncopyable
     {
     public:
         /**
-         * @brief Virtual destructor.
-         */
-        virtual ~index_allocator() noexcept = default;
-
-        /**
-         * @brief Allocate the next free index.
+         * @brief STL-compatible forward iterator over allocated indices.
          *
-         * @return Valid index, or invalid_index if capacity exhausted.
-         */
-        [[nodiscard]] virtual index_t allocate() noexcept = 0;
-
-        /**
-         * @brief Deallocate a previously allocated index.
+         * Iterates only over currently allocated indices in ascending order.
+         * Dereferencing yields the @ref index_t value of the allocated slot.
          *
-         * @param index the index to deallocate.
-         * @return true if deallocated, false if index was not allocated.
-         * @note Safe to call with invalid or already-freed index.
+         * @tparam IsConst  If @c true, the iterator holds a pointer to a @c const allocator.
          */
-        virtual bool deallocate(index_t index) noexcept = 0;
+        template<bool IsConst>
+        class iterator_base
+        {
+        public:
+            using alloc_ptr = std::conditional_t<IsConst, const Derived*, Derived*>;
 
-        /**
-         * @brief Check if index is currently allocated.
-         *
-         * @param index The index to check.
-         * @return `true` if the index is currently allocated, or `false` otherwise.
-         */
-        [[nodiscard]] virtual bool contains(index_t index) const noexcept = 0;
+            // STL iterator traits
+            using iterator_category = std::forward_iterator_tag;
+            using value_type = index_t;
+            using difference_type = std::ptrdiff_t;
+            using pointer = void;
+            using reference = index_t;
 
-        /**
-         * @brief Reset all indices to free state.
-         */
-        virtual void reset() noexcept = 0;
+            iterator_base() noexcept = default;
 
-        /**
-         * @brief Returns the maximum number of indices.
-         */
-        [[nodiscard]] virtual size_t capacity() const noexcept = 0;
+            /**
+             * @brief Constructs an iterator pointing at position @p pos in allocator @p alloc.
+             * @param alloc  Pointer to the owning allocator. Must not be null.
+             * @param pos    Current index position. Use `capacity()` for the end sentinel.
+             */
+            iterator_base(alloc_ptr alloc, index_t pos) noexcept
+                : m_alloc(alloc)
+                , m_pos(pos)
+            {
+            }
 
-        /**
-         * @brief Returns the number of currently allocated indices.
-         */
-        [[nodiscard]] virtual size_t size() const noexcept = 0;
+            /**
+             * @brief Implicit conversion from non-const to const iterator.
+             */
+            operator iterator_base<true>() const noexcept
+                requires(!IsConst)
+            {
+                return iterator_base<true>(m_alloc, m_pos);
+            }
 
+            /**
+             * @brief Returns the current allocated index.
+             * @pre The iterator must not be equal to `end()`.
+             */
+            reference operator*() const noexcept
+            {
+                return m_pos;
+            }
+
+            /**
+             * @brief Advances to the next allocated index (pre-increment).
+             * @pre The iterator must not be equal to `end()`.
+             */
+            iterator_base& operator++() noexcept
+            {
+                m_pos = m_alloc->next_after(m_pos);
+                return *this;
+            }
+
+            /**
+             * @brief Advances to the next allocated index (post-increment).
+             * @pre The iterator must not be equal to `end()`.
+             */
+            iterator_base operator++(int) noexcept
+            {
+                auto copy = *this;
+                m_pos = m_alloc->next_after(m_pos);
+                return copy;
+            }
+
+            bool operator==(const iterator_base& other) const noexcept
+            {
+                return m_pos == other.m_pos;
+            }
+
+            bool operator!=(const iterator_base& other) const noexcept
+            {
+                return m_pos != other.m_pos;
+            }
+
+        private:
+            alloc_ptr m_alloc = nullptr;
+            index_t   m_pos = 0;
+        };
+
+        using iterator = iterator_base<false>;
+        using const_iterator = iterator_base<true>;
+
+    public:
         /**
-         * @brief Returns 'true' if no index is allocated.
+         * @brief Returns @c true if no indices are currently allocated.
          */
         [[nodiscard]] bool empty() const noexcept
         {
-            return size() == 0;
+            return derived().size() == 0;
         }
 
         /**
-         * @brief Returns 'true' if the allocator has allocated all possible indices.
+         * @brief Returns @c true if all possible indices are allocated.
          */
         [[nodiscard]] bool full() const noexcept
         {
-            return size() == capacity();
+            return derived().size() == derived().capacity();
         }
 
         /**
-         * @brief Returns the number of free indexes.
+         * @brief Returns the number of indices available for allocation.
          */
         [[nodiscard]] size_t available() const noexcept
         {
-            return capacity() - size();
+            return derived().capacity() - derived().size();
+        }
+
+        /**
+         * @brief Returns an iterator to the first allocated index.
+         *
+         * If no indices are allocated, returns @ref end().
+         */
+        [[nodiscard]] iterator begin() noexcept
+        {
+            return {&derived(), derived().find_first()};
+        }
+
+        /// @copydoc begin()
+        [[nodiscard]] const_iterator begin() const noexcept
+        {
+            return {&derived(), derived().find_first()};
+        }
+
+        /**
+         * @brief Returns a sentinel iterator one past the last possible index.
+         *
+         * The sentinel position is equal to `capacity()` and does not correspond
+         * to any allocated slot.
+         */
+        [[nodiscard]] iterator end() noexcept
+        {
+            return {&derived(), static_cast<index_t>(derived().capacity())};
+        }
+
+        /// @copydoc end()
+        [[nodiscard]] const_iterator end() const noexcept
+        {
+            return {&derived(), static_cast<index_t>(derived().capacity())};
+        }
+
+    private:
+        const Derived& derived() const noexcept
+        {
+            return static_cast<const Derived&>(*this);
+        }
+
+        Derived& derived() noexcept
+        {
+            return static_cast<Derived&>(*this);
         }
     };
 

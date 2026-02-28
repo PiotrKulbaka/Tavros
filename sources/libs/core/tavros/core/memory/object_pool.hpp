@@ -5,6 +5,7 @@
 #include <tavros/core/math/bitops.hpp>
 #include <tavros/core/memory/raw_ptr.hpp>
 #include <tavros/core/ids/handle_allocator.hpp>
+#include <tavros/core/ids/l3_bitmap_index_allocator.hpp>
 
 #include <type_traits>
 
@@ -34,7 +35,7 @@ namespace tavros::core
     {
     public:
         using handle_type = handle_base<Tag>;
-        using handle_allocator_type = handle_allocator<Tag>;
+        using handle_allocator_type = handle_allocator<Tag, l3_bitmap_index_allocator>;
 
         static_assert(handle_allocator_type::k_capacity < 0xffffffffu, "index allocator supports more indices than 32 bits");
         static_assert(std::is_nothrow_move_constructible_v<T>, "object_pool requires noexcept move for exception-safety when expanding");
@@ -78,11 +79,9 @@ namespace tavros::core
         template<typename Func>
         void for_each(Func&& func)
         {
-            for (index_t i = 0; i < m_end_idx; ++i) {
-                auto h = m_h_alc.at(i);
-                if (h) {
-                    func(h, m_res.get()[i]);
-                }
+            for (auto h : m_h_alc) {
+                auto i = h.index();
+                func(h, m_res.get()[i]);
             }
         }
 
@@ -200,11 +199,6 @@ namespace tavros::core
             if (h) {
                 auto idx = h.index();
                 ensure_allocation(idx);
-
-                if (m_end_idx <= idx) {
-                    m_end_idx = idx + 1;
-                }
-
                 std::construct_at(m_res.get() + idx, std::forward<Args>(args)...);
             }
 
@@ -225,13 +219,6 @@ namespace tavros::core
             if (m_h_alc.deallocate(handle)) {
                 auto idx = handle.index();
                 std::destroy_at(m_res.get() + idx);
-
-                if (m_end_idx == idx + 1) {
-                    while (m_end_idx > 0 && !m_h_alc.at(m_end_idx - 1)) {
-                        --m_end_idx;
-                    }
-                }
-
                 return true;
             }
             return false;
@@ -246,17 +233,14 @@ namespace tavros::core
         {
             destroy_all();
             m_h_alc.reset();
-            m_end_idx = 0;
         }
 
     private:
         void destroy_all() noexcept
         {
             if (m_res) {
-                for (index_t i = 0; i < m_end_idx; ++i) {
-                    if (m_h_alc.at(i)) {
-                        std::destroy_at(m_res.get() + i);
-                    }
+                for (auto h : m_h_alc) {
+                    std::destroy_at(m_res.get() + h.index());
                 }
             }
         }
@@ -276,11 +260,10 @@ namespace tavros::core
             T*   new_res = reinterpret_cast<T*>(res_addr);
 
             if (m_mem != nullptr) {
-                for (index_t i = 0; i < m_end_idx; ++i) {
-                    if (m_h_alc.at(i)) {
-                        new (new_res + i) T(std::move(m_res.get()[i]));
-                        std::destroy_at(m_res.get() + i);
-                    }
+                for (auto h : m_h_alc) {
+                    auto i = h.index();
+                    new (new_res + i) T(std::move(m_res.get()[i]));
+                    std::destroy_at(m_res.get() + i);
                 }
                 m_mem_alc->deallocate(m_mem.get());
             }
@@ -303,7 +286,6 @@ namespace tavros::core
     private:
         raw_ptr<allocator>    m_mem_alc;
         handle_allocator_type m_h_alc;
-        index_t               m_end_idx = 0;
 
         raw_ptr<uint8> m_mem;
         raw_ptr<T>     m_res;
