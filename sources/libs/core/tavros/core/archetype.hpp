@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
+#include <tavros/core/traits.hpp>
 #include <tavros/core/containers/vector.hpp>
 
 #include <tuple>
@@ -9,195 +10,150 @@ namespace tavros::core
 {
 
     /**
-     * @brief Checks if a pack of types contains only unique types.
-     */
-    template<class...>
-    struct unique_types
-        : std::true_type
-    {
-    };
-
-    /**
-     * @brief Partial specialization for checking uniqueness in a non-empty pack.
-     *
-     * @tparam T First type in the pack.
-     * @tparam Rest Remaining types in the pack.
-     */
-    template<class T, class... Rest>
-    struct unique_types<T, Rest...>
-        : std::conditional_t<(std::is_same_v<T, Rest> || ...), std::false_type, unique_types<Rest...>>
-    {
-    };
-
-    /**
-     * @brief Checks if a type exists in a type tuple.
-     */
-    template<class T, class... Ts>
-    struct contains_type;
-
-    /**
-     * @brief Specialization of contains_type for std::tuple.
-     *
-     * @tparam T Type to search for.
-     * @tparam Ts Types contained in the tuple.
-     */
-    template<class T, class... Ts>
-    struct contains_type<T, std::tuple<Ts...>>
-        : std::disjunction<std::is_same<T, Ts>...>
-    {
-    };
-
-    /**
-     * @brief Convenience variable template to check type presence in a tuple.
-     *
-     * @tparam T Type to search for.
-     * @tparam Tuple Tuple of types to check.
-     */
-    template<class T, class Tuple>
-    inline constexpr bool contains_type_v = contains_type<T, Tuple>::value;
-
-    /**
      * @brief Concept: archetype contains all required components.
      */
     template<class ArchetypeT, class... RequiredComponents>
     concept ArchetypeWith = requires {
         typename ArchetypeT::is_archetype;
-    } && (contains_type_v<RequiredComponents, class ArchetypeT::components> && ...);
+    } && (is_subset_v<type_list<RequiredComponents...>, class ArchetypeT::unqualified_types>);
+
+
+    template<class... Ty>
+    concept is_all_default_constructible = (std::is_default_constructible_v<Ty> && ...);
+
+
+    template<bool IsConst, class Table, class... Ty>
+    class basic_table_iterator
+    {
+    private:
+        template<bool, class, class...>
+        friend class basic_table_iterator;
+
+    public:
+        using dense_table_ptr = std::conditional_t<IsConst, const Table*, Table*>;
+        using iterator_category = std::random_access_iterator_tag;
+        using value_type = std::tuple<std::remove_const_t<Ty>...>;
+        using difference_type = ptrdiff_t;
+        using size_type = size_t;
+        using pointer = void;
+        using reference = std::conditional_t<IsConst, std::tuple<const std::remove_const_t<Ty>&...>, std::tuple<Ty&...>>;
+
+    public:
+        constexpr basic_table_iterator() noexcept = default;
+
+        constexpr basic_table_iterator(dense_table_ptr table, size_type pos) noexcept
+            : m_table(table)
+            , m_pos(pos)
+        {
+        }
+
+        operator basic_table_iterator<true, Table, Ty...>() const noexcept
+            requires(!IsConst)
+        {
+            return basic_table_iterator<true, Table, Ty...>(m_table, m_pos);
+        }
+
+        [[nodiscard]] constexpr reference operator[](difference_type value) const noexcept
+        {
+            return std::forward_as_tuple(
+                m_table->template get<std::remove_const_t<Ty>>()[m_pos + value]...
+            );
+        }
+
+        [[nodiscard]] constexpr reference operator*() const noexcept
+        {
+            return std::forward_as_tuple(
+                m_table->template get<std::remove_const_t<Ty>>()[m_pos]...
+            );
+        }
+
+        constexpr basic_table_iterator& operator++() noexcept
+        {
+            ++m_pos;
+            return *this;
+        }
+
+        constexpr basic_table_iterator operator++(int) noexcept
+        {
+            auto copy = *this;
+            ++m_pos;
+            return copy;
+        }
+
+        constexpr basic_table_iterator& operator+=(difference_type value) noexcept
+        {
+            m_pos += value;
+            return *this;
+        }
+
+        constexpr basic_table_iterator operator+(difference_type value) const noexcept
+        {
+            auto copy = *this;
+            return (copy += value);
+        }
+
+        constexpr basic_table_iterator& operator--() noexcept
+        {
+            --m_pos;
+            return *this;
+        }
+
+        constexpr basic_table_iterator operator--(int) noexcept
+        {
+            auto copy = *this;
+            --m_pos;
+            return copy;
+        }
+
+        constexpr basic_table_iterator& operator-=(difference_type value) noexcept
+        {
+            m_pos -= value;
+            return *this;
+        }
+
+        constexpr basic_table_iterator operator-(difference_type value) const noexcept
+        {
+            auto copy = *this;
+            return (copy -= value);
+        }
+
+        [[nodiscard]] constexpr difference_type operator-(const basic_table_iterator& other) const noexcept
+        {
+            return static_cast<difference_type>(m_pos) - static_cast<difference_type>(other.m_pos);
+        }
+
+        [[nodiscard]] constexpr auto operator<=>(const basic_table_iterator& other) const noexcept
+        {
+            return m_pos <=> other.m_pos;
+        }
+
+        [[nodiscard]] constexpr bool operator==(const basic_table_iterator& other) const noexcept
+        {
+            return m_pos == other.m_pos;
+        }
+
+    private:
+        dense_table_ptr m_table = nullptr;
+        size_type       m_pos = 0;
+    };
 
 
     /**
      * @brief Non-owning view over an archetype's container for a subset of components.
      *
-     * @tparam Container  Underlying archetype_base (or compatible) type.
+     * @tparam Container  Underlying tightly_packed_archetype_base (or compatible) type.
      * @tparam Components Component types exposed by this view.
      */
-    template<class Container, class... Components>
+    template<class Table, class... Components>
     class archetype_view
     {
     public:
-        template<bool IsConst>
-        class iterator_base
-        {
-        public:
-            using container_ptr = std::conditional_t<IsConst, const Container*, Container*>;
-            using iterator_category = std::random_access_iterator_tag;
-            using value_type = std::conditional_t<IsConst, std::tuple<const Components&...>, std::tuple<Components&...>>;
-            using difference_type = std::ptrdiff_t;
-            using pointer = void;
-            using reference = value_type;
-
-        public:
-            template<bool OtherConst>
-                requires(IsConst && !OtherConst)
-            iterator_base(const iterator_base<OtherConst>& other) noexcept
-                : m_container(other.m_container)
-                , m_index(other.m_index)
-            {
-            }
-
-            iterator_base& operator++() noexcept
-            {
-                ++m_index;
-                return *this;
-            }
-
-            iterator_base operator++(int) noexcept
-            {
-                iterator_base tmp = *this;
-                ++m_index;
-                return tmp;
-            }
-
-            iterator_base& operator--() noexcept
-            {
-                --m_index;
-                return *this;
-            }
-
-            iterator_base operator--(int) noexcept
-            {
-                iterator_base tmp = *this;
-                --m_index;
-                return tmp;
-            }
-
-            iterator_base& operator+=(difference_type n) noexcept
-            {
-                m_index = static_cast<size_t>(static_cast<difference_type>(m_index) + n);
-                return *this;
-            }
-
-            iterator_base& operator-=(difference_type n) noexcept
-            {
-                return (*this) += -n;
-            }
-
-            iterator_base operator+(difference_type n) const noexcept
-            {
-                iterator_base tmp = *this;
-                return tmp += n;
-            }
-
-            iterator_base operator-(difference_type n) const noexcept
-            {
-                iterator_base tmp = *this;
-                return tmp -= n;
-            }
-
-            difference_type operator-(const iterator_base& other) const noexcept
-            {
-                return static_cast<difference_type>(m_index) - static_cast<difference_type>(other.m_index);
-            }
-
-            bool operator<=>(const iterator_base& other) const noexcept
-            {
-                return m_index <=> other.m_index;
-            }
-
-            /**
-             * @brief Returns a tuple of (const) references to all view components at current index.
-             */
-            reference operator*() const
-            {
-                return std::forward_as_tuple(
-                    m_container->template get<std::remove_const_t<Components>>()[m_index]...
-                );
-            }
-
-            reference operator[](difference_type n) const
-            {
-                return *(*this + n);
-            }
-
-            template<class C>
-            decltype(auto) get_component() const
-            {
-                static_assert(
-                    (std::is_same_v<std::remove_const_t<C>, Components> || ...),
-                    "Component type is not part of this view"
-                );
-                using result_t = std::conditional_t<IsConst, const std::remove_const_t<C>, std::remove_const_t<C>>;
-                return static_cast<result_t&>(
-                    m_container->template get<std::remove_const_t<C>>()[m_index]
-                );
-            }
-
-            friend iterator_base operator+(difference_type n, const iterator_base& it) noexcept
-            {
-                return it + n;
-            }
-
-        private:
-            container_ptr m_container;
-            size_t        m_index;
-        };
-
-        using iterator = iterator_base<false>;
-        using const_iterator = iterator_base<true>;
+        using iterator = basic_table_iterator<false, Table, Components...>;
+        using const_iterator = basic_table_iterator<true, Table, Components...>;
 
     public:
-        archetype_view(Container& container)
-            : m_container(container)
+        archetype_view(Table& table)
+            : m_table(table)
         {
         }
 
@@ -228,7 +184,7 @@ namespace tavros::core
                 (std::is_same_v<T, Components> || ...),
                 "The passed component type is not contained in the tuple"
             );
-            return m_container.template get<std::remove_const_t<T>>()[index];
+            return m_table.template get<std::remove_const_t<T>>()[index];
         }
 
         /**
@@ -242,7 +198,7 @@ namespace tavros::core
                 (std::is_same_v<T, Components> || ...),
                 "The passed component type is not contained in the tuple"
             );
-            return m_container.template get<std::remove_const_t<T>>()[index];
+            return m_table.template get<std::remove_const_t<T>>()[index];
         }
 
         /**
@@ -270,7 +226,7 @@ namespace tavros::core
         template<class Func>
         void each(Func&& func)
         {
-            const size_t n = m_container.size();
+            const size_t n = m_table.size();
             for (size_t i = 0; i < n; ++i) {
                 func(get_component_at<Components>(i)...);
             }
@@ -283,7 +239,7 @@ namespace tavros::core
         template<class Func>
         void each(Func&& func) const
         {
-            const size_t n = m_container.size();
+            const size_t n = m_table.size();
             for (size_t i = 0; i < n; ++i) {
                 func(get_component_at<Components>(i)...);
             }
@@ -296,7 +252,7 @@ namespace tavros::core
         template<class Func>
         void each_n(size_t first, size_t count, Func&& func)
         {
-            TAV_ASSERT(first + count <= m_container.size());
+            TAV_ASSERT(first + count <= m_table.size());
             const size_t end = first + count;
             for (size_t i = first; i < end; ++i) {
                 func(get_component_at<Components>(i)...);
@@ -309,7 +265,7 @@ namespace tavros::core
         template<class Func>
         void each_indexed(Func&& func)
         {
-            const size_t n = m_container.size();
+            const size_t n = m_table.size();
             for (size_t i = 0; i < n; ++i) {
                 func(i, get_component_at<Components>(i)...);
             }
@@ -318,7 +274,7 @@ namespace tavros::core
         template<class Func>
         void each_indexed(Func&& func) const
         {
-            const size_t n = m_container.size();
+            const size_t n = m_table.size();
             for (size_t i = 0; i < n; ++i) {
                 func(i, get_component_at<Components>(i)...);
             }
@@ -327,7 +283,7 @@ namespace tavros::core
         template<class Func>
         void each_n_indexed(size_t first, size_t count, Func&& func)
         {
-            TAV_ASSERT(first + count <= m_container.size());
+            TAV_ASSERT(first + count <= m_table.size());
             const size_t end = first + count;
             for (size_t i = first; i < end; ++i) {
                 func(i, get_component_at<Components>(i)...);
@@ -336,36 +292,237 @@ namespace tavros::core
 
         [[nodiscard]] size_t size() const noexcept
         {
-            return m_container.size();
+            return m_table.size();
         }
 
         [[nodiscard]] bool empty() const noexcept
         {
-            return m_container.empty();
+            return m_table.empty();
         }
 
         [[nodiscard]] iterator begin() noexcept
         {
-            return {&m_container, 0};
+            return {&m_table, 0};
         }
 
         [[nodiscard]] iterator end() noexcept
         {
-            return {&m_container, m_container.size()};
+            return {&m_table, m_table.size()};
         }
 
         [[nodiscard]] const_iterator begin() const noexcept
         {
-            return {&m_container, 0};
+            return {&m_table, 0};
         }
 
         [[nodiscard]] const_iterator end() const noexcept
         {
-            return {&m_container, m_container.size()};
+            return {&m_table, m_table.size()};
         }
 
     private:
-        Container& m_container; /// Reference to the underlying container.
+        Table& m_table; /// Reference to the underlying container.
+    };
+
+
+    template<class... Ty>
+        requires is_all_default_constructible<Ty...>
+    class basic_dense_table : noncopyable
+    {
+        template<class T>
+        using vector_type = vector<T>;
+        using storage_type = std::tuple<vector_type<Ty>...>;
+
+    public:
+        using types = type_list<Ty...>;
+        using unqualified_types = type_transform_t<std::remove_cvref, types>;
+
+        using size_type = size_t;
+        using difference_type = ptrdiff_t;
+
+        using value_type = void;
+        using allocator_type = void;
+        using reference = std::tuple<Ty&...>;
+        using const_reference = std::tuple<const std::remove_const_t<Ty>&...>;
+        using pointer = void;
+        using const_pointer = void;
+        using iterator = basic_table_iterator<false, basic_dense_table, Ty...>;
+        using const_iterator = basic_table_iterator<true, basic_dense_table, Ty...>;
+        using reverse_iterator = std::reverse_iterator<iterator>;
+        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
+
+    public:
+        [[nodiscard]] reference operator[](size_type index) noexcept
+        {
+            return std::forward_as_tuple(get<std::remove_const_t<Ty>>()[index]...);
+        }
+
+        [[nodiscard]] const_reference operator[](size_type index) const noexcept
+        {
+            return std::forward_as_tuple(get<std::remove_const_t<Ty>>()[index]...);
+        }
+
+        [[nodiscard]] reference front() noexcept
+        {
+            return this->operator[](static_cast<size_type>(0));
+        }
+
+        [[nodiscard]] const_reference front() const noexcept
+        {
+            return this->operator[](static_cast<size_type>(0));
+        }
+
+        [[nodiscard]] reference back() noexcept
+        {
+            return this->operator[](static_cast<size_type>(size() - 1));
+        }
+
+        [[nodiscard]] const_reference back() const noexcept
+        {
+            return this->operator[](static_cast<size_type>(size() - 1));
+        }
+
+        template<class T>
+        [[nodiscard]] auto& get() noexcept
+        {
+            static_assert((std::is_same_v<T, Ty> || ...), "The passed type is not contained in the table");
+            return std::get<vector<T>>(m_storage);
+        }
+
+        template<class T>
+        [[nodiscard]] const auto& get() const noexcept
+        {
+            static_assert((std::is_same_v<T, Ty> || ...), "The passed type is not contained in the table");
+            return std::get<vector<T>>(m_storage);
+        }
+
+        [[nodiscard]] bool empty() const noexcept
+        {
+            return std::get<0>(m_storage).empty();
+        }
+
+        [[nodiscard]] size_type size() const noexcept
+        {
+            return std::get<0>(m_storage).size();
+        }
+
+        [[nodiscard]] size_type max_size() const noexcept
+        {
+            return std::get<0>(m_storage).size();
+        }
+
+        void reserve(size_type new_cap)
+        {
+            (get<Ty>().reserve(new_cap), ...);
+        }
+
+        [[nodiscard]] size_type capacity() const noexcept
+        {
+            return std::get<0>(m_storage).capacity();
+        }
+
+        void shrink_to_fit()
+        {
+            (get<Ty>().shrink_to_fit(), ...);
+        }
+
+        void clear() noexcept
+        {
+            (get<Ty>().clear(), ...);
+        }
+
+        template<class... Ts>
+        reference emplace_back(Ts&&... args)
+        {
+            using unqualified_ts = type_transform_t<std::remove_cvref, type_list<Ts...>>;
+            static_assert(are_unique_v<unqualified_ts>, "Duplicate component types passed to emplace_back");
+            static_assert(is_subset_v<unqualified_ts, unqualified_types>, "One or more passed types are not part of this basic_table");
+
+            ([&]<class C>() {
+                if constexpr ((std::is_same_v<C, std::remove_cvref_t<Ts>> || ...)) {
+                    get<C>().emplace_back(pick_arg<C>(std::forward<Ts>(args)...));
+                } else {
+                    get<C>().emplace_back();
+                }
+            }.template operator()<std::remove_cvref_t<Ty>>(),
+             ...);
+
+            auto idx = size() - 1;
+            return std::forward_as_tuple(get<std::remove_cvref_t<Ty>>()[idx]...);
+        }
+
+        void pop_back()
+        {
+            (get<Ty>().pop_back(), ...);
+        }
+
+        void swap_and_pop(size_type index)
+        {
+            TAV_ASSERT(index < size());
+            if (index >= size()) {
+                return;
+            }
+
+            size_type last = size() - 1;
+            if (last != index) {
+                (std::swap(get<Ty>()[index], get<Ty>()[last]), ...);
+            }
+            pop_back();
+        }
+
+        void resize(size_type count)
+        {
+            (get<Ty>().resize(count), ...);
+        }
+
+        void swap(basic_dense_table& other) noexcept
+        {
+            (std::swap(get<Ty>(), other.get<Ty>()), ...);
+        }
+
+        [[nodiscard]] iterator begin() noexcept
+        {
+            return iterator(this, 0);
+        }
+
+        [[nodiscard]] iterator end() noexcept
+        {
+            return iterator(this, size());
+        }
+
+        [[nodiscard]] const_iterator begin() const noexcept
+        {
+            return const_iterator(this, 0);
+        }
+
+        [[nodiscard]] const_iterator end() const noexcept
+        {
+            return const_iterator(this, size());
+        }
+
+        [[nodiscard]] const_iterator cbegin() const noexcept
+        {
+            return begin();
+        }
+
+        [[nodiscard]] const_iterator cend() const noexcept
+        {
+            return end();
+        }
+
+    private:
+        template<class C, class T, class... Rest>
+        static decltype(auto) pick_arg(T&& first, Rest&&... rest)
+        {
+            if constexpr (std::is_same_v<C, std::remove_cvref_t<T>>) {
+                return std::forward<T>(first);
+            } else {
+                return pick_arg<C>(std::forward<Rest>(rest)...);
+            }
+        }
+
+    private:
+        storage_type m_storage;
     };
 
 
@@ -378,209 +535,14 @@ namespace tavros::core
      * @tparam Components Component types. Must all be distinct.
      */
     template<class... Components>
-        requires unique_types<Components...>::value
-    class archetype_base
+        requires are_unique_unqualified_v<type_list<Components...>>
+    class tightly_packed_archetype_base final : public basic_dense_table<Components...>
     {
+        using base = basic_dense_table<Components...>;
+
     public:
         /// Marker type to identify this class as an archetype.
         using is_archetype = void;
-
-        /// Tuple containing all component types stored in this archetype.
-        using components = std::tuple<Components...>;
-
-    public:
-        /**
-         * @brief Reserve memory for all component vectors.
-         *
-         * @param new_capacity Number of elements to reserve space for.
-         * @note This does not change the logical size of the archetype, only preallocates memory.
-         */
-        void reserve(size_t new_capacity)
-        {
-            (get<Components>().reserve(new_capacity), ...);
-        }
-
-        /**
-         * @brief Resize all component vectors to the given size.
-         *
-         * @param count New size of each component vector.
-         * @note If the new size is larger, default-constructed elements are added.
-         */
-        void resize(size_t count)
-        {
-            (get<Components>().resize(count), ...);
-        }
-
-        /**
-         * @brief Clear all component vectors.
-         *
-         * After this call, size() will return 0.
-         */
-        void clear() noexcept
-        {
-            (get<Components>().clear(), ...);
-        }
-
-        /**
-         * @brief Release excess capacity.
-         */
-        void shrink_to_fit()
-        {
-            (get<Components>().shrink_to_fit(), ...);
-        }
-
-        /**
-         * @brief Get the number of entities stored in this archetype.
-         *
-         * @return Number of elements (entities) in the archetype.
-         */
-        [[nodiscard]] size_t size() const noexcept
-        {
-            return std::get<0>(m_storage).size();
-        }
-
-        /**
-         * @brief Get the capacity of the archetype (capacity of component vectors).
-         *
-         * @return Capacity of the archetype.
-         */
-        [[nodiscard]] size_t capacity() const noexcept
-        {
-            return std::get<0>(m_storage).capacity();
-        }
-
-        /**
-         * @brief Check if the archetype contains no entities.
-         *
-         * @return true if empty, false otherwise.
-         */
-        [[nodiscard]] bool empty() const noexcept
-        {
-            return std::get<0>(m_storage).empty();
-        }
-
-        /**
-         * @brief Access the vector of a specific component type.
-         *
-         * @tparam T Component type.
-         * @return Reference to the vector storing components of type T.
-         * @note Static assertion fails if T is not part of the archetype.
-         */
-        template<class T>
-        [[nodiscard]] auto& get() noexcept
-        {
-            static_assert(
-                (std::is_same_v<T, Components> || ...),
-                "The passed component type is not contained in the tuple"
-            );
-            return std::get<vector<T>>(m_storage);
-        }
-
-        /**
-         * @brief Const access to the vector of a specific component type.
-         *
-         * @tparam T Component type.
-         * @return Const reference to the vector storing components of type T.
-         * @note Static assertion fails if T is not part of the archetype.
-         */
-        template<class T>
-        [[nodiscard]] const auto& get() const noexcept
-        {
-            static_assert(
-                (std::is_same_v<T, Components> || ...),
-                "The passed component type is not contained in the tuple"
-            );
-            return std::get<vector<T>>(m_storage);
-        }
-
-        /**
-         * @brief Access raw pointer to the array of a specific component type.
-         *
-         * @tparam T Component type.
-         * @return Pointer to the underlying array of components.
-         */
-        template<class T>
-        [[nodiscard]] T* data()
-        {
-            return get<T>().data();
-        }
-
-        /**
-         * @brief Const access to raw pointer of a specific component type.
-         *
-         * @tparam T Component type.
-         * @return Const pointer to the underlying array of components.
-         */
-        template<class T>
-        [[nodiscard]] const T* data() const
-        {
-            return get<T>().data();
-        }
-
-        /**
-         * @brief Add a new entity with given component values.
-         *
-         * @param ts Component values to emplace.
-         * @note Each component is forwarded to its respective vector.
-         */
-        /*void emplace_back(Components&&... ts)
-        {
-            (get<Components>().emplace_back(std::forward<Components>(ts)), ...);
-        }*/
-
-        /**
-         * @brief Append a new entity, passing components in any order.
-         *
-         * Provided component types must be a subset of Components...
-         * (no duplicates allowed). Omitted components are default-constructed.
-         *
-         * @code
-         *   arch.emplace_back(Position{1,2}, Velocity{3,4});
-         *   arch.emplace_back(Velocity{3,4}, Position{1,2}); // same result
-         * @endcode
-         */
-        template<class... Ts>
-        void emplace_back(Ts&&... args)
-        {
-            static_assert(unique_types<std::remove_cvref_t<Ts>...>::value, "Duplicate component types passed to emplace_back");
-            static_assert((contains_type_v<std::remove_cvref_t<Ts>, components> && ...), "One or more passed types are not part of this archetype");
-
-            ([&]<class C>() {
-                if constexpr ((std::is_same_v<C, std::remove_cvref_t<Ts>> || ...)) {
-                    get<C>().emplace_back(pick_arg<C>(std::forward<Ts>(args)...));
-                } else {
-                    get<C>().emplace_back();
-                }
-            }.template operator()<Components>(),
-             ...);
-        }
-
-        /**
-         * @brief Remove an entity at the given index using swap-and-pop.
-         *
-         * @param index Index of the entity to remove.
-         * @note Swaps the last element into the removed position and pops the last element
-         *       from all component vectors. This is O(1) but does not preserve order.
-         */
-        size_t swap_erase(size_t index)
-        {
-            TAV_ASSERT(index < size());
-            const size_t last = size() - 1;
-            if (index != last) {
-                (std::swap(get<Components>()[index], get<Components>()[last]), ...);
-            }
-
-            (get<Components>().pop_back(), ...);
-            return last;
-        }
-
-        /**
-         * @brief Swap the contents of two archetypes.
-         */
-        void swap(archetype_base& other) noexcept
-        {
-            (std::swap(get<Components>(), other.get<Components>()), ...);
-        }
 
         /**
          * @brief Create a mutable view over a subset of components.
@@ -594,34 +556,18 @@ namespace tavros::core
         template<class... Ts>
         [[nodiscard]] auto view()
         {
-            static_assert((contains_type_v<std::remove_cvref_t<Ts>, components> && ...), "One or more view components are not part of this archetype");
-            return archetype_view<archetype_base, Ts...>(*this);
+            using unqualified_ts = type_transform_t<std::remove_cvref, type_list<Ts...>>;
+            static_assert(is_subset_v<unqualified_ts, typename base::unqualified_types>, "One or more view components are not part of this archetype");
+            return archetype_view<tightly_packed_archetype_base, Ts...>(*this);
         }
 
         template<class... Ts>
         [[nodiscard]] auto view() const
         {
-            static_assert((contains_type_v<std::remove_cvref_t<Ts>, components> && ...), "One or more view components are not part of this archetype");
-            return archetype_view<const archetype_base, Ts...>(*this);
+            using unqualified_ts = type_transform_t<std::remove_cvref, type_list<Ts...>>;
+            static_assert(is_subset_v<unqualified_ts, typename base::unqualified_types>, "One or more view components are not part of this archetype");
+            return archetype_view<const tightly_packed_archetype_base, Ts...>(*this);
         }
-
-    private:
-        /**
-         * @brief Pick the argument of type C from a parameter pack.
-         *        Exactly one argument must have that type (enforced by static_assert above).
-         */
-        template<class C, class T, class... Rest>
-        static decltype(auto) pick_arg(T&& first, Rest&&... rest)
-        {
-            if constexpr (std::is_same_v<C, std::remove_cvref_t<T>>) {
-                return std::forward<T>(first);
-            } else {
-                return pick_arg<C>(std::forward<Rest>(rest)...);
-            }
-        }
-
-    private:
-        std::tuple<vector<Components>...> m_storage;
     };
 
 } // namespace tavros::core
