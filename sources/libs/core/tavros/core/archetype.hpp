@@ -1,11 +1,6 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
-#include <tavros/core/traits.hpp>
-#include <tavros/core/containers/vector.hpp>
-#include <tavros/core/containers/table_iterator.hpp>
-
-#include <tuple>
+#include <tavros/core/containers/table.hpp>
 
 namespace tavros::core
 {
@@ -17,10 +12,6 @@ namespace tavros::core
     concept ArchetypeWith = requires {
         typename ArchetypeT::is_archetype;
     } && (is_subset_v<type_list<RequiredComponents...>, class ArchetypeT::unqualified_types>);
-
-
-    template<class... Ty>
-    concept is_all_default_constructible = (std::is_default_constructible_v<Ty> && ...);
 
     /**
      * @brief Non-owning view over an archetype's container for a subset of components.
@@ -209,207 +200,6 @@ namespace tavros::core
     };
 
 
-    template<class... Ty>
-        requires is_all_default_constructible<Ty...>
-    class basic_dense_table : noncopyable
-    {
-        template<class T>
-        using vector_type = vector<T>;
-        using storage_type = std::tuple<vector_type<Ty>...>;
-
-    public:
-        using types = type_list<Ty...>;
-        using unqualified_types = type_transform_t<std::remove_cvref, types>;
-
-        using size_type = size_t;
-        using difference_type = ptrdiff_t;
-
-        using value_type = void;
-        using allocator_type = void;
-        using reference = std::tuple<Ty&...>;
-        using const_reference = std::tuple<const std::remove_const_t<Ty>&...>;
-        using pointer = void;
-        using const_pointer = void;
-        using iterator = basic_table_iterator<false, basic_dense_table, Ty...>;
-        using const_iterator = basic_table_iterator<true, basic_dense_table, Ty...>;
-        using reverse_iterator = std::reverse_iterator<iterator>;
-        using const_reverse_iterator = std::reverse_iterator<const_iterator>;
-
-    public:
-        [[nodiscard]] reference operator[](size_type index) noexcept
-        {
-            return std::forward_as_tuple(get<std::remove_const_t<Ty>>()[index]...);
-        }
-
-        [[nodiscard]] const_reference operator[](size_type index) const noexcept
-        {
-            return std::forward_as_tuple(get<std::remove_const_t<Ty>>()[index]...);
-        }
-
-        [[nodiscard]] reference front() noexcept
-        {
-            return this->operator[](static_cast<size_type>(0));
-        }
-
-        [[nodiscard]] const_reference front() const noexcept
-        {
-            return this->operator[](static_cast<size_type>(0));
-        }
-
-        [[nodiscard]] reference back() noexcept
-        {
-            return this->operator[](static_cast<size_type>(size() - 1));
-        }
-
-        [[nodiscard]] const_reference back() const noexcept
-        {
-            return this->operator[](static_cast<size_type>(size() - 1));
-        }
-
-        template<class T>
-        [[nodiscard]] auto& get() noexcept
-        {
-            static_assert((std::is_same_v<T, Ty> || ...), "The passed type is not contained in the table");
-            return std::get<vector<T>>(m_storage);
-        }
-
-        template<class T>
-        [[nodiscard]] const auto& get() const noexcept
-        {
-            static_assert((std::is_same_v<T, Ty> || ...), "The passed type is not contained in the table");
-            return std::get<vector<T>>(m_storage);
-        }
-
-        [[nodiscard]] bool empty() const noexcept
-        {
-            return std::get<0>(m_storage).empty();
-        }
-
-        [[nodiscard]] size_type size() const noexcept
-        {
-            return std::get<0>(m_storage).size();
-        }
-
-        [[nodiscard]] size_type max_size() const noexcept
-        {
-            return std::get<0>(m_storage).size();
-        }
-
-        void reserve(size_type new_cap)
-        {
-            (get<Ty>().reserve(new_cap), ...);
-        }
-
-        [[nodiscard]] size_type capacity() const noexcept
-        {
-            return std::get<0>(m_storage).capacity();
-        }
-
-        void shrink_to_fit()
-        {
-            (get<Ty>().shrink_to_fit(), ...);
-        }
-
-        void clear() noexcept
-        {
-            (get<Ty>().clear(), ...);
-        }
-
-        template<class... Ts>
-        reference emplace_back(Ts&&... args)
-        {
-            using unqualified_ts = type_transform_t<std::remove_cvref, type_list<Ts...>>;
-            static_assert(are_unique_v<unqualified_ts>, "Duplicate component types passed to emplace_back");
-            static_assert(is_subset_v<unqualified_ts, unqualified_types>, "One or more passed types are not part of this basic_table");
-
-            ([&]<class C>() {
-                if constexpr ((std::is_same_v<C, std::remove_cvref_t<Ts>> || ...)) {
-                    get<C>().emplace_back(pick_arg<C>(std::forward<Ts>(args)...));
-                } else {
-                    get<C>().emplace_back();
-                }
-            }.template operator()<std::remove_cvref_t<Ty>>(),
-             ...);
-
-            auto idx = size() - 1;
-            return std::forward_as_tuple(get<std::remove_cvref_t<Ty>>()[idx]...);
-        }
-
-        void pop_back()
-        {
-            (get<Ty>().pop_back(), ...);
-        }
-
-        void swap_and_pop(size_type index)
-        {
-            TAV_ASSERT(index < size());
-            if (index >= size()) {
-                return;
-            }
-
-            size_type last = size() - 1;
-            if (last != index) {
-                (std::swap(get<Ty>()[index], get<Ty>()[last]), ...);
-            }
-            pop_back();
-        }
-
-        void resize(size_type count)
-        {
-            (get<Ty>().resize(count), ...);
-        }
-
-        void swap(basic_dense_table& other) noexcept
-        {
-            (std::swap(get<Ty>(), other.get<Ty>()), ...);
-        }
-
-        [[nodiscard]] iterator begin() noexcept
-        {
-            return iterator(this, 0);
-        }
-
-        [[nodiscard]] iterator end() noexcept
-        {
-            return iterator(this, size());
-        }
-
-        [[nodiscard]] const_iterator begin() const noexcept
-        {
-            return const_iterator(this, 0);
-        }
-
-        [[nodiscard]] const_iterator end() const noexcept
-        {
-            return const_iterator(this, size());
-        }
-
-        [[nodiscard]] const_iterator cbegin() const noexcept
-        {
-            return begin();
-        }
-
-        [[nodiscard]] const_iterator cend() const noexcept
-        {
-            return end();
-        }
-
-    private:
-        template<class C, class T, class... Rest>
-        static decltype(auto) pick_arg(T&& first, Rest&&... rest)
-        {
-            if constexpr (std::is_same_v<C, std::remove_cvref_t<T>>) {
-                return std::forward<T>(first);
-            } else {
-                return pick_arg<C>(std::forward<Rest>(rest)...);
-            }
-        }
-
-    private:
-        storage_type m_storage;
-    };
-
-
     /**
      * @brief SoA (Structure of Arrays) storage for a fixed set of component types.
      *
@@ -420,9 +210,9 @@ namespace tavros::core
      */
     template<class... Components>
         requires are_unique_unqualified_v<type_list<Components...>>
-    class tightly_packed_archetype_base final : public basic_dense_table<Components...>
+    class tightly_packed_archetype_base final : public basic_table<Components...>
     {
-        using base = basic_dense_table<Components...>;
+        using base = basic_table<Components...>;
 
     public:
         /// Marker type to identify this class as an archetype.

@@ -183,4 +183,4 @@ namespace tavros::core
         size_type m_pos = 0;
     };
 
-}
+} // namespace tavros::core

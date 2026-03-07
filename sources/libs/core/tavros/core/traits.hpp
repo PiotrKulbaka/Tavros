@@ -29,12 +29,14 @@ namespace tavros::core
     };
 
     template<class T, class... Ts>
-    struct type_at<0, type_list<T, Ts...>> : std::type_identity<T>
+    struct type_at<0, type_list<T, Ts...>>
+        : std::type_identity<T>
     {
     };
 
     template<size_t N, class T, class... Ts>
-    struct type_at<N, type_list<T, Ts...>> : type_at<N - 1, Ts...>
+    struct type_at<N, type_list<T, Ts...>>
+        : type_at<N - 1, Ts...>
     {
     };
 
@@ -55,7 +57,8 @@ namespace tavros::core
     };
 
     template<class... Ts>
-    struct list_size<type_list<Ts...>> : std::integral_constant<size_t, sizeof...(Ts)>
+    struct list_size<type_list<Ts...>>
+        : std::integral_constant<size_t, sizeof...(Ts)>
     {
     };
 
@@ -77,7 +80,8 @@ namespace tavros::core
     };
 
     template<template<class> class Op, class... Ts>
-    struct type_transform<Op, type_list<Ts...>> : std::type_identity<type_list<typename Op<Ts>::type...>>
+    struct type_transform<Op, type_list<Ts...>>
+        : std::type_identity<type_list<typename Op<Ts>::type...>>
     {
     };
 
@@ -99,7 +103,8 @@ namespace tavros::core
     };
 
     template<class... Ts, class... Us>
-    struct type_cat<type_list<Ts...>, type_list<Us...>> : std::type_identity<type_list<Ts..., Us...>>
+    struct type_cat<type_list<Ts...>, type_list<Us...>>
+        : std::type_identity<type_list<Ts..., Us...>>
     {
     };
 
@@ -121,7 +126,8 @@ namespace tavros::core
     };
 
     template<class T, class... Ts>
-    struct contains_type<T, type_list<Ts...>> : std::bool_constant<(std::is_same_v<T, Ts> || ...)>
+    struct contains_type<T, type_list<Ts...>>
+        : std::bool_constant<(std::is_same_v<T, Ts> || ...)>
     {
     };
 
@@ -142,7 +148,8 @@ namespace tavros::core
     };
 
     template<class... Ts, class... Us>
-    struct is_subset<type_list<Ts...>, type_list<Us...>> : std::conjunction<contains_type<Ts, type_list<Us...>>...>
+    struct is_subset<type_list<Ts...>, type_list<Us...>>
+        : std::conjunction<contains_type<Ts, type_list<Us...>>...>
     {
     };
 
@@ -167,7 +174,8 @@ namespace tavros::core
     };
 
     template<class T, class... Ts>
-    struct are_unique<type_list<T, Ts...>> : std::bool_constant<!contains_type_v<T, type_list<Ts...>> && are_unique<type_list<Ts...>>::value>
+    struct are_unique<type_list<T, Ts...>>
+        : std::bool_constant<!contains_type_v<T, type_list<Ts...>> && are_unique<type_list<Ts...>>::value>
     {
     };
 
@@ -188,12 +196,57 @@ namespace tavros::core
     };
 
     template<class... Ts>
-    struct are_unique_unqualified<type_list<Ts...>> : are_unique<type_transform_t<std::remove_cvref, type_list<Ts...>>>
+    struct are_unique_unqualified<type_list<Ts...>>
+        : are_unique<type_transform_t<std::remove_cvref, type_list<Ts...>>>
     {
     };
 
     /** @brief Helper variable template for @ref are_unique_unqualified. */
     template<class List>
     inline constexpr bool are_unique_unqualified_v = are_unique_unqualified<List>::value;
+
+
+    /**
+     * @brief Checks whether all types in a @ref type_list are nothrow default-constructible.
+     * @tparam List A @ref type_list specialization.
+     * @note Ill-formed if @p List is not a @ref type_list.
+     */
+    template<class List>
+    struct are_nothrow_default_constructible
+    {
+        static_assert(sizeof(List) == 0, "are_nothrow_default_constructible: argument must be a type_list");
+    };
+
+    template<class... Ts>
+    struct are_nothrow_default_constructible<type_list<Ts...>>
+        : std::bool_constant<(std::is_nothrow_default_constructible_v<Ts> && ...)>
+    {
+    };
+
+    /** @brief Helper variable template for @ref are_nothrow_default_constructible. */
+    template<class List>
+    inline constexpr bool are_nothrow_default_constructible_v = are_nothrow_default_constructible<List>::value;
+
+
+    /**
+     * @brief Checks whether all types in a @ref type_list are nothrow-swappable.
+     * @tparam List A @ref type_list specialization.
+     * @note Ill-formed if @p List is not a @ref type_list.
+     */
+    template<class List>
+    struct are_nothrow_swappable
+    {
+        static_assert(sizeof(List) == 0, "are_nothrow_swappable: argument must be a type_list");
+    };
+
+    template<class... Ts>
+    struct are_nothrow_swappable<type_list<Ts...>>
+        : std::bool_constant<(std::is_nothrow_swappable_v<Ts> && ...)>
+    {
+    };
+
+    /** @brief Helper variable template for @ref are_nothrow_swappable. */
+    template<class List>
+    inline constexpr bool are_nothrow_swappable_v = are_nothrow_swappable<List>::value;
 
 } // namespace tavros::core
