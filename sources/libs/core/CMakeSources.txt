@@ -33,6 +33,8 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/map.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/set.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/static_vector.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/table.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/table_iterator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/unordered_map.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/unordered_set.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/containers/vector.hpp

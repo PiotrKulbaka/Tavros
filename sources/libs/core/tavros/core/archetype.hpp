@@ -3,6 +3,7 @@
 #include <tavros/core/types.hpp>
 #include <tavros/core/traits.hpp>
 #include <tavros/core/containers/vector.hpp>
+#include <tavros/core/containers/table_iterator.hpp>
 
 #include <tuple>
 
@@ -20,123 +21,6 @@ namespace tavros::core
 
     template<class... Ty>
     concept is_all_default_constructible = (std::is_default_constructible_v<Ty> && ...);
-
-
-    template<bool IsConst, class Table, class... Ty>
-    class basic_table_iterator
-    {
-    private:
-        template<bool, class, class...>
-        friend class basic_table_iterator;
-
-    public:
-        using dense_table_ptr = std::conditional_t<IsConst, const Table*, Table*>;
-        using iterator_category = std::random_access_iterator_tag;
-        using value_type = std::tuple<std::remove_const_t<Ty>...>;
-        using difference_type = ptrdiff_t;
-        using size_type = size_t;
-        using pointer = void;
-        using reference = std::conditional_t<IsConst, std::tuple<const std::remove_const_t<Ty>&...>, std::tuple<Ty&...>>;
-
-    public:
-        constexpr basic_table_iterator() noexcept = default;
-
-        constexpr basic_table_iterator(dense_table_ptr table, size_type pos) noexcept
-            : m_table(table)
-            , m_pos(pos)
-        {
-        }
-
-        operator basic_table_iterator<true, Table, Ty...>() const noexcept
-            requires(!IsConst)
-        {
-            return basic_table_iterator<true, Table, Ty...>(m_table, m_pos);
-        }
-
-        [[nodiscard]] constexpr reference operator[](difference_type value) const noexcept
-        {
-            return std::forward_as_tuple(
-                m_table->template get<std::remove_const_t<Ty>>()[m_pos + value]...
-            );
-        }
-
-        [[nodiscard]] constexpr reference operator*() const noexcept
-        {
-            return std::forward_as_tuple(
-                m_table->template get<std::remove_const_t<Ty>>()[m_pos]...
-            );
-        }
-
-        constexpr basic_table_iterator& operator++() noexcept
-        {
-            ++m_pos;
-            return *this;
-        }
-
-        constexpr basic_table_iterator operator++(int) noexcept
-        {
-            auto copy = *this;
-            ++m_pos;
-            return copy;
-        }
-
-        constexpr basic_table_iterator& operator+=(difference_type value) noexcept
-        {
-            m_pos += value;
-            return *this;
-        }
-
-        constexpr basic_table_iterator operator+(difference_type value) const noexcept
-        {
-            auto copy = *this;
-            return (copy += value);
-        }
-
-        constexpr basic_table_iterator& operator--() noexcept
-        {
-            --m_pos;
-            return *this;
-        }
-
-        constexpr basic_table_iterator operator--(int) noexcept
-        {
-            auto copy = *this;
-            --m_pos;
-            return copy;
-        }
-
-        constexpr basic_table_iterator& operator-=(difference_type value) noexcept
-        {
-            m_pos -= value;
-            return *this;
-        }
-
-        constexpr basic_table_iterator operator-(difference_type value) const noexcept
-        {
-            auto copy = *this;
-            return (copy -= value);
-        }
-
-        [[nodiscard]] constexpr difference_type operator-(const basic_table_iterator& other) const noexcept
-        {
-            return static_cast<difference_type>(m_pos) - static_cast<difference_type>(other.m_pos);
-        }
-
-        [[nodiscard]] constexpr auto operator<=>(const basic_table_iterator& other) const noexcept
-        {
-            return m_pos <=> other.m_pos;
-        }
-
-        [[nodiscard]] constexpr bool operator==(const basic_table_iterator& other) const noexcept
-        {
-            return m_pos == other.m_pos;
-        }
-
-    private:
-        dense_table_ptr m_table = nullptr;
-        size_type       m_pos = 0;
-    };
-
 
     /**
      * @brief Non-owning view over an archetype's container for a subset of components.
