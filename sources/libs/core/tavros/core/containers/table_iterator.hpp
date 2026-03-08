@@ -27,6 +27,8 @@ namespace tavros::core
         template<bool, class, class...>
         friend class basic_table_iterator;
 
+        using types = type_list<Ty...>;
+
     public:
         /** @brief Table type, const-qualified according to @p IsConst. */
         using table_type = std::conditional_t<IsConst, const Table, Table>;
@@ -83,17 +85,36 @@ namespace tavros::core
          */
         [[nodiscard]] constexpr reference operator[](difference_type value) const noexcept
         {
-            return std::forward_as_tuple(
-                m_table->template get<std::remove_const_t<Ty>>()[m_pos + value]...
+            return std::tie(
+                (m_table->template get<std::remove_const_t<Ty>>()[m_pos + value])...
             );
         }
 
         /** @brief Dereferences the iterator, returning a tuple of references to the current element. */
         [[nodiscard]] constexpr reference operator*() const noexcept
         {
-            return std::forward_as_tuple(
-                m_table->template get<std::remove_const_t<Ty>>()[m_pos]...
+            return std::tie(
+                (m_table->template get<std::remove_const_t<Ty>>()[m_pos])...
             );
+        }
+
+        /**
+         * @brief Returns a reference to the column vector for type @p T.
+         * @tparam T Column type. Ill-formed if @p T is not among @p Ty.
+         */
+        template<class T>
+            requires contains_type_v<T, types>
+        [[nodiscard]] auto& get() noexcept
+        {
+            return m_table->template get<std::remove_const_t<T>>()[m_pos];
+        }
+
+        /** @brief Const overload of type-based @ref get(). */
+        template<class T>
+            requires contains_type_v<T, types>
+        [[nodiscard]] const auto& get() const noexcept
+        {
+            return m_table->template get<std::remove_const_t<T>>()[m_pos];
         }
 
         /** @brief Pre-increments the iterator. */

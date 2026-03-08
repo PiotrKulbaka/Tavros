@@ -268,10 +268,8 @@ namespace tavros::core
          * @brief Removes the row at @p index by swapping it with the last row then popping.
          * @param index Row to remove. Does not preserve row order.
          * @pre index < size()
-         * @note Only available when all column element types are nothrow-swappable.
          */
         void swap_and_pop(size_type index) noexcept
-            requires are_nothrow_swappable_v<type_list<vector_type<Ty...>>>
         {
             TAV_ASSERT(index < size());
             if (index >= size()) {
@@ -279,9 +277,7 @@ namespace tavros::core
             }
 
             size_type last = size() - 1;
-            if (last != index) {
-                (std::swap(get<Ty>()[index], get<Ty>()[last]), ...);
-            }
+            ((get<Ty>()[index] = std::move(get<Ty>()[last])), ...);
             pop_back();
         }
 

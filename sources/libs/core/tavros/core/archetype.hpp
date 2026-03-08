@@ -1,230 +1,92 @@
 #pragma once
 
 #include <tavros/core/containers/table.hpp>
+#include <tavros/core/archetype_view.hpp>
 
 namespace tavros::core
 {
 
     /**
-     * @brief Concept: archetype contains all required components.
+     * @brief Concept: type @p T is an archetype that contains all @p RequiredTs components.
+     *
+     * @tparam T           Archetype type to test.
+     * @tparam RequiredTs  Component types that must be present in @p T.
      */
-    template<class ArchetypeT, class... RequiredComponents>
-    concept ArchetypeWith = requires {
-        typename ArchetypeT::is_archetype;
-    } && (is_subset_v<type_list<RequiredComponents...>, class ArchetypeT::unqualified_types>);
+    template<class T, class... RequiredTs>
+    concept archetype_with = requires {
+        typename T::is_archetype;
+    } && (are_unique_unqualified_v<type_list<RequiredTs...>>) && (is_subset_v<type_list<RequiredTs...>, class T::unqualified_types>);
 
     /**
-     * @brief Non-owning view over an archetype's container for a subset of components.
+     * @brief Structure-of-Arrays (SoA) storage for a fixed, unique set of component types.
      *
-     * @tparam Container  Underlying tightly_packed_archetype_base (or compatible) type.
-     * @tparam Components Component types exposed by this view.
-     */
-    template<class Table, class... Components>
-    class archetype_view
-    {
-    public:
-        using iterator = basic_table_iterator<false, Table, Components...>;
-        using const_iterator = basic_table_iterator<true, Table, Components...>;
-
-    public:
-        archetype_view(Table& table)
-            : m_table(table)
-        {
-        }
-
-        /**
-         * @brief Returns a tuple of references to all view components at index.
-         */
-        [[nodiscard]] auto operator[](size_t index) noexcept
-        {
-            return std::forward_as_tuple(get_component_at<Components>(index)...);
-        }
-
-        /**
-         * @brief Returns a tuple of const references to all view components at index.
-         */
-        [[nodiscard]] auto operator[](size_t index) const noexcept
-        {
-            return std::forward_as_tuple(get_component_at<Components>(index)...);
-        }
-
-        /**
-         * @brief Get a specific component at given index.
-         * @tparam T Component type (must be in Components...).
-         */
-        template<class T>
-        [[nodiscard]] T& get_component_at(size_t index)
-        {
-            static_assert(
-                (std::is_same_v<T, Components> || ...),
-                "The passed component type is not contained in the tuple"
-            );
-            return m_table.template get<std::remove_const_t<T>>()[index];
-        }
-
-        /**
-         * @brief Get a specific component at given index.
-         * @tparam T Component type (must be in Components...).
-         */
-        template<class T>
-        [[nodiscard]] const T& get_component_at(size_t index) const
-        {
-            static_assert(
-                (std::is_same_v<T, Components> || ...),
-                "The passed component type is not contained in the tuple"
-            );
-            return m_table.template get<std::remove_const_t<T>>()[index];
-        }
-
-        /**
-         * @brief Invoke a callable with all view components at a specific index.
-         */
-        template<class Func>
-        void invoke_at(size_t index, Func&& func)
-        {
-            func(get_component_at<Components>(index)...);
-        }
-
-        /**
-         * @brief Invoke a callable with all view components at a specific index.
-         */
-        template<class Func>
-        void invoke_at(size_t index, Func&& func) const
-        {
-            func(get_component_at<Components>(index)...);
-        }
-
-        /**
-         * @brief Iterate over all elements, invoking func(Components&...) for each.
-         * @note  func is stored by ref — safe to call in a loop.
-         */
-        template<class Func>
-        void each(Func&& func)
-        {
-            const size_t n = m_table.size();
-            for (size_t i = 0; i < n; ++i) {
-                func(get_component_at<Components>(i)...);
-            }
-        }
-
-        /**
-         * @brief Iterate over all elements, invoking func(Components&...) for each.
-         * @note  func is stored by ref — safe to call in a loop.
-         */
-        template<class Func>
-        void each(Func&& func) const
-        {
-            const size_t n = m_table.size();
-            for (size_t i = 0; i < n; ++i) {
-                func(get_component_at<Components>(i)...);
-            }
-        }
-
-        /**
-         * @brief Iterate over [first, first + count) invoking func for each element.
-         * @pre   first + count <= size()
-         */
-        template<class Func>
-        void each_n(size_t first, size_t count, Func&& func)
-        {
-            TAV_ASSERT(first + count <= m_table.size());
-            const size_t end = first + count;
-            for (size_t i = first; i < end; ++i) {
-                func(get_component_at<Components>(i)...);
-            }
-        }
-
-        /**
-         * @brief Iterate over all elements, invoking func(size_t index, Components&...) for each.
-         */
-        template<class Func>
-        void each_indexed(Func&& func)
-        {
-            const size_t n = m_table.size();
-            for (size_t i = 0; i < n; ++i) {
-                func(i, get_component_at<Components>(i)...);
-            }
-        }
-
-        template<class Func>
-        void each_indexed(Func&& func) const
-        {
-            const size_t n = m_table.size();
-            for (size_t i = 0; i < n; ++i) {
-                func(i, get_component_at<Components>(i)...);
-            }
-        }
-
-        template<class Func>
-        void each_n_indexed(size_t first, size_t count, Func&& func)
-        {
-            TAV_ASSERT(first + count <= m_table.size());
-            const size_t end = first + count;
-            for (size_t i = first; i < end; ++i) {
-                func(i, get_component_at<Components>(i)...);
-            }
-        }
-
-        [[nodiscard]] size_t size() const noexcept
-        {
-            return m_table.size();
-        }
-
-        [[nodiscard]] bool empty() const noexcept
-        {
-            return m_table.empty();
-        }
-
-        [[nodiscard]] iterator begin() noexcept
-        {
-            return {&m_table, 0};
-        }
-
-        [[nodiscard]] iterator end() noexcept
-        {
-            return {&m_table, m_table.size()};
-        }
-
-        [[nodiscard]] const_iterator begin() const noexcept
-        {
-            return {&m_table, 0};
-        }
-
-        [[nodiscard]] const_iterator end() const noexcept
-        {
-            return {&m_table, m_table.size()};
-        }
-
-    private:
-        Table& m_table; /// Reference to the underlying container.
-    };
-
-
-    /**
-     * @brief SoA (Structure of Arrays) storage for a fixed set of component types.
+     * Inherits all row-management operations from @ref basic_table and adds
+     * typed @ref view() factory methods that expose a subset of columns as an
+     * @ref archetype_view.
      *
-     * Each component type is stored in its own contiguous vector, enabling
-     * cache-friendly iteration. Entities are identified by their index.
+     * Compared to @ref basic_table, @c basic_archetype enforces that every
+     * component type appears **exactly once** (via @c are_unique_unqualified_v),
+     * making it suitable as the canonical per-archetype storage in an ECS.
      *
-     * @tparam Components Component types. Must all be distinct.
+     * ### Example
+     * @code
+     *   basic_archetype<Position, Velocity, Health> arch;
+     *   arch.typed_emplace_back(Position{0,0}, Velocity{1,0}, Health{100});
+     *
+     *   // Mutable view over two of the three columns
+     *   auto v = arch.view<Position, Velocity>();
+     *   for (auto [pos, vel] : v) {
+     *       pos.x += vel.x;
+     *   }
+     *
+     *   // Read-only view
+     *   const auto& carch = arch;
+     *   auto cv = carch.view<Health>();
+     * @endcode
+     *
+     * @tparam Components Component types. Must all be distinct after cv-ref stripping.
      */
     template<class... Components>
         requires are_unique_unqualified_v<type_list<Components...>>
-    class tightly_packed_archetype_base final : public basic_table<Components...>
+    class basic_archetype final : public basic_table<Components...>
     {
         using base = basic_table<Components...>;
 
     public:
-        /// Marker type to identify this class as an archetype.
+        /// Marker type used by the @ref archetype_with concept to identify archetypes.
         using is_archetype = void;
 
+        /// Inherit size and index type from base.
+        using typename base::size_type;
+
+        /** @brief Default-constructs an empty archetype with no rows. */
+        basic_archetype() noexcept = default;
+
+        /** @brief Default move-constructor. */
+        basic_archetype(basic_archetype&& other) noexcept = default;
+
+        /** @brief Default move-assignement operator. */
+        basic_archetype& operator=(basic_archetype&& other) noexcept = default;
+
+        /** @brief Default destructor. */
+        ~basic_archetype() noexcept = default;
+
         /**
-         * @brief Create a mutable view over a subset of components.
+         * @brief Creates a mutable view over a subset of component columns.
          *
-         * @tparam Ts Components exposed by the view. Must be a subset of Components...
+         * The returned @ref archetype_view holds a non-owning pointer to this
+         * archetype; it is invalidated if the archetype is destroyed or if any
+         * reallocation occurs (e.g. via @c emplace_back after capacity is exceeded).
+         *
+         * @tparam Ts  Components to expose. Each type must be present in
+         *             @p Components and all must be distinct. May be
+         *             cv-qualified to restrict mutability of individual columns
+         *             (e.g. @c const Velocity).
+         * @return     A lightweight @ref archetype_view<basic_archetype, Ts...>.
+         *
          * @code
          *   auto v = arch.view<Position, Velocity>();
-         *   for (auto [pos, vel] : v) { ... }
+         *   v.each([](Position& p, Velocity& v) { p.x += v.x; });
          * @endcode
          */
         template<class... Ts>
@@ -232,15 +94,30 @@ namespace tavros::core
         {
             using unqualified_ts = type_transform_t<std::remove_cvref, type_list<Ts...>>;
             static_assert(is_subset_v<unqualified_ts, typename base::unqualified_types>, "One or more view components are not part of this archetype");
-            return archetype_view<tightly_packed_archetype_base, Ts...>(*this);
+            return basic_archetype_view<basic_archetype, Ts...>(*this);
         }
 
+        /**
+         * @brief Creates an immutable view over a subset of component columns.
+         *
+         * All columns exposed by the view are implicitly const-qualified,
+         * regardless of the cv-qualifiers on @p Ts.
+         *
+         * @tparam Ts  Components to expose. Same constraints as the mutable overload.
+         * @return     A lightweight @ref archetype_view<const basic_archetype, const Ts...>.
+         *
+         * @code
+         *   const auto& carch = arch;
+         *   auto cv = carch.view<Position>();
+         *   cv.each([](const Position& p) { /* read-only *\/ });
+         * @endcode
+         */
         template<class... Ts>
         [[nodiscard]] auto view() const
         {
             using unqualified_ts = type_transform_t<std::remove_cvref, type_list<Ts...>>;
             static_assert(is_subset_v<unqualified_ts, typename base::unqualified_types>, "One or more view components are not part of this archetype");
-            return archetype_view<const tightly_packed_archetype_base, Ts...>(*this);
+            return basic_archetype_view<basic_archetype, Ts...>(*this);
         }
     };
 

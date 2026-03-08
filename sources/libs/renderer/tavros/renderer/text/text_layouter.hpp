@@ -92,8 +92,8 @@ namespace tavros::renderer
          * @return Bounding box of the laid out text block or invalid bbox if lines.size() is zero.
          */
         template<
-            core::ArchetypeWith<glyph_c, pos2_c> Text,
-            core::ArchetypeWith<text_line_c>     Lines>
+            core::archetype_with<glyph_c, pos2_c> Text,
+            core::archetype_with<text_line_c>     Lines>
         static geometry::aabb2 layout(Text& text, Lines& lines, text_align align = text_align::left, float line_spacing = 1.0f) noexcept
         {
             if (lines.size() == 0) {
@@ -166,7 +166,7 @@ namespace tavros::renderer
          *
          * @return Bounding box of the laid out text block or invalid bbox if text.size() is zero.
          */
-        template<core::ArchetypeWith<glyph_c, pos2_c> Text>
+        template<core::archetype_with<glyph_c, pos2_c> Text>
         static geometry::aabb2 layout(Text& text, float line_wrap_width = 0.0f, text_align align = text_align::left, float line_spacing = 1.0f) noexcept
         {
             if (text.size() == 0) {

@@ -80,7 +80,7 @@ namespace tavros::renderer
          * @param fnt Font used for glyph generation (must not be null).
          * @param font_size Font size scaling factor.
          */
-        template<core::ArchetypeWith<glyph_c, atlas_rect_t, rect_layout_c> Text>
+        template<core::archetype_with<glyph_c, atlas_rect_t, rect_layout_c> Text>
         static void set_text(Text& text, core::string_view str, const font* fnt, float font_size)
         {
             text.clear();
@@ -102,7 +102,7 @@ namespace tavros::renderer
          * @param fnt Font used for glyph generation (must not be null).
          * @param font_size Font size scaling factor.
          */
-        template<core::ArchetypeWith<glyph_c, atlas_rect_t, rect_layout_c> Text>
+        template<core::archetype_with<glyph_c, atlas_rect_t, rect_layout_c> Text>
         static void append_text(Text& text, core::string_view str, const font* fnt, float font_size)
         {
             TAV_ASSERT(fnt != nullptr);
@@ -142,7 +142,7 @@ namespace tavros::renderer
 
                     atlas_rect_t entry = std::iswspace(cp) ? atlas_rect_t{0, 0, 0, 0} : gi.entry;
 
-                    text.emplace_back(
+                    text.typed_emplace_back(
                         // Invert ascent and descent to match the UI coordinate system where Y increases downwards
                         glyph_c{fnt, cp, font_size, step_x * font_size, -fm.ascent_y * font_size, -fm.descent_y * font_size},
                         entry,
@@ -166,7 +166,7 @@ namespace tavros::renderer
          * @param fnt New font (must not be null).
          * @param font_size New font size scaling factor.
          */
-        template<core::ArchetypeWith<glyph_c, atlas_rect_t, rect_layout_c> Text>
+        template<core::archetype_with<glyph_c, atlas_rect_t, rect_layout_c> Text>
         static void set_style(Text& text, size_t first, size_t count, const font* fnt, float font_size)
         {
             TAV_ASSERT(fnt != nullptr);

@@ -151,8 +151,8 @@ namespace tavros::renderer
          * @param line_wrap_width Maximum allowed width (0 disables wrapping).
          */
         template<
-            core::ArchetypeWith<glyph_c>     Text,
-            core::ArchetypeWith<text_line_c> Lines>
+            core::archetype_with<glyph_c>     Text,
+            core::archetype_with<text_line_c> Lines>
         static void break_lines(Text& text, Lines& lines, float line_wrap_width = 0.0f)
         {
             lines.clear();
