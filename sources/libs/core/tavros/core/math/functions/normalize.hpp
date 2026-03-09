@@ -17,11 +17,11 @@
  * - The `wrap_angle` function is used to wrap Euler angles into the [-π, π] range, which is useful for applications like smooth rotations and comparisons.
  *
  * ### Supported Types:
- * - `vec2` — 2D vector normalization
- * - `vec3` — 3D vector normalization
- * - `vec4` — 4D vector normalization
- * - `quat` — Quaternion normalization
- * - `euler3` — Euler angle normalization
+ * - `vec2` - 2D vector normalization
+ * - `vec3` - 3D vector normalization
+ * - `vec4` - 4D vector normalization
+ * - `quat` - Quaternion normalization
+ * - `euler3` - Euler angle normalization
  */
 
 namespace tavros::math

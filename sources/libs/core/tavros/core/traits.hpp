@@ -138,8 +138,8 @@ namespace tavros::core
 
     /**
      * @brief Checks whether all types in @p List are contained in @p Other.
-     * @tparam List Source @ref type_list — types to look up.
-     * @tparam Other Target @ref type_list — types to search in.
+     * @tparam List Source @ref type_list - types to look up.
+     * @tparam Other Target @ref type_list - types to search in.
      */
     template<class List, class Other>
     struct is_subset

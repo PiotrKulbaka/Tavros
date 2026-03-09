@@ -2,6 +2,7 @@
 
 #include <tavros/core/memory/dynamic_buffer.hpp>
 #include <concepts>
+#include <algorithm>
 
 namespace tavros::core
 {
@@ -12,7 +13,7 @@ namespace tavros::core
      * Similar to std::span, this class represents a view over an existing
      * memory buffer, allowing both read and write access to its contents.
      *
-     * The class does not manage memory — it only stores a pointer and a size.
+     * The class does not manage memory - it only stores a pointer and a size.
      *
      * @tparam T Element type of the buffer.
      */

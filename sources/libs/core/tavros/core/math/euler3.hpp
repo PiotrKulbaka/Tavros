@@ -9,7 +9,7 @@ namespace tavros::math
     /**
      * @brief Represents a set of Euler angles in radians.
      *
-     * This class stores and manipulates a set of 3D Euler angles — roll, pitch, and yaw —
+     * This class stores and manipulates a set of 3D Euler angles - roll, pitch, and yaw -
      * representing rotations around the X, Y, and Z axes, respectively. All angles are stored
      * in radians.
      *

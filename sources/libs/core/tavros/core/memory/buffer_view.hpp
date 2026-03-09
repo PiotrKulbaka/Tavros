@@ -97,7 +97,9 @@ namespace tavros::core
          *
          * @param buffer Reference to the source dynamic_buffer.
          */
-        constexpr buffer_view(const dynamic_buffer<T>& buffer) noexcept
+        template<class U = T>
+            requires std::is_trivially_copyable_v<U>
+        constexpr buffer_view(const dynamic_buffer<U>& buffer) noexcept
             : m_data(buffer.data())
             , m_size(buffer.capacity())
         {

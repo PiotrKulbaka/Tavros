@@ -117,7 +117,7 @@ namespace tavros::core
      *
      * @par Validity
      * A handle is considered valid if its raw ID is non-zero (@ref valid, @ref operator bool).
-     * Validity does not imply liveness — the slot may have been deallocated and reallocated
+     * Validity does not imply liveness - the slot may have been deallocated and reallocated
      * with a higher generation. Use @ref handle_allocator::contains for liveness checks.
      *
      * @par Equality
@@ -229,9 +229,9 @@ namespace tavros::core
  * @brief fmt formatter for @ref tavros::core::handle_base.
  *
  * Formats a handle as `TTTT:GGGG:IIIIIIII` where:
- * - `TTTT`     — 4 hex digits of type ID
- * - `GGGG`     — 4 hex digits of generation
- * - `IIIIIIII` — 8 hex digits of index
+ * - `TTTT`     - 4 hex digits of type ID
+ * - `GGGG`     - 4 hex digits of generation
+ * - `IIIIIIII` - 8 hex digits of index
  *
  * Invalid handles are formatted with error styling applied to all fields.
  */

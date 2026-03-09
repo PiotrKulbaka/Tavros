@@ -19,12 +19,12 @@
  * - Prefer `squared_length()` when possible to avoid the cost of `sqrt()`.
  *
  * ### Supported Types:
- * - `vec2` — 2D vector
- * - `vec3` — 3D vector
- * - `vec4` — 4D vector
- * - `quat` — Quaternion
+ * - `vec2` - 2D vector
+ * - `vec3` - 3D vector
+ * - `vec4` - 4D vector
+ * - `quat` - Quaternion
  *
- * @see dot.hpp — For the underlying dot product computations used in these functions.
+ * @see dot.hpp - For the underlying dot product computations used in these functions.
  */
 
 #include <tavros/core/math/functions/basic_math.hpp>

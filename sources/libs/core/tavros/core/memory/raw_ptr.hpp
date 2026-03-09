@@ -19,10 +19,10 @@ namespace tavros::core
     class raw_ptr
     {
     public:
-        /**
-         * @brief Default constructor. Pointer is nullptr.
-         */
-        raw_ptr() noexcept
+        using value_type = T;
+
+        /** @brief Default constructor. Pointer is nullptr. */
+        constexpr raw_ptr() noexcept
             : m_ptr(nullptr)
         {
         }
@@ -31,50 +31,38 @@ namespace tavros::core
          * @brief Constructs wrapper from a raw pointer.
          * @param ptr Pointer to wrap.
          */
-        raw_ptr(T* ptr) noexcept
+        constexpr raw_ptr(value_type* ptr) noexcept
             : m_ptr(ptr)
         {
         }
 
-        /**
-         * @brief Constructs wrapper from nullptr.
-         */
-        raw_ptr(std::nullptr_t) noexcept
+        /** @brief Constructs wrapper from nullptr. */
+        constexpr raw_ptr(std::nullptr_t) noexcept
             : m_ptr(nullptr)
         {
         }
 
-        /**
-         * @brief Copy constructor. Simply copies the pointer.
-         */
-        raw_ptr(const raw_ptr& other) noexcept = default;
+        /** @brief Copy constructor. Simply copies the pointer. */
+        constexpr raw_ptr(const raw_ptr& other) noexcept = default;
 
-        /**
-         * @brief Move constructor. Transfers ownership, source becomes nullptr.
-         */
-        raw_ptr(raw_ptr&& other) noexcept
+        /** @brief Move constructor. Transfers ownership, source becomes nullptr. */
+        constexpr raw_ptr(raw_ptr&& other) noexcept
             : m_ptr(other.m_ptr)
         {
             other.m_ptr = nullptr;
         }
 
-        /**
-         * @brief Destructor. Does not delete the object.
-         */
-        ~raw_ptr() noexcept
+        /** @brief Destructor. Does not delete the object. */
+        constexpr ~raw_ptr() noexcept
         {
             m_ptr = nullptr;
         }
 
-        /**
-         * @brief Copy assignment. Simply copies the pointer.
-         */
-        raw_ptr& operator=(const raw_ptr& other) noexcept = default;
+        /** @brief Copy assignment. Simply copies the pointer. */
+        constexpr raw_ptr& operator=(const raw_ptr& other) noexcept = default;
 
-        /**
-         * @brief Move assignment. Transfers ownership, source becomes nullptr.
-         */
-        raw_ptr& operator=(raw_ptr&& other) noexcept
+        /** @brief Move assignment. Transfers ownership, source becomes nullptr. */
+        constexpr raw_ptr& operator=(raw_ptr&& other) noexcept
         {
             if (this != &other) {
                 m_ptr = other.m_ptr;
@@ -83,64 +71,50 @@ namespace tavros::core
             return *this;
         }
 
-        /**
-         * @brief Checks if the pointer is not nullptr.
-         */
-        operator bool() const noexcept
+        /** @brief Checks if the pointer is not nullptr. */
+        constexpr operator bool() const noexcept
         {
             return m_ptr != nullptr;
         }
 
-        /**
-         * @brief Returns the raw pointer.
-         */
-        T* get() noexcept
+        /** @brief Returns the raw pointer. */
+        constexpr value_type* get() noexcept
         {
             return m_ptr;
         }
 
-        /**
-         * @brief Returns the raw pointer (const version).
-         */
-        const T* get() const noexcept
+        /** @brief Returns the raw pointer (const version). */
+        constexpr const value_type* get() const noexcept
         {
             return m_ptr;
         }
 
-        /**
-         * @brief Access the pointed object.
-         */
-        T* operator->() noexcept
+        /** @brief Access the pointed object. */
+        constexpr value_type* operator->() noexcept
         {
             return get();
         }
 
-        /**
-         * @brief Access the pointed object (const version).
-         */
-        const T* operator->() const noexcept
+        /** @brief Access the pointed object (const version). */
+        constexpr const value_type* operator->() const noexcept
         {
             return get();
         }
 
-        /**
-         * @brief Dereference operator.
-         */
-        T& operator*() noexcept
+        /** @brief Dereference operator. */
+        constexpr value_type& operator*() noexcept
         {
             return *get();
         }
 
-        /**
-         * @brief Dereference operator (const version).
-         */
-        const T& operator*() const noexcept
+        /** @brief Dereference operator (const version). */
+        constexpr const value_type& operator*() const noexcept
         {
             return *get();
         }
 
     private:
-        T* m_ptr;
+        value_type* m_ptr;
     };
 
 

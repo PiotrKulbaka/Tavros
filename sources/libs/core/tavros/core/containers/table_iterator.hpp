@@ -48,7 +48,7 @@ namespace tavros::core
         /** @brief Unsigned index type. */
         using size_type = size_t;
 
-        /** @brief No pointer type — iterator yields tuple references, not addressable values. */
+        /** @brief No pointer type - iterator yields tuple references, not addressable values. */
         using pointer = void;
 
         /** @brief Tuple of (const) lvalue references to each column element at the current position. */

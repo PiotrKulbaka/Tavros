@@ -22,10 +22,10 @@
  * - Generating intermediate values
  *
  * ### Supported Types:
- * - `float` — Scalar interpolation
- * - `vec2` — 2D vector interpolation
- * - `vec3` — 3D vector interpolation
- * - `vec4` — 4D vector interpolation
+ * - `float` - Scalar interpolation
+ * - `vec2` - 2D vector interpolation
+ * - `vec3` - 3D vector interpolation
+ * - `vec4` - 4D vector interpolation
  */
 
 #include <tavros/core/math/vec2.hpp>

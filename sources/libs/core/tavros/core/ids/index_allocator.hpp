@@ -43,9 +43,9 @@ namespace tavros::core
      * concrete allocators only need to implement the core allocation primitives
      * and two navigation helpers:
      *
-     * - `index_t find_first() const noexcept` — index of the first allocated slot,
+     * - `index_t find_first() const noexcept` - index of the first allocated slot,
      *   or `capacity()` if none are allocated.
-     * - `index_t next_after(index_t pos) const noexcept` — index of the next
+     * - `index_t next_after(index_t pos) const noexcept` - index of the next
      *   allocated slot after @p pos, or `capacity()` if there are no more.
      *
      * @par Iterator invalidation

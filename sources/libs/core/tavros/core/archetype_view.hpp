@@ -16,7 +16,7 @@ namespace tavros::core
      *                    restrict mutability (e.g. @c const Position restricts that column
      *                    to read-only access).
      *
-     * @note The view does **not** own the table — the caller must ensure the table
+     * @note The view does **not** own the table - the caller must ensure the table
      *       outlives the view.
      */
     template<class Table, class... Components>
@@ -164,7 +164,7 @@ namespace tavros::core
          * @brief Calls @p func(size_type index, Components&...) for every row.
          *
          * Identical to @ref each, but also passes the current row index as the
-         * first argument — useful when the caller needs to correlate results with
+         * first argument - useful when the caller needs to correlate results with
          * entity IDs or perform sparse updates.
          *
          * @tparam Func  Callable matching @c void(size_type, Components&...).

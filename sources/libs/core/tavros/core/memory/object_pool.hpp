@@ -50,7 +50,7 @@ namespace tavros::core
         /**
          * @brief Forward iterator over live objects in the pool.
          *
-         * Dereferencing yields `std::pair<handle_type, T*>` — the handle and
+         * Dereferencing yields `std::pair<handle_type, T*>` - the handle and
          * a pointer to the corresponding object.
          *
          * @tparam IsConst  If @c true, the pointer in the pair is @c const T*.

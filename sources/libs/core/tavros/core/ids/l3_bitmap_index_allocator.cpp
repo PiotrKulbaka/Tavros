@@ -170,13 +170,13 @@ namespace tavros::core
                 return static_cast<index_t>(l3_idx * k_bits_per_word + l3_bit + math::first_set_bit(l3_word));
             }
 
-            // Current l3 block exhausted — try next l3 block in the same l2 group
+            // Current l3 block exhausted - try next l3 block in the same l2 group
             const size_t next_l3 = l3_idx + 1;
             const size_t cur_l2 = l3_idx / k_bits_per_word;
             const size_t end_l3 = (cur_l2 + 1) * k_bits_per_word; // first l3 of next l2 group
 
             if (next_l3 < end_l3 && next_l3 < k_l3_map_size) {
-                // Still inside the same l2 group — scan remaining l3 blocks via l2 bitmap
+                // Still inside the same l2 group - scan remaining l3 blocks via l2 bitmap
                 const size_t l3_bit_in_l2 = next_l3 % k_bits_per_word;
                 const uint64 l2_remaining = ~m_l2_map[cur_l2] >> l3_bit_in_l2;
                 if (l2_remaining != 0) {
@@ -193,7 +193,7 @@ namespace tavros::core
                 }
             }
 
-            // Current l2 group exhausted — jump to the next l2 group via l1
+            // Current l2 group exhausted - jump to the next l2 group via l1
             const size_t next_l2 = cur_l2 + 1;
             if (next_l2 >= k_l2_map_size) {
                 break;
@@ -212,7 +212,7 @@ namespace tavros::core
             // Within the jumped l2 group, find the first non-full l3 block
             const uint64 l2_word = ~m_l2_map[jump_l2];
             if (l2_word == 0) {
-                // All l3 blocks in this group are full — shouldn't happen if m_size is correct,
+                // All l3 blocks in this group are full - shouldn't happen if m_size is correct,
                 // but handle gracefully by moving to the start of next group
                 pos = static_cast<index_t>((jump_l2 + 1) * k_bits_per_word * k_bits_per_word);
                 continue;

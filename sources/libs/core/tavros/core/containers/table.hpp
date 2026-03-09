@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tavros/core/containers/vector.hpp>
 #include <tavros/core/containers/table_iterator.hpp>
 
 namespace tavros::core
@@ -10,7 +11,7 @@ namespace tavros::core
      *
      * Stores each column type @p Ty in a separate contiguous vector, providing
      * row-wise access via tuples of references. Satisfies most named requirements
-     * of a reversible container. Duplicate column types are allowed at this level —
+     * of a reversible container. Duplicate column types are allowed at this level -
      * uniqueness constraints belong to higher-level constructs such as archetypes.
      *
      * @tparam Ty Column types. Pack must be non-empty.
@@ -39,10 +40,10 @@ namespace tavros::core
         /** @brief Signed difference type. */
         using difference_type = ptrdiff_t;
 
-        /** @brief No single value type — rows are heterogeneous tuples. */
+        /** @brief No single value type - rows are heterogeneous tuples. */
         using value_type = void;
 
-        /** @brief No allocator exposure — allocation is managed internally per column. */
+        /** @brief No allocator exposure - allocation is managed internally per column. */
         using allocator_type = void;
 
         /** @brief Tuple of lvalue references to each column element at a given row. */
@@ -51,7 +52,7 @@ namespace tavros::core
         /** @brief Tuple of const lvalue references to each column element at a given row. */
         using const_reference = std::tuple<const std::remove_const_t<Ty>&...>;
 
-        /** @brief No pointer type — rows are not contiguously addressable as a unit. */
+        /** @brief No pointer type - rows are not contiguously addressable as a unit. */
         using pointer = void;
 
         /** @brief No const pointer type. */
