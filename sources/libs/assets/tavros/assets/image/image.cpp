@@ -1,6 +1,7 @@
 #include <tavros/assets/image/image.hpp>
 
 #include <tavros/assets/image/image_codec.hpp>
+#include <tavros/assets/image/image_view.hpp>
 #include <tavros/core/logger/logger.hpp>
 
 namespace
@@ -45,9 +46,9 @@ namespace tavros::assets
         return image(std::move(pixels), w, h, fmt, stride);
     }
 
-    core::dynamic_buffer<uint8> image::encode(const image& im, bool y_flip)
+    core::dynamic_buffer<uint8> image::encode(image_view im, bool y_flip)
     {
-        return image_codec::encode(im.m_data, im.m_width, im.m_height, im.m_components, im.m_stride, image_codec::image_format::png, y_flip);
+        return image_codec::encode({im.data(), im.size_bytes()}, im.width(), im.height(), im.components(), im.stride(), image_codec::image_format::png, y_flip);
     }
 
 } // namespace tavros::assets

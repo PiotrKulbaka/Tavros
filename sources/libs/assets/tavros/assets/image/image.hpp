@@ -8,6 +8,8 @@
 namespace tavros::assets
 {
 
+    class image_view;
+
     /**
      * @brief Simple 2D image container for raw pixel data.
      *
@@ -71,7 +73,7 @@ namespace tavros::assets
          *
          * @return Buffer containing the encoded image data.
          */
-        [[nodiscard]] static core::dynamic_buffer<uint8> encode(const image& im, bool y_flip = false);
+        [[nodiscard]] static core::dynamic_buffer<uint8> encode(image_view im, bool y_flip = false);
 
     public:
         /** @brief Constructs an empty invalid image. */

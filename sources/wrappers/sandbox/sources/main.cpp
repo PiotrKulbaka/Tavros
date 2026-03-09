@@ -22,7 +22,7 @@
 #include <tavros/renderer/gpu_stream_buffer.hpp>
 #include <tavros/input/input_manager.hpp>
 #include <tavros/assets/asset_manager.hpp>
-#include <tavros/assets/image/image.hpp>
+#include <tavros/assets/image/image_view.hpp>
 #include <tavros/ui/view.hpp>
 #include <tavros/ui/button/button.hpp>
 #include <tavros/ui/root_view.hpp>
@@ -784,23 +784,22 @@ private:
         const int w = m_input_manager.get_window_size().width;
         const int h = m_input_manager.get_window_size().height;
 
-        auto map = m_graphics_device->map_buffer(m_stage_upload_buffer);
-
+        auto         map = m_graphics_device->map_buffer(m_stage_upload_buffer);
         const size_t plane_size = static_cast<size_t>(w * h);
 
         // Color
-        tavros::core::dynamic_buffer<uint8> color_buf(map.data(), plane_size * 4);
-        tavros::assets::image               color_im(std::move(color_buf), w, h, tavros::assets::image::pixel_format::rgba8);
+        tavros::assets::image_view color_im({map.data(), plane_size * 4}, w, h, tavros::assets::image::pixel_format::rgba8);
         save_image(color_im, "output://color.png", true);
 
         // Depth (float -> u8)
         tavros::core::dynamic_buffer<uint8> depth_buf(plane_size);
-        const float*                        src = reinterpret_cast<const float*>(map.data() + plane_size * 4);
+
+        const float* src = reinterpret_cast<const float*>(map.data() + plane_size * 4);
         for (size_t i = 0; i < plane_size; ++i) {
-            depth_buf.data()[i] = static_cast<uint8>(src[i] * 255.0f);
+            depth_buf[i] = static_cast<uint8>(src[i] * 255.0f);
         }
 
-        tavros::assets::image depth_im(std::move(depth_buf), w, h, tavros::assets::image::pixel_format::r8);
+        tavros::assets::image_view depth_im(depth_buf, w, h, tavros::assets::image::pixel_format::r8);
         save_image(depth_im, "output://depth.png", true);
 
         m_graphics_device->unmap_buffer(m_stage_upload_buffer);
@@ -982,7 +981,7 @@ private:
         return {};
     }
 
-    void save_image(const tavros::assets::image& im, tavros::core::string_view path, bool y_flip = false)
+    void save_image(tavros::assets::image_view im, tavros::core::string_view path, bool y_flip = false)
     {
         if (!im.valid()) {
             g_logger.error("Failed to save invalid image {}", path);
