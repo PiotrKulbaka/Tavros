@@ -4,6 +4,7 @@
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/core/memory/buffer.hpp>
 #include <tavros/core/containers/vector.hpp>
+#include <tavros/core/string.hpp>
 
 namespace tavros::assets
 {

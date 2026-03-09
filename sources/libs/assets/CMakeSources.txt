@@ -11,8 +11,10 @@ set(TAV_ASSETS_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/asset_stream.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/asset_stream.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/codecs/image_codec.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/codecs/image_codec.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/image/image.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/image/image.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/image/image_codec.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/image/image_codec.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/io/file_stream.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/assets/io/file_stream.hpp

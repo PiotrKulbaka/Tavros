@@ -1,7 +1,8 @@
 #pragma once
 
-#include <tavros/core/memory/dynamic_buffer.hpp>
+#include <tavros/core/nonconstructable.hpp>
 #include <tavros/core/memory/buffer_view.hpp>
+#include <tavros/assets/image/image.hpp>
 
 namespace tavros::assets
 {
@@ -17,7 +18,7 @@ namespace tavros::assets
      * @note Each call to `decode()` or `encode()` invalidates the data returned by any
      * previous call to either function, as the internal buffer is reused for performance.
      */
-    class image_codec : core::noncopyable
+    class image_codec : core::nonconstructable
     {
     public:
         /**
@@ -26,14 +27,12 @@ namespace tavros::assets
          * This structure provides basic information about the decoded image, including
          * dimensions, channel count, row stride, and a memory view of the pixel data.
          */
-        struct pixels_view
+        struct image_info
         {
-            uint32 width = 0;                /// Image width in pixels.
-            uint32 height = 0;               /// Image height in pixels.
-            uint32 channels = 0;             /// Number of color channels (e.g., 3 for RGB, 4 for RGBA).
-            uint32 stride = 0;               /// Number of bytes per row (including padding).
-
-            core::buffer_view<uint8> pixels; /// View of the raw pixel data.
+            uint32 width = 0;    /// Image width in pixels.
+            uint32 height = 0;   /// Image height in pixels.
+            uint32 channels = 0; /// Number of color channels (e.g., 3 for RGB, 4 for RGBA).
+            uint32 stride = 0;   /// Number of bytes per row (including padding).
         };
 
         /**
@@ -44,24 +43,13 @@ namespace tavros::assets
          */
         enum class image_format
         {
-            png, /// Portable Network Graphics format — lossless compression, supports alpha channel
-            jpg, /// JPEG format — lossy compression, compact size, no alpha channel
-            tga, /// Truevision TGA format — simple, can be uncompressed or RLE, optional alpha
-            bmp, /// Windows Bitmap format — uncompressed or RLE, no built-in alpha
+            png, /// Portable Network Graphics format ï¿½ lossless compression, supports alpha channel
+            jpg, /// JPEG format ï¿½ lossy compression, compact size, no alpha channel
+            tga, /// Truevision TGA format ï¿½ simple, can be uncompressed or RLE, optional alpha
+            bmp, /// Windows Bitmap format ï¿½ uncompressed or RLE, no built-in alpha
         };
 
     public:
-        /**
-         * @brief Constructs a new image codec.
-         * @param alc Pointer to the memory allocator used for internal buffers.
-         */
-        explicit image_codec(tavros::core::allocator* alc);
-
-        /**
-         * @brief Destroys the image codec and releases any allocated resources.
-         */
-        ~image_codec();
-
         /**
          * @brief Decodes a packed image format into raw pixel data.
          *
@@ -75,7 +63,7 @@ namespace tavros::assets
          *
          * @note The returned view becomes invalid after the next call to `decode()` or `encode()`.
          */
-        pixels_view decode(core::buffer_view<uint8> packed_pixels, uint32 required_channels = 4, bool y_flip = false);
+        static core::dynamic_buffer<uint8> decode(core::buffer_view<uint8> data, uint32& w, uint32& h, uint32& c, uint32& stride, uint32 rc = 0, bool y_flip = false);
 
         /**
          * @brief Encodes raw pixel data into a compressed image format.
@@ -89,10 +77,7 @@ namespace tavros::assets
          *
          * @note The returned view becomes invalid after the next call to `encode()` or `decode()`.
          */
-        core::buffer_view<uint8> encode(const pixels_view& pixels, image_format fmt = image_format::png, bool y_flip = false);
-
-    private:
-        core::dynamic_buffer<uint8> m_buffer;
+        static core::dynamic_buffer<uint8> encode(core::buffer_view<uint8> pixels, uint32 w, uint32 h, uint32 c, uint32 stride, image_format fmt = image_format::png, bool y_flip = false);
     };
 
 } // namespace tavros::assets
