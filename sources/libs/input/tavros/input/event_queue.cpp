@@ -26,7 +26,7 @@ namespace tavros::input
         if (count < k_max_events) {
             *m_back.end++ = e;
         } else {
-            ::logger.warning("Event queue overflow — call swap_queues() to flush events");
+            ::logger.warning("Event queue overflow - call swap_queues() to flush events");
         }
     }
 

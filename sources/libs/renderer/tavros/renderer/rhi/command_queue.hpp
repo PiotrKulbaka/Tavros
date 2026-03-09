@@ -11,7 +11,7 @@ namespace tavros::renderer::rhi
     /**
      * @brief Low-level abstraction for recording GPU commands.
      *
-     * This interface represents a command queue — a sequence of GPU operations such as
+     * This interface represents a command queue - a sequence of GPU operations such as
      * binding resources, performing draw calls, and executing data transfers.
      * Command queues are designed to be recorded on multiple threads and submitted
      * later for execution through a frame_composer.

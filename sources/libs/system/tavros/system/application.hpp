@@ -16,7 +16,7 @@ namespace tavros::system
      * the lifecycle of the program. It manages initialization, event handling,
      * and shutdown through an internal platform-specific implementation.
      *
-     * This class follows the singleton pattern — only one instance can exist
+     * This class follows the singleton pattern - only one instance can exist
      * during the lifetime of the program.
      */
     class application : public core::singleton<application>

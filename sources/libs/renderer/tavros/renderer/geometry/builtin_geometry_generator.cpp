@@ -152,7 +152,7 @@ namespace tavros::renderer
         if (subdivisions > 12) {
             ::logger.error(
                 "Failed to generate icosphere (subdivisions = {}). "
-                "Subdivision level too high — potential integer overflow when computing vertex or index count.",
+                "Subdivision level too high - potential integer overflow when computing vertex or index count.",
                 fmt::styled_param(subdivisions)
             );
             return false;
