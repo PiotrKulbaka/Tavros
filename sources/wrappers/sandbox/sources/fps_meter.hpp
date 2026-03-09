@@ -8,7 +8,7 @@
 class fps_meter
 {
 public:
-    static constexpr std::size_t buffer_size = 256;
+    static constexpr std::size_t buffer_size = 60;
 
 public:
     fps_meter() noexcept

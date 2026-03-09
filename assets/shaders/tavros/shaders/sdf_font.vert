@@ -46,7 +46,7 @@ void main()
 
     // Transform to clip space
     vec2 world_pos = a_gpyph_transform * vec3(local_pos, 1.0);
-    gl_Position = u_ortho * vec4(world_pos, 0.0, 1.0);
+    gl_Position = ortho_projection * vec4(world_pos, 0.0, 1.0);
 
     v_color = unpack_color(a_gpyph_color);
     v_outline_color = unpack_color(a_outline_color);

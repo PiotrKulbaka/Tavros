@@ -73,7 +73,7 @@ namespace app
         a.button = e.button;
         a.type = tavros::input::event_type::mouse_down;
         a.time_us = e.event_time_us;
-        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.height));
+        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
         m_event_queue.push_event(a);
     }
 
@@ -92,7 +92,7 @@ namespace app
         a.button = e.button;
         a.type = tavros::input::event_type::mouse_up;
         a.time_us = e.event_time_us;
-        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.height));
+        a.vec = tavros::math::vec2(static_cast<float>(e.pos.x), static_cast<float>(e.pos.y));
         m_event_queue.push_event(a);
     }
 

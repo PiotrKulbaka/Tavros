@@ -275,8 +275,8 @@ class text_style {
   //    01 + 01 = 010
   //    11 + 01 = 100 (!!)
   //    11 + 11 = 110 (!!)
-  // In the last two cases, the ones we want to catch, the third bit——the
-  // overflow bit——is set. Bingo.
+  // In the last two cases, the ones we want to catch, the third bit--the
+  // overflow bit--is set. Bingo.
   //
   // We must take into account the possible carry bit from the bits
   // before the discriminator. The only potentially problematic case is
