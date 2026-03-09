@@ -89,7 +89,7 @@ namespace tavros::assets
         return stream->read_text();
     }
 
-    core::vector<uint8> asset_manager::read_binary(core::string_view path) const
+    core::dynamic_buffer<uint8> asset_manager::read_binary(core::string_view path) const
     {
         auto stream = open(path, asset_open_mode::read_only);
         return stream->read_binary();

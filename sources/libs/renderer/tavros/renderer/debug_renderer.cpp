@@ -1136,8 +1136,9 @@ namespace tavros::renderer
 
     bool debug_renderer::create_font_atlas()
     {
-        core::vector<uint8> ttf_data(g_consola_mono_ttf_uncompressed_size, 0);
-        auto                compressed_ttf_data = core::buffer_view<uint8>(g_consola_mono_ttf_compressed_data, g_consola_mono_ttf_compressed_size);
+        core::dynamic_buffer<uint8> ttf_data(g_consola_mono_ttf_uncompressed_size);
+
+        auto compressed_ttf_data = core::buffer_view<uint8>(g_consola_mono_ttf_compressed_data, g_consola_mono_ttf_compressed_size);
         if (!core::uncompress_data(compressed_ttf_data, ttf_data)) {
             ::logger.fatal("Failed to uncompress ttf");
             return false;

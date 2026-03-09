@@ -34,7 +34,7 @@ namespace tavros::renderer
         struct atlas_pixels
         {
             /// Pointer to 8-bit grayscale pixel data.
-            core::vector<uint8> pixels;
+            core::dynamic_buffer<uint8> pixels;
 
             /// Atlas width in pixels.
             uint32 width = 0;

@@ -3,7 +3,6 @@
 #include <tavros/core/types.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/core/memory/buffer.hpp>
-#include <tavros/core/containers/vector.hpp>
 #include <tavros/core/string.hpp>
 
 namespace tavros::assets
@@ -90,26 +89,28 @@ namespace tavros::assets
         /**
          * @brief Reads all remaining bytes from the current position as text.
          *
-         * Convenience function reads all bytes as UTF-8 text.
+         * Reads all bytes from the current position until the end of the source
+         * and returns them as UTF-8 text.
          *
-         * @param path The path to the asset.
          * @return A string containing the asset's contents.
          *
-         * @throws core::file_error If opening or reading the asset fails.
+         * @throws core::file_error If the read operation fails.
          */
         core::string read_text();
 
         /**
-         * @brief Reads all remaining bytes from the current position as vector of bytes.
+         * @brief Reads all remaining bytes from the current read position.
          *
-         * Convenience function reads all bytes as a vector of bytes.
+         * Reads all bytes from the current position until the end of the source
+         * and returns them as a contiguous byte buffer.
          *
-         * @param path The path to the asset.
-         * @return A vector containing the raw bytes of the asset.
+         * The read cursor will be moved to the end after this call.
          *
-         * @throws core::file_error If opening or reading the asset fails.
+         * @return A buffer containing the remaining raw bytes.
+         *
+         * @throws core::file_error If the read operation fails.
          */
-        core::vector<uint8> read_binary();
+        core::dynamic_buffer<uint8> read_binary();
     };
 
 } // namespace tavros::assets

@@ -94,28 +94,30 @@ namespace tavros::assets
         core::unique_ptr<asset_stream> try_open(core::string_view path, asset_open_mode open_mode = asset_open_mode::read_only) const noexcept;
 
         /**
-         * @brief Reads the entire asset as text.
+         * @brief Reads the entire asset as UTF-8 text.
          *
-         * Convenience function that opens the asset and reads all bytes as UTF-8 text.
+         * Opens the asset at the specified path and reads its entire contents
+         * as a UTF-8 encoded string.
          *
-         * @param path The path to the asset.
-         * @return A string containing the asset's contents.
+         * @param path Path to the asset.
+         * @return A string containing the asset contents.
          *
-         * @throws core::file_error If opening or reading the asset fails.
+         * @throws core::file_error If the asset cannot be opened or read.
          */
         core::string read_text(core::string_view path) const;
 
         /**
          * @brief Reads the entire asset as a binary buffer.
          *
-         * Convenience function that opens the asset and reads all bytes into a vector.
+         * Opens the asset at the specified path and reads its entire contents
+         * into a contiguous byte buffer.
          *
-         * @param path The path to the asset.
-         * @return A vector containing the raw bytes of the asset.
+         * @param path Path to the asset.
+         * @return A buffer containing the raw bytes of the asset.
          *
-         * @throws core::file_error If opening or reading the asset fails.
+         * @throws core::file_error If the asset cannot be opened or read.
          */
-        core::vector<uint8> read_binary(core::string_view path) const;
+        core::dynamic_buffer<uint8> read_binary(core::string_view path) const;
 
     private:
         core::vector<core::unique_ptr<asset_provider>> m_providers;

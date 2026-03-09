@@ -20,7 +20,7 @@ namespace tavros::renderer
         stbtt_fontinfo info;
     };
 
-    truetype_font::truetype_font(core::vector<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges)
+    truetype_font::truetype_font(core::dynamic_buffer<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges)
         : m_font_data(std::move(font_data))
         , m_scale(0.0f)
         , m_impl()

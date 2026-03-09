@@ -108,9 +108,10 @@ namespace tavros::renderer
         }
 
 
-        auto                atlas_size = static_cast<size_t>(atlas_width) * static_cast<size_t>(atlas_height);
-        auto                stride = atlas_width;
-        core::vector<uint8> pixels(atlas_size, 0);
+        auto atlas_size = static_cast<size_t>(atlas_width) * static_cast<size_t>(atlas_height);
+        auto stride = atlas_width;
+
+        core::dynamic_buffer<uint8> pixels(atlas_size, 0);
 
         // Bake atlas
         size_t rect_idx = 0;

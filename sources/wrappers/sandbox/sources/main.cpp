@@ -138,7 +138,7 @@ public:
     {
     }
 
-    tavros::core::vector<uint8> load(tavros::core::string_view path) override
+    tavros::core::dynamic_buffer<uint8> load(tavros::core::string_view path) override
     {
         return m_rm->asset_manager().read_binary(path);
     }

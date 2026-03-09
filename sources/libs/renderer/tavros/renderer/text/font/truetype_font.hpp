@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/pimpl.hpp>
-#include <tavros/core/containers/vector.hpp>
+#include <tavros/core/memory/dynamic_buffer.hpp>
 #include <tavros/renderer/text/font/font.hpp>
 
 namespace tavros::renderer
@@ -50,7 +50,7 @@ namespace tavros::renderer
          * @param font_data         Raw font file stored in a dynamic buffer.
          * @param codepoint_ranges  List of Unicode ranges to load glyphs from.
          */
-        truetype_font(core::vector<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges);
+        truetype_font(core::dynamic_buffer<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges);
 
         /**
          * @brief Destroys the font object.
@@ -65,8 +65,8 @@ namespace tavros::renderer
         float get_kerning_internal(char32 cp1, char32 cp2) const noexcept override;
 
     private:
-        core::vector<uint8> m_font_data;
-        float               m_scale;
+        core::dynamic_buffer<uint8> m_font_data;
+        float                       m_scale;
 
         // Internal implementation details (stb_truetype state).
         struct impl;

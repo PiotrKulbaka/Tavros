@@ -15,11 +15,11 @@ namespace tavros::assets
         return str;
     }
 
-    core::vector<uint8> asset_stream::read_binary()
+    core::dynamic_buffer<uint8> asset_stream::read_binary()
     {
         TAV_ASSERT(size() >= tell());
-        size_t              sz = size() - tell();
-        core::vector<uint8> bytes(sz, 0);
+        const size_t sz = size() - tell();
+        core::dynamic_buffer<uint8> bytes(sz);
         read(bytes);
         return bytes;
     }
