@@ -21,7 +21,7 @@ namespace tavros::renderer
 
         /**
          * @brief Loads font data by path.
-         * 
+         *
          * Reads the font identified by the given path and returns its
          * entire binary contents.
          *

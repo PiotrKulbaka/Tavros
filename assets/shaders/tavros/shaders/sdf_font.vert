@@ -1,4 +1,5 @@
 #include <tavros/shaders/scene.glsl>
+#include <tavros/shaders/color.glsl>
 
 layout (location = 0) in mat3x2 a_gpyph_transform;  // per-instance transform
 layout (location = 3) in uvec2 a_bounds; // per-instance glyph uvs
@@ -17,16 +18,6 @@ layout(binding = 0) uniform sampler2D u_sdf_atlas;
 out vec2 v_uv;
 out vec4 v_color;
 out vec4 v_outline_color;
-
-vec4 unpack_color(uint cl)
-{
-    return vec4(
-        float((cl >> 24) & 0xFFu) / 255.0,
-        float((cl >> 16) & 0xFFu) / 255.0,
-        float((cl >>  8) & 0xFFu) / 255.0,
-        float((cl >>  0) & 0xFFu) / 255.0
-    );
-}
 
 void main()
 {

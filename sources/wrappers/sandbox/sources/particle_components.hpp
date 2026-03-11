@@ -3,32 +3,53 @@
 #include <tavros/core/archetype.hpp>
 #include <tavros/core/math/vec3.hpp>
 #include <tavros/core/math/vec4.hpp>
+#include <tavros/core/math/rgba8.hpp>
 
-namespace app
+namespace tavros::particles
 {
-
-    // -------------------------------------------------------------------------
-    // Components
-    // -------------------------------------------------------------------------
 
     struct position_c
     {
-        tavros::math::vec3 value;
+        math::vec3 value;
     };
 
     struct velocity_c
     {
-        tavros::math::vec3 value;
+        math::vec3 value;
+    };
+
+    struct physics_c
+    {
+        float mass = 0.0f;
+        float drag_coeff = 0.0f;
+        float cross_area = 0.0f;
     };
 
     struct color_c
     {
-        tavros::math::color start;
-        tavros::math::color end;
+        static constexpr int k_max_colors = 4;
 
-        [[nodiscard]] tavros::math::color color(float t) const noexcept
+        float       stops[k_max_colors] = {0.0f};
+        math::rgba8 colors[k_max_colors] = {};
+
+        [[nodiscard]] math::rgba8 sample(float t) const noexcept
         {
-            return tavros::math::lerp(start, end, t);
+            if (t <= stops[0]) {
+                return colors[0];
+            }
+            if (t >= stops[k_max_colors - 1]) {
+                return colors[k_max_colors - 1];
+            }
+
+            for (int i = 0; i < k_max_colors - 1; ++i) {
+                if (t <= stops[i + 1]) {
+                    const float range = stops[i + 1] - stops[i];
+                    const float local = (range > 1e-6f) ? (t - stops[i]) / range : 0.0f;
+                    return math::rgba8::lerp(colors[i], colors[i + 1], local);
+                }
+            }
+
+            return colors[k_max_colors - 1];
         }
     };
 
@@ -36,15 +57,13 @@ namespace app
     {
         float start = 0.0f;
         float end = 0.0f;
+
+        [[nodiscard]] float sample(float t) const noexcept
+        {
+            return start + (end - start) * t;
+        }
     };
 
-    /**
-     * @brief Normalized lifetime in [0..1].
-     *
-     * 0 = just spawned, 1 = expired.
-     * Updated each frame as elapsed / total.
-     * Particle is removed when value >= 1.0.
-     */
     struct lifetime_c
     {
         float elapsed = 0.0f;
@@ -54,7 +73,6 @@ namespace app
         {
             return elapsed / total;
         }
-
         [[nodiscard]] bool is_dead() const noexcept
         {
             return elapsed >= total;
@@ -71,21 +89,26 @@ namespace app
         float value = 0.0f;
     };
 
+    /**
+     * @brief Accumulated force vector (N) applied this frame.
+     *
+     * Cleared to zero at the start of each physics tick.
+     * Each force system (gravity, wind, explosion, ...) adds its contribution.
+     * The integrator then computes: a = force / mass, v += a * dt.
+     */
+    struct force_c
+    {
+        tavros::math::vec3 value = {0.0f, 0.0f, 0.0f};
+    };
+
     // -------------------------------------------------------------------------
     // Archetype
     // -------------------------------------------------------------------------
-
-    /**
-     * @brief Archetype storing all per-particle components (SoA layout).
-     *
-     * Each frame:
-     *   1. Update lifetime, position, rotation via a view over the archetype.
-     *   2. Upload instance data to gpu_stream_buffer.
-     *   3. Draw with draw(4, 0, size(), 0) using triangle_strip.
-     */
-    using particle_archetype = tavros::core::basic_archetype<
+    using particle_archetype = core::basic_archetype<
         position_c,
         velocity_c,
+        physics_c,
+        force_c,
         color_c,
         size_c,
         lifetime_c,
@@ -107,12 +130,12 @@ namespace app
      */
     struct particle_instance
     {
-        float position[3]; // location 0
-        float size;        // location 1
-        float color[4];    // location 2
-        float rotation;    // location 3
+        float  position[3]; // location 0
+        float  size;        // location 1
+        uint32 color;       // location 2
+        float  rotation;    // location 3
     };
 
-    static_assert(sizeof(particle_instance) == 9 * sizeof(float));
+    static_assert(sizeof(particle_instance) == 5 * sizeof(float) + sizeof(uint32));
 
-} // namespace app
+} // namespace tavros::particles

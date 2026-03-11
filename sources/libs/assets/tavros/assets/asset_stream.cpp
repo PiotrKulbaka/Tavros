@@ -18,7 +18,7 @@ namespace tavros::assets
     core::dynamic_buffer<uint8> asset_stream::read_binary()
     {
         TAV_ASSERT(size() >= tell());
-        const size_t sz = size() - tell();
+        const size_t                sz = size() - tell();
         core::dynamic_buffer<uint8> bytes(sz);
         read(bytes);
         return bytes;

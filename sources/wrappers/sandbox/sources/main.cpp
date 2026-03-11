@@ -5,7 +5,12 @@
 #include "scene_data.hpp"
 #include "text_rendering.hpp"
 #include "pipeline_presets.hpp"
-#include "particle_system.hpp"
+#include "particle_effectors.hpp"
+#include "particle_emitter.hpp"
+#include "particle_physics.hpp"
+#include "particle_render.hpp"
+#include "particle_shapes.hpp"
+#include "thread_pool.hpp"
 
 #include <tavros/renderer/shaders/shader_loader.hpp>
 #include <tavros/renderer/shaders/shader_source_provider.hpp>
@@ -159,6 +164,7 @@ public:
         , m_resource_manager(rm)
         , m_sl(tavros::core::make_unique<filesystem_shader_provider>(rm))
         , m_font_lib(tavros::core::make_unique<filesystem_font_provider>(rm))
+        , m_thread_pool(std::thread::hardware_concurrency())
     {
     }
 
@@ -190,24 +196,183 @@ public:
         m_graphics_device = nullptr;
     }
 
+    template<typename Rng>
+    inline void add_explosion(
+        tavros::particles::emitter_archetype& emitters,
+        tavros::math::vec3                    origin,
+        float                                 radius,
+        Rng&&                                 rng
+    ) noexcept
+    {
+        using namespace tavros::particles;
+        emitters.typed_emplace_back(emitter_c{
+            .shape = spawn_shape::sphere_shell,
+            .shape_params = {.center = origin, .radius = radius},
+            .params = {
+                .physics = k_spark_preset,
+                .colors = {.stops = {
+                               {0.0f, {255, 240, 50, 0}, {255, 255, 150, 0}},
+                               {0.05f, {255, 100, 0, 255}, {255, 160, 30, 255}},
+                               {0.6f, {180, 20, 0, 200}, {220, 50, 0, 220}},
+                               {1.0f, {30, 30, 30, 0}, {60, 60, 60, 0}},
+                           }},
+                .velocity = {.speed_min = 1.0f, .speed_max = 4.0f, .spread_angle = 3.14159f},
+                .lifetime_min = 12.8f,
+                .lifetime_max = 22.5f,
+                .size_start_min = 0.06f,
+                .size_start_max = 0.22f,
+                .size_end_min = 0.0f,
+                .size_end_max = 0.0f,
+                .avel_min = -6.0f,
+                .avel_max = 6.0f,
+            },
+            .mode = emitter_mode::burst,
+            .rate_min = 80.0f,
+            .rate_max = 120.0f,
+            .lifetime = 0.1f,
+            .immortal = false,
+        });
+    }
+
+    inline void add_portal(tavros::particles::emitter_archetype& emitters, tavros::math::vec3 center, float radius) noexcept
+    {
+        using namespace tavros::particles;
+        emitters.typed_emplace_back(emitter_c{
+            .shape = spawn_shape::sphere_shell,
+            .shape_params = {.center = center, .radius = radius},
+            .params = {
+                .physics = k_droplet_preset,
+                .colors = {.stops = {
+                               {0.0f, {100, 0, 255, 0}, {150, 50, 255, 0}},
+                               {0.1f, {200, 0, 255, 200}, {0, 100, 255, 220}},
+                               {0.8f, {50, 0, 180, 120}, {100, 0, 220, 150}},
+                               {1.0f, {0, 0, 80, 0}, {20, 0, 100, 0}},
+                           }},
+                .velocity = {.speed_min = 0.15f, .speed_max = 1.0f, .direction = {0.0f, 0.0f, 0.0f}, .spread_angle = 3.14159f},
+                .lifetime_min = 8.5f,
+                .lifetime_max = 32.5f,
+                .size_start_min = 0.03f,
+                .size_start_max = 0.09f,
+                .size_end_min = 0.0f,
+                .size_end_max = 0.01f,
+                .avel_min = -4.0f,
+                .avel_max = 4.0f,
+            },
+            .mode = emitter_mode::burst,
+            .rate_min = 300.0f,
+            .rate_max = 500.0f,
+            .immortal = false,
+        });
+    }
+
+    void parallel_for(size_t n, size_t chunk_size, auto fn)
+    {
+        const size_t num_chunks = (n + chunk_size - 1) / chunk_size;
+
+        TAV_ASSERT(num_chunks <= 64);
+
+        for (size_t c = 0; c < num_chunks; ++c) {
+            const size_t begin = c * chunk_size;
+            const size_t count = std::min(chunk_size, n - begin);
+            m_thread_pool.enqueue(fn, begin, count);
+        }
+        m_thread_pool.wait_all();
+    }
+
+    inline constexpr size_t calc_chunk_size(size_t n, size_t target_chunks, size_t min_chunk) noexcept
+    {
+        if (n == 0) {
+            return min_chunk;
+        }
+
+        const size_t ideal = (n + target_chunks - 1) / target_chunks;
+        const size_t pow2 = std::max(std::bit_floor(ideal), size_t{1});
+        const size_t min_p2 = std::bit_ceil(min_chunk);
+
+        return std::max(pow2, min_p2);
+    }
+
     void render(tavros::input::event_args_queue_view events, double delta_time) override
     {
         m_delta_time = static_cast<float>(m_delta_time);
         m_time = m_timer.elapsed_seconds();
 
         tavros::core::timer frame_timer;
-
         process_input(events, delta_time);
         m_fps_meter.tick(delta_time);
         update_frame_data();
-        spawn_effects(delta_time);
-        app::update_particles(m_particles, static_cast<float>(delta_time));
+
+        clear_dead(m_particles);
+
+        auto rng = [&](float lo, float hi) { return rand_range(lo, hi); };
+
+        constexpr float spawn_area = 15;
+        constexpr float max_strength = 5.0f;
+        constexpr float min_strength = -2.0f;
+
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_E)) {
+            float x = rng(-spawn_area, spawn_area);
+            float y = rng(-spawn_area, spawn_area);
+            float z = rng(-spawn_area, spawn_area);
+            m_particle_effectors.typed_emplace_back(
+                tavros::particles::attractor_c{.origin = {x, y, z}, .strength = rng(min_strength, max_strength), .kill_radius = rng(0.1f, 1.0f)},
+                tavros::particles::wind_c{{0.0f, 0.0f, 0.0f}}
+            );
+        }
+
+        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_Q)) {
+            const size_t sz = m_particle_effectors.size();
+            if (sz > 0) {
+                int n = rand() % sz;
+                m_particle_effectors.swap_and_pop(n);
+            }
+        }
+
+        if (m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_1)) {
+            add_portal(m_particle_emitters, {10.0f, -10.0f, -10.0f}, 1.0f);
+        }
+        if (m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_2)) {
+            add_explosion(m_particle_emitters, {10.0f, 10.0f, 10.0f}, 2.0f, rng);
+        }
+        if (m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_3)) {
+            float x = rng(-spawn_area, spawn_area);
+            float y = rng(-spawn_area, spawn_area);
+            float z = rng(-spawn_area, spawn_area);
+            add_portal(m_particle_emitters, {x, y, z}, rng(1.0f, 10.0f));
+        }
+
+        tavros::particles::update_emitters(m_particle_emitters, m_particles, delta_time, rng);
+
+        const size_t n = m_particles.size();
+        const size_t chunk_size = calc_chunk_size(n, m_thread_pool.worker_count(), 256);
+        parallel_for(n, chunk_size, [&](size_t begin, size_t count) {
+            tavros::particles::clear_forces(m_particles, begin, count);
+        });
+
+        parallel_for(n, chunk_size, [&](size_t begin, size_t count) {
+            tavros::particles::apply_effectors(m_particle_effectors, m_particles, begin, count);
+            tavros::particles::apply_gravity(m_particles, begin, count);
+            tavros::particles::apply_drag(m_particles, begin, count);
+        });
+
+        parallel_for(n, chunk_size, [&](size_t begin, size_t count) {
+            tavros::particles::integrate(m_particles, delta_time, begin, count);
+            tavros::particles::integrate_rotation(m_particles, delta_time, begin, count);
+        });
+
+        tavros::particles::clear_dead(m_particles);
 
         m_stream_draw->begin_frame();
         m_drenderer.begin_frame(
             m_scene_data.ortho_projection,
             m_scene_data.view_projection
         );
+
+        m_particle_effectors.view<tavros::particles::attractor_c>().each([&](tavros::particles::attractor_c& a) {
+            float r = a.strength < 0.0f ? 0.0f : a.strength / max_strength;
+            float b = a.strength < 0.0f ? a.strength / min_strength : 0.0f;
+            m_drenderer.sphere3d({a.origin, a.kill_radius}, {r, 0.4f, b, 0.2f}, tavros::renderer::debug_renderer::draw_mode::faces);
+        });
 
         upload_frame_uniforms();
         build_fps_text();
@@ -437,10 +602,11 @@ private:
         auto frag = load_and_create_shader("tavros/shaders/particle.frag", rhi::shader_stage::fragment);
 
         rhi::pipeline_create_info info;
-        info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0, sizeof(app::particle_instance), offsetof(app::particle_instance, position), 1});
-        info.bindings.push_back({rhi::attribute_type::scalar, rhi::attribute_format::f32, false, 1, sizeof(app::particle_instance), offsetof(app::particle_instance, size), 1});
-        info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2, sizeof(app::particle_instance), offsetof(app::particle_instance, color), 1});
-        info.bindings.push_back({rhi::attribute_type::scalar, rhi::attribute_format::f32, false, 3, sizeof(app::particle_instance), offsetof(app::particle_instance, rotation), 1});
+        using tavros::particles::particle_instance;
+        info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0, sizeof(particle_instance), offsetof(particle_instance, position), 1});
+        info.bindings.push_back({rhi::attribute_type::scalar, rhi::attribute_format::f32, false, 1, sizeof(particle_instance), offsetof(particle_instance, size), 1});
+        info.bindings.push_back({rhi::attribute_type::scalar, rhi::attribute_format::u32, false, 2, sizeof(particle_instance), offsetof(particle_instance, color), 1});
+        info.bindings.push_back({rhi::attribute_type::scalar, rhi::attribute_format::f32, false, 3, sizeof(particle_instance), offsetof(particle_instance, rotation), 1});
         info.shaders.push_back(vert);
         info.shaders.push_back(frag);
         info.depth_stencil = depth_off();
@@ -593,29 +759,6 @@ private:
         m_scene_data._pad1 = 0.0f;
     }
 
-    void spawn_effects(double delta_time)
-    {
-        auto        rng = [&](float lo, float hi) { return rand_range(lo, hi); };
-        const float time = static_cast<float>(m_frame_number) * 0.016f;
-
-        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_E)) {
-            app::particle_spawner::explosion(m_particles, {10.0f, 5.0f, 0.0f}, 150, rng);
-        }
-        if (m_input_manager.is_key_up(tavros::input::keyboard_key::k_3)) {
-            app::particle_spawner::star_burst(m_particles, {0.0f, 2.0f, 0.0f}, 160, rng);
-        }
-
-        app::particle_spawner::fountain(m_particles, {10.0f, 10.0f, 0.0f}, 10, rng);
-        app::particle_spawner::vortex(m_particles, {5.0f, 10.0f, 0.0f}, time, 30, rng);
-        app::particle_spawner::lightning(m_particles, {0.0f, 10.0f, 0.0f}, 30.0f, rng);
-        app::particle_spawner::portal(m_particles, {-5.0f, 10.0f, 0.0f}, 1.0f, static_cast<float>(delta_time), 40, rng);
-        app::particle_spawner::smoke(m_particles, {-10.0f, -10.0f, 0.0f}, 3, rng);
-        app::particle_spawner::snowfall(m_particles, {0.0f, 0.0f, 0.0f}, 60.0f, 60.0f, 10.0f, 50, rng);
-
-        m_meteor_pos += m_meteor_vel * static_cast<float>(delta_time);
-        app::particle_spawner::meteor_trail(m_particles, m_meteor_pos, m_meteor_vel, 20, rng);
-    }
-
     void upload_frame_uniforms()
     {
         auto map = m_graphics_device->map_buffer(m_stage_buffer, 0, sizeof(m_scene_data));
@@ -657,16 +800,16 @@ private:
 
     struct particle_draw_slice
     {
-        tavros::renderer::gpu_buffer_view<app::particle_instance> slice{};
-        size_t                                                    count = 0;
+        tavros::renderer::gpu_buffer_view<tavros::particles::particle_instance> slice{};
+        size_t                                                                  count = 0;
     };
 
     particle_draw_slice prepare_particle_slice()
     {
         particle_draw_slice result;
         if (m_particles.size() > 0) {
-            result.slice = m_stream_draw->slice<app::particle_instance>(m_particles.size());
-            result.count = app::fill_particle_instances(m_particles, result.slice.data());
+            result.slice = m_stream_draw->slice<tavros::particles::particle_instance>(m_particles.size());
+            result.count = tavros::particles::fill_instances(m_particles, result.slice.data());
         }
         return result;
     }
@@ -1063,6 +1206,7 @@ private:
     // -- Core --
     tavros::core::shared_ptr<resource_manager> m_resource_manager;
     tavros::renderer::shader_loader            m_sl;
+    tavros::core::thread_pool                  m_thread_pool;
 
     // -- Graphics device --
     tavros::core::unique_ptr<rhi::graphics_device> m_graphics_device;
@@ -1117,9 +1261,9 @@ private:
     tavros::ui::button    m_btn0, m_btn1;
 
     // -- Particles --
-    app::particle_archetype m_particles;
-    tavros::math::vec3      m_meteor_pos = {-10.0f, 8.0f, 0.0f};
-    tavros::math::vec3      m_meteor_vel = {4.0f, -2.0f, 1.0f};
+    tavros::particles::particle_archetype m_particles;
+    tavros::particles::emitter_archetype  m_particle_emitters;
+    tavros::particles::effector_archetype m_particle_effectors;
 
     // -- Input --
     tavros::input::input_manager m_input_manager;

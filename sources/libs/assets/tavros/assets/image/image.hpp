@@ -94,7 +94,7 @@ namespace tavros::assets
          * @param format Pixel format. Must not be pixel_format::none.
          * @param stride Row stride in bytes. If 0, defaults to width * component_count(format).
          */
-        explicit image(core::dynamic_buffer<uint8>&& pixels, uint32 width, uint32 height, pixel_format format, uint32 stride = 0)
+        explicit image(core::dynamic_buffer<uint8> pixels, uint32 width, uint32 height, pixel_format format, uint32 stride = 0)
             : m_width(width)
             , m_height(height)
             , m_format(format)

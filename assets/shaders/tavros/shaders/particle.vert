@@ -1,12 +1,13 @@
 #include <tavros/shaders/scene.glsl>
+#include <tavros/shaders/color.glsl>
 
-layout(location = 0) in vec3  a_position; // world 3D position
-layout(location = 1) in float a_size;     // уже интерполирован на CPU
-layout(location = 2) in vec4  a_color;    // уже интерполирован на CPU
+layout(location = 0) in vec3  a_pos;
+layout(location = 1) in float a_size;
+layout(location = 2) in uint  a_color;
 layout(location = 3) in float a_rotation;
 
-out vec2  v_uv;
-out vec4  v_color;
+out vec2 v_uv;
+out vec4 v_color;
 
 const vec2 k_quad[4] = vec2[4](
     vec2(-0.5, -0.5), vec2(0.5, -0.5), vec2(-0.5, 0.5), vec2(0.5, 0.5)
@@ -25,10 +26,10 @@ void main()
                         corner.x * s + corner.y * c) * a_size;
 
     // Billboard: переводим центр в view space, смещаем по XY
-    vec4 view_center = view * vec4(a_position, 1.0); // vec3 → vec4!
+    vec4 view_center = view * vec4(a_pos, 1.0); // vec3 → vec4!
     view_center.xy  += rotated;
     gl_Position      = projection * view_center;
 
-    v_uv      = k_uv[gl_VertexID];
-    v_color   = a_color;
+    v_uv = k_uv[gl_VertexID];
+    v_color = unpack_color(a_color);
 }
