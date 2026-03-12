@@ -15,18 +15,74 @@ namespace tavros::renderer
 
     render_target::render_target(tavros::core::buffer_view<rhi::pixel_format> cl_atch_fmts, rhi::pixel_format ds_atch_fmt) noexcept
         : m_is_created(false)
+        , m_is_msaa_enabled(false)
         , m_gdevice(nullptr)
-        , m_color_attachment_formats(cl_atch_fmts)
-        , m_depth_stencil_attachment_format(ds_atch_fmt)
+        , m_cl_fmt(cl_atch_fmts)
+        , m_ds_fmt(ds_atch_fmt)
     {
-        for (auto fmt : m_color_attachment_formats) {
+        for (auto fmt : m_cl_fmt) {
             TAV_ASSERT(fmt != rhi::pixel_format::none);
         }
     }
 
-    render_target::~render_target()
+    render_target::render_target(render_target&& other) noexcept
+        : m_is_created(other.m_is_created)
+        , m_is_msaa_enabled(other.m_is_msaa_enabled)
+        , m_gdevice(other.m_gdevice)
+        , m_cl_fmt(std::move(other.m_cl_fmt))
+        , m_ds_fmt(other.m_ds_fmt)
+        , m_src_cl(std::move(other.m_src_cl))
+        , m_dst_cl(std::move(other.m_dst_cl))
+        , m_src_ds(other.m_src_ds)
+        , m_dst_ds(other.m_dst_ds)
+        , m_framebuffer(other.m_framebuffer)
+        , m_render_pass(other.m_render_pass)
+    {
+        other.m_is_created      = false;
+        other.m_is_msaa_enabled = false;
+        other.m_gdevice         = nullptr;
+        other.m_ds_fmt          = rhi::pixel_format::none;
+        other.m_src_ds          = {};
+        other.m_dst_ds          = {};
+        other.m_framebuffer     = {};
+        other.m_render_pass     = {};
+    }
+
+
+    render_target::~render_target() noexcept
     {
         shutdown();
+    }
+
+    render_target& render_target::operator=(render_target&& other) noexcept
+    {
+        if (this == &other) {
+            return *this;
+        }
+        shutdown();
+
+        m_is_created      = other.m_is_created;
+        m_is_msaa_enabled = other.m_is_msaa_enabled;
+        m_gdevice         = other.m_gdevice;
+        m_cl_fmt          = std::move(other.m_cl_fmt);
+        m_ds_fmt          = other.m_ds_fmt;
+        m_src_cl          = std::move(other.m_src_cl);
+        m_dst_cl          = std::move(other.m_dst_cl);
+        m_src_ds          = other.m_src_ds;
+        m_dst_ds          = other.m_dst_ds;
+        m_framebuffer     = other.m_framebuffer;
+        m_render_pass     = other.m_render_pass;
+
+        other.m_is_created      = false;
+        other.m_is_msaa_enabled = false;
+        other.m_gdevice         = nullptr;
+        other.m_ds_fmt          = rhi::pixel_format::none;
+        other.m_src_ds          = {};
+        other.m_dst_ds          = {};
+        other.m_framebuffer     = {};
+        other.m_render_pass     = {};
+
+        return *this;
     }
 
     void render_target::init(rhi::graphics_device* gdevice)
@@ -34,8 +90,9 @@ namespace tavros::renderer
         if (m_gdevice) {
             ::logger.warning("Already initialized");
         }
+        TAV_ASSERT(!m_gdevice);
+        TAV_ASSERT(gdevice);
         m_gdevice = gdevice;
-        TAV_ASSERT(m_gdevice);
     }
 
     void render_target::shutdown()
@@ -45,39 +102,64 @@ namespace tavros::renderer
         }
     }
 
-    void render_target::recreate(uint32 width, uint32 height, uint32 msaa)
+    void render_target::resize(uint32 width, uint32 height, uint32 msaa)
     {
+        TAV_ASSERT(m_gdevice);
+
         destroy_all();
+
+        const bool need_resolve = msaa > 1;
 
         auto exit_fail = core::make_scope_exit([this]() { destroy_all(); });
 
-        constexpr auto resolve_source_usage = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
-        constexpr auto resolve_destination_usage = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
+        constexpr auto color_usage_msaa     = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
+        constexpr auto color_usage_resolved = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
+        constexpr auto color_usage_simple   = rhi::texture_usage::render_target | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
 
-        for (auto fmt : m_color_attachment_formats) {
-            auto src_tex = create_texture(width, height, fmt, resolve_source_usage, msaa);
-            if (!src_tex) {
+        constexpr auto depth_usage_msaa     = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
+        constexpr auto depth_usage_resolved = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
+        constexpr auto depth_usage_simple   = rhi::texture_usage::render_target | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
+
+        for (auto fmt : m_cl_fmt) {
+            if (need_resolve) {
+                auto src_tex = create_texture(width, height, fmt, color_usage_msaa, msaa);
+                if (!src_tex) {
+                    return;
+                }
+                m_src_cl.push_back(src_tex);
+
+                auto dst_tex = create_texture(width, height, fmt, color_usage_resolved, 1);
+                if (!dst_tex) {
+                    return;
+                }
+                m_dst_cl.push_back(dst_tex);
+            } else {
+                auto tex = create_texture(width, height, fmt, color_usage_simple, 1);
+                if (!tex) {
+                    return;
+                }
+                m_src_cl.push_back(tex);
+                m_dst_cl.push_back(tex);
+            }
+        }
+
+        if (need_resolve) {
+            m_src_ds = create_texture(width, height, m_ds_fmt, depth_usage_msaa, msaa);
+            if (!m_src_ds) {
                 return;
             }
 
-            m_resolve_source_color_attachments.push_back(src_tex);
-
-            auto dst_tex = create_texture(width, height, fmt, resolve_destination_usage, 1);
-            if (!dst_tex) {
+            m_dst_ds = create_texture(width, height, m_ds_fmt, depth_usage_resolved, 1);
+            if (!m_dst_ds) {
                 return;
             }
-
-            m_resolve_destination_color_attachments.push_back(dst_tex);
-        }
-
-        m_resolve_source_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_source_usage, msaa);
-        if (!m_resolve_source_depth_stencil_attachment) {
-            return;
-        }
-
-        m_resolve_destination_depth_stencil_attachment = create_texture(width, height, m_depth_stencil_attachment_format, resolve_destination_usage, 1);
-        if (!m_resolve_destination_depth_stencil_attachment) {
-            return;
+        } else {
+            auto tex = create_texture(width, height, m_ds_fmt, depth_usage_simple, 1);
+            if (!tex) {
+                return;
+            }
+            m_src_ds = tex;
+            m_dst_ds = tex;
         }
 
         m_framebuffer = create_fb(width, height, msaa);
@@ -85,29 +167,34 @@ namespace tavros::renderer
             return;
         }
 
-        m_render_pass = create_rp(true);
+        m_render_pass = create_rp(need_resolve);
         if (!m_render_pass) {
             return;
         }
 
         exit_fail.release();
 
+        
+        m_is_msaa_enabled = msaa > 1;
         m_is_created = true;
     }
 
-    uint32 render_target::color_attachment_count() const
+    uint32 render_target::attachment_count() const
     {
-        return m_color_attachment_formats.size();
+        return m_cl_fmt.size();
     }
 
-    rhi::texture_handle render_target::get_color_attachment(uint32 index) const
+    rhi::texture_handle render_target::color_attachment(uint32 index) const
     {
-        return m_resolve_destination_color_attachments[index];
+        TAV_ASSERT(m_is_created);
+        TAV_ASSERT(index < attachment_count());
+        return m_dst_cl[index];
     }
 
-    rhi::texture_handle render_target::get_depth_stencil_attachment() const
+    rhi::texture_handle render_target::depth_stencil_attachment() const
     {
-        return m_resolve_destination_depth_stencil_attachment;
+        TAV_ASSERT(m_is_created);
+        return m_dst_ds;
     }
 
     rhi::framebuffer_handle render_target::framebuffer() const
@@ -118,32 +205,39 @@ namespace tavros::renderer
 
     rhi::render_pass_handle render_target::render_pass() const
     {
+        TAV_ASSERT(m_render_pass);
         return m_render_pass;
     }
 
     void render_target::destroy_all()
     {
+        if (!m_gdevice) {
+            return;
+        }
+
         m_is_created = false;
 
-        for (auto tex : m_resolve_source_color_attachments) {
+        for (auto tex : m_src_cl) {
             m_gdevice->destroy_texture(tex);
         }
-        m_resolve_source_color_attachments.clear();
+        m_src_cl.clear();
 
-        for (auto tex : m_resolve_destination_color_attachments) {
-            m_gdevice->destroy_texture(tex);
+        if (m_is_msaa_enabled) {
+            for (auto tex : m_dst_cl) {
+                m_gdevice->destroy_texture(tex);
+            }
         }
-        m_resolve_destination_color_attachments.clear();
+        m_dst_cl.clear();
 
-        if (m_resolve_source_depth_stencil_attachment) {
-            m_gdevice->destroy_texture(m_resolve_source_depth_stencil_attachment);
-            m_resolve_source_depth_stencil_attachment = {};
+        if (m_src_ds) {
+            m_gdevice->destroy_texture(m_src_ds);
+            m_src_ds = {};
         }
 
-        if (m_resolve_destination_depth_stencil_attachment) {
-            m_gdevice->destroy_texture(m_resolve_destination_depth_stencil_attachment);
-            m_resolve_destination_depth_stencil_attachment = {};
+        if (m_dst_ds && m_is_msaa_enabled) {
+            m_gdevice->destroy_texture(m_dst_ds);
         }
+        m_dst_ds = {};
 
         if (m_framebuffer) {
             m_gdevice->destroy_framebuffer(m_framebuffer);
@@ -154,6 +248,8 @@ namespace tavros::renderer
             m_gdevice->destroy_render_pass(m_render_pass);
             m_render_pass = {};
         }
+
+        m_is_msaa_enabled = false;
     }
 
     rhi::framebuffer_handle render_target::create_fb(uint32 width, uint32 height, uint32 msaa)
@@ -161,9 +257,9 @@ namespace tavros::renderer
         rhi::framebuffer_create_info fb_info;
         fb_info.width = width;
         fb_info.height = height;
-        fb_info.color_attachments = m_resolve_source_color_attachments;
-        fb_info.has_depth_stencil_attachment = true;
-        fb_info.depth_stencil_attachment = m_resolve_source_depth_stencil_attachment;
+        fb_info.color_attachments = m_src_cl;
+        fb_info.has_depth_stencil_attachment = m_ds_fmt != rhi::pixel_format::none;
+        fb_info.depth_stencil_attachment = m_src_ds;
         fb_info.sample_count = msaa;
 
         auto fb = m_gdevice->create_framebuffer(fb_info);
@@ -200,29 +296,29 @@ namespace tavros::renderer
         rhi::render_pass_create_info rp_info;
 
         uint32 resolve_index = 0;
-        for (uint32 index = 0; index < m_color_attachment_formats.size(); ++index) {
+        for (uint32 index = 0; index < m_cl_fmt.size(); ++index) {
             rhi::color_attachment_info ca_info;
-            ca_info.format = m_color_attachment_formats[index];
+            ca_info.format = m_cl_fmt[index];
             ca_info.load = rhi::load_op::clear;
             ca_info.store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
-            ca_info.resolve_target = need_resolve ? m_resolve_destination_color_attachments[index] : rhi::texture_handle();
-            ca_info.clear_value[0] = 0.2f;
-            ca_info.clear_value[1] = 0.2f;
-            ca_info.clear_value[2] = 0.25f;
-            ca_info.clear_value[3] = 1.0f;
+            ca_info.resolve_target = need_resolve ? m_dst_cl[index] : rhi::texture_handle();
+            ca_info.clear_value[0] = 0.0f;
+            ca_info.clear_value[1] = 0.0f;
+            ca_info.clear_value[2] = 0.0f;
+            ca_info.clear_value[3] = 0.0f;
 
             rp_info.color_attachments.push_back(ca_info);
         }
 
         rhi::depth_stencil_attachment_info dsca_info;
-        dsca_info.format = m_depth_stencil_attachment_format;
+        dsca_info.format = m_ds_fmt;
         dsca_info.depth_load = rhi::load_op::clear;
         dsca_info.depth_store = need_resolve ? rhi::store_op::resolve : rhi::store_op::store;
         dsca_info.depth_clear_value = 1.0f;
         dsca_info.stencil_load = rhi::load_op::dont_care;
         dsca_info.stencil_store = rhi::store_op::dont_care;
         dsca_info.stencil_clear_value = 0;
-        dsca_info.resolve_target = m_resolve_destination_depth_stencil_attachment;
+        dsca_info.resolve_target = need_resolve ? m_dst_ds : rhi::texture_handle();
 
         rp_info.depth_stencil_attachment = dsca_info;
 
