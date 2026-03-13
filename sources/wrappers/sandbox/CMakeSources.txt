@@ -19,6 +19,7 @@ set(TAV_SANDBOX_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/sources/render_app_base.hpp
     ${CMAKE_CURRENT_LIST_DIR}/sources/scene_data.hpp
     ${CMAKE_CURRENT_LIST_DIR}/sources/text_rendering.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/sources/texture_uploader.hpp
     ${CMAKE_CURRENT_LIST_DIR}/sources/thread_pool.hpp
 )
 

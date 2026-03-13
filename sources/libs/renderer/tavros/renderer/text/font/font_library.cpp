@@ -23,9 +23,9 @@ namespace tavros::renderer
         constexpr truetype_font::codepoint_range ranges[] = {
             {0x0, 0x7f},
             {0xab, 0xbb},
-            {0x401, 0x401},   // ru ¨
-            {0x410, 0x44F},   // ru À–ßà–ÿ
-            {0x451, 0x451},   // ru ¸
+            {0x401, 0x401},   // ru JO (RUS!!!)
+            {0x410, 0x44F},   // ru A-Za-z (RUS!!!)
+            {0x451, 0x451},   // ru jo (RUS!!!)
             {0x2012, 0x2014}, // dash
             {0x2022, 0x2026}, // circle, riangle, one dot, two dot, three dot
             {0xfffd, 0xfffd}, // replacement character

@@ -13,20 +13,18 @@ namespace
 namespace tavros::renderer
 {
 
-    render_target::render_target(tavros::core::buffer_view<rhi::pixel_format> cl_atch_fmts, rhi::pixel_format ds_atch_fmt) noexcept
-        : m_is_created(false)
+    render_target::render_target() noexcept
+        : m_is_init(false)
+        , m_is_created(false)
         , m_is_msaa_enabled(false)
         , m_gdevice(nullptr)
-        , m_cl_fmt(cl_atch_fmts)
-        , m_ds_fmt(ds_atch_fmt)
+        , m_ds_fmt(rhi::pixel_format::none)
     {
-        for (auto fmt : m_cl_fmt) {
-            TAV_ASSERT(fmt != rhi::pixel_format::none);
-        }
     }
 
     render_target::render_target(render_target&& other) noexcept
-        : m_is_created(other.m_is_created)
+        : m_is_init(other.m_is_init)
+        , m_is_created(other.m_is_created)
         , m_is_msaa_enabled(other.m_is_msaa_enabled)
         , m_gdevice(other.m_gdevice)
         , m_cl_fmt(std::move(other.m_cl_fmt))
@@ -38,16 +36,16 @@ namespace tavros::renderer
         , m_framebuffer(other.m_framebuffer)
         , m_render_pass(other.m_render_pass)
     {
-        other.m_is_created      = false;
+        other.m_is_init = false;
+        other.m_is_created = false;
         other.m_is_msaa_enabled = false;
-        other.m_gdevice         = nullptr;
-        other.m_ds_fmt          = rhi::pixel_format::none;
-        other.m_src_ds          = {};
-        other.m_dst_ds          = {};
-        other.m_framebuffer     = {};
-        other.m_render_pass     = {};
+        other.m_gdevice = nullptr;
+        other.m_ds_fmt = rhi::pixel_format::none;
+        other.m_src_ds = {};
+        other.m_dst_ds = {};
+        other.m_framebuffer = {};
+        other.m_render_pass = {};
     }
-
 
     render_target::~render_target() noexcept
     {
@@ -61,38 +59,49 @@ namespace tavros::renderer
         }
         shutdown();
 
-        m_is_created      = other.m_is_created;
+        m_is_init = other.m_is_init;
+        m_is_created = other.m_is_created;
         m_is_msaa_enabled = other.m_is_msaa_enabled;
-        m_gdevice         = other.m_gdevice;
-        m_cl_fmt          = std::move(other.m_cl_fmt);
-        m_ds_fmt          = other.m_ds_fmt;
-        m_src_cl          = std::move(other.m_src_cl);
-        m_dst_cl          = std::move(other.m_dst_cl);
-        m_src_ds          = other.m_src_ds;
-        m_dst_ds          = other.m_dst_ds;
-        m_framebuffer     = other.m_framebuffer;
-        m_render_pass     = other.m_render_pass;
+        m_gdevice = other.m_gdevice;
+        m_cl_fmt = std::move(other.m_cl_fmt);
+        m_ds_fmt = other.m_ds_fmt;
+        m_src_cl = std::move(other.m_src_cl);
+        m_dst_cl = std::move(other.m_dst_cl);
+        m_src_ds = other.m_src_ds;
+        m_dst_ds = other.m_dst_ds;
+        m_framebuffer = other.m_framebuffer;
+        m_render_pass = other.m_render_pass;
 
-        other.m_is_created      = false;
+        other.m_is_init = false;
+        other.m_is_created = false;
         other.m_is_msaa_enabled = false;
-        other.m_gdevice         = nullptr;
-        other.m_ds_fmt          = rhi::pixel_format::none;
-        other.m_src_ds          = {};
-        other.m_dst_ds          = {};
-        other.m_framebuffer     = {};
-        other.m_render_pass     = {};
+        other.m_gdevice = nullptr;
+        other.m_ds_fmt = rhi::pixel_format::none;
+        other.m_src_ds = {};
+        other.m_dst_ds = {};
+        other.m_framebuffer = {};
+        other.m_render_pass = {};
 
         return *this;
     }
 
-    void render_target::init(rhi::graphics_device* gdevice)
+    void render_target::init(rhi::graphics_device* gdevice, tavros::core::buffer_view<rhi::pixel_format> cl_atch_fmts, rhi::pixel_format ds_atch_fmt)
     {
-        if (m_gdevice) {
-            ::logger.warning("Already initialized");
+        if (m_is_init) {
+            ::logger.error("Already initialized");
+            return;
         }
         TAV_ASSERT(!m_gdevice);
         TAV_ASSERT(gdevice);
+
+        for (auto fmt : cl_atch_fmts) {
+            TAV_ASSERT(fmt != rhi::pixel_format::none);
+            m_cl_fmt.push_back(fmt);
+        }
+
+        m_ds_fmt = ds_atch_fmt;
         m_gdevice = gdevice;
+        m_is_init = true;
     }
 
     void render_target::shutdown()
@@ -100,10 +109,14 @@ namespace tavros::renderer
         if (m_is_created) {
             destroy_all();
         }
+        m_is_init = false;
+        m_ds_fmt = rhi::pixel_format::none;
+        m_cl_fmt.clear();
     }
 
     void render_target::resize(uint32 width, uint32 height, uint32 msaa)
     {
+        TAV_ASSERT(m_is_init);
         TAV_ASSERT(m_gdevice);
 
         destroy_all();
@@ -112,13 +125,13 @@ namespace tavros::renderer
 
         auto exit_fail = core::make_scope_exit([this]() { destroy_all(); });
 
-        constexpr auto color_usage_msaa     = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
+        constexpr auto color_usage_msaa = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
         constexpr auto color_usage_resolved = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
-        constexpr auto color_usage_simple   = rhi::texture_usage::render_target | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
+        constexpr auto color_usage_simple = rhi::texture_usage::render_target | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
 
-        constexpr auto depth_usage_msaa     = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
+        constexpr auto depth_usage_msaa = rhi::texture_usage::resolve_source | rhi::texture_usage::render_target;
         constexpr auto depth_usage_resolved = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
-        constexpr auto depth_usage_simple   = rhi::texture_usage::render_target | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
+        constexpr auto depth_usage_simple = rhi::texture_usage::render_target | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
 
         for (auto fmt : m_cl_fmt) {
             if (need_resolve) {
@@ -174,7 +187,7 @@ namespace tavros::renderer
 
         exit_fail.release();
 
-        
+
         m_is_msaa_enabled = msaa > 1;
         m_is_created = true;
     }
@@ -186,6 +199,7 @@ namespace tavros::renderer
 
     rhi::texture_handle render_target::color_attachment(uint32 index) const
     {
+        TAV_ASSERT(m_is_init);
         TAV_ASSERT(m_is_created);
         TAV_ASSERT(index < attachment_count());
         return m_dst_cl[index];
@@ -193,18 +207,21 @@ namespace tavros::renderer
 
     rhi::texture_handle render_target::depth_stencil_attachment() const
     {
+        TAV_ASSERT(m_is_init);
         TAV_ASSERT(m_is_created);
         return m_dst_ds;
     }
 
     rhi::framebuffer_handle render_target::framebuffer() const
     {
+        TAV_ASSERT(m_is_init);
         TAV_ASSERT(m_framebuffer);
         return m_framebuffer;
     }
 
     rhi::render_pass_handle render_target::render_pass() const
     {
+        TAV_ASSERT(m_is_init);
         TAV_ASSERT(m_render_pass);
         return m_render_pass;
     }
@@ -254,6 +271,8 @@ namespace tavros::renderer
 
     rhi::framebuffer_handle render_target::create_fb(uint32 width, uint32 height, uint32 msaa)
     {
+        TAV_ASSERT(m_is_init);
+
         rhi::framebuffer_create_info fb_info;
         fb_info.width = width;
         fb_info.height = height;
@@ -272,6 +291,8 @@ namespace tavros::renderer
 
     rhi::texture_handle render_target::create_texture(uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa)
     {
+        TAV_ASSERT(m_is_init);
+
         rhi::texture_create_info tex_info;
         tex_info.type = rhi::texture_type::texture_2d;
         tex_info.format = fmt;
@@ -293,6 +314,8 @@ namespace tavros::renderer
 
     rhi::render_pass_handle render_target::create_rp(bool need_resolve)
     {
+        TAV_ASSERT(m_is_init);
+
         rhi::render_pass_create_info rp_info;
 
         uint32 resolve_index = 0;

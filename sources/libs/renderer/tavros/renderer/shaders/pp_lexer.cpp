@@ -85,10 +85,9 @@ namespace tavros::renderer
         }
 
         do {
-            auto        line = m_line;
-            auto        row = m_row;
-            auto        col = m_col;
-            const auto* fwd = m_forward;
+            auto line = m_line;
+            auto row = m_row;
+            auto col = m_col;
 
             skip_trivia();
 
@@ -258,7 +257,6 @@ namespace tavros::renderer
         const auto quote_char = peek();
         adv();
         const auto* beg = m_forward;
-        const auto* end = m_end;
 
         while (!eos() && peek() != '\n' && peek() != quote_char) {
             if (peek() == '\\') {

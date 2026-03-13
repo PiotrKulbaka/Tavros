@@ -1,10 +1,11 @@
-in vec2 texCoord;
-out vec4 FragColor;
+in vec2 v_uv;
 
-layout(binding = 0) uniform sampler2D uTex;
+out vec4 out_color;
+
+layout(binding = 0) uniform sampler2D u_tex;
 
 void main()
 {
-    vec3 color = texture(uTex, texCoord).rgb;
-    FragColor = vec4(color, 1.0f);
+    vec3 color = texture(u_tex, v_uv).rgb;
+    out_color = vec4(color, 1.0f);
 }

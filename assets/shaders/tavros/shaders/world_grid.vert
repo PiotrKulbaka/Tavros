@@ -12,14 +12,12 @@ out float v_far;
 
 void main()
 {
-    v_near = near_plane;
-    v_far = far_plane;
-    float view_space_depth = far_plane - near_plane;
+    v_near = s_near_plane;
+    v_far = s_far_plane;
+    float view_space_depth = s_far_plane - s_near_plane;
 
-    const float SQRT2 = 1.4142135623730951;
-
-    float plane_scale = (view_space_depth) * SQRT2;
-    v_cam_pos = (inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    float plane_scale = (view_space_depth) * 1.5f;
+    v_cam_pos = (s_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
 
     float minor_step_base = 1.0;
     float major_step_base = 10.0;
@@ -45,7 +43,7 @@ void main()
     
     v_line_width = 0.01 * pow(cam_height, 0.63);
 
-    vec2 pos = quadVerts[gl_VertexID];
-    v_world_pos = vec3(pos.x * plane_scale + v_cam_pos.x, pos.y * plane_scale + v_cam_pos.y, 0.0);
-    gl_Position = view_projection * vec4(v_world_pos, 1.0);
+    vec2 pos = k_quad_verts[gl_VertexID] * 2.0f * plane_scale ;
+    v_world_pos = vec3(pos.x + v_cam_pos.x, pos.y + v_cam_pos.y, 0.0);
+    gl_Position = s_view_projection * vec4(v_world_pos, 1.0);
 }

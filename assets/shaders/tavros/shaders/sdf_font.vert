@@ -21,8 +21,7 @@ out vec4 v_outline_color;
 
 void main()
 {
-    int vid = gl_VertexID % 4;
-    vec2 local_pos = plane_verts[vid];
+    vec2 local_pos = plane_verts[gl_VertexID];
 
     vec2 tex_size = textureSize(u_sdf_atlas, 0);
     vec4 uv0uv1 = vec4(
@@ -37,7 +36,7 @@ void main()
 
     // Transform to clip space
     vec2 world_pos = a_gpyph_transform * vec3(local_pos, 1.0);
-    gl_Position = ortho_projection * vec4(world_pos, 0.0, 1.0);
+    gl_Position = s_ortho_projection * vec4(world_pos, 0.0, 1.0);
 
     v_color = unpack_color(a_gpyph_color);
     v_outline_color = unpack_color(a_outline_color);

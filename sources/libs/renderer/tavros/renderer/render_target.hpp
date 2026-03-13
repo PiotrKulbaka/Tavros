@@ -40,17 +40,8 @@ namespace tavros::renderer
     class render_target : core::noncopyable
     {
     public:
-        /**
-         * @brief Constructs a render target with the given attachment formats.
-         *
-         * Does not allocate any GPU resources. Call init() then resize() to do so.
-         *
-         * @param color_attachment_formats  Pixel formats for each color attachment.
-         *                                  Must not contain pixel_format::none.
-         * @param depth_stencil_attachment_format  Pixel format for the depth/stencil attachment.
-         *                                         Pass pixel_format::none to omit it.
-         */
-        render_target(core::buffer_view<rhi::pixel_format> color_attachment_formats, rhi::pixel_format depth_stencil_attachment_format) noexcept;
+        /** @brief Default constructor. */
+        render_target() noexcept;
 
         /**
          * @brief Move constructor.
@@ -68,7 +59,7 @@ namespace tavros::renderer
          * @brief Move assignment.
          */
         render_target& operator=(render_target&& other) noexcept;
-        
+
         /**
          * @brief Binds a graphics device to this render target.
          *
@@ -76,10 +67,14 @@ namespace tavros::renderer
          *
          * @param gdevice  Non-owning pointer to the graphics device.
          *                 Must outlive this render target.
+         * @param color_attachment_formats  Pixel formats for each color attachment.
+         *                                  Must not contain pixel_format::none.
+         * @param depth_stencil_attachment_format  Pixel format for the depth/stencil attachment.
+         *                                         Pass pixel_format::none to omit it.
          * @pre  gdevice != nullptr
          * @pre  init() has not been called before on this instance
          */
-        void init(rhi::graphics_device* gdevice);
+        void init(rhi::graphics_device* gdevice, core::buffer_view<rhi::pixel_format> color_attachment_formats, rhi::pixel_format depth_stencil_attachment_format);
 
         /**
          * @brief Releases all GPU resources created by resize().
@@ -162,20 +157,22 @@ namespace tavros::renderer
         template<class T>
         using vector_t = core::static_vector<T, rhi::k_max_color_attachments>;
 
+        bool m_is_init;
         bool m_is_created;
         bool m_is_msaa_enabled;
 
-        rhi::graphics_device* m_gdevice; // Non-owning pointer to the graphics
+        rhi::graphics_device* m_gdevice;        // Non-owning pointer to the graphics
 
-        vector_t<rhi::pixel_format>   m_cl_fmt; // Color ttachment formats
-        rhi::pixel_format             m_ds_fmt; // Depth stencil color ttachment format
+        vector_t<rhi::pixel_format> m_cl_fmt;   // Color ttachment formats
+        rhi::pixel_format           m_ds_fmt;   // Depth stencil color ttachment format
+
         vector_t<rhi::texture_handle> m_src_cl; // Source color attachment
         vector_t<rhi::texture_handle> m_dst_cl; // Destination color attachment
         rhi::texture_handle           m_src_ds; // Source depth stencil attachment
         rhi::texture_handle           m_dst_ds; // Destination depth stencil attachment
 
-        rhi::framebuffer_handle m_framebuffer; // Framebuffer referencing src attachments
-        rhi::render_pass_handle m_render_pass; // Render pass with load/store/resolve ops
+        rhi::framebuffer_handle m_framebuffer;  // Framebuffer referencing src attachments
+        rhi::render_pass_handle m_render_pass;  // Render pass with load/store/resolve ops
     };
 
 

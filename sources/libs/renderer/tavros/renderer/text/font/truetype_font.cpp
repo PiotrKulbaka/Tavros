@@ -106,7 +106,10 @@ namespace tavros::renderer
 
         if (0 == idx) {
             auto sz = g.metrics.size * glyph_scale_pix;
-            return math::ivec2(math::ceil(sz.width) + pad2, math::ceil(sz.height) + pad2);
+            return math::ivec2(
+                static_cast<int32>(math::ceil(sz.width)) + pad2,
+                static_cast<int32>(math::ceil(sz.height)) + pad2
+            );
         }
 
         int32 ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
@@ -128,7 +131,10 @@ namespace tavros::renderer
 
         if (0 == idx) {
             auto sz = g.metrics.size * glyph_scale_pix;
-            auto bitmap_sz = math::ivec2(math::ceil(sz.width) + pad * 2, math::ceil(sz.height) + pad * 2);
+            auto bitmap_sz = math::ivec2(
+                static_cast<int32>(math::ceil(sz.width)) + pad * 2,
+                static_cast<int32>(math::ceil(sz.height)) + pad * 2
+            );
 
             auto cx = static_cast<float>(bitmap_sz.width) / 2.0f;
             auto cy = static_cast<float>(bitmap_sz.height) / 2.0f;

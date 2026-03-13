@@ -189,10 +189,9 @@ public:
 
     void shutdown() override
     {
-        m_stream_draw = nullptr;
+        m_stream_draw.shutdown();
         m_drenderer.shutdown();
-        m_root_view.shutdown();
-        m_offscreen_rt->shutdown();
+        m_offscreen_rt.shutdown();
         m_graphics_device = nullptr;
     }
 
@@ -362,7 +361,7 @@ public:
 
         tavros::particles::clear_dead(m_particles);
 
-        m_stream_draw->begin_frame();
+        m_stream_draw.reset();
         m_drenderer.begin_frame(
             m_scene_data.ortho_projection,
             m_scene_data.view_projection
@@ -377,7 +376,7 @@ public:
         upload_frame_uniforms();
         build_fps_text();
 
-        auto glyph_slice = m_stream_draw->slice<app::glyph_instance>(m_fps_text.size());
+        auto glyph_slice = m_stream_draw.slice<app::glyph_instance>(m_fps_text.size());
         auto glyph_count = app::fill_glyph_instances(m_fps_text, glyph_slice.data(), {16.0f, 16.0f});
         auto particle_slice = prepare_particle_slice();
 
@@ -439,9 +438,7 @@ private:
         m_stage_upload_buffer = create_buffer(64_MiB, rhi::buffer_usage::stage, rhi::buffer_access::gpu_to_cpu);
         m_uniform_buffer = create_buffer(1_MiB, rhi::buffer_usage::storage, rhi::buffer_access::gpu_only);
 
-        m_stream_draw = tavros::core::make_unique<tavros::renderer::gpu_stream_buffer>(
-            m_graphics_device.get(), 128_MiB, rhi::buffer_usage::vertex
-        );
+        m_stream_draw.init(m_graphics_device.get(), 128_MiB, rhi::buffer_usage::vertex);
 
         m_camera.set_orientation({1.0f, 1.0f, -0.25f}, {0.0f, 0.0f, 1.0f});
         m_camera.set_position({-8.0f, -8.0f, 5.0f});
@@ -449,11 +446,7 @@ private:
 
     void init_offscreen()
     {
-        m_offscreen_rt = tavros::core::make_unique<tavros::renderer::render_target>(
-            rhi::pixel_format::rgba8un,
-            rhi::pixel_format::depth32f
-        );
-        m_offscreen_rt->init(m_graphics_device.get());
+        m_offscreen_rt.init(m_graphics_device.get(), rhi::pixel_format::rgba8un, rhi::pixel_format::depth32f);
 
         rhi::render_pass_create_info rp;
         rp.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::load_op::clear, rhi::store_op::dont_care, {}, {0.2f, 0.2f, 0.25f, 1.0f}});
@@ -543,55 +536,6 @@ private:
     void init_ui()
     {
         m_drenderer.init(m_graphics_device.get());
-        m_root_view.init(m_graphics_device.get());
-
-        // Build view hierarchy
-        for (auto* v : {&m_view1, &m_view2, &m_view3, &m_view4, &m_view5, (tavros::ui::view*) &m_btn0}) {
-            m_root_view.root().insert_last_child(v);
-        }
-        for (auto* v : {&m_view6, &m_view7, &m_view8, &m_view9, (tavros::ui::view*) &m_btn1}) {
-            m_view5.insert_last_child(v);
-        }
-        m_view9.insert_last_child(&m_view10);
-        m_view9.insert_last_child(&m_view11);
-
-        m_view5.set_enabled(false);
-
-        // Layout
-        m_btn0.set_position({1400, 100});
-        m_btn0.set_size({240.0f, 80.0f});
-        m_btn0.set_text("Button0");
-        m_btn1.set_position({300, 100});
-        m_btn1.set_size({240.0f, 80.0f});
-        m_btn1.set_text("Button1");
-
-        m_view1.set_position({100, 100});
-        m_view1.set_size({100, 100});
-        m_view2.set_position({100, 300});
-        m_view2.set_size({100, 100});
-        m_view3.set_position({300, 100});
-        m_view3.set_size({150, 150});
-        m_view4.set_position({300, 300});
-        m_view4.set_size({200, 100});
-
-        m_view5.set_position({1250, 100});
-        m_view5.set_size({600, 600});
-        m_view5.set_padding({10.0f, 20.0f, 30.0f, 40.0f});
-
-        m_view6.set_position({10, 10});
-        m_view6.set_size({100, 100});
-        m_view7.set_position({250, 50});
-        m_view7.set_size({100, 150});
-        m_view7.set_padding({10, 10, 10, 10});
-        m_view8.set_position({50, 250});
-        m_view8.set_size({100, 150});
-        m_view9.set_position({250, 250});
-        m_view9.set_size({250, 300});
-
-        m_view10.set_position({50, 50});
-        m_view10.set_size({100, 50});
-        m_view11.set_position({50, 150});
-        m_view11.set_size({150, 100});
     }
 
     void init_particle_pipeline()
@@ -628,8 +572,6 @@ private:
 
     void process_input(tavros::input::event_args_queue_view events, double delta_time)
     {
-        m_root_view.process_ui_events(events);
-
         m_input_manager.begin_frame(tavros::system::application::instance().highp_time_us());
         m_input_manager.process_events(events);
 
@@ -669,10 +611,7 @@ private:
             return;
         }
 
-        m_offscreen_rt->recreate(
-            static_cast<uint32>(sz.width),
-            static_cast<uint32>(sz.height), 32
-        );
+        m_offscreen_rt.resize(static_cast<uint32>(sz.width), static_cast<uint32>(sz.height), 32);
 
         recreate_offscreen_bindings();
 
@@ -688,6 +627,11 @@ private:
 
     void update_camera(double delta_time)
     {
+        const auto mouse_delta = m_input_manager.get_smooth_mouse_delta();
+        if (tavros::math::squared_length(mouse_delta) > 0.0f) {
+            apply_camera_rotation(mouse_delta);
+        }
+
         const auto factor = [&](tavros::input::keyboard_key key) {
             return static_cast<float>(m_input_manager.key_hold_factor(key));
         };
@@ -706,11 +650,6 @@ private:
         const bool  ctrl = m_input_manager.is_key_pressed(tavros::input::keyboard_key::k_lcontrol);
         const float speed = static_cast<float>(delta_time) * (shift ? (ctrl ? 100.0f : 10.0f) : 2.0f);
         m_camera.move(move * speed);
-
-        const auto mouse_delta = m_input_manager.get_smooth_mouse_delta();
-        if (tavros::math::squared_length(mouse_delta) > 0.0f) {
-            apply_camera_rotation(mouse_delta);
-        }
     }
 
     void apply_camera_rotation(tavros::math::vec2 mouse_delta)
@@ -808,7 +747,7 @@ private:
     {
         particle_draw_slice result;
         if (m_particles.size() > 0) {
-            result.slice = m_stream_draw->slice<tavros::particles::particle_instance>(m_particles.size());
+            result.slice = m_stream_draw.slice<tavros::particles::particle_instance>(m_particles.size());
             result.count = tavros::particles::fill_instances(m_particles, result.slice.data());
         }
         return result;
@@ -822,7 +761,7 @@ private:
     )
     {
         cbuf->copy_buffer(m_stage_buffer, m_uniform_buffer, sizeof(m_scene_data));
-        cbuf->begin_render_pass(m_offscreen_rt->render_pass(), m_offscreen_rt->framebuffer());
+        cbuf->begin_render_pass(m_offscreen_rt.render_pass(), m_offscreen_rt.framebuffer());
 
         draw_cube(cbuf);
         draw_world_grid(cbuf);
@@ -832,8 +771,6 @@ private:
         m_drenderer.update();
         m_drenderer.render(cbuf);
         m_drenderer.end_frame();
-
-        m_root_view.on_frame(cbuf, 0.0f);
 
         cbuf->end_render_pass();
     }
@@ -916,10 +853,10 @@ private:
         rhi::texture_copy_region rgn;
         rgn.width = w;
         rgn.height = h;
-        cbuf->copy_texture_to_buffer(m_offscreen_rt->get_color_attachment(0), m_stage_upload_buffer, rgn);
+        cbuf->copy_texture_to_buffer(m_offscreen_rt.color_attachment(0), m_stage_upload_buffer, rgn);
 
         rgn.buffer_offset = static_cast<size_t>(w * h * 4);
-        cbuf->copy_texture_to_buffer(m_offscreen_rt->get_depth_stencil_attachment(), m_stage_upload_buffer, rgn);
+        cbuf->copy_texture_to_buffer(m_offscreen_rt.depth_stencil_attachment(), m_stage_upload_buffer, rgn);
     }
 
     void save_frame_capture()
@@ -1190,8 +1127,8 @@ private:
         destroy(m_color_shader_binding);
         destroy(m_depth_stencil_shader_binding);
 
-        m_color_shader_binding = create_texture_binding(m_offscreen_rt->get_color_attachment(0), m_sampler);
-        m_depth_stencil_shader_binding = create_texture_binding(m_offscreen_rt->get_depth_stencil_attachment(), m_sampler);
+        m_color_shader_binding = create_texture_binding(m_offscreen_rt.color_attachment(0), m_sampler);
+        m_depth_stencil_shader_binding = create_texture_binding(m_offscreen_rt.depth_stencil_attachment(), m_sampler);
     }
 
     float rand_range(float lo, float hi) noexcept
@@ -1214,7 +1151,7 @@ private:
     rhi::fence_handle                              m_fence;
 
     // -- Offscreen RT --
-    tavros::core::unique_ptr<tavros::renderer::render_target> m_offscreen_rt;
+    tavros::renderer::render_target m_offscreen_rt;
 
     // -- Pipelines --
     rhi::pipeline_handle m_fullscreen_quad_pipeline;
@@ -1242,7 +1179,7 @@ private:
     rhi::buffer_handle  m_mesh_indices_buffer;
     rhi::buffer_handle  m_uniform_buffer;
 
-    tavros::core::unique_ptr<tavros::renderer::gpu_stream_buffer> m_stream_draw;
+    tavros::renderer::gpu_stream_buffer m_stream_draw;
 
     // -- Scene --
     tavros::renderer::camera         m_camera;
@@ -1253,12 +1190,6 @@ private:
     tavros::renderer::font_library m_font_lib;
     app::text_archetype            m_fps_text;
     float                          m_font_height = 100.0f;
-
-    // -- UI --
-    tavros::ui::root_view m_root_view;
-    tavros::ui::view      m_view1, m_view2, m_view3, m_view4, m_view5;
-    tavros::ui::view      m_view6, m_view7, m_view8, m_view9, m_view10, m_view11;
-    tavros::ui::button    m_btn0, m_btn1;
 
     // -- Particles --
     tavros::particles::particle_archetype m_particles;

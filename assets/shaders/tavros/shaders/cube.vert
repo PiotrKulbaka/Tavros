@@ -15,10 +15,10 @@ void main()
 
     v_normal = a_normal; // mat3(u_model) * a_normal;
 
-    vec3 camera_pos = (inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
+    vec3 camera_pos = (s_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     v_to_camera = normalize(camera_pos - world_pos.xyz);
 
     v_tex_coord = a_uv;
 
-    gl_Position = view_projection * vec4(a_pos, 1.0);
+    gl_Position = s_view_projection * vec4(a_pos, 1.0);
 }
