@@ -67,11 +67,6 @@ namespace tavros::renderer::rhi
         render_pass_create_info info;
     };
 
-    struct gl_shader_binding
-    {
-        shader_binding_create_info info;
-    };
-
     struct gl_shader
     {
         shader_create_info info;
@@ -113,7 +108,6 @@ namespace tavros::renderer::rhi
         explicit device_resources_opengl()
             : m_samplers()
             , m_composers()
-            , m_shader_bindings()
             , m_shaders()
             , m_textures()
             , m_pipelines()
@@ -189,23 +183,21 @@ namespace tavros::renderer::rhi
         const core::object_pool<T, tag_of<T>>& get_pool() const noexcept;
 
     private:
-        core::object_pool<gl_sampler, sampler_tag>               m_samplers;
-        core::object_pool<gl_composer, frame_composer_tag>       m_composers;
-        core::object_pool<gl_shader_binding, shader_binding_tag> m_shader_bindings;
-        core::object_pool<gl_shader, shader_tag>                 m_shaders;
-        core::object_pool<gl_texture, texture_tag>               m_textures;
-        core::object_pool<gl_pipeline, pipeline_tag>             m_pipelines;
-        core::object_pool<gl_framebuffer, framebuffer_tag>       m_framebuffers;
-        core::object_pool<gl_buffer, buffer_tag>                 m_buffers;
-        core::object_pool<gl_render_pass, render_pass_tag>       m_render_passes;
-        core::object_pool<gl_fence, fence_tag>                   m_fences;
+        core::object_pool<gl_sampler, sampler_tag>         m_samplers;
+        core::object_pool<gl_composer, frame_composer_tag> m_composers;
+        core::object_pool<gl_shader, shader_tag>           m_shaders;
+        core::object_pool<gl_texture, texture_tag>         m_textures;
+        core::object_pool<gl_pipeline, pipeline_tag>       m_pipelines;
+        core::object_pool<gl_framebuffer, framebuffer_tag> m_framebuffers;
+        core::object_pool<gl_buffer, buffer_tag>           m_buffers;
+        core::object_pool<gl_render_pass, render_pass_tag> m_render_passes;
+        core::object_pool<gl_fence, fence_tag>             m_fences;
     };
 
     // clang-format off
     // Handle -> data type
     template<> struct device_resources_opengl::data_type_traits<frame_composer_handle> { using type = gl_composer; };
     template<> struct device_resources_opengl::data_type_traits<shader_handle>         { using type = gl_shader; };
-    template<> struct device_resources_opengl::data_type_traits<shader_binding_handle> { using type = gl_shader_binding; };
     template<> struct device_resources_opengl::data_type_traits<sampler_handle>        { using type = gl_sampler; };
     template<> struct device_resources_opengl::data_type_traits<texture_handle>        { using type = gl_texture; };
     template<> struct device_resources_opengl::data_type_traits<pipeline_handle>       { using type = gl_pipeline; };
@@ -217,7 +209,6 @@ namespace tavros::renderer::rhi
     // Data type -> handle type
     template<> struct device_resources_opengl::handle_type_traits<gl_composer>       { using type = frame_composer_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_shader>         { using type = shader_handle; };
-    template<> struct device_resources_opengl::handle_type_traits<gl_shader_binding> { using type = shader_binding_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_sampler>        { using type = sampler_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_texture>        { using type = texture_handle; };
     template<> struct device_resources_opengl::handle_type_traits<gl_pipeline>       { using type = pipeline_handle; };
@@ -229,7 +220,6 @@ namespace tavros::renderer::rhi
     // Data type -> tag type
     template<> struct device_resources_opengl::tag_type_traits<gl_composer>       { using type = frame_composer_tag; };
     template<> struct device_resources_opengl::tag_type_traits<gl_shader>         { using type = shader_tag; };
-    template<> struct device_resources_opengl::tag_type_traits<gl_shader_binding> { using type = shader_binding_tag; };
     template<> struct device_resources_opengl::tag_type_traits<gl_sampler>        { using type = sampler_tag; };
     template<> struct device_resources_opengl::tag_type_traits<gl_texture>        { using type = texture_tag; };
     template<> struct device_resources_opengl::tag_type_traits<gl_pipeline>       { using type = pipeline_tag; };
@@ -241,7 +231,6 @@ namespace tavros::renderer::rhi
     // get_pool specializations
     template<> inline core::object_pool<gl_composer, frame_composer_tag>&       device_resources_opengl::get_pool<gl_composer>() noexcept       { return m_composers; }
     template<> inline core::object_pool<gl_shader, shader_tag>&                 device_resources_opengl::get_pool<gl_shader>() noexcept         { return m_shaders; }
-    template<> inline core::object_pool<gl_shader_binding, shader_binding_tag>& device_resources_opengl::get_pool<gl_shader_binding>() noexcept { return m_shader_bindings; }
     template<> inline core::object_pool<gl_sampler, sampler_tag>&               device_resources_opengl::get_pool<gl_sampler>() noexcept        { return m_samplers; }
     template<> inline core::object_pool<gl_texture, texture_tag>&               device_resources_opengl::get_pool<gl_texture>() noexcept        { return m_textures; }
     template<> inline core::object_pool<gl_pipeline, pipeline_tag>&             device_resources_opengl::get_pool<gl_pipeline>() noexcept       { return m_pipelines; }
@@ -252,7 +241,6 @@ namespace tavros::renderer::rhi
 
     template<> inline const core::object_pool<gl_composer, frame_composer_tag>&       device_resources_opengl::get_pool<gl_composer>() const noexcept       { return m_composers; }
     template<> inline const core::object_pool<gl_shader, shader_tag>&                 device_resources_opengl::get_pool<gl_shader>() const noexcept         { return m_shaders; }
-    template<> inline const core::object_pool<gl_shader_binding, shader_binding_tag>& device_resources_opengl::get_pool<gl_shader_binding>() const noexcept { return m_shader_bindings; }
     template<> inline const core::object_pool<gl_sampler, sampler_tag>&               device_resources_opengl::get_pool<gl_sampler>() const noexcept        { return m_samplers; }
     template<> inline const core::object_pool<gl_texture, texture_tag>&               device_resources_opengl::get_pool<gl_texture>() const noexcept        { return m_textures; }
     template<> inline const core::object_pool<gl_pipeline, pipeline_tag>&             device_resources_opengl::get_pool<gl_pipeline>() const noexcept       { return m_pipelines; }

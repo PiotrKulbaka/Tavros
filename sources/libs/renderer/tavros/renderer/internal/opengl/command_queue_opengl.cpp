@@ -328,65 +328,69 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj));
     }
 
-    void command_queue_opengl::bind_shader_binding(shader_binding_handle shader_binding)
+    void command_queue_opengl::bind_shader_buffers(core::buffer_view<buffer_binding> buffers)
     {
-        auto* sb = m_device->get_resources()->find(shader_binding);
-        if (!sb) {
-            ::logger.error("Failed to bind shader binding {}: shader binding not found", shader_binding);
-            return;
-        }
-
-        auto& info = sb->info;
-
-        // Bind textures and samplers
-        for (uint32 i = 0; i < info.texture_bindings.size(); ++i) {
-            auto& binding = info.texture_bindings[i];
-
-            // Bind texture
-            if (auto* t = m_device->get_resources()->find(binding.texture)) {
-                if (!t->info.usage.has_flag(texture_usage::sampled)) {
-                    ::logger.error("Failed to bind shader binding {}: texture {} is not sampled", shader_binding, binding.texture);
-                    return;
-                }
-                GL_CALL(glActiveTexture(GL_TEXTURE0 + binding.binding));
-                GL_CALL(glBindTexture(t->target, t->texture_obj));
-            } else {
-                ::logger.error("Failed to bind shader binding {}: texture {} not found", shader_binding, binding.texture);
-                return;
-            }
-
-            // Bind sampler
-            if (auto* s = m_device->get_resources()->find(binding.sampler)) {
-                GL_CALL(glBindSampler(binding.binding, s->sampler_obj));
-            } else {
-                ::logger.error("Failed to bind shader binding {}: sampler {} not found", shader_binding, binding.sampler);
-                return;
-            }
-        }
-
         // Bind buffers (UBO or SSBO buffers)
-        for (uint32 i = 0; i < info.buffer_bindings.size(); ++i) {
-            auto& binding = info.buffer_bindings[i];
+        for (uint32 i = 0; i < buffers.size(); ++i) {
+            auto& buf = buffers[i];
 
-            auto buf_h = binding.buffer;
-            if (auto* b = m_device->get_resources()->find(buf_h)) {
+            if (auto* b = m_device->get_resources()->find(buf.buffer)) {
                 TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER || b->gl_target == GL_SHADER_STORAGE_BUFFER);
 
-                if (binding.size == 0) {
+                if (b->info.usage != buffer_usage::constant && b->info.usage != buffer_usage::storage) {
+                    ::logger.error(
+                        "Failed to bind shader binding: buffer {} binding {} has invalid usage (expected `constant` or `storage`, got {})",
+                        buf.buffer,
+                        fmt::styled_param(i),
+                        b->info.usage
+                    );
+                    return;
+                }
+
+                if (buf.size == 0) {
                     // Bind the entire buffer
-                    GL_CALL(glBindBufferBase(b->gl_target, binding.binding, b->buffer_obj));
+                    GL_CALL(glBindBufferBase(b->gl_target, buf.binding, b->buffer_obj));
                 } else {
                     // Bind a range of the buffer (subbuffer)
                     GL_CALL(glBindBufferRange(
                         b->gl_target,
-                        binding.binding,
+                        buf.binding,
                         b->buffer_obj,
-                        static_cast<GLintptr>(binding.offset),
-                        static_cast<GLsizeiptr>(binding.size)
+                        static_cast<GLintptr>(buf.offset),
+                        static_cast<GLsizeiptr>(buf.size)
                     ));
                 }
             } else {
-                ::logger.error("Failed to bind shader binding {}: buffer {} not found", shader_binding, buf_h);
+                ::logger.error("Failed to bind shader buffer {}: buffer not found", buf.buffer);
+                return;
+            }
+        }
+    }
+
+    void command_queue_opengl::bind_shader_textures(core::buffer_view<texture_binding> textures)
+    {
+        // Bind textures and samplers
+        for (uint32 i = 0; i < textures.size(); ++i) {
+            auto& bind = textures[i];
+
+            // Bind texture
+            if (auto* t = m_device->get_resources()->find(bind.texture)) {
+                if (!t->info.usage.has_flag(texture_usage::sampled)) {
+                    ::logger.error("Failed to bind shader texture {}: texture is not sampled", bind.texture);
+                    return;
+                }
+                GL_CALL(glActiveTexture(GL_TEXTURE0 + bind.binding));
+                GL_CALL(glBindTexture(t->target, t->texture_obj));
+            } else {
+                ::logger.error("Failed to bind shader texture {}: texture not found", bind.texture);
+                return;
+            }
+
+            // Bind sampler
+            if (auto* s = m_device->get_resources()->find(bind.sampler)) {
+                GL_CALL(glBindSampler(bind.binding, s->sampler_obj));
+            } else {
+                ::logger.error("Failed to bind shader texture {}: sampler {} not found", bind.texture, bind.sampler);
                 return;
             }
         }

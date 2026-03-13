@@ -805,7 +805,7 @@ namespace tavros::renderer
         }
 
         // Draw 3D geom (instanced)
-        cmds->bind_shader_binding(m_scene_persp_binding);
+        cmds->bind_shader_buffers(rhi::buffer_binding{m_scene_params_buffer, 256, 256, 0});
 
         cmds->bind_pipeline(m_inst_mesh_pipeline);
         rhi::bind_buffer_info draw_bufs_static[] = {{m_static_verts_buffer, 0}, {m_static_verts_buffer, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}};
@@ -836,7 +836,7 @@ namespace tavros::renderer
         draw(cmds, m_draw_icosphere_wireframe_info);
 
         // Draw 2D geom (batch)
-        cmds->bind_shader_binding(m_scene_orto_binding);
+        cmds->bind_shader_buffers(rhi::buffer_binding{m_scene_params_buffer, 0, 256, 0});
 
         cmds->bind_pipeline(m_points2d_pipeline);
         cmds->bind_vertex_buffers(draw_bufs_batch);
@@ -851,7 +851,7 @@ namespace tavros::renderer
         draw(cmds, m_draw_tris2d_info);
 
         cmds->bind_pipeline(m_text2d_pipeline);
-        cmds->bind_shader_binding(m_font_binding);
+        cmds->bind_shader_textures(rhi::texture_binding{m_font_atlas, m_font_sampler, 0});
         rhi::bind_buffer_info draw_bufs_text[] = {{m_inst_stream_data, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}};
         cmds->bind_vertex_buffers(draw_bufs_text);
         draw(cmds, m_draw_text_info);
@@ -891,23 +891,6 @@ namespace tavros::renderer
         m_scene_params_buffer = m_gdevice->create_buffer(ubo_desc);
         if (!m_scene_params_buffer) {
             ::logger.error("Failed to create ubo (scene)");
-            return false;
-        }
-
-        // Create shader bindings for Scene
-        rhi::shader_binding_create_info scene_orto_sb_info;
-        scene_orto_sb_info.buffer_bindings.push_back({m_scene_params_buffer, 0, 256, 0});
-        m_scene_orto_binding = m_gdevice->create_shader_binding(scene_orto_sb_info);
-        if (!m_scene_orto_binding) {
-            ::logger.error("Failed to create scene orto binding");
-            return false;
-        }
-
-        rhi::shader_binding_create_info scene_persp_sb_info;
-        scene_persp_sb_info.buffer_bindings.push_back({m_scene_params_buffer, 256, 256, 0});
-        m_scene_persp_binding = m_gdevice->create_shader_binding(scene_persp_sb_info);
-        if (!m_scene_persp_binding) {
-            ::logger.error("Failed to create scene persp binding");
             return false;
         }
 
@@ -1177,14 +1160,6 @@ namespace tavros::renderer
             return false;
         }
 
-        rhi::shader_binding_create_info shader_binding_info;
-        shader_binding_info.texture_bindings.push_back({m_font_atlas, m_font_sampler, 0});
-        m_font_binding = m_gdevice->create_shader_binding(shader_binding_info);
-        if (!m_font_binding) {
-            ::logger.fatal("Failed to create shader binding");
-            return false;
-        }
-
         rhi::buffer_create_info stage_desc{1024ull * 1024ull, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu};
         m_stage = m_gdevice->create_buffer(stage_desc);
         if (!m_stage) {
@@ -1211,8 +1186,6 @@ namespace tavros::renderer
         m_gdevice->safe_destroy(m_inst_stream_data);
         m_gdevice->safe_destroy(m_static_verts_buffer);
         m_gdevice->safe_destroy(m_static_inds_buffer);
-        m_gdevice->safe_destroy(m_scene_orto_binding);
-        m_gdevice->safe_destroy(m_scene_persp_binding);
         m_gdevice->safe_destroy(m_inst_mesh_pipeline);
         m_gdevice->safe_destroy(m_inst_wireframe_mesh_pipeline);
         m_gdevice->safe_destroy(m_points3d_pipeline);
@@ -1223,7 +1196,6 @@ namespace tavros::renderer
         m_gdevice->safe_destroy(m_tris2d_pipeline);
         m_gdevice->safe_destroy(m_font_atlas);
         m_gdevice->safe_destroy(m_font_sampler);
-        m_gdevice->safe_destroy(m_font_binding);
         m_gdevice->safe_destroy(m_text2d_pipeline);
         m_gdevice->safe_destroy(m_stage);
         m_gdevice = nullptr;

@@ -23,7 +23,9 @@ namespace tavros::renderer::rhi
 
         void bind_index_buffer(buffer_handle buffer, index_buffer_format format) override;
 
-        void bind_shader_binding(shader_binding_handle shader_binding) override;
+        void bind_shader_buffers(core::buffer_view<buffer_binding> buffers) override;
+
+        void bind_shader_textures(core::buffer_view<texture_binding> textures) override;
 
         void begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer) override;
 

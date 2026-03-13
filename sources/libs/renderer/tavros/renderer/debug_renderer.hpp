@@ -142,9 +142,7 @@ namespace tavros::renderer
         bool                  m_gpu_resources_created = false;
 
         // Scene buffer binding
-        rhi::buffer_handle         m_scene_params_buffer;
-        rhi::shader_binding_handle m_scene_orto_binding;
-        rhi::shader_binding_handle m_scene_persp_binding;
+        rhi::buffer_handle m_scene_params_buffer;
 
         // Batching geom
         rhi::buffer_handle m_batch_geom_buffer;
@@ -177,13 +175,12 @@ namespace tavros::renderer
         rhi::pipeline_handle m_tris2d_pipeline;
         rhi::pipeline_handle m_text2d_pipeline;
 
-        rhi::texture_handle        m_font_atlas;
-        rhi::sampler_handle        m_font_sampler;
-        rhi::shader_binding_handle m_font_binding;
-        rhi::buffer_handle         m_stage;
-        bool                       m_need_upload_texture;
-        rhi::texture_copy_region   m_texture_copy_rgn;
-        math::vec2                 m_atlas_texture_size;
+        rhi::texture_handle      m_font_atlas;
+        rhi::sampler_handle      m_font_sampler;
+        rhi::buffer_handle       m_stage;
+        bool                     m_need_upload_texture;
+        rhi::texture_copy_region m_texture_copy_rgn;
+        math::vec2               m_atlas_texture_size;
 
         core::shared_ptr<font> m_font;
     };

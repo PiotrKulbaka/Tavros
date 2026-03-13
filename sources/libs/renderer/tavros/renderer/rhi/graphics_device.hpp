@@ -16,7 +16,6 @@
 #include <tavros/renderer/rhi/framebuffer_create_info.hpp>
 #include <tavros/renderer/rhi/buffer_create_info.hpp>
 #include <tavros/renderer/rhi/render_pass_create_info.hpp>
-#include <tavros/renderer/rhi/shader_binding_create_info.hpp>
 #include <tavros/renderer/rhi/shader_create_info.hpp>
 
 #include <type_traits>
@@ -175,21 +174,6 @@ namespace tavros::renderer::rhi
         virtual void destroy_render_pass(render_pass_handle render_pass) = 0;
 
         /**
-         * @brief Create a shader binding set (descriptor set / resource group).
-         *
-         * @param info Shader binding creation parameters.
-         * @return Handle to the created shader binding.
-         */
-        virtual shader_binding_handle create_shader_binding(const shader_binding_create_info& info) = 0;
-
-        /**
-         * @brief Destroy a previously created shader binding.
-         *
-         * @param shader_binding Handle to the shader binding to destroy.
-         */
-        virtual void destroy_shader_binding(shader_binding_handle shader_binding) = 0;
-
-        /**
          * @brief Create a GPU fence object used for synchronization.
          *
          * @return Handle to the created fence.
@@ -273,8 +257,6 @@ namespace tavros::renderer::rhi
                 destroy_buffer(h);
             } else if constexpr (std::is_same_v<T, render_pass_handle>) {
                 destroy_render_pass(h);
-            } else if constexpr (std::is_same_v<T, shader_binding_handle>) {
-                destroy_shader_binding(h);
             } else if constexpr (std::is_same_v<T, shader_handle>) {
                 destroy_shader(h);
             } else if constexpr (std::is_same_v<T, fence_handle>) {

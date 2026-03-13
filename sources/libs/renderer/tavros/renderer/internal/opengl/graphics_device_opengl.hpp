@@ -41,9 +41,6 @@ namespace tavros::renderer::rhi
         render_pass_handle create_render_pass(const render_pass_create_info& info) override;
         void               destroy_render_pass(render_pass_handle render_pass) override;
 
-        shader_binding_handle create_shader_binding(const shader_binding_create_info& info) override;
-        void                  destroy_shader_binding(shader_binding_handle shader_binding) override;
-
         fence_handle create_fence() override;
         void         destroy_fence(fence_handle fence) override;
 

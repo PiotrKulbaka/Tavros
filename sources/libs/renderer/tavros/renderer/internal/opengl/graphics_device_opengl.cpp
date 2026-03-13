@@ -213,8 +213,6 @@ namespace tavros::renderer::rhi
 
         destroy_for<buffer_handle>(m_resources, [this](auto h) { destroy_buffer(h); });
 
-        destroy_for<shader_binding_handle>(m_resources, [this](auto h) { destroy_shader_binding(h); });
-
         destroy_for<shader_handle>(m_resources, [this](auto h) { destroy_shader(h); });
 
         destroy_for<render_pass_handle>(m_resources, [this](auto h) { destroy_render_pass(h); });
@@ -1478,73 +1476,6 @@ namespace tavros::renderer::rhi
             ::logger.debug("Render pass {} destroyed", render_pass);
         } else {
             ::logger.error("Failed to destroy render pass {}: not found", render_pass);
-        }
-    }
-
-    shader_binding_handle graphics_device_opengl::create_shader_binding(const shader_binding_create_info& info)
-    {
-        // Validate texture and sampler bindings
-        for (size_t i = 0; i < info.texture_bindings.size(); ++i) {
-            auto& binding = info.texture_bindings[i];
-
-            auto* tex = m_resources.find(binding.texture);
-            if (!tex) {
-                ::logger.error(
-                    "Failed to create shader binding: texture {} binding {} not found",
-                    binding.texture,
-                    fmt::styled_param(i)
-                );
-                return {};
-            }
-
-            auto* smp = m_resources.find(binding.sampler);
-            if (!smp) {
-                ::logger.error(
-                    "Failed to create shader binding: sampler {} binding {} not found",
-                    binding.sampler,
-                    fmt::styled_param(i)
-                );
-                return {};
-            }
-        }
-
-        // Validate buffers
-        for (size_t i = 0; i < info.buffer_bindings.size(); ++i) {
-            auto& binding = info.buffer_bindings[i];
-
-            auto* b = m_resources.find(binding.buffer);
-            if (!b) {
-                ::logger.error(
-                    "Failed to create shader binding: buffer {} binding {} not found",
-                    binding.buffer,
-                    fmt::styled_param(i)
-                );
-                return {};
-            }
-
-            if (b->info.usage != buffer_usage::constant && b->info.usage != buffer_usage::storage) {
-                ::logger.error(
-                    "Failed to create shader binding: buffer {} binding {} has invalid usage (expected `constant` or `storage`, got {})",
-                    binding.buffer,
-                    fmt::styled_param(i),
-                    b->info.usage
-                );
-                return {};
-            }
-        }
-
-        auto h = m_resources.create(gl_shader_binding{info});
-        ::logger.debug("Shader binding {} created", h);
-        return h;
-    }
-
-    void graphics_device_opengl::destroy_shader_binding(shader_binding_handle shader_binding)
-    {
-        if (auto* sb = m_resources.find(shader_binding)) {
-            m_resources.remove(shader_binding);
-            ::logger.debug("Shader binding {} destroyed", shader_binding);
-        } else {
-            ::logger.error("Failed to destroy shader binding {}: not found", shader_binding);
         }
     }
 

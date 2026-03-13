@@ -515,10 +515,6 @@ private:
         upload_to_mapped(m_mesh_vertices_buffer, app::cube_vertices, sizeof(app::cube_vertices));
         upload_to_mapped(m_mesh_indices_buffer, app::cube_indices, sizeof(app::cube_indices));
 
-        // Shader bindings
-        m_mesh_shader_binding = create_texture_binding(m_cube_texture, m_sampler);
-        m_scene_binding = create_buffer_binding(m_uniform_buffer, sizeof(app::scene_data));
-
         m_graphics_device->wait_for_fence(m_fence);
     }
 
@@ -530,7 +526,7 @@ private:
         m_font_lib.load("fonts/NotoSans-Regular.ttf", "NotoSans-Regular");
         m_font_lib.load("fonts/Roboto-Medium.ttf", "Roboto-Medium");
 
-        m_font_shader_binding = bake_and_upload_font_atlas();
+        m_font_texture = bake_and_upload_font_atlas();
     }
 
     void init_ui()
@@ -612,8 +608,6 @@ private:
         }
 
         m_offscreen_rt.resize(static_cast<uint32>(sz.width), static_cast<uint32>(sz.height), 32);
-
-        recreate_offscreen_bindings();
 
         m_composer->resize(sz.width, sz.height);
 
@@ -785,23 +779,23 @@ private:
         };
         cbuf->bind_vertex_buffers(bufs);
         cbuf->bind_index_buffer(m_mesh_indices_buffer, rhi::index_buffer_format::u32);
-        cbuf->bind_shader_binding(m_scene_binding);
-        cbuf->bind_shader_binding(m_mesh_shader_binding);
+        cbuf->bind_shader_buffers(rhi::buffer_binding{m_uniform_buffer, 0, sizeof(app::scene_data), 0});
+        cbuf->bind_shader_textures(rhi::texture_binding{m_cube_texture, m_sampler});
         cbuf->draw_indexed(6 * 6);
     }
 
     void draw_world_grid(rhi::command_queue* cbuf)
     {
         cbuf->bind_pipeline(m_world_grid_pipeline);
-        cbuf->bind_shader_binding(m_scene_binding);
+        cbuf->bind_shader_buffers(rhi::buffer_binding{m_uniform_buffer, 0, sizeof(app::scene_data), 0});
         cbuf->draw(4);
     }
 
     void draw_hud_text(rhi::command_queue* cbuf, const tavros::renderer::gpu_buffer_view<app::glyph_instance>& slice, size_t count)
     {
         cbuf->bind_pipeline(m_sdf_font_pipeline);
-        cbuf->bind_shader_binding(m_font_shader_binding);
-        cbuf->bind_shader_binding(m_scene_binding);
+        cbuf->bind_shader_textures(rhi::texture_binding{m_font_texture, m_sampler, 0});
+        cbuf->bind_shader_buffers(rhi::buffer_binding{m_uniform_buffer, 0, sizeof(app::scene_data), 0});
 
         rhi::bind_buffer_info bufs[] = {
             {slice.gpu_buffer(), slice.offset_bytes()},
@@ -822,7 +816,8 @@ private:
         }
 
         cbuf->bind_pipeline(m_particle_pipeline);
-        cbuf->bind_shader_binding(m_scene_binding);
+
+        cbuf->bind_shader_buffers(rhi::buffer_binding{m_uniform_buffer, 0, sizeof(app::scene_data), 0});
 
         rhi::bind_buffer_info bufs[] = {
             {pslice.slice.gpu_buffer(), pslice.slice.offset_bytes()},
@@ -838,9 +833,11 @@ private:
     {
         cbuf->begin_render_pass(m_main_pass, m_composer->backbuffer());
         cbuf->bind_pipeline(m_fullscreen_quad_pipeline);
-        cbuf->bind_shader_binding(
-            m_current_buffer_output == 0 ? m_color_shader_binding : m_depth_stencil_shader_binding
-        );
+        if (m_current_buffer_output == 0) {
+            cbuf->bind_shader_textures(rhi::texture_binding{m_offscreen_rt.color_attachment(0), m_sampler});
+        } else {
+            cbuf->bind_shader_textures(rhi::texture_binding{m_offscreen_rt.depth_stencil_attachment(), m_sampler});
+        }
         cbuf->draw(4);
         cbuf->end_render_pass();
     }
@@ -1022,36 +1019,8 @@ private:
         return m_graphics_device->create_shader({src, stage, "main"});
     }
 
-    rhi::shader_binding_handle create_texture_binding(
-        rhi::texture_handle texture,
-        rhi::sampler_handle sampler,
-        uint32              slot = 0
-    )
-    {
-        rhi::shader_binding_create_info info;
-        info.texture_bindings.push_back({texture, sampler, slot});
-        auto h = m_graphics_device->create_shader_binding(info);
-        TAV_FATAL_IF(!h, "Failed to create texture shader binding.");
-        return h;
-    }
-
-    rhi::shader_binding_handle create_buffer_binding(
-        rhi::buffer_handle buffer,
-        size_t             size,
-        uint32             slot = 0,
-        size_t             offset = 0
-    )
-    {
-        rhi::shader_binding_create_info info;
-        info.buffer_bindings.push_back({buffer, static_cast<uint32>(offset), static_cast<uint32>(size), slot});
-        auto h = m_graphics_device->create_shader_binding(info);
-        TAV_FATAL_IF(!h, "Failed to create buffer shader binding.");
-        return h;
-    }
-
     tavros::assets::image load_image(tavros::core::string_view path, bool y_flip = false)
     {
-        tavros::assets::image im;
         try {
             auto data = m_resource_manager->asset_manager().read_binary(path);
             return tavros::assets::image::decode(data, y_flip);
@@ -1075,7 +1044,7 @@ private:
         }
     }
 
-    rhi::shader_binding_handle bake_and_upload_font_atlas()
+    rhi::texture_handle bake_and_upload_font_atlas()
     {
         auto atlas = m_font_lib.invalidate_old_and_bake_new_atlas(96.0f, 8.0f);
 
@@ -1096,13 +1065,6 @@ private:
         auto tex = m_graphics_device->create_texture(ti);
         TAV_FATAL_IF(!tex, "Failed to create font atlas texture.");
 
-        rhi::sampler_create_info si;
-        si.filter.mipmap_filter = rhi::mipmap_filter_mode::off;
-        si.filter.min_filter = rhi::filter_mode::linear;
-        si.filter.mag_filter = rhi::filter_mode::linear;
-        auto smp = m_graphics_device->create_sampler(si);
-        TAV_FATAL_IF(!smp, "Failed to create font atlas sampler.");
-
         rhi::texture_copy_region rgn;
         rgn.width = atlas.width;
         rgn.height = atlas.height;
@@ -1113,22 +1075,7 @@ private:
         cbuf->signal_fence(m_fence);
         m_composer->submit_command_queue(cbuf);
 
-        return create_texture_binding(tex, smp);
-    }
-
-    void recreate_offscreen_bindings()
-    {
-        auto destroy = [&](rhi::shader_binding_handle& h) {
-            if (h) {
-                m_graphics_device->destroy_shader_binding(h);
-                h = {};
-            }
-        };
-        destroy(m_color_shader_binding);
-        destroy(m_depth_stencil_shader_binding);
-
-        m_color_shader_binding = create_texture_binding(m_offscreen_rt.color_attachment(0), m_sampler);
-        m_depth_stencil_shader_binding = create_texture_binding(m_offscreen_rt.depth_stencil_attachment(), m_sampler);
+        return tex;
     }
 
     float rand_range(float lo, float hi) noexcept
@@ -1163,14 +1110,8 @@ private:
     // -- Render passes --
     rhi::render_pass_handle m_main_pass;
 
-    // -- Shader bindings --
-    rhi::shader_binding_handle m_mesh_shader_binding;
-    rhi::shader_binding_handle m_scene_binding;
-    rhi::shader_binding_handle m_color_shader_binding;
-    rhi::shader_binding_handle m_depth_stencil_shader_binding;
-    rhi::shader_binding_handle m_font_shader_binding;
-
     // -- GPU resources --
+    rhi::texture_handle m_font_texture;
     rhi::texture_handle m_cube_texture;
     rhi::sampler_handle m_sampler;
     rhi::buffer_handle  m_stage_buffer;

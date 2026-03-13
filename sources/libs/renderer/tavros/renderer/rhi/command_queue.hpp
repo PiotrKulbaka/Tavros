@@ -71,15 +71,9 @@ namespace tavros::renderer::rhi
          */
         virtual void bind_index_buffer(buffer_handle buffer, index_buffer_format format) = 0;
 
-        /**
-         * @brief Bind shader resources to the current pipeline.
-         *
-         * Binds textures, uniform buffers, and other shader-accessible resources
-         * described by the given shader binding object.
-         *
-         * @param shader_binding Handle to the shader binding to use.
-         */
-        virtual void bind_shader_binding(shader_binding_handle shader_binding) = 0;
+        virtual void bind_shader_buffers(core::buffer_view<buffer_binding> buffers) = 0;
+
+        virtual void bind_shader_textures(core::buffer_view<texture_binding> textures) = 0;
 
         /**
          * @brief Begin a render pass.
