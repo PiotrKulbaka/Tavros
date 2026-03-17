@@ -24,23 +24,36 @@ def main(root_dir) -> int:
     try:
         if args['--show_resolved_config']:
             log_print(cfg.to_str())
+    
         elif args['autoformat']:
             autoformat(cfg)
+    
         elif args['collect_sources']:
             collect_sources(cfg)
+
         elif args['cmake_gen']:
+            defines={}
+            defines['TRACY_ENABLE'] = 'ON' if args['--tracy'] else 'OFF'
+            defines['TRACY_ON_DEMAND'] = 'ON' if args['--tracy'] else 'OFF'
+
             if args['--autoformat']:
                 autoformat(cfg)
+
             if args['--collect_sources']:
                 collect_sources(cfg)
+
             if args['xcode']:
-                cmake_gen(cfg, 'xcode')
+                cmake_gen(cfg, 'xcode', defines)
+
             if args['visual_studio']:
-                cmake_gen(cfg, 'visual_studio')
+                cmake_gen(cfg, 'visual_studio', defines)
+
             if args['ninja']:
-                cmake_gen(cfg, 'ninja')
+                cmake_gen(cfg, 'ninja', defines)
+
             if args['makefiles']:
-                cmake_gen(cfg, 'makefiles')
+                cmake_gen(cfg, 'makefiles', defines)
+
         else:
             log_print(f'{CL_FATAL}Unknown command.')
             log_print(doc)

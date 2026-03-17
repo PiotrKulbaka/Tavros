@@ -7,7 +7,7 @@ def get_doc():
         Usage:
             tavros.py autoformat [--colored]
             tavros.py collect_sources [--colored]
-            tavros.py cmake_gen (xcode | visual_studio | ninja | makefiles) [--collect_sources] [--autoformat] [--colored]
+            tavros.py cmake_gen (xcode | visual_studio | ninja | makefiles) [--tracy] [--collect_sources] [--autoformat] [--colored]
             tavros.py (--show_resolved_config) [--colored]
             tavros.py (-h | --help) [--colored]
 
@@ -17,6 +17,7 @@ def get_doc():
             --collect_sources       Collect source code files to the `CMakeSources.txt`, executed before the main command
             --show_resolved_config  Show resolved configuration file
             --colored               Use colors in the output
+            --tracy                 Use Tracy profiler
 
         Commands:
             autoformat              Autoformat all source code files
