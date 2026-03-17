@@ -51,6 +51,7 @@ namespace tavros::renderer::rhi
         fence_handle                     m_fences[3];
 
         uint64 m_frame_number;
+        uint64 m_buffer_count;
         bool   m_frame_started = false;
 
         core::unique_ptr<command_queue_opengl> m_internal_command_queue; // Temporary object, will be deleted soon

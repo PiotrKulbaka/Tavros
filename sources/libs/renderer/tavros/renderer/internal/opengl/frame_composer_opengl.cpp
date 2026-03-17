@@ -44,9 +44,9 @@ namespace tavros::renderer::rhi
         TAV_ASSERT(m_context);
         TAV_ASSERT(m_device);
         TAV_ASSERT(info.width > 0 && info.height > 0);
-        TAV_ASSERT(m_buffer_count == 2 || m_buffer_count == 3);
+        TAV_ASSERT(info.buffer_count == 2 || info.buffer_count == 3);
 
-        m_buffer_count = info.buffer_count;
+        m_buffer_count = static_cast<uint64>(info.buffer_count);
 
         // Create default backbuffer
         framebuffer_create_info backbuffer_info;
@@ -157,19 +157,19 @@ namespace tavros::renderer::rhi
     void frame_composer_opengl::submit_command_queue(command_queue* queue)
     {
         TAV_UNUSED(queue);
-        auto id = m_frame_number % 3;
+        auto id = m_frame_number % m_buffer_count;
         queue->signal_fence(m_fences[id]);
     }
 
     bool frame_composer_opengl::is_frame_complete()
     {
-        auto id = m_frame_number % 3;
+        auto id = m_frame_number % m_buffer_count;
         return !m_frame_started && m_device->is_fence_signaled(m_fences[id]);
     }
 
     void frame_composer_opengl::wait_for_frame_complete()
     {
-        auto id = m_frame_number % 3;
+        auto id = m_frame_number % m_buffer_count;
         m_device->wait_for_fence(m_fences[id]);
     }
 
