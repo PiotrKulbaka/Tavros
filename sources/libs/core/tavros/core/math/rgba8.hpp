@@ -96,11 +96,12 @@ namespace tavros::math
          */
         static constexpr rgba8 lerp(const rgba8& c1, const rgba8& c2, float t)
         {
+            const int32 ti = static_cast<int32>(t * 256.0f);
             return rgba8(
-                static_cast<uint8>(static_cast<float>(c1.r + (c2.r - c1.r) * t)),
-                static_cast<uint8>(static_cast<float>(c1.g + (c2.g - c1.g) * t)),
-                static_cast<uint8>(static_cast<float>(c1.b + (c2.b - c1.b) * t)),
-                static_cast<uint8>(static_cast<float>(c1.a + (c2.a - c1.a) * t))
+                static_cast<uint8>(static_cast<int32>(c1.r) + ((static_cast<int32>(c2.r) - static_cast<int32>(c1.r)) * static_cast<int32>(ti) >> 8)),
+                static_cast<uint8>(static_cast<int32>(c1.g) + ((static_cast<int32>(c2.g) - static_cast<int32>(c1.g)) * static_cast<int32>(ti) >> 8)),
+                static_cast<uint8>(static_cast<int32>(c1.b) + ((static_cast<int32>(c2.b) - static_cast<int32>(c1.b)) * static_cast<int32>(ti) >> 8)),
+                static_cast<uint8>(static_cast<int32>(c1.a) + ((static_cast<int32>(c2.a) - static_cast<int32>(c1.a)) * static_cast<int32>(ti) >> 8))
             );
         }
 
