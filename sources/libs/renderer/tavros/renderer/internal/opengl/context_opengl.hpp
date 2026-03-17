@@ -20,7 +20,7 @@ namespace tavros::renderer::rhi
 
         virtual void swap_buffers() = 0;
 
-        virtual bool is_current() = 0;
+        virtual bool is_current() const noexcept = 0;
     };
 
 } // namespace tavros::renderer::rhi

@@ -48,9 +48,10 @@ namespace tavros::renderer::rhi
         core::unique_ptr<context_opengl> m_context;
         frame_composer_create_info       m_info;
         framebuffer_handle               m_backbuffer;
-        fence_handle                     m_fence;
+        fence_handle                     m_fences[3];
 
-        bool m_frame_started = false;
+        uint64 m_frame_number;
+        bool   m_frame_started = false;
 
         core::unique_ptr<command_queue_opengl> m_internal_command_queue; // Temporary object, will be deleted soon
     };

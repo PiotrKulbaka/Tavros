@@ -25,26 +25,6 @@ namespace tavros::renderer::rhi
         virtual ~command_queue() = default;
 
         /**
-         * @brief Begins recording commands into the command queue.
-         *
-         * Must be called before issuing any rendering or compute commands.
-         * Once begun, commands can be recorded until @ref end() is called.
-         * Command queues cannot be executed until they have been properly ended.
-         */
-        virtual void begin() = 0;
-
-        /**
-         * @brief Ends command recording.
-         *
-         * Finalizes the recorded command sequence, making it ready for submission
-         * to a command queue or execution context. After calling this method,
-         * no further commands can be recorded until @ref begin() is called again.
-         *
-         * This must be called before submitting the command buffer for execution.
-         */
-        virtual void end() = 0;
-
-        /**
          * @brief Bind a graphics pipeline.
          *
          * Associates the given pipeline state object with the command queue.
@@ -71,8 +51,39 @@ namespace tavros::renderer::rhi
          */
         virtual void bind_index_buffer(buffer_handle buffer, index_buffer_format format) = 0;
 
+        /**
+         * @brief Binds one or more shader buffer resources for use in subsequent draw calls.
+         *
+         * Each buffer binding specifies a buffer handle, a byte offset, a size, and a binding
+         * slot index that matches `layout(binding=X)` in the shader.
+         *
+         * This method supports dynamic buffer bindings — offset and size can differ per call,
+         * allowing sub-allocation from a shared buffer without recreating any GPU objects.
+         *
+         * @param buffers A view over buffer binding descriptions.
+         *
+         * @note All bindings remain active until overwritten by a subsequent call
+         *       or until a new pipeline is bound.
+         * @note For uniform/storage buffers updated every frame, prefer sub-allocating
+         *       from a shared buffer and passing the current frame's offset here.
+         */
         virtual void bind_shader_buffers(core::buffer_view<buffer_binding> buffers) = 0;
 
+        /**
+         * @brief Binds one or more texture and sampler pairs for use in subsequent draw calls.
+         *
+         * Each texture binding specifies a texture handle, a sampler handle, and a binding
+         * slot index that matches `layout(binding=X)` in the shader.
+         *
+         * Textures are expected to remain valid and unchanged for the duration of any
+         * draw call that references them. Unlike buffer bindings, texture bindings are
+         * typically set once and reused across many frames.
+         *
+         * @param textures A view over texture binding descriptions.
+         *
+         * @note All bindings remain active until overwritten by a subsequent call
+         *       or until a new pipeline is bound.
+         */
         virtual void bind_shader_textures(core::buffer_view<texture_binding> textures) = 0;
 
         /**

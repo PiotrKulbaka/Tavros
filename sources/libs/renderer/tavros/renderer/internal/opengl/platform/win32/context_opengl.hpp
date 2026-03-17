@@ -22,7 +22,7 @@ namespace tavros::renderer::rhi
 
         void swap_buffers() override;
 
-        bool is_current() override;
+        bool is_current() const noexcept override;
 
     private:
         HWND  m_hWnd = nullptr;  // Handle to the window

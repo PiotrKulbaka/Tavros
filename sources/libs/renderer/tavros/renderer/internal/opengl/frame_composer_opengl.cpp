@@ -44,6 +44,9 @@ namespace tavros::renderer::rhi
         TAV_ASSERT(m_context);
         TAV_ASSERT(m_device);
         TAV_ASSERT(info.width > 0 && info.height > 0);
+        TAV_ASSERT(m_buffer_count == 2 || m_buffer_count == 3);
+
+        m_buffer_count = info.buffer_count;
 
         // Create default backbuffer
         framebuffer_create_info backbuffer_info;
@@ -57,12 +60,20 @@ namespace tavros::renderer::rhi
         m_backbuffer = m_device->get_resources()->create(gl_framebuffer{backbuffer_info, 0, true, info.color_attachment_format, info.depth_stencil_attachment_format});
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
 
-        m_fence = m_device->create_fence();
+        m_fences[0] = m_device->create_fence();
+        m_fences[1] = m_device->create_fence();
+        if (m_buffer_count == 3) {
+            m_fences[2] = m_device->create_fence();
+        }
     }
 
     frame_composer_opengl::~frame_composer_opengl()
     {
-        m_device->destroy_fence(m_fence);
+        m_device->destroy_fence(m_fences[0]);
+        m_device->destroy_fence(m_fences[1]);
+        if (m_buffer_count == 3) {
+            m_device->destroy_fence(m_fences[2]);
+        }
 
         // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
         auto& pool = m_device->get_resources()->get_pool<gl_framebuffer>();
@@ -135,6 +146,7 @@ namespace tavros::renderer::rhi
             ::logger.error("Frame not started");
         }
         m_frame_started = false;
+        ++m_frame_number;
     }
 
     command_queue* frame_composer_opengl::create_command_queue()
@@ -145,17 +157,20 @@ namespace tavros::renderer::rhi
     void frame_composer_opengl::submit_command_queue(command_queue* queue)
     {
         TAV_UNUSED(queue);
-        queue->signal_fence(m_fence);
+        auto id = m_frame_number % 3;
+        queue->signal_fence(m_fences[id]);
     }
 
     bool frame_composer_opengl::is_frame_complete()
     {
-        return !m_frame_started && m_device->is_fence_signaled(m_fence);
+        auto id = m_frame_number % 3;
+        return !m_frame_started && m_device->is_fence_signaled(m_fences[id]);
     }
 
     void frame_composer_opengl::wait_for_frame_complete()
     {
-        m_device->wait_for_fence(m_fence);
+        auto id = m_frame_number % 3;
+        m_device->wait_for_fence(m_fences[id]);
     }
 
 } // namespace tavros::renderer::rhi

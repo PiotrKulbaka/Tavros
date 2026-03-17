@@ -28,6 +28,9 @@ namespace tavros::renderer::rhi
         /// Number of back buffers to create (usually 2 for double-buffering or 3 for triple-buffering)
         uint32 buffer_count = 3;
 
+        /// Swap interval
+        int32 swap_interval = -1; // FPS limit, -1 - default; 0 - no limit
+
         /// Native handle associated with the frame composer (e.g., platform-specific window or surface)
         void* native_handle = nullptr;
     };

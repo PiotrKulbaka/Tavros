@@ -13,10 +13,6 @@ namespace tavros::renderer::rhi
 
         ~command_queue_opengl() override;
 
-        void begin() override;
-
-        void end() override;
-
         void bind_pipeline(pipeline_handle pipeline) override;
 
         void bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers) override;
@@ -58,8 +54,6 @@ namespace tavros::renderer::rhi
         index_buffer_format     m_current_index_buffer_format = index_buffer_format::u16;
 
         GLuint m_resolve_fbo = 0;
-
-        bool m_started = false;
     };
 
 } // namespace tavros::renderer::rhi
