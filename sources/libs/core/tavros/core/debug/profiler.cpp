@@ -1,7 +1,7 @@
 #include <tavros/core/debug/profiler.hpp>
 
 #include <tavros/core/types.hpp>
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <chrono>
 #include <mutex>
 
@@ -19,7 +19,7 @@ namespace
     }
 
     constexpr size_t                                                   k_max_sinks = 8;
-    tavros::core::static_vector<tavros::profiler::sink_t, k_max_sinks> g_sinks;
+    tavros::core::fixed_vector<tavros::profiler::sink_t, k_max_sinks> g_sinks;
 
     void push_perf_event(const tavros::profiler::perf_event& e) noexcept
     {

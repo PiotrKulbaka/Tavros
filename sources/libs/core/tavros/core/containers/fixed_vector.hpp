@@ -24,7 +24,7 @@ namespace tavros::core
      */
     template<typename T, size_t N>
         requires std::is_nothrow_move_constructible_v<T>
-    class static_vector
+    class fixed_vector
     {
     public:
         using iterator = T*;                                                  /// Mutable iterator type.
@@ -36,7 +36,7 @@ namespace tavros::core
         /**
          * @brief Default constructor. Initializes an empty container.
          */
-        constexpr static_vector() noexcept = default;
+        constexpr fixed_vector() noexcept = default;
 
         /**
          * @brief Constructs the container from an initializer list.
@@ -44,7 +44,7 @@ namespace tavros::core
          * @param init Initializer list of elements to insert.
          * @note The number of elements must not exceed `N`.
          */
-        constexpr explicit static_vector(std::initializer_list<T> init) noexcept
+        constexpr explicit fixed_vector(std::initializer_list<T> init) noexcept
         {
             TAV_ASSERT(init.size() <= N);
             for (const auto& value : init) {
@@ -58,7 +58,7 @@ namespace tavros::core
          * @param init Span of elements to copy into the container.
          * @note The number of elements must not exceed `N`.
          */
-        constexpr explicit static_vector(buffer_view<T> init) noexcept
+        constexpr explicit fixed_vector(buffer_view<T> init) noexcept
         {
             TAV_ASSERT(init.size() <= N);
             for (const auto& value : init) {
@@ -67,12 +67,12 @@ namespace tavros::core
         }
 
         /**
-         * @brief Swaps contents with another static_vector.
+         * @brief Swaps contents with another fixed_vector.
          *
          * @param other Another container to swap contents with.
          * @note Swapping is `noexcept` if `T` is nothrow swappable.
          */
-        constexpr void swap(static_vector& other) noexcept(std::is_nothrow_swappable_v<T>)
+        constexpr void swap(fixed_vector& other) noexcept(std::is_nothrow_swappable_v<T>)
         {
             m_data.swap(other.m_data);
             auto sz = m_size;
