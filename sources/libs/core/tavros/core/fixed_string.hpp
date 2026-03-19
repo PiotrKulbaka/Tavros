@@ -55,7 +55,7 @@ namespace tavros::core
      * in release builds (assertions are used in debug).
      */
     template<size_t Capacity, class Char, class Traits = std::char_traits<Char>>
-    class basic_static_string
+    class basic_fixed_string
     {
         static_assert(Capacity > 0 && (Capacity % 8 == 0), "Capacity must be positive and a multiple of 8");
         static_assert(std::is_same_v<Char, typename Traits::char_type>);
@@ -97,18 +97,18 @@ namespace tavros::core
         // Constructors
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string() noexcept
+        constexpr basic_fixed_string() noexcept
             : m_size(0)
         {
             m_data[0] = Char{};
         }
 
-        constexpr basic_static_string(const Char* s)
-            : basic_static_string(s, Traits::length(s))
+        constexpr basic_fixed_string(const Char* s)
+            : basic_fixed_string(s, Traits::length(s))
         {
         }
 
-        constexpr basic_static_string(const Char* s, size_type count)
+        constexpr basic_fixed_string(const Char* s, size_type count)
             : m_size(count)
         {
             TAV_ASSERT(count < Capacity);
@@ -116,7 +116,7 @@ namespace tavros::core
             m_data[m_size] = Char{};
         }
 
-        constexpr basic_static_string(size_type count, Char ch)
+        constexpr basic_fixed_string(size_type count, Char ch)
             : m_size(count)
         {
             TAV_ASSERT(count < Capacity);
@@ -125,7 +125,7 @@ namespace tavros::core
         }
 
         template<class InputIt>
-        constexpr basic_static_string(InputIt first, InputIt last)
+        constexpr basic_fixed_string(InputIt first, InputIt last)
             : m_size(static_cast<size_type>(std::distance(first, last)))
         {
             TAV_ASSERT(m_size < Capacity);
@@ -133,35 +133,35 @@ namespace tavros::core
             m_data[m_size] = Char{};
         }
 
-        constexpr basic_static_string(std::initializer_list<Char> list)
-            : basic_static_string(list.begin(), static_cast<size_type>(list.size()))
+        constexpr basic_fixed_string(std::initializer_list<Char> list)
+            : basic_fixed_string(list.begin(), static_cast<size_type>(list.size()))
         {
         }
 
-        explicit constexpr basic_static_string(view_type sv)
-            : basic_static_string(sv.data(), sv.size())
+        explicit constexpr basic_fixed_string(view_type sv)
+            : basic_fixed_string(sv.data(), sv.size())
         {
         }
 
-        constexpr basic_static_string(const basic_static_string&) noexcept = default;
-        constexpr basic_static_string(basic_static_string&&) noexcept = default;
+        constexpr basic_fixed_string(const basic_fixed_string&) noexcept = default;
+        constexpr basic_fixed_string(basic_fixed_string&&) noexcept = default;
 
-        constexpr basic_static_string& operator=(const basic_static_string&) noexcept = default;
-        constexpr basic_static_string& operator=(basic_static_string&&) noexcept = default;
+        constexpr basic_fixed_string& operator=(const basic_fixed_string&) noexcept = default;
+        constexpr basic_fixed_string& operator=(basic_fixed_string&&) noexcept = default;
 
-        constexpr ~basic_static_string() noexcept = default;
+        constexpr ~basic_fixed_string() noexcept = default;
 
 
         // ----------------------------------------------------------------------
         // Assignment operators
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string& operator=(const Char* s)
+        constexpr basic_fixed_string& operator=(const Char* s)
         {
             return assign(s);
         }
 
-        constexpr basic_static_string& operator=(Char ch)
+        constexpr basic_fixed_string& operator=(Char ch)
         {
             m_size = 1;
             m_data[0] = ch;
@@ -169,12 +169,12 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& operator=(view_type sv)
+        constexpr basic_fixed_string& operator=(view_type sv)
         {
             return assign(sv);
         }
 
-        constexpr basic_static_string& operator=(std::initializer_list<Char> list)
+        constexpr basic_fixed_string& operator=(std::initializer_list<Char> list)
         {
             return assign(list);
         }
@@ -199,7 +199,7 @@ namespace tavros::core
         [[nodiscard]] constexpr reference at(size_type index)
         {
             if (index >= m_size) {
-                throw std::out_of_range("basic_static_string::at: index out of range");
+                throw std::out_of_range("basic_fixed_string::at: index out of range");
             }
             return m_data[index];
         }
@@ -207,7 +207,7 @@ namespace tavros::core
         [[nodiscard]] constexpr const_reference at(size_type index) const
         {
             if (index >= m_size) {
-                throw std::out_of_range("basic_static_string::at: index out of range");
+                throw std::out_of_range("basic_fixed_string::at: index out of range");
             }
             return m_data[index];
         }
@@ -437,7 +437,7 @@ namespace tavros::core
             }
         }
 
-        constexpr void swap(basic_static_string& other) noexcept
+        constexpr void swap(basic_fixed_string& other) noexcept
         {
             // Both objects live on the stack - swap via a local buffer
             Char      tmp[Capacity];
@@ -454,7 +454,7 @@ namespace tavros::core
         // assign
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string& assign(const Char* s, size_type count)
+        constexpr basic_fixed_string& assign(const Char* s, size_type count)
         {
             TAV_ASSERT(count < Capacity);
             m_size = count;
@@ -463,12 +463,12 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& assign(const Char* s)
+        constexpr basic_fixed_string& assign(const Char* s)
         {
             return assign(s, Traits::length(s));
         }
 
-        constexpr basic_static_string& assign(size_type count, Char ch)
+        constexpr basic_fixed_string& assign(size_type count, Char ch)
         {
             TAV_ASSERT(count < Capacity);
             m_size = count;
@@ -477,17 +477,17 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& assign(view_type sv)
+        constexpr basic_fixed_string& assign(view_type sv)
         {
             return assign(sv.data(), sv.size());
         }
 
-        constexpr basic_static_string& assign(view_type sv, size_type pos, size_type count = npos)
+        constexpr basic_fixed_string& assign(view_type sv, size_type pos, size_type count = npos)
         {
             return assign(sv.substr(pos, count));
         }
 
-        constexpr basic_static_string& assign(const basic_static_string& other)
+        constexpr basic_fixed_string& assign(const basic_fixed_string& other)
         {
             if (this != &other) {
                 *this = other;
@@ -495,18 +495,18 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& assign(const basic_static_string& other, size_type pos, size_type count = npos)
+        constexpr basic_fixed_string& assign(const basic_fixed_string& other, size_type pos, size_type count = npos)
         {
             return assign(view_type{other}.substr(pos, count));
         }
 
-        constexpr basic_static_string& assign(std::initializer_list<Char> list)
+        constexpr basic_fixed_string& assign(std::initializer_list<Char> list)
         {
             return assign(list.begin(), static_cast<size_type>(list.size()));
         }
 
         template<class InputIt>
-        constexpr basic_static_string& assign(InputIt first, InputIt last)
+        constexpr basic_fixed_string& assign(InputIt first, InputIt last)
         {
             const auto count = static_cast<size_type>(std::distance(first, last));
             TAV_ASSERT(count < Capacity);
@@ -521,7 +521,7 @@ namespace tavros::core
         // append
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string& append(const Char* s, size_type count)
+        constexpr basic_fixed_string& append(const Char* s, size_type count)
         {
             TAV_ASSERT(m_size + count < Capacity);
             Traits::copy(m_data + m_size, s, count);
@@ -530,12 +530,12 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& append(const Char* s)
+        constexpr basic_fixed_string& append(const Char* s)
         {
             return append(s, Traits::length(s));
         }
 
-        constexpr basic_static_string& append(size_type count, Char ch)
+        constexpr basic_fixed_string& append(size_type count, Char ch)
         {
             TAV_ASSERT(m_size + count < Capacity);
             Traits::assign(m_data + m_size, count, ch);
@@ -544,35 +544,35 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& append(view_type sv)
+        constexpr basic_fixed_string& append(view_type sv)
         {
             return append(sv.data(), sv.size());
         }
 
-        constexpr basic_static_string& append(view_type sv, size_type pos, size_type count = npos)
+        constexpr basic_fixed_string& append(view_type sv, size_type pos, size_type count = npos)
         {
             return append(sv.substr(pos, count));
         }
 
-        constexpr basic_static_string& append(const basic_static_string& other)
+        constexpr basic_fixed_string& append(const basic_fixed_string& other)
         {
             return append(other.m_data, other.m_size);
         }
 
-        constexpr basic_static_string& append(
-            const basic_static_string& other, size_type pos, size_type count = npos
+        constexpr basic_fixed_string& append(
+            const basic_fixed_string& other, size_type pos, size_type count = npos
         )
         {
             return append(view_type{other}.substr(pos, count));
         }
 
-        constexpr basic_static_string& append(std::initializer_list<Char> list)
+        constexpr basic_fixed_string& append(std::initializer_list<Char> list)
         {
             return append(list.begin(), static_cast<size_type>(list.size()));
         }
 
         template<class InputIt>
-        constexpr basic_static_string& append(InputIt first, InputIt last)
+        constexpr basic_fixed_string& append(InputIt first, InputIt last)
         {
             const auto count = static_cast<size_type>(std::distance(first, last));
             TAV_ASSERT(m_size + count < Capacity);
@@ -587,28 +587,28 @@ namespace tavros::core
         // operator+=
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string& operator+=(const basic_static_string& other)
+        constexpr basic_fixed_string& operator+=(const basic_fixed_string& other)
         {
             return append(other);
         }
 
-        constexpr basic_static_string& operator+=(Char ch)
+        constexpr basic_fixed_string& operator+=(Char ch)
         {
             push_back(ch);
             return *this;
         }
 
-        constexpr basic_static_string& operator+=(const Char* s)
+        constexpr basic_fixed_string& operator+=(const Char* s)
         {
             return append(s);
         }
 
-        constexpr basic_static_string& operator+=(view_type sv)
+        constexpr basic_fixed_string& operator+=(view_type sv)
         {
             return append(sv);
         }
 
-        constexpr basic_static_string& operator+=(std::initializer_list<Char> list)
+        constexpr basic_fixed_string& operator+=(std::initializer_list<Char> list)
         {
             return append(list);
         }
@@ -618,7 +618,7 @@ namespace tavros::core
         // insert
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string& insert(size_type pos, const Char* s, size_type count)
+        constexpr basic_fixed_string& insert(size_type pos, const Char* s, size_type count)
         {
             TAV_ASSERT(pos <= m_size && m_size + count < Capacity);
             Traits::move(m_data + pos + count, m_data + pos, m_size - pos + 1); // shift suffix + null
@@ -627,12 +627,12 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& insert(size_type pos, const Char* s)
+        constexpr basic_fixed_string& insert(size_type pos, const Char* s)
         {
             return insert(pos, s, Traits::length(s));
         }
 
-        constexpr basic_static_string& insert(size_type pos, size_type count, Char ch)
+        constexpr basic_fixed_string& insert(size_type pos, size_type count, Char ch)
         {
             TAV_ASSERT(pos <= m_size && m_size + count < Capacity);
             Traits::move(m_data + pos + count, m_data + pos, m_size - pos + 1);
@@ -641,22 +641,22 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& insert(size_type pos, view_type sv)
+        constexpr basic_fixed_string& insert(size_type pos, view_type sv)
         {
             return insert(pos, sv.data(), sv.size());
         }
 
-        constexpr basic_static_string& insert(size_type pos, view_type sv, size_type sv_pos, size_type count = npos)
+        constexpr basic_fixed_string& insert(size_type pos, view_type sv, size_type sv_pos, size_type count = npos)
         {
             return insert(pos, sv.substr(sv_pos, count));
         }
 
-        constexpr basic_static_string& insert(size_type pos, const basic_static_string& other)
+        constexpr basic_fixed_string& insert(size_type pos, const basic_fixed_string& other)
         {
             return insert(pos, other.m_data, other.m_size);
         }
 
-        constexpr basic_static_string& insert(size_type pos, const basic_static_string& other, size_type other_pos, size_type count = npos)
+        constexpr basic_fixed_string& insert(size_type pos, const basic_fixed_string& other, size_type other_pos, size_type count = npos)
         {
             return insert(pos, view_type{other}.substr(other_pos, count));
         }
@@ -699,7 +699,7 @@ namespace tavros::core
         // erase
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string& erase(size_type pos = 0, size_type count = npos)
+        constexpr basic_fixed_string& erase(size_type pos = 0, size_type count = npos)
         {
             TAV_ASSERT(pos <= m_size);
             const size_type actual = std::min(count, m_size - pos);
@@ -728,7 +728,7 @@ namespace tavros::core
         // replace
         // ----------------------------------------------------------------------
 
-        constexpr basic_static_string& replace(size_type pos, size_type count, const Char* s, size_type s_count)
+        constexpr basic_fixed_string& replace(size_type pos, size_type count, const Char* s, size_type s_count)
         {
             TAV_ASSERT(pos <= m_size);
             const size_type actual = std::min(count, m_size - pos);
@@ -740,12 +740,12 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& replace(size_type pos, size_type count, const Char* s)
+        constexpr basic_fixed_string& replace(size_type pos, size_type count, const Char* s)
         {
             return replace(pos, count, s, Traits::length(s));
         }
 
-        constexpr basic_static_string& replace(size_type pos, size_type count, size_type n, Char ch)
+        constexpr basic_fixed_string& replace(size_type pos, size_type count, size_type n, Char ch)
         {
             TAV_ASSERT(pos <= m_size);
             const size_type actual = std::min(count, m_size - pos);
@@ -757,28 +757,28 @@ namespace tavros::core
             return *this;
         }
 
-        constexpr basic_static_string& replace(size_type pos, size_type count, view_type sv)
+        constexpr basic_fixed_string& replace(size_type pos, size_type count, view_type sv)
         {
             return replace(pos, count, sv.data(), sv.size());
         }
 
-        constexpr basic_static_string& replace(size_type pos, size_type count, view_type sv, size_type sv_pos, size_type sv_count = npos)
+        constexpr basic_fixed_string& replace(size_type pos, size_type count, view_type sv, size_type sv_pos, size_type sv_count = npos)
         {
             return replace(pos, count, sv.substr(sv_pos, sv_count));
         }
 
-        constexpr basic_static_string& replace(size_type pos, size_type count, const basic_static_string& other)
+        constexpr basic_fixed_string& replace(size_type pos, size_type count, const basic_fixed_string& other)
         {
             return replace(pos, count, other.m_data, other.m_size);
         }
 
-        constexpr basic_static_string& replace(size_type pos, size_type count, const basic_static_string& other, size_type other_pos, size_type other_count = npos)
+        constexpr basic_fixed_string& replace(size_type pos, size_type count, const basic_fixed_string& other, size_type other_pos, size_type other_count = npos)
         {
             return replace(pos, count, view_type{other}.substr(other_pos, other_count));
         }
 
         // Iterator-based replace overloads delegate to index-based ones
-        constexpr basic_static_string& replace(const_iterator first, const_iterator last, const Char* s, size_type count)
+        constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, const Char* s, size_type count)
         {
             return replace(
                 static_cast<size_type>(first - m_data),
@@ -786,7 +786,7 @@ namespace tavros::core
             );
         }
 
-        constexpr basic_static_string& replace(const_iterator first, const_iterator last, const Char* s)
+        constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, const Char* s)
         {
             return replace(
                 static_cast<size_type>(first - m_data),
@@ -794,7 +794,7 @@ namespace tavros::core
             );
         }
 
-        constexpr basic_static_string& replace(const_iterator first, const_iterator last, size_type count, Char ch)
+        constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, size_type count, Char ch)
         {
             return replace(
                 static_cast<size_type>(first - m_data),
@@ -802,7 +802,7 @@ namespace tavros::core
             );
         }
 
-        constexpr basic_static_string& replace(const_iterator first, const_iterator last, view_type sv)
+        constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, view_type sv)
         {
             return replace(
                 static_cast<size_type>(first - m_data),
@@ -810,7 +810,7 @@ namespace tavros::core
             );
         }
 
-        constexpr basic_static_string& replace(const_iterator first, const_iterator last, const basic_static_string& other)
+        constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, const basic_fixed_string& other)
         {
             return replace(
                 static_cast<size_type>(first - m_data),
@@ -818,7 +818,7 @@ namespace tavros::core
             );
         }
 
-        constexpr basic_static_string& replace(const_iterator first, const_iterator last, std::initializer_list<Char> list)
+        constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, std::initializer_list<Char> list)
         {
             return replace(
                 static_cast<size_type>(first - m_data),
@@ -828,9 +828,9 @@ namespace tavros::core
         }
 
         template<class InputIt>
-        constexpr basic_static_string& replace(const_iterator first, const_iterator last, InputIt s_first, InputIt s_last)
+        constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, InputIt s_first, InputIt s_last)
         {
-            const basic_static_string tmp(s_first, s_last);
+            const basic_fixed_string tmp(s_first, s_last);
             return replace(first, last, tmp.m_data, tmp.m_size);
         }
 
@@ -847,9 +847,9 @@ namespace tavros::core
             return actual;
         }
 
-        [[nodiscard]] constexpr basic_static_string substr(size_type pos = 0, size_type count = npos) const
+        [[nodiscard]] constexpr basic_fixed_string substr(size_type pos = 0, size_type count = npos) const
         {
-            return basic_static_string{as_view().substr(pos, count)};
+            return basic_fixed_string{as_view().substr(pos, count)};
         }
 
 
@@ -877,7 +877,7 @@ namespace tavros::core
             return as_view().find(ch, pos);
         }
 
-        [[nodiscard]] constexpr size_type find(const basic_static_string& other, size_type pos = 0) const noexcept
+        [[nodiscard]] constexpr size_type find(const basic_fixed_string& other, size_type pos = 0) const noexcept
         {
             return as_view().find(view_type{other}, pos);
         }
@@ -903,7 +903,7 @@ namespace tavros::core
             return as_view().rfind(ch, pos);
         }
 
-        [[nodiscard]] constexpr size_type rfind(const basic_static_string& other, size_type pos = npos) const noexcept
+        [[nodiscard]] constexpr size_type rfind(const basic_fixed_string& other, size_type pos = npos) const noexcept
         {
             return as_view().rfind(view_type{other}, pos);
         }
@@ -929,7 +929,7 @@ namespace tavros::core
             return as_view().find_first_of(ch, pos);
         }
 
-        [[nodiscard]] constexpr size_type find_first_of(const basic_static_string& other, size_type pos = 0) const noexcept
+        [[nodiscard]] constexpr size_type find_first_of(const basic_fixed_string& other, size_type pos = 0) const noexcept
         {
             return as_view().find_first_of(view_type{other}, pos);
         }
@@ -955,7 +955,7 @@ namespace tavros::core
             return as_view().find_last_of(ch, pos);
         }
 
-        [[nodiscard]] constexpr size_type find_last_of(const basic_static_string& other, size_type pos = npos) const noexcept
+        [[nodiscard]] constexpr size_type find_last_of(const basic_fixed_string& other, size_type pos = npos) const noexcept
         {
             return as_view().find_last_of(view_type{other}, pos);
         }
@@ -981,7 +981,7 @@ namespace tavros::core
             return as_view().find_first_not_of(ch, pos);
         }
 
-        [[nodiscard]] constexpr size_type find_first_not_of(const basic_static_string& other, size_type pos = 0) const noexcept
+        [[nodiscard]] constexpr size_type find_first_not_of(const basic_fixed_string& other, size_type pos = 0) const noexcept
         {
             return as_view().find_first_not_of(view_type{other}, pos);
         }
@@ -1007,7 +1007,7 @@ namespace tavros::core
             return as_view().find_last_not_of(ch, pos);
         }
 
-        [[nodiscard]] constexpr size_type find_last_not_of(const basic_static_string& other, size_type pos = npos) const noexcept
+        [[nodiscard]] constexpr size_type find_last_not_of(const basic_fixed_string& other, size_type pos = npos) const noexcept
         {
             return as_view().find_last_not_of(view_type{other}, pos);
         }
@@ -1047,17 +1047,17 @@ namespace tavros::core
             return as_view().substr(pos, count).compare(view_type{s, s_count});
         }
 
-        [[nodiscard]] constexpr int compare(const basic_static_string& other) const noexcept
+        [[nodiscard]] constexpr int compare(const basic_fixed_string& other) const noexcept
         {
             return as_view().compare(view_type{other});
         }
 
-        [[nodiscard]] constexpr int compare(size_type pos, size_type count, const basic_static_string& other) const
+        [[nodiscard]] constexpr int compare(size_type pos, size_type count, const basic_fixed_string& other) const
         {
             return as_view().substr(pos, count).compare(view_type{other});
         }
 
-        [[nodiscard]] constexpr int compare(size_type pos, size_type count, const basic_static_string& other, size_type other_pos, size_type other_count = npos) const
+        [[nodiscard]] constexpr int compare(size_type pos, size_type count, const basic_fixed_string& other, size_type other_pos, size_type other_count = npos) const
         {
             return as_view().substr(pos, count).compare(view_type{other}.substr(other_pos, other_count));
         }
@@ -1116,10 +1116,10 @@ namespace tavros::core
 
     public:
         template<class... Args>
-        [[nodiscard]] static basic_static_string format(fmt::format_string<Args...> fmt, Args&&... args)
+        [[nodiscard]] static basic_fixed_string format(fmt::format_string<Args...> fmt, Args&&... args)
         {
-            basic_static_string result;
-            auto                r = fmt::format_to_n(
+            basic_fixed_string result;
+            auto               r = fmt::format_to_n(
                 result.m_data,
                 static_cast<std::ptrdiff_t>(Capacity - 1),
                 fmt,
@@ -1127,7 +1127,7 @@ namespace tavros::core
             );
 
             if (static_cast<size_type>(r.size) > Capacity - 1) {
-                throw std::overflow_error("static_string::format: result exceeds capacity");
+                throw std::overflow_error("basic_fixed_string::format: result exceeds capacity");
             }
 
             result.m_size = static_cast<size_type>(r.out - result.m_data);
@@ -1136,10 +1136,10 @@ namespace tavros::core
         }
 
         template<class... Args>
-        [[nodiscard]] static basic_static_string format(on_overflow_truncate_t, fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        [[nodiscard]] static basic_fixed_string format(on_overflow_truncate_t, fmt::format_string<Args...> fmt, Args&&... args) noexcept
         {
-            basic_static_string result;
-            auto                r = fmt::format_to_n(
+            basic_fixed_string result;
+            auto               r = fmt::format_to_n(
                 result.m_data,
                 static_cast<std::ptrdiff_t>(Capacity - 1),
                 fmt,
@@ -1161,7 +1161,7 @@ namespace tavros::core
     // --------------------------------------------------------------------------
 
     template<size_t N, class Char, class Traits>
-    constexpr void swap(basic_static_string<N, Char, Traits>& lhs, basic_static_string<N, Char, Traits>& rhs) noexcept
+    constexpr void swap(basic_fixed_string<N, Char, Traits>& lhs, basic_fixed_string<N, Char, Traits>& rhs) noexcept
     {
         lhs.swap(rhs);
     }
@@ -1171,25 +1171,25 @@ namespace tavros::core
     // --------------------------------------------------------------------------
 
     template<size_t N, size_t M, class Char, class Traits>
-    [[nodiscard]] constexpr bool operator==(const basic_static_string<N, Char, Traits>& lhs, const basic_static_string<M, Char, Traits>& rhs) noexcept
+    [[nodiscard]] constexpr bool operator==(const basic_fixed_string<N, Char, Traits>& lhs, const basic_fixed_string<M, Char, Traits>& rhs) noexcept
     {
         return basic_string_view<Char, Traits>{lhs} == basic_string_view<Char, Traits>{rhs};
     }
 
     template<size_t N, class Char, class Traits>
-    [[nodiscard]] constexpr bool operator==(const basic_static_string<N, Char, Traits>& lhs, const Char* rhs) noexcept
+    [[nodiscard]] constexpr bool operator==(const basic_fixed_string<N, Char, Traits>& lhs, const Char* rhs) noexcept
     {
         return basic_string_view<Char, Traits>{lhs} == rhs;
     }
 
     template<size_t N, size_t M, class Char, class Traits>
-    [[nodiscard]] constexpr auto operator<=>(const basic_static_string<N, Char, Traits>& lhs, const basic_static_string<M, Char, Traits>& rhs) noexcept
+    [[nodiscard]] constexpr auto operator<=>(const basic_fixed_string<N, Char, Traits>& lhs, const basic_fixed_string<M, Char, Traits>& rhs) noexcept
     {
         return basic_string_view<Char, Traits>{lhs} <=> basic_string_view<Char, Traits>{rhs};
     }
 
     template<size_t N, class Char, class Traits>
-    [[nodiscard]] constexpr auto operator<=>(const basic_static_string<N, Char, Traits>& lhs, const Char* rhs) noexcept
+    [[nodiscard]] constexpr auto operator<=>(const basic_fixed_string<N, Char, Traits>& lhs, const Char* rhs) noexcept
     {
         return basic_string_view<Char, Traits>{lhs} <=> basic_string_view<Char, Traits>{rhs};
     }
@@ -1199,9 +1199,9 @@ namespace tavros::core
     // --------------------------------------------------------------------------
 
     template<size_t N, size_t M, class Char, class Traits>
-    [[nodiscard]] constexpr basic_static_string<N + M, Char, Traits> operator+(const basic_static_string<N, Char, Traits>& lhs, const basic_static_string<M, Char, Traits>& rhs)
+    [[nodiscard]] constexpr basic_fixed_string<N + M, Char, Traits> operator+(const basic_fixed_string<N, Char, Traits>& lhs, const basic_fixed_string<M, Char, Traits>& rhs)
     {
-        basic_static_string<N + M, Char, Traits> result(lhs);
+        basic_fixed_string<N + M, Char, Traits> result(lhs);
         result.append(rhs);
         return result;
     }
@@ -1211,15 +1211,15 @@ namespace tavros::core
     // --------------------------------------------------------------------------
 
     template<size_t Capacity>
-    using static_string = basic_static_string<Capacity, char>;
+    using fixed_string = basic_fixed_string<Capacity, char>;
     template<size_t Capacity>
-    using static_wstring = basic_static_string<Capacity, wchar_t>;
+    using fixed_wstring = basic_fixed_string<Capacity, wchar_t>;
     template<size_t Capacity>
-    using static_u8string = basic_static_string<Capacity, char8_t>;
+    using fixed_u8string = basic_fixed_string<Capacity, char8_t>;
     template<size_t Capacity>
-    using static_u16string = basic_static_string<Capacity, char16_t>;
+    using fixed_u16string = basic_fixed_string<Capacity, char16_t>;
     template<size_t Capacity>
-    using static_u32string = basic_static_string<Capacity, char32_t>;
+    using fixed_u32string = basic_fixed_string<Capacity, char32_t>;
 
 } // namespace tavros::core
 
@@ -1231,9 +1231,9 @@ namespace std
 {
 
     template<size_t Capacity, class Char, class Traits>
-    struct hash<tavros::core::basic_static_string<Capacity, Char, Traits>>
+    struct hash<tavros::core::basic_fixed_string<Capacity, Char, Traits>>
     {
-        size_t operator()(const tavros::core::basic_static_string<Capacity, Char, Traits>& s) const noexcept
+        size_t operator()(const tavros::core::basic_fixed_string<Capacity, Char, Traits>& s) const noexcept
         {
             return hash<tavros::core::basic_string_view<Char, Traits>>{}(s);
         }
@@ -1244,11 +1244,11 @@ namespace std
 namespace fmt
 {
     template<size_t Capacity, class Char, class Traits>
-    struct formatter<tavros::core::basic_static_string<Capacity, Char, Traits>, Char>
+    struct formatter<tavros::core::basic_fixed_string<Capacity, Char, Traits>, Char>
         : fmt::formatter<std::basic_string_view<Char, Traits>, Char>
     {
         template<class FormatContext>
-        auto format(const tavros::core::basic_static_string<Capacity, Char, Traits>& s, FormatContext& ctx) const
+        auto format(const tavros::core::basic_fixed_string<Capacity, Char, Traits>& s, FormatContext& ctx) const
         {
             return fmt::formatter<std::basic_string_view<Char, Traits>, Char>::format(std::basic_string_view<Char, Traits>{s.data(), s.size()}, ctx);
         }

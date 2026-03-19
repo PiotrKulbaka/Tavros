@@ -9,6 +9,7 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/defines.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/exception.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/exception.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/fixed_string.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/flags.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math.hpp
@@ -18,10 +19,8 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/optional.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/pimpl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/singleton.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/static_string.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/string.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/string_view.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/timer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/timer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/traits.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/types.hpp
@@ -49,9 +48,6 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/profiler.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/unreachable.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/verify.hpp
-
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/fs/path.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/fs/path_view.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb2.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/geometry/aabb2.hpp
@@ -140,9 +136,6 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/slerp.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/slerp.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/transpose.hpp
-
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/utils/make_string.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/utils/make_string.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/allocator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/buffer.hpp

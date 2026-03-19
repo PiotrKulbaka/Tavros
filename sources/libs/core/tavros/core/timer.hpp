@@ -7,81 +7,97 @@ namespace tavros::core
 {
 
     /**
-     * @brief A simple timer class for measuring elapsed time with pause/unpause support.
-     *
-     * This timer is useful for measuring durations in various time units.
-     * It can be paused and resumed without losing the already accumulated time.
+     * @brief Measures elapsed time with pause/resume support.
      */
     class timer
     {
     public:
         using clock = std::chrono::steady_clock;
-        using time = std::chrono::time_point<clock>;
-        using duration = time::duration;
+        using time_point = std::chrono::time_point<clock>;
+        using duration = time_point::duration;
 
     public:
         /**
          * @brief Constructs and starts the timer immediately.
          */
-        timer() noexcept;
+        timer() noexcept
+        {
+            restart();
+        }
+
+        ~timer() noexcept = default;
 
         /**
          * @brief Starts or restarts the timer, resetting the accumulated time.
          */
-        void start() noexcept;
+        void restart() noexcept
+        {
+            m_start = clock::now();
+            m_accumulated = duration(0);
+            m_paused = false;
+        }
 
         /**
-         * @brief Pauses the timer. Has no effect if already paused.
+         * @brief Pauses the timer. No-op if already paused.
          */
-        void pause() noexcept;
+        void pause() noexcept
+        {
+            if (!m_paused) {
+                m_accumulated += clock::now() - m_start;
+                m_paused = true;
+            }
+        }
 
         /**
-         * @brief Resumes the timer from pause. Has no effect if not paused.
+         * @brief Resumes the timer. No-op if not paused.
          */
-        void unpause() noexcept;
+        void unpause() noexcept
+        {
+            if (m_paused) {
+                m_start = clock::now();
+                m_paused = false;
+            }
+        }
 
         /**
-         * @brief Checks whether the timer is currently paused.
-         * @return true if paused, false otherwise.
+         * @brief Returns true if the timer is currently paused.
          */
-        bool is_paused() const noexcept;
+        [[nodiscard]] bool is_paused() const noexcept
+        {
+            return m_paused;
+        }
 
         /**
-         * @brief Returns the elapsed time since the last start, excluding any paused duration.
+         * @brief Returns elapsed time cast to duration type @p T, excluding paused intervals.
          *
-         * The returned value is cast to the specified duration type.
-         * For example: `elapsed<std::chrono::milliseconds>()` returns milliseconds as uint64.
-         *
-         * @tparam T Chrono duration type, such as std::chrono::microseconds, milliseconds, seconds.
-         * @return Elapsed time in the requested unit.
+         * @tparam T A @c std::chrono duration type (e.g. @c std::chrono::milliseconds).
          */
         template<typename T>
-        uint64 elapsed() const noexcept
+        T elapsed() const noexcept
         {
-            return std::chrono::duration_cast<T>(elapsed_duration()).count();
+            return std::chrono::duration_cast<T>(elapsed_duration());
         }
 
         /**
-         * @brief Returns the elapsed time since the last start in seconds, excluding any paused duration.
+         * @brief Returns elapsed time in seconds as @c double, excluding paused intervals.
          */
-        double elapsed_seconds() const noexcept
+        [[nodiscard]] double elapsed_seconds() const noexcept
         {
-            return static_cast<float>(elapsed<std::chrono::nanoseconds>()) / 1000000000.0;
+            return elapsed<std::chrono::duration<double>>().count();
         }
 
         /**
-         * @brief Returns the raw elapsed duration since the last start.
-         * If the timer is paused, returns the accumulated time.
-         * Otherwise, includes the time since the last unpause.
-         *
-         * @return Duration since start.
+         * @brief Returns the raw elapsed duration, excluding paused intervals.
          */
-        duration elapsed_duration() const noexcept;
+        duration elapsed_duration() const noexcept
+        {
+            return m_paused ? m_accumulated : m_accumulated + (clock::now() - m_start);
+        }
 
     private:
-        time     m_start;
-        duration m_accumulated;
-        bool     m_is_paused;
+        time_point m_start;
+        duration   m_accumulated;
+        bool       m_paused;
     };
 
 } // namespace tavros::core
