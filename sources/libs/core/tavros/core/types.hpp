@@ -40,3 +40,70 @@ static_assert(sizeof(int64) == 8);
 static_assert(sizeof(size_t) == sizeof(void*));
 
 #define TAV_UNUSED(x) ((void) (x))
+
+namespace tavros::core
+{
+
+    /**
+     * @brief Tag type used to explicitly enable unsafe operations.
+     *
+     * This tag is passed to functions that perform non-standard or potentially
+     * unsafe operations, typically for performance or low-level memory access.
+     *
+     * By providing this tag, the caller explicitly acknowledges that:
+     * - required invariants are satisfied,
+     * - no additional safety checks are performed,
+     * - undefined behavior may occur if used incorrectly.
+     *
+     * This mechanism is intended to make unsafe code paths explicit at call sites,
+     * preventing accidental misuse while still allowing advanced optimizations.
+     *
+     * Example:
+     * @code
+     * buffer.write(ptr, size, unsafe); // caller guarantees validity
+     * @endcode
+     */
+    struct unsafe_t
+    {
+        explicit unsafe_t() = default;
+    };
+
+    /**
+     * @brief Global constant instance of @ref unsafe_t.
+     *
+     * Use this object to opt into unsafe operations.
+     */
+    inline constexpr unsafe_t unsafe{};
+
+    /**
+     * @brief Tag type that enables truncation on overflow.
+     *
+     * This tag is used to indicate that, in case of insufficient capacity,
+     * the operation should not fail or assert, but instead truncate the input
+     * to fit into the available space.
+     *
+     * When this tag is provided, the caller explicitly allows loss of data
+     * beyond the container's capacity.
+     *
+     * This is useful for scenarios where:
+     * - fixed-size buffers are used,
+     * - partial writes are acceptable,
+     * - performance is preferred over strict correctness.
+     *
+     * Example:
+     * @code
+     * static_string<8>::format("Hello World!!!"); // excess data will be discarded
+     * @endcode
+     */
+    struct on_overflow_truncate_t
+    {
+        explicit on_overflow_truncate_t() = default;
+    };
+
+    /**
+     * @brief Global constant instance of @ref on_overflow_truncate_t.
+     *
+     * Use this object to enable truncation behavior on overflow.
+     */
+    inline constexpr on_overflow_truncate_t on_overflow_truncate{};
+} // namespace tavros::core

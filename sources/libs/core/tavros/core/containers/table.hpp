@@ -18,7 +18,7 @@ namespace tavros::core
      */
     template<class... Ty>
         requires(sizeof...(Ty) > 0) && are_nothrow_default_constructible_v<type_list<Ty...>>
-    class basic_table : noncopyable
+    class basic_table
     {
         template<class T>
         using vector_type = vector<T>;
