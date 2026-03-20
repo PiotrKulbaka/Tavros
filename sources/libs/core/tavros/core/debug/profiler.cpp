@@ -18,7 +18,7 @@ namespace
         return std::chrono::duration_cast<std::chrono::nanoseconds>(now - g_start_time).count();
     }
 
-    constexpr size_t                                                   k_max_sinks = 8;
+    constexpr size_t                                                  k_max_sinks = 8;
     tavros::core::fixed_vector<tavros::profiler::sink_t, k_max_sinks> g_sinks;
 
     void push_perf_event(const tavros::profiler::perf_event& e) noexcept
