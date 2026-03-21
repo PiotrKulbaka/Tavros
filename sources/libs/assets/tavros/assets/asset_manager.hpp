@@ -4,7 +4,7 @@
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/string.hpp>
 #include <tavros/core/containers/vector.hpp>
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/core/ids/handle_allocator.hpp>
 
 #include <tavros/assets/asset_provider.hpp>

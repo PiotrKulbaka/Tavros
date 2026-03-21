@@ -613,6 +613,40 @@ namespace tavros::core
             return append(list);
         }
 
+        // ----------------------------------------------------------------------
+        // operator/=
+        // ----------------------------------------------------------------------
+
+        constexpr basic_fixed_string& operator/=(const basic_fixed_string& other)
+        {
+            append("/");
+            return append(other);
+        }
+
+        constexpr basic_fixed_string& operator/=(Char ch)
+        {
+            append("/");
+            push_back(ch);
+            return *this;
+        }
+
+        constexpr basic_fixed_string& operator/=(const Char* s)
+        {
+            append("/");
+            return append(s);
+        }
+
+        constexpr basic_fixed_string& operator/=(view_type sv)
+        {
+            append("/");
+            return append(sv);
+        }
+
+        constexpr basic_fixed_string& operator/=(std::initializer_list<Char> list)
+        {
+            append("/");
+            return append(list);
+        }
 
         // ----------------------------------------------------------------------
         // insert

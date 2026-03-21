@@ -5,7 +5,6 @@
 #include <tavros/core/exception.hpp>
 #include <tavros/assets/io/file_stream.hpp>
 
-#include <filesystem>
 
 namespace
 {
@@ -16,11 +15,12 @@ namespace tavros::assets
 {
 
     filesystem_provider::filesystem_provider(core::string_view path, core::string_view scheme, asset_open_mode open_mode)
-        : m_base(path)
-        , m_scheme(scheme)
+        : m_scheme(scheme)
         , m_open_mode(open_mode)
     {
-        if (!exists(path)) {
+        filesystem::normalize_path(path, m_base);
+
+        if (!filesystem::exists(m_base)) {
             ::logger.error("Filesystem provider for `{}` created, but path is invalid", path);
         }
     }
@@ -44,40 +44,19 @@ namespace tavros::assets
 
     bool filesystem_provider::exists(core::string_view path) const
     {
-        auto            full_path = std::filesystem::path(m_base) / std::filesystem::path(path);
-        std::error_code ec;
-        auto            ret = std::filesystem::exists(full_path, ec);
-        if (ec.value() == 0) {
-            return ret;
-        }
-
-        core::file_error_tag et = core::file_error_tag::other;
-
-        switch (ec.value()) {
-        case static_cast<int>(std::errc::permission_denied):
-            et = core::file_error_tag::permission_denied;
-            break;
-        case static_cast<int>(std::errc::no_such_file_or_directory):
-            et = core::file_error_tag::not_found;
-            break;
-        case static_cast<int>(std::errc::filename_too_long):
-            et = core::file_error_tag::invalid_path;
-            break;
-        default:
-            break;
-        }
-
-        throw core::file_error(core::file_error_tag::permission_denied, full_path.string(), ec.message());
+        filesystem::fixed_path full_path = m_base;
+        full_path /= path;
+        return filesystem::exists(full_path);
     }
 
     core::unique_ptr<asset_stream> filesystem_provider::open(core::string_view path, asset_open_mode open_mode)
     {
-        auto full_path = std::filesystem::path(m_base) / std::filesystem::path(path);
+        filesystem::fixed_path full_path = m_base;
+        full_path /= path;
         if (open_mode != m_open_mode) {
-            throw core::file_error(core::file_error_tag::open_failed, full_path.string(), "incorrect opening mode");
+            throw core::file_error(core::file_error_tag::open_failed, full_path, "incorrect opening mode");
         }
-        auto native_path = full_path.string();
-        return core::make_unique<file_stream>(native_path, open_mode);
+        return core::make_unique<file_stream>(full_path, open_mode);
     }
 
 } // namespace tavros::assets

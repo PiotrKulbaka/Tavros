@@ -1,11 +1,13 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
-#include <tavros/core/string_view.hpp>
+#include <tavros/core/string.hpp>
 #include <tavros/core/fixed_string.hpp>
+#include <tavros/core/string_view.hpp>
 
 #include <filesystem>
 #include <stdexcept>
+#include <cctype>
 
 namespace tavros::filesystem
 {
@@ -30,12 +32,6 @@ namespace tavros::filesystem
             }
             buffer = fixed_path(path);
             return buffer.data();
-        }
-
-        /** @brief Replaces backslashes with forward slashes in-place. */
-        inline void normalize_slashes(std::string& s)
-        {
-            std::replace(s.begin(), s.end(), '\\', '/');
         }
     } // namespace detail
 
@@ -79,8 +75,9 @@ namespace tavros::filesystem
     {
         fixed_path buf;
 
-        auto result = std::filesystem::absolute(detail::cstr_path(path, buf)).string();
-        detail::normalize_slashes(result);
+        auto result = std::filesystem::absolute(detail::cstr_path(path, buf))
+            .lexically_normal()
+            .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: absolute path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -95,8 +92,9 @@ namespace tavros::filesystem
         fixed_path path_buf;
         fixed_path base_buf;
 
-        auto result = std::filesystem::relative(detail::cstr_path(path, path_buf), detail::cstr_path(base, base_buf)).string();
-        detail::normalize_slashes(result);
+        auto result = std::filesystem::relative(detail::cstr_path(path, path_buf), detail::cstr_path(base, base_buf))
+            .lexically_normal()
+            .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: relative path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -108,8 +106,9 @@ namespace tavros::filesystem
     /** @brief Returns the current working directory. */
     [[nodiscard]] inline fixed_path current_path()
     {
-        auto result = std::filesystem::current_path().string();
-        detail::normalize_slashes(result);
+        auto result = std::filesystem::current_path()
+            .lexically_normal()
+            .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: current path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -121,8 +120,9 @@ namespace tavros::filesystem
     /** @brief Returns a path suitable for temporary files. */
     [[nodiscard]] inline fixed_path temp_directory_path()
     {
-        auto result = std::filesystem::temp_directory_path().string();
-        detail::normalize_slashes(result);
+        auto result = std::filesystem::temp_directory_path()
+            .lexically_normal()
+            .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: temp path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -183,6 +183,191 @@ namespace tavros::filesystem
             detail::cstr_path(to, to_buf),
             options
         );
+    }
+
+    /** @brief Returns the filename component(everything after the last / or \). */
+    [[nodiscard]] inline core::string_view filename(core::string_view path) noexcept
+    {
+        auto pos = path.find_last_of('/');
+        if (pos == core::string_view::npos) {
+            pos = path.find_last_of('\\'); // fallback
+            if (pos == core::string_view::npos) {
+                return path;
+            }
+        }
+        return path.substr(pos + 1);
+    }
+
+    /**
+     * @brief Returns the extension component(including the dot, e.g. ".txt").
+     * Returns empty if no extension or filename starts with a dot and has no other dot.
+     */
+    [[nodiscard]] inline core::string_view extension(core::string_view path) noexcept
+    {
+        auto name = filename(path);
+        if (name.empty() || name == "." || name == "..") {
+            return {};
+        }
+        // skip leading dot (hidden files: ".gitignore" has no extension)
+        auto pos = name.rfind('.');
+        if (pos == core::string_view::npos || pos == 0) {
+            return {};
+        }
+        return name.substr(pos);
+    }
+
+    /** @brief Returns the stem component(filename without extension). */
+    [[nodiscard]] inline core::string_view stem(core::string_view path) noexcept
+    {
+        auto name = filename(path);
+        auto ext  = extension(path);
+        return name.substr(0, name.size() - ext.size());
+    }
+
+    /**
+     8 @brief Returns the parent path(everything before the last / or \).
+     * Returns empty for single-component paths with no separator.
+     */
+    [[nodiscard]] inline core::string_view parent_path(core::string_view path) noexcept
+    {
+        if (path.empty()) {
+            return {};
+        }
+
+        // strip trailing slashes
+        auto last = path.size() - 1;
+        while (last > 0 && (path[last] == '/' || path[last] == '\\')) {
+            --last;
+        }
+
+        // preserve root slash: "/foo" -> "/"
+        if (last == 0) {
+            if (path[0] == '/' || path[0] == '\\') {
+                return path.substr(0, 1);
+            }
+            return {};
+        }
+
+        auto pos = path.find_last_of('/', last);
+        if (pos == core::string_view::npos) {
+            pos = path.find_last_of('\\', last);
+            if (pos == core::string_view::npos) {
+                return {};
+            }
+        }
+
+        // strip slashes
+        while (pos > 0 && (path[pos] == '/' || path[pos] == '\\')) {
+            --pos;
+        }
+
+        // preserve root slash: "/foo" -> "/"
+        if (pos == 0 && (path[pos] == '/' || path[pos] == '\\')) {
+            return path.substr(0, 1);
+        }
+        return path.substr(0, pos + 1);
+    }
+
+    /** @brief Returns true if the path is absolute. */
+    [[nodiscard]] inline bool is_absolute(core::string_view path) noexcept
+    {
+        if (path.empty()) {
+            return false;
+        }
+        // Unix: /foo
+        if (path[0] == '/' || path[0] == '\\') {
+            return true;
+        }
+        // Windows (or URL): C:/foo (resource://foo)
+        auto sz = path.size();
+        const auto* p = path.data();
+        while (sz > 0 && std::isalnum(static_cast<int>(*p))) {
+            --sz;
+            ++p;
+        }
+
+        if (sz != path.size() && sz > 1 && (p[0] == ':') && (p[1] == '/' || p[1] == '\\')) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /** @brief Returns true if the path is relative. */
+    [[nodiscard]] inline bool is_relative(core::string_view path) noexcept
+    {
+        return !is_absolute(path);
+    }
+
+    /** @brief Returns true if the path has a non-empty filename component. */
+    [[nodiscard]] inline bool has_filename(core::string_view path) noexcept
+    {
+        return !filename(path).empty();
+    }
+
+    /** @brief Returns true if the path has a non-empty stem component. */
+    [[nodiscard]] inline bool has_stem(core::string_view path) noexcept
+    {
+        return !stem(path).empty();
+    }
+
+    /** @brief Returns true if the path has an extension. */
+    [[nodiscard]] inline bool has_extension(core::string_view path) noexcept
+    {
+        return !extension(path).empty();
+    }
+
+    /** @brief Returns true if the path has a parent path. */
+    [[nodiscard]] inline bool has_parent_path(core::string_view path) noexcept
+    {
+        return !parent_path(path).empty();
+    }
+
+    /** @brief Returns a normalized copy of @p path, resolving @c . and @c .., replacing @c \\ with @c / . */
+    [[nodiscard]] inline core::string normalize_path(const core::string& path)
+    {
+        auto result = std::filesystem::path(path.data())
+            .lexically_normal()
+            .generic_string();
+        return result;
+    }
+
+    /** @brief Returns a normalized copy of @p path, resolving @c . and @c .., replacing @c \\ with @c / . */
+    template<size_t N>
+    [[nodiscard]] inline core::fixed_string<N> normalize_path(const core::fixed_string<N>& path)
+    {
+        auto result = std::filesystem::path(path.data())
+            .lexically_normal()
+            .generic_string();
+        return core::fixed_string<N>(core::string_view(result.data(), result.size()));
+    }
+
+    /** @brief Returns a normalized copy of @p path, resolving @c . and @c .., replacing @c \\ with @c / . */
+    template<size_t N>
+    inline void normalize_path(core::string_view path, core::fixed_string<N>& out)
+    {
+        auto result = std::filesystem::path(path.data())
+            .lexically_normal()
+            .generic_string();
+        out = core::fixed_string<N>(core::string_view(result.data(), result.size()));
+    }
+
+    /** @brief Normalizes @p path in place, resolving @c . and @c .., replacing @c \\ with @c / . */
+    inline void normalize_path_inplace(core::string& path)
+    {
+        path = std::move(std::filesystem::path(path.data())
+            .lexically_normal()
+            .generic_string());
+    }
+
+    /** @brief Normalizes @p path in place, resolving @c . and @c .., replacing @c \\ with @c / . */
+    template<size_t N>
+    inline void normalize_path_inplace(core::fixed_string<N>& path)
+    {
+        auto result = std::filesystem::path(path.data())
+            .lexically_normal()
+            .generic_string();
+        path = result;
     }
 
 } // namespace tavros::filesystem

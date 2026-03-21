@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/string.hpp>
+#include <tavros/core/filesystem.hpp>
 #include <tavros/assets/asset_provider.hpp>
 #include <tavros/assets/asset_open_mode.hpp>
 
@@ -23,11 +24,10 @@ namespace tavros::assets
         [[nodiscard]] bool exists(core::string_view path) const override;
 
         [[nodiscard]] core::unique_ptr<asset_stream> open(core::string_view path, asset_open_mode open_mode) override;
-
     private:
-        core::string    m_base;
-        core::string    m_scheme;
-        asset_open_mode m_open_mode;
+        filesystem::fixed_path m_base;
+        core::fixed_string<32> m_scheme;
+        asset_open_mode        m_open_mode;
     };
 
 } // namespace tavros::assets
