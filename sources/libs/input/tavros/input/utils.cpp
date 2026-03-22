@@ -252,7 +252,6 @@ namespace tavros::input
             return "last_key";
         default:
             TAV_UNREACHABLE();
-            return "<unknown>";
         }
     }
 
@@ -275,7 +274,6 @@ namespace tavros::input
             return "last_button";
         default:
             TAV_UNREACHABLE();
-            return "<unknown>";
         }
     }
 

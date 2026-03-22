@@ -66,11 +66,6 @@ namespace tavros::math
         constexpr float* data() noexcept;
 
     public:
-#pragma warning(push)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4458)
-
-
         union
         {
             vec3 vec;
@@ -82,8 +77,6 @@ namespace tavros::math
             };
         };
     };
-
-#pragma warning(pop)
 
     constexpr euler3 operator-(const euler3& e) noexcept;
     constexpr euler3 operator+(const euler3& a, const euler3& b) noexcept;
@@ -97,8 +90,4 @@ namespace tavros::math
 
 } // namespace tavros::math
 
-#pragma warning(push)
-#pragma warning(disable : 4458)
 #include <tavros/core/math/euler3.inl>
-#pragma warning(pop)
-

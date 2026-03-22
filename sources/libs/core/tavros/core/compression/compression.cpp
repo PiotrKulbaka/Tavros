@@ -13,8 +13,13 @@ namespace tavros::core
 
     bool uncompress_data(buffer_view<uint8> compressed_data, buffer_span<uint8> output)
     {
-        uLongf dest_len = output.size();
-        auto   res = uncompress(output.data(), &dest_len, compressed_data.data(), compressed_data.size());
+        auto dest_len = static_cast<uLongf>(output.size());
+        auto res = uncompress(
+            static_cast<Bytef*>(output.data()),
+            &dest_len,
+            static_cast<const Bytef*>(compressed_data.data()),
+            static_cast<uLong>(compressed_data.size())
+        );
 
         switch (res) {
         case Z_OK:

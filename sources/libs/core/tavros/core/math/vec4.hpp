@@ -76,10 +76,6 @@ namespace tavros::math
         constexpr float* data() noexcept;
 
     public:
-#pragma warning(push)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4458)
-
         union
         {
             vec3 xyz;
@@ -93,8 +89,6 @@ namespace tavros::math
             };
         };
     };
-
-#pragma warning(pop)
 
     using color = vec4;
 
@@ -110,8 +104,5 @@ namespace tavros::math
 
 } // namespace tavros::math
 
-#pragma warning(push)
-#pragma warning(disable : 4458)
 #include <tavros/core/math/vec4.inl>
-#pragma warning(pop)
 

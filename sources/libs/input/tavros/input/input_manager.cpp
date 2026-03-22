@@ -346,7 +346,7 @@ namespace tavros::input
         }
 
         auto factor = static_cast<float>(total_us) / static_cast<float>(frame_duration);
-        return factor > 1.0 ? 1.0 : factor;
+        return factor > 1.0f ? 1.0f : factor;
     }
 
 } // namespace tavros::input

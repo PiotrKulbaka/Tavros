@@ -104,15 +104,10 @@ namespace tavros::core
         index_t next_after(index_t pos) const noexcept;
 
     private:
-#pragma warning(push)
-#pragma warning(disable : 4324) // structure was padded due to alignment specifier
-
         alignas(64) uint64 m_l1_map[k_l1_map_size];
         alignas(64) uint64 m_l2_map[k_l2_map_size];
         alignas(64) uint64 m_l3_map[k_l3_map_size];
         alignas(64) uint64 m_l4_map[k_l4_map_size];
-
-#pragma warning(pop)
 
         size_t m_size;
     };

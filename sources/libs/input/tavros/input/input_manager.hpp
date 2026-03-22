@@ -70,7 +70,7 @@ namespace tavros::input
         bool is_key_pressed(keyboard_key key) const noexcept;
 
         /**
-         * @brief Returns a normalized factor [0–1] representing how long the key has been held.
+         * @brief Returns a normalized factor [0-1] representing how long the key has been held.
          */
         float key_hold_factor(keyboard_key key) const noexcept;
 
@@ -90,7 +90,7 @@ namespace tavros::input
         bool is_mouse_button_pressed(mouse_button button) const noexcept;
 
         /**
-         * @brief Returns a normalized factor [0–1] representing how long the button has been held.
+         * @brief Returns a normalized factor [0-1] representing how long the button has been held.
          */
         float mouse_button_hold_factor(mouse_button button) const noexcept;
 

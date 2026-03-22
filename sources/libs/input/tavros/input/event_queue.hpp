@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/input/event_args.hpp>
 #include <mutex>
@@ -63,8 +63,8 @@ namespace tavros::input
         event_args_queue_view front_queue() const;
 
     private:
-        core::static_vector<event_args, k_max_events> m_buffer_a{};
-        core::static_vector<event_args, k_max_events> m_buffer_b{};
+        core::fixed_vector<event_args, k_max_events> m_buffer_a{};
+        core::fixed_vector<event_args, k_max_events> m_buffer_b{};
 
         struct queue_data
         {

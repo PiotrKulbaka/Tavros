@@ -23,5 +23,17 @@ endif()
 
 include(${CMAKE_CURRENT_LIST_DIR}/tools/cmake/utils.cmake)
 
+# -----------------------------------------------------------------------------
+# Suppressed MSVC warnings
+# -----------------------------------------------------------------------------
+if (MSVC)
+    add_compile_options(
+        /wd4201  # nonstandard extension: nameless struct/union
+        /wd4324  # structure was padded due to alignment specifier
+        /wd4458  # declaration of 'x' hides class member
+        /wd4624  # destructor could not be generated
+    )
+endif()
+
 add_subdirectory(sources)
 add_subdirectory(tests)

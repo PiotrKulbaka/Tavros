@@ -38,10 +38,6 @@ namespace tavros::math
         constexpr ivec2& operator/=(int32 scalar) noexcept;
 
     public:
-#pragma warning(push)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4458)
-
         union
         {
             struct
@@ -59,8 +55,6 @@ namespace tavros::math
         };
     };
 
-#pragma warning(pop)
-
     using ipoint2 = ivec2;
     using isize2 = ivec2;
 
@@ -76,8 +70,4 @@ namespace tavros::math
 
 } // namespace tavros::math
 
-#pragma warning(push)
-#pragma warning(disable : 4458)
 #include <tavros/core/math/ivec2.inl>
-#pragma warning(pop)
-

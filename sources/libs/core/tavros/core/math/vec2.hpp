@@ -61,10 +61,6 @@ namespace tavros::math
         constexpr float* data() noexcept;
 
     public:
-#pragma warning(push)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4458)
-
         union
         {
             struct
@@ -82,8 +78,6 @@ namespace tavros::math
         };
     };
 
-#pragma warning(pop)
-
     using point2 = vec2;
     using size2 = vec2;
 
@@ -100,8 +94,4 @@ namespace tavros::math
 
 } // namespace tavros::math
 
-#pragma warning(push)
-#pragma warning(disable : 4458)
 #include <tavros/core/math/vec2.inl>
-#pragma warning(pop)
-

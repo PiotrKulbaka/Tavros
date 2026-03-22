@@ -101,10 +101,6 @@ namespace tavros::math
         constexpr float* data() noexcept;
 
     public:
-#pragma warning(push)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4458)
-
         union
         {
             vec4 vec;
@@ -114,8 +110,6 @@ namespace tavros::math
             };
         };
     };
-
-#pragma warning(pop)
 
     constexpr quat operator-(const quat& q) noexcept;
     constexpr quat operator+(const quat& a, const quat& b) noexcept;
@@ -129,8 +123,4 @@ namespace tavros::math
 
 } // namespace tavros::math
 
-#pragma warning(push)
-#pragma warning(disable : 4458)
 #include <tavros/core/math/quat.inl>
-#pragma warning(pop)
-

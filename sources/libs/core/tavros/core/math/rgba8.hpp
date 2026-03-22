@@ -106,10 +106,6 @@ namespace tavros::math
         }
 
     public:
-#pragma warning(push)
-#pragma warning(disable : 4201)
-#pragma warning(disable : 4458)
-
         union
         {
             struct
@@ -118,8 +114,6 @@ namespace tavros::math
             };
             uint32 color; /// Packed RGBA value in 0xRRGGBBAA format.
         };
-
-#pragma warning(pop)
     };
 
     static_assert(sizeof(rgba8) == 4);
