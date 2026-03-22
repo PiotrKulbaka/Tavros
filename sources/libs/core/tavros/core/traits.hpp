@@ -1,6 +1,8 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
+#include <tavros/core/string.hpp>
+#include <tavros/core/fixed_string.hpp>
 #include <type_traits>
 
 namespace tavros::core
@@ -248,5 +250,28 @@ namespace tavros::core
     /** @brief Helper variable template for @ref are_nothrow_swappable. */
     template<class List>
     inline constexpr bool are_nothrow_swappable_v = are_nothrow_swappable<List>::value;
+
+
+    /** @brief Checks whether a type is considered a string type. */
+    template<typename T>
+    struct is_string_type : std::false_type
+    {
+    };
+
+    /** @brief Specialization for dynamic string type. */
+    template<>
+    struct is_string_type<string> : std::true_type
+    {
+    };
+
+    /** @brief Specialization for fixed-capacity string type. */
+    template<size_t N>
+    struct is_string_type<core::fixed_string<N>> : std::true_type
+    {
+    };
+
+    /** @brief Convenience variable template for @ref is_string_type. */
+    template<typename T>
+    inline constexpr bool is_string_type_v = is_string_type<T>::value;
 
 } // namespace tavros::core

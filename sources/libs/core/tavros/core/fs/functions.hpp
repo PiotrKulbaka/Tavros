@@ -76,8 +76,8 @@ namespace tavros::filesystem
         fixed_path buf;
 
         auto result = std::filesystem::absolute(detail::cstr_path(path, buf))
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: absolute path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -93,8 +93,8 @@ namespace tavros::filesystem
         fixed_path base_buf;
 
         auto result = std::filesystem::relative(detail::cstr_path(path, path_buf), detail::cstr_path(base, base_buf))
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: relative path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -107,8 +107,8 @@ namespace tavros::filesystem
     [[nodiscard]] inline fixed_path current_path()
     {
         auto result = std::filesystem::current_path()
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: current path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -121,8 +121,8 @@ namespace tavros::filesystem
     [[nodiscard]] inline fixed_path temp_directory_path()
     {
         auto result = std::filesystem::temp_directory_path()
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
 
         if (result.size() >= k_fixed_path_size) {
             throw std::length_error("tavros::filesystem: temp path exceeds " + std::to_string(k_fixed_path_size - 1) + " characters");
@@ -220,7 +220,7 @@ namespace tavros::filesystem
     [[nodiscard]] inline core::string_view stem(core::string_view path) noexcept
     {
         auto name = filename(path);
-        auto ext  = extension(path);
+        auto ext = extension(path);
         return name.substr(0, name.size() - ext.size());
     }
 
@@ -279,7 +279,7 @@ namespace tavros::filesystem
             return true;
         }
         // Windows (or URL): C:/foo (resource://foo)
-        auto sz = path.size();
+        auto        sz = path.size();
         const auto* p = path.data();
         while (sz > 0 && std::isalnum(static_cast<int>(*p))) {
             --sz;
@@ -327,8 +327,8 @@ namespace tavros::filesystem
     [[nodiscard]] inline core::string normalize_path(const core::string& path)
     {
         auto result = std::filesystem::path(path.data())
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
         return result;
     }
 
@@ -337,8 +337,8 @@ namespace tavros::filesystem
     [[nodiscard]] inline core::fixed_string<N> normalize_path(const core::fixed_string<N>& path)
     {
         auto result = std::filesystem::path(path.data())
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
         return core::fixed_string<N>(core::string_view(result.data(), result.size()));
     }
 
@@ -347,17 +347,15 @@ namespace tavros::filesystem
     inline void normalize_path(core::string_view path, core::fixed_string<N>& out)
     {
         auto result = std::filesystem::path(path.data())
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
         out = core::fixed_string<N>(core::string_view(result.data(), result.size()));
     }
 
     /** @brief Normalizes @p path in place, resolving @c . and @c .., replacing @c \\ with @c / . */
     inline void normalize_path_inplace(core::string& path)
     {
-        path = std::move(std::filesystem::path(path.data())
-            .lexically_normal()
-            .generic_string());
+        path = std::move(std::filesystem::path(path.data()).lexically_normal().generic_string());
     }
 
     /** @brief Normalizes @p path in place, resolving @c . and @c .., replacing @c \\ with @c / . */
@@ -365,8 +363,8 @@ namespace tavros::filesystem
     inline void normalize_path_inplace(core::fixed_string<N>& path)
     {
         auto result = std::filesystem::path(path.data())
-            .lexically_normal()
-            .generic_string();
+                          .lexically_normal()
+                          .generic_string();
         path = result;
     }
 
