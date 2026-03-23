@@ -18,7 +18,11 @@ namespace tavros::geometry
          *
          * Creates a ray starting at the origin (0, 0, 0) pointing along positive Z axis (0, 0, 1).
          */
-        constexpr ray3() noexcept;
+        constexpr ray3() noexcept
+            : origin(0.0f, 0.0f, 0.0f)
+            , direction(0.0f, 0.0f, 1.0f)
+        {
+        }
 
         /**
          * @brief Constructs a ray with given origin and direction.
@@ -26,7 +30,11 @@ namespace tavros::geometry
          * @param origin The starting point of the ray
          * @param direction The direction of the ray (should be normalized)
          */
-        constexpr ray3(const math::vec3& origin, const math::vec3& direction) noexcept;
+        constexpr ray3(const math::vec3& origin, const math::vec3& direction) noexcept
+            : origin(origin)
+            , direction(direction)
+        {
+        }
 
         /**
          * @brief Computes the point at a given distance along the ray
@@ -34,13 +42,17 @@ namespace tavros::geometry
          * @param distance The distance along the ray
          * @return The point at the given distance along the ray
          */
-        constexpr math::vec3 at(float distance) const noexcept;
+        constexpr math::vec3 at(float distance) const noexcept
+        {
+            return origin + direction * distance;
+        }
 
     public:
         math::vec3 origin;
         math::vec3 direction;
     };
 
-} // namespace tavros::geometry
+    static_assert(sizeof(ray3) == 24, "incorrect size");
+    static_assert(alignof(ray3) == 4, "incorrect alignment");
 
-#include <tavros/core/geometry/ray3.inl>
+} // namespace tavros::geometry

@@ -14,7 +14,7 @@ namespace tavros::geometry
         if (math::almost_zero(denom)) {
             return 0.0f;
         }
-        auto t = -(math::dot(plane.normal, ray.origin) + plane.d) / denom;
+        auto t = -(math::dot(plane.normal, ray.origin) + plane.distance) / denom;
         return t < 0.0f ? 0.0f : t;
     }
 

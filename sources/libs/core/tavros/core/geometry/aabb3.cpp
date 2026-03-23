@@ -1,70 +1,10 @@
 #include <tavros/core/geometry/aabb3.hpp>
 
-#include <limits>
-
 #include <tavros/core/math/functions/max.hpp>
 #include <tavros/core/math/functions/min.hpp>
 
 namespace tavros::geometry
 {
-
-    aabb3::aabb3() noexcept
-        : min(std::numeric_limits<float>::max())
-        , max(std::numeric_limits<float>::lowest())
-    {
-    }
-
-    aabb3::aabb3(const math::vec3& min_point, const math::vec3& max_point) noexcept
-        : min(min_point)
-        , max(max_point)
-    {
-    }
-
-    math::vec3 aabb3::center() const noexcept
-    {
-        return (min + max) * 0.5f;
-    }
-
-    math::vec3 aabb3::size() const noexcept
-    {
-        return max - min;
-    }
-
-    float aabb3::volume() const noexcept
-    {
-        const auto s = size();
-        return s.x * s.y * s.z;
-    }
-
-    bool aabb3::contains_point(const math::vec3& point) const noexcept
-    {
-        return (point.x >= min.x && point.x <= max.x)
-            && (point.y >= min.y && point.y <= max.y)
-            && (point.z >= min.z && point.z <= max.z);
-    }
-
-    void aabb3::expand(const math::vec3& point) noexcept
-    {
-        min = tavros::math::min(this->min, point);
-        max = tavros::math::max(this->max, point);
-    }
-
-    aabb3 aabb3::merged(const aabb3& other) const noexcept
-    {
-        return aabb3(tavros::math::min(min, other.min), tavros::math::max(max, other.max));
-    }
-
-    void aabb3::merge(const aabb3& other) noexcept
-    {
-        min = tavros::math::min(this->min, other.min);
-        max = tavros::math::max(this->max, other.max);
-    }
-
-    void aabb3::reset() noexcept
-    {
-        min = math::vec3(std::numeric_limits<float>::max());
-        max = math::vec3(std::numeric_limits<float>::lowest());
-    }
 
     float aabb3::distance(const math::vec3& point) const noexcept
     {

@@ -18,7 +18,7 @@ namespace tavros::geometry
          *
          * Initializes a sphere with center at the origin and zero radius.
          */
-        constexpr sphere() noexcept;
+        constexpr sphere() noexcept = default;
 
         /**
          * @brief Constructs a sphere from a center point and a radius.
@@ -26,13 +26,18 @@ namespace tavros::geometry
          * @param center Center of the sphere.
          * @param radius Radius of the sphere.
          */
-        constexpr sphere(const math::vec3& center, float radius) noexcept;
+        constexpr sphere(const math::vec3& center, float radius) noexcept
+            : center(center)
+            , radius(radius)
+        {
+        }
 
     public:
         math::vec3 center;
-        float      radius;
+        float      radius = 0.0f;
     };
 
-} // namespace tavros::geometry
+    static_assert(sizeof(sphere) == 16, "incorrect size");
+    static_assert(alignof(sphere) == 4, "incorrect alignment");
 
-#include <tavros/core/geometry/sphere.inl>
+} // namespace tavros::geometry

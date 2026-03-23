@@ -1,69 +1,94 @@
 #pragma once
-
 #include <tavros/core/math.hpp>
 
 namespace tavros::geometry
 {
-
     /**
-     * @brief Represents a plane in 3D space.
+     * @brief Plane in 3D space defined by a normal and a signed distance from the origin.
      *
-     * The plane is defined by a normal vector and a scalar distance from the origin.
-     * The implicit equation of the plane is: dot(normal, point) + d = 0
-     *
-     * By default, the plane lies in the XY plane (normal is (0, 0, 1)), meaning it faces
-     * along the positive Z axis.
+     * Implicit equation: dot(normal, point) + distance = 0
+     * The normal points to the "positive" side of the plane.
+     * By default, the plane lies in the XY plane with normal (0, 0, 1).
      */
     class plane
     {
     public:
+        constexpr plane() noexcept = default;
+
+        constexpr plane(const math::vec3& normal, float distance) noexcept
+            : normal(normal)
+            , distance(distance)
+        {
+        }
+
         /**
          * @brief Constructs a plane from a normal and a point on the plane.
-         *
-         * @param normal A normalized vector representing the plane's normal.
-         * @param point A point lying on the plane.
          */
-        static plane from_normal_point(const math::vec3& normal, const math::vec3& point) noexcept;
+        static constexpr plane from_normal_point(const math::vec3& normal, const math::vec3& point) noexcept
+        {
+            return plane(normal, -math::dot(normal, point));
+        }
 
         /**
-         * @brief Constructs a plane from three non-collinear points.
-         *
-         * @param a First point.
-         * @param b Second point.
-         * @param c Third point.
-         *
-         * The normal is computed from the cross product of vectors (b - a) and (c - a).
+         * @brief Constructs a plane from three non-collinear points (counter-clockwise winding).
          */
-        static plane from_points(const math::vec3& a, const math::vec3& b, const math::vec3& c) noexcept;
+        static plane from_points(const math::vec3& a, const math::vec3& b, const math::vec3& c) noexcept
+        {
+            auto n = math::normalize(math::cross(c - a, b - a));
+            return plane(n, -math::dot(n, a));
+        }
+
+        /**
+         * @brief Returns the signed distance from a point to the plane.
+         *
+         * Positive if the point is on the side the normal points to, negative otherwise.
+         */
+        [[nodiscard]] constexpr float signed_distance(const math::vec3& point) const noexcept
+        {
+            return math::dot(normal, point) + distance;
+        }
+
+        /**
+         * @brief Returns the closest point on the plane to a given point.
+         */
+        [[nodiscard]] constexpr math::vec3 closest_point(const math::vec3& point) const noexcept
+        {
+            return point - normal * signed_distance(point);
+        }
+
+        /**
+         * @brief Checks if a point is on the positive side of the plane.
+         */
+        [[nodiscard]] constexpr bool is_on_positive_side(const math::vec3& point) const noexcept
+        {
+            return signed_distance(point) >= 0.0f;
+        }
+
+        /**
+         * @brief Returns a plane with the same position but flipped normal.
+         */
+        [[nodiscard]] constexpr plane flipped() const noexcept
+        {
+            return plane(-normal, -distance);
+        }
+
+        /**
+         * @brief Returns a normalized version of the plane.
+         *
+         * Use when the normal may not be unit-length (e.g. after extracting from a matrix).
+         */
+        [[nodiscard]] plane normalized() const noexcept
+        {
+            float len = math::length(normal);
+            return plane(normal / len, distance / len);
+        }
 
     public:
-        /**
-         * @brief Default constructor.
-         *
-         * Initializes the plane with normal (0, 0, 1) and d = 0.
-         * This creates a plane lying along the X and Y axes at Z = 0.
-         */
-        constexpr plane() noexcept;
-
-        /**
-         * @brief Constructs a plane from a normal and a distance.
-         *
-         * @param normal A normalized vector representing the plane's normal.
-         * @param d The signed distance from the origin to the plane along the normal.
-         *
-         * The plane equation is: dot(normal, point) + d = 0.
-         *
-         * @note The value of `d` should typically be negative, as it is calculated as -dot(normal, point_on_plane).
-         * Providing a positive `d` positions the plane in the direction opposite to the one given by -dot(normal, point).
-         */
-        constexpr plane(const math::vec3& normal, float d) noexcept;
-
-    public:
-        math::vec3 normal; // The normalized normal vector of the plane
-        float      d;      // The signed distance from the origin to the plane along the normal
-                           // (used in plane equation: dot(normal, point) + d = 0)
+        math::vec3 normal = math::vec3(0.0f, 0.0f, 1.0f);
+        float      distance = 0.0f;
     };
 
-} // namespace tavros::geometry
+    static_assert(sizeof(plane) == 16, "incorrect size");
+    static_assert(alignof(plane) == 4, "incorrect alignment");
 
-#include <tavros/core/geometry/plane.inl>
+} // namespace tavros::geometry

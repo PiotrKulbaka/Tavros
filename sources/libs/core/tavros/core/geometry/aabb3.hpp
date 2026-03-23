@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/math.hpp>
+#include <limits>
 
 namespace tavros::geometry
 {
@@ -40,58 +41,96 @@ namespace tavros::geometry
         /**
          * @brief Constructs an invalid AABB (min > max).
          */
-        aabb3() noexcept;
+        aabb3() noexcept
+            : min(std::numeric_limits<float>::max())
+            , max(std::numeric_limits<float>::lowest())
+        {
+        }
 
         /**
          * @brief Constructs an AABB from min and max points.
-         * @param min_point Minimum corner of the box.
-         * @param max_point Maximum corner of the box.
+         * @param min Minimum corner of the box.
+         * @param max Maximum corner of the box.
          */
-        aabb3(const math::vec3& min_point, const math::vec3& max_point) noexcept;
+        aabb3(const math::vec3& min, const math::vec3& max) noexcept
+            : min(min)
+            , max(max)
+        {
+        }
 
         /**
          * @brief Returns the center point of the box.
          */
-        math::vec3 center() const noexcept;
+        math::vec3 center() const noexcept
+        {
+            return (min + max) * 0.5f;
+        }
 
         /**
          * @brief Returns the size of the box (max - min).
          */
-        math::vec3 size() const noexcept;
+        math::vec3 size() const noexcept
+        {
+            return max - min;
+        }
 
         /**
          * @brief Returns the volume of the box.
          */
-        float volume() const noexcept;
+        float volume() const noexcept
+        {
+            const auto s = size();
+            return s.x * s.y * s.z;
+        }
 
         /**
          * @brief Returns true if the box contains the given point.
          * @param point Point to test.
          */
-        bool contains_point(const math::vec3& point) const noexcept;
+        bool contains_point(const math::vec3& point) const noexcept
+        {
+            return (point.x >= min.x && point.x <= max.x)
+                && (point.y >= min.y && point.y <= max.y)
+                && (point.z >= min.z && point.z <= max.z);
+        }
 
         /**
          * @brief Expands the AABB to include the given point.
          * @param point Point to include.
          */
-        void expand(const math::vec3& point) noexcept;
+        void expand(const math::vec3& point) noexcept
+        {
+            min = math::min(this->min, point);
+            max = math::max(this->max, point);
+        }
 
         /**
          * @brief Returns a new AABB that merges this box with another.
          * @param other Box to merge with.
          */
-        aabb3 merged(const aabb3& other) const noexcept;
+        aabb3 merged(const aabb3& other) const noexcept
+        {
+            return aabb3(math::min(min, other.min), math::max(max, other.max));
+        }
 
         /**
          * @brief Merges this box with another AABB in place.
          * @param other Box to merge with.
          */
-        void merge(const aabb3& other) noexcept;
+        void merge(const aabb3& other) noexcept
+        {
+            min = math::min(this->min, other.min);
+            max = math::max(this->max, other.max);
+        }
 
         /**
          * @brief Resets the box to an invalid state (min > max).
          */
-        void reset() noexcept;
+        void reset() noexcept
+        {
+            min = math::vec3(std::numeric_limits<float>::max());
+            max = math::vec3(std::numeric_limits<float>::lowest());
+        }
 
         /**
          * @brief Returns distance from a point to the AABB (0 if inside).

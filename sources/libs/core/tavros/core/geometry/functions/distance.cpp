@@ -8,7 +8,7 @@ namespace tavros::geometry
 
     float distance(const plane& plane, const math::vec3& point) noexcept
     {
-        return math::dot(plane.normal, point) + plane.d;
+        return math::dot(plane.normal, point) + plane.distance;
     }
 
     float distance(const sphere& sphere, const math::vec3& point) noexcept
