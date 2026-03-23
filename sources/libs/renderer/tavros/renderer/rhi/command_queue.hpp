@@ -57,7 +57,7 @@ namespace tavros::renderer::rhi
          * Each buffer binding specifies a buffer handle, a byte offset, a size, and a binding
          * slot index that matches `layout(binding=X)` in the shader.
          *
-         * This method supports dynamic buffer bindings — offset and size can differ per call,
+         * This method supports dynamic buffer bindings - offset and size can differ per call,
          * allowing sub-allocation from a shared buffer without recreating any GPU objects.
          *
          * @param buffers A view over buffer binding descriptions.

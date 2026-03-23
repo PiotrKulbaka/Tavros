@@ -80,7 +80,7 @@ namespace tavros::renderer
             float actual_width = width = glyphs[i].step_x;
             float actual_ascent_y = ascent_y = glyphs[i].ascent_y;
             float actual_descent_y = descent_y = glyphs[i].descent_y;
-            bool  in_word_seq = !std::iswspace(glyphs[i].codepoint);
+            bool  in_word_seq = !std::iswspace(static_cast<wint_t>(glyphs[i].codepoint));
             bool  is_first_word = in_word_seq;
 
             if (U'\n' == glyphs[i].codepoint) {
@@ -99,7 +99,7 @@ namespace tavros::renderer
                     actual_descent_y = g.descent_y;
                 }
 
-                if (std::iswspace(g.codepoint)) {
+                if (std::iswspace(static_cast<wint_t>(g.codepoint))) {
                     if (in_word_seq) {
                         width = actual_width - g.step_x;
                         in_word_seq = false;

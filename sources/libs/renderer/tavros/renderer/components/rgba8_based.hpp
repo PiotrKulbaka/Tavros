@@ -5,22 +5,24 @@
 namespace tavros::renderer
 {
 
-    struct primary_color_c : public math::rgba8
+    struct color0_c
     {
-        constexpr primary_color_c& operator=(const math::rgba8& other) noexcept
-        {
-            math::rgba8::operator=(other);
-            return *this;
-        }
+        math::rgba8 value;
     };
 
-    struct outline_color_c : public math::rgba8
+    struct color1_c
     {
-        constexpr outline_color_c& operator=(const math::rgba8& other) noexcept
-        {
-            math::rgba8::operator=(other);
-            return *this;
-        }
+        math::rgba8 value;
+    };
+
+    struct color2_c
+    {
+        math::rgba8 value;
+    };
+
+    struct color3_c
+    {
+        math::rgba8 value;
     };
 
 } // namespace tavros::renderer

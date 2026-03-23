@@ -140,7 +140,7 @@ namespace tavros::renderer
                     auto b = gi.metrics.bearing * font_size;
                     auto s = gi.metrics.size * font_size;
 
-                    atlas_rect_t entry = std::iswspace(cp) ? atlas_rect_t{0, 0, 0, 0} : gi.entry;
+                    atlas_rect_t entry = std::iswspace(static_cast<wint_t>(cp)) ? atlas_rect_t{0, 0, 0, 0} : gi.entry;
 
                     text.typed_emplace_back(
                         // Invert ascent and descent to match the UI coordinate system where Y increases downwards

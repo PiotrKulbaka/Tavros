@@ -419,7 +419,7 @@ namespace tavros::renderer
 
     void debug_renderer::draw_text2d(core::string_view str, float text_size, geometry::aabb2 rect, math::color color, text_align h_align, vertical_align v_align, float line_spacing)
     {
-        using text_t = tavros::core::basic_archetype<glyph_c, atlas_rect_t, rect_layout_c, pos2_c>;
+        using text_t = tavros::core::basic_archetype<glyph_c, atlas_rect_t, rect_layout_c, position2d_c>;
         text_t text;
         text_builder::append_text(text, str, m_font.get(), text_size);
         auto text_bbox = text_layouter::layout(text, 0.0f, h_align, line_spacing);
@@ -449,7 +449,7 @@ namespace tavros::renderer
         }
 
         auto base = rect.min + math::vec2(x_off, y_off);
-        text.view<atlas_rect_t, rect_layout_c, pos2_c>().each([&](const atlas_rect_t& r, const auto& l, const auto& p) {
+        text.view<atlas_rect_t, rect_layout_c, position2d_c>().each([&](const atlas_rect_t& r, const auto& l, const auto& p) {
             instance_data_t d;
             d.color = color;
             d.uv1_uv2 = math::vec4(
@@ -459,7 +459,7 @@ namespace tavros::renderer
                 static_cast<float>(r.bottom) / m_atlas_texture_size.height
             );
 
-            d.model = math::mat4::scale_translate(l.size(), base + l.min + p);
+            d.model = math::mat4::scale_translate(l.size(), base + l.min + p.value);
             m_text.emplace_back(d);
         });
     }

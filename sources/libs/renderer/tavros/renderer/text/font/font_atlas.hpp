@@ -3,7 +3,7 @@
 #include <tavros/core/types.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/core/containers/vector.hpp>
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 
 #include <tavros/renderer/text/font/font.hpp>
 
@@ -98,8 +98,8 @@ namespace tavros::renderer
         atlas_pixels invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix);
 
     private:
-        core::static_vector<font*, k_max_fonts> m_fonts;
-        bool                                    m_need_to_recreate;
+        core::fixed_vector<font*, k_max_fonts> m_fonts;
+        bool                                   m_need_to_recreate;
     };
 
 } // namespace tavros::renderer

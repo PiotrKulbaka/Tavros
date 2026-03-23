@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/renderer/rhi/enums.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
@@ -66,7 +66,7 @@ namespace tavros::renderer::rhi
     struct render_pass_create_info
     {
         /// List of color attachments. The order matches the layout in the framebuffer
-        core::static_vector<color_attachment_info, k_max_color_attachments> color_attachments;
+        core::fixed_vector<color_attachment_info, k_max_color_attachments> color_attachments;
 
         /// Optional depth/stencil attachment
         depth_stencil_attachment_info depth_stencil_attachment;

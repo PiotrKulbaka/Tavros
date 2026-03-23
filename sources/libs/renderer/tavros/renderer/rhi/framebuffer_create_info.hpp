@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/renderer/rhi/enums.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
@@ -20,7 +20,7 @@ namespace tavros::renderer::rhi
         uint32 height = 0;
 
         /// List of color attachments. Each attachment's format must match the pipeline layout
-        core::static_vector<texture_handle, k_max_color_attachments> color_attachments;
+        core::fixed_vector<texture_handle, k_max_color_attachments> color_attachments;
 
         /// Whether the framebuffer has a depth-stencil attachment
         bool has_depth_stencil_attachment = false;

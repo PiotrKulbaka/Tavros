@@ -626,7 +626,7 @@ namespace tavros::renderer::rhi
             GLuint      attachment = 0;
             gl_texture* dst = nullptr;
         };
-        core::static_vector<blit_info, k_max_color_attachments> blit_data;
+        core::fixed_vector<blit_info, k_max_color_attachments> blit_data;
         for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
             auto& rp_attachment = rp->info.color_attachments[i];
 

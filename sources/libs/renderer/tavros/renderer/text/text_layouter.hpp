@@ -26,7 +26,7 @@ namespace tavros::renderer
     /**
      * @brief Static utility for positioning glyphs into 2D layout.
      *
-     * Computes per-glyph positions (pos2_c) from glyph metrics and line data.
+     * Computes per-glyph positions (position2d_c) from glyph metrics and line data.
      * Supports horizontal alignment and configurable line spacing.
      *
      * Coordinate system:
@@ -78,11 +78,11 @@ namespace tavros::renderer
          * Does not perform line breaking.
          *
          * Guarantees:
-         *  - pos2_c is assigned for every glyph in each line.
+         *  - position2d_c is assigned for every glyph in each line.
          *  - Horizontal alignment is applied per line.
          *  - Returned AABB encloses all positioned glyph baselines.
          *
-         * @tparam Text  Archetype containing glyph_c and pos2_c.
+         * @tparam Text  Archetype containing glyph_c and position2d_c.
          * @tparam Lines Archetype containing text_line_c.
          * @param text   Glyph container.
          * @param lines  Precomputed line metadata.
@@ -92,8 +92,8 @@ namespace tavros::renderer
          * @return Bounding box of the laid out text block or invalid bbox if lines.size() is zero.
          */
         template<
-            core::archetype_with<glyph_c, pos2_c> Text,
-            core::archetype_with<text_line_c>     Lines>
+            core::archetype_with<glyph_c, position2d_c> Text,
+            core::archetype_with<text_line_c>           Lines>
         static geometry::aabb2 layout(Text& text, Lines& lines, text_align align = text_align::left, float line_spacing = 1.0f) noexcept
         {
             if (lines.size() == 0) {
@@ -124,7 +124,7 @@ namespace tavros::renderer
                     max_width = line.width;
                 }
                 TAV_ASSERT(static_cast<size_t>(line.first_glyph_index + line.glyph_count) <= text.size());
-                text.view<const glyph_c, pos2_c>().each_n(line.first_glyph_index, line.glyph_count, [&](const auto& g, auto& p) {
+                text.view<const glyph_c, position2d_c>().each_n(line.first_glyph_index, line.glyph_count, [&](const auto& g, auto& p) {
                     p.set(x, y);
                     x += g.step_x;
                 });
@@ -150,7 +150,7 @@ namespace tavros::renderer
          *  - Otherwise, lines are broken to satisfy width constraint.
          *
          * Guarantees:
-         *  - pos2_c is assigned for all glyphs.
+         *  - position2d_c is assigned for all glyphs.
          *  - Horizontal alignment is applied per computed line.
          *  - step_x is assumed precomputed and unchanged.
          *  - Returned AABB encloses the final layout.
@@ -158,7 +158,7 @@ namespace tavros::renderer
          * Preconditions:
          *  - text.size() < 2^32
          *
-         * @tparam Text Archetype containing glyph_c and pos2_c.
+         * @tparam Text Archetype containing glyph_c and position2d_c.
          * @param text  Glyph container.
          * @param line_wrap_width Maximum allowed line width (0 disables wrapping).
          * @param align Horizontal alignment mode.
@@ -166,7 +166,7 @@ namespace tavros::renderer
          *
          * @return Bounding box of the laid out text block or invalid bbox if text.size() is zero.
          */
-        template<core::archetype_with<glyph_c, pos2_c> Text>
+        template<core::archetype_with<glyph_c, position2d_c> Text>
         static geometry::aabb2 layout(Text& text, float line_wrap_width = 0.0f, text_align align = text_align::left, float line_spacing = 1.0f) noexcept
         {
             if (text.size() == 0) {
@@ -208,8 +208,8 @@ namespace tavros::renderer
                     max_width = width;
                 }
 
-                text.view<const glyph_c, pos2_c>().each_n(i, next_i - i, [&](const auto& g, auto& p) {
-                    p.set(x, y);
+                text.view<const glyph_c, position2d_c>().each_n(i, next_i - i, [&](const auto& g, auto& p) {
+                    p.value.set(x, y);
                     x += g.step_x;
                 });
 

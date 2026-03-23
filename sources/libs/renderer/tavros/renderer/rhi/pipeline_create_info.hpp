@@ -2,7 +2,7 @@
 
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/flags.hpp>
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/renderer/rhi/limits.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 
@@ -193,7 +193,7 @@ namespace tavros::renderer::rhi
     struct render_targets
     {
         /// Color attachment formats
-        core::static_vector<pixel_format, k_max_color_attachments> color_formats;
+        core::fixed_vector<pixel_format, k_max_color_attachments> color_formats;
 
         /// Depth attachment format
         pixel_format depth_stencil_format = pixel_format::depth24_stencil8;
@@ -202,13 +202,13 @@ namespace tavros::renderer::rhi
     struct pipeline_create_info
     {
         /// List with descriptions of shaders to be used in the pipeline
-        core::static_vector<shader_handle, k_max_pipeline_shaders> shaders;
+        core::fixed_vector<shader_handle, k_max_pipeline_shaders> shaders;
 
         /// Array of attribute bindings describing how vertex attributes are read from buffers
-        core::static_vector<vertex_attribute, k_max_vertex_attributes> bindings;
+        core::fixed_vector<vertex_attribute, k_max_vertex_attributes> bindings;
 
         /// Describes the properties of a blend state for a multiple render targets
-        core::static_vector<blend_state, k_max_color_attachments> blend_states;
+        core::fixed_vector<blend_state, k_max_color_attachments> blend_states;
 
         /// Describes the properties of depth and stencil testing
         depth_stencil_state depth_stencil;

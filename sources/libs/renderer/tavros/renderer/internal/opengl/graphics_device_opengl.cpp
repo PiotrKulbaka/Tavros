@@ -926,7 +926,7 @@ namespace tavros::renderer::rhi
         }
 
         // Get and validate color attachments
-        core::static_vector<gl_texture*, k_max_color_attachments> color_attachments;
+        core::fixed_vector<gl_texture*, k_max_color_attachments> color_attachments;
         for (size_t i = 0; i < info.color_attachments.size(); ++i) {
             auto tex_h = info.color_attachments[i];
 
@@ -1057,7 +1057,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
 
         // Attach color textures to the framebuffer
-        core::static_vector<GLenum, k_max_color_attachments> draw_buffers;
+        core::fixed_vector<GLenum, k_max_color_attachments> draw_buffers;
         for (uint32 i = 0; i < color_attachments.size(); ++i) {
             auto*  tex = color_attachments[i];
             GLenum attachment_type = GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i);

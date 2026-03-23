@@ -15,7 +15,7 @@ namespace tavros::renderer
      * Owns a single GPU buffer and a persistent CPU mapping.
      * Provides typed slice allocation via slice<T>().
      *
-     * Not intended to be used directly — use derived classes:
+     * Not intended to be used directly - use derived classes:
      * - gpu_stream_buffer  : per-frame streaming (vertex, uniform)
      * - gpu_stage_buffer : CPU-to-GPU upload (textures, static meshes)
      * - gpu_readback_buffer: GPU-to-CPU readback (screenshots, compute results)

@@ -155,7 +155,7 @@ namespace tavros::renderer
 
     private:
         template<class T>
-        using vector_t = core::static_vector<T, rhi::k_max_color_attachments>;
+        using vector_t = core::fixed_vector<T, rhi::k_max_color_attachments>;
 
         bool m_is_init;
         bool m_is_created;
