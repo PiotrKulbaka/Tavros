@@ -13,15 +13,18 @@ namespace tavros::assets
 {
 
     /**
-     * @brief Central manager for accessing assets through multiple providers.
+     * @brief Central manager for accessing assets through mounted providers.
      *
-     * The asset manager is responsible for locating and opening assets from
-     * various sources, such as filesystem, memory archives, or virtual paths.
-     * It maintains a list of mounted providers and searches them in order
-     * to resolve asset paths.
+     * The asset manager locates and opens assets from various sources such as
+     * the filesystem, memory archives, or virtual paths. It maintains an ordered
+     * list of mounted providers and searches them in mount order to resolve paths.
      *
-     * This class is non-copyable and serves purely as a high-level access point
-     * to underlying asset streams. It does not decode asset formats.
+     * Scheme-based routing is supported: a path prefixed with @c "scheme://" is
+     * routed directly to the matching provider. Unprefixed paths fall through to
+     * providers with an empty scheme, in mount order.
+     *
+     * This class is non-copyable and does not decode asset formats - it provides
+     * raw byte streams only.
      */
     class asset_manager : core::noncopyable
     {
@@ -39,11 +42,11 @@ namespace tavros::assets
         /**
          * @brief Mounts a new asset provider.
          *
-         * The provider can be any class derived from `asset_provider`.
-         * Mounted providers are searched in the order they were added.
+         * Constructs a provider of type @p T in-place and appends it to the
+         * provider list. Providers are searched in mount order.
          *
-         * @tparam T The type of the provider (must derive from `asset_provider`).
-         * @param args Arguments forwarded to the provider's constructor.
+         * @tparam T Must derive from @c asset_provider.
+         * @param args Arguments forwarded to @c T's constructor.
          */
         template<typename T, typename... Args>
             requires std::derived_from<T, asset_provider>
@@ -54,66 +57,55 @@ namespace tavros::assets
         }
 
         /**
-         * @brief Checks whether an asset exists across all mounted providers.
+         * @brief Returns true if the asset exists in at least one mounted provider.
          *
-         * @param path The path to the asset.
-         * @return true if the asset exists in at least one provider, false otherwise.
-         *
-         * @throws core::file_error If a provider cannot access the asset due to permissions or other I/O issues.
+         * @throws core::file_error If a provider fails to check existence due to I/O or permission errors.
          */
-        bool exists(core::string_view path) const;
+        [[nodiscard]] bool exists(core::string_view path) const;
 
         /**
-         * @brief Opens a stream to the specified asset.
+         * @brief Opens the asset at @p path for reading.
          *
-         * The first provider that allows access to the asset will be used.
+         * The first provider that reports @c can_read() for the path is used.
          *
-         * @param path The path to the asset.
-         * @param open_mode The desired access mode (read-only by default).
-         * @return A unique pointer to the opened stream.
-         *
-         * @throws core::file_error If opening fails due to permission issues, invalid open mode, or other I/O errors.
+         * @return A non-null unique pointer to the opened reader.
+         * @throws core::file_error If no provider can open the asset, or on I/O failure.
          */
-        core::unique_ptr<asset_stream> open(core::string_view path, asset_open_mode open_mode = asset_open_mode::read_only) const;
+        core::unique_ptr<core::basic_stream_reader> open_reader(core::string_view path) const;
 
         /**
-         * @brief Attempts to open a stream to the specified asset.
+         * @brief Opens the asset at @p path for writing.
          *
-         * The first provider that allows access to the asset will be used.
-         * Unlike open(), this function does not throw on failure.
+         * The first provider that reports @c can_write() for the path is used.
          *
-         * @param path The path to the asset.
-         * @param open_mode The desired access mode (read-only by default).
-         * @return A unique pointer to the opened stream, or nullptr if the asset
-         *         could not be opened for any reason.
-         *
-         * @note This function is noexcept and will return nullptr instead of
-         *       throwing if the asset is not found, access is denied,
-         *       the open mode is invalid, or any I/O error occurs.
+         * @return A non-null unique pointer to the opened writer.
+         * @throws core::file_error If no provider can open the asset, or on I/O failure.
          */
-        core::unique_ptr<asset_stream> try_open(core::string_view path, asset_open_mode open_mode = asset_open_mode::read_only) const noexcept;
+        core::unique_ptr<core::basic_stream_writer> open_writer(core::string_view path) const;
 
         /**
-         * @brief Reads the entire asset as UTF-8 text.
+         * @brief Attempts to open the asset at @p path for reading.
          *
-         * Opens the asset at the specified path and reads its entire contents
-         * as a UTF-8 encoded string.
+         * Does not throw. Returns @c nullptr if the asset cannot be opened for any reason.
+         */
+        core::unique_ptr<core::basic_stream_reader> try_open_reader(core::string_view path) const noexcept;
+
+        /**
+         * @brief Attempts to open the asset at @p path for writing.
          *
-         * @param path Path to the asset.
-         * @return A string containing the asset contents.
+         * Does not throw. Returns @c nullptr if the asset cannot be opened for any reason.
+         */
+        core::unique_ptr<core::basic_stream_writer> try_open_writer(core::string_view path) const noexcept;
+
+        /**
+         * @brief Opens the asset and reads its entire contents as a UTF-8 string.
          *
          * @throws core::file_error If the asset cannot be opened or read.
          */
         core::string read_text(core::string_view path) const;
 
         /**
-         * @brief Reads the entire asset as a binary buffer.
-         *
-         * Opens the asset at the specified path and reads its entire contents
-         * into a contiguous byte buffer.
-         *
-         * @param path Path to the asset.
-         * @return A buffer containing the raw bytes of the asset.
+         * @brief Opens the asset and reads its entire contents into a byte buffer.
          *
          * @throws core::file_error If the asset cannot be opened or read.
          */

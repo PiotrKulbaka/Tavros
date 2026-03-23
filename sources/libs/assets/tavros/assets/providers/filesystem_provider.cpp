@@ -1,9 +1,10 @@
 #include <tavros/assets/providers/filesystem_provider.hpp>
 
+#include <tavros/core/io/file_reader.hpp>
+#include <tavros/core/io/file_writer.hpp>
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/debug_break.hpp>
 #include <tavros/core/exception.hpp>
-#include <tavros/assets/io/file_stream.hpp>
 
 
 namespace
@@ -14,9 +15,10 @@ namespace
 namespace tavros::assets
 {
 
-    filesystem_provider::filesystem_provider(core::string_view path, core::string_view scheme, asset_open_mode open_mode)
+    filesystem_provider::filesystem_provider(core::string_view path, core::string_view scheme, bool for_read, bool for_write)
         : m_scheme(scheme)
-        , m_open_mode(open_mode)
+        , m_can_read(for_read)
+        , m_can_write(for_write)
     {
         filesystem::normalize_path(path, m_base);
 
@@ -34,12 +36,14 @@ namespace tavros::assets
 
     bool filesystem_provider::can_read(core::string_view path) const noexcept
     {
-        return asset_open_mode::read_only == m_open_mode;
+        TAV_UNUSED(path);
+        return m_can_read;
     }
 
     bool filesystem_provider::can_write(core::string_view path) const noexcept
     {
-        return asset_open_mode::write_only == m_open_mode;
+        TAV_UNUSED(path);
+        return m_can_write;
     }
 
     bool filesystem_provider::exists(core::string_view path) const
@@ -49,14 +53,24 @@ namespace tavros::assets
         return filesystem::exists(full_path);
     }
 
-    core::unique_ptr<asset_stream> filesystem_provider::open(core::string_view path, asset_open_mode open_mode)
+    core::unique_ptr<core::basic_stream_reader> filesystem_provider::open_reader(core::string_view path)
     {
         filesystem::fixed_path full_path = m_base;
         full_path /= path;
-        if (open_mode != m_open_mode) {
-            throw core::file_error(core::file_error_tag::open_failed, full_path, "incorrect opening mode");
+        if (!m_can_read) {
+            throw core::file_error(core::file_error_tag::open_failed, full_path, "unavailable for reading");
         }
-        return core::make_unique<file_stream>(full_path, open_mode);
+        return core::make_unique<core::file_reader>(full_path);
+    }
+
+    core::unique_ptr<core::basic_stream_writer> filesystem_provider::open_writer(core::string_view path)
+    {
+        filesystem::fixed_path full_path = m_base;
+        full_path /= path;
+        if (!m_can_write) {
+            throw core::file_error(core::file_error_tag::open_failed, full_path, "unavailable for writing");
+        }
+        return core::make_unique<core::file_writer>(full_path, core::file_open_mode::truncate);
     }
 
 } // namespace tavros::assets

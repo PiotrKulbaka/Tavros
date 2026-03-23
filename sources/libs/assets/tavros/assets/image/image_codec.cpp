@@ -25,7 +25,7 @@ namespace tavros::assets
         }
 
         int info_x = 0, info_y = 0, info_channels_in_file = 0;
-        if (!stbi_info_from_memory(data.data(), data.size(), &info_x, &info_y, &info_channels_in_file)) {
+        if (!stbi_info_from_memory(data.data(), static_cast<int>(data.size()), &info_x, &info_y, &info_channels_in_file)) {
             ::logger.error("Failed to decode pixels: stbi_info_from_memory is failed");
             return {};
         }
@@ -35,7 +35,7 @@ namespace tavros::assets
         int32 required_channels = rc == 0 ? info_channels_in_file : static_cast<int32>(rc);
 
         int    x = 0, y = 0, channels_in_file = 0;
-        uint8* pixels = stbi_load_from_memory(data.data(), data.size(), &x, &y, &channels_in_file, required_channels);
+        uint8* pixels = stbi_load_from_memory(data.data(), static_cast<int>(data.size()), &x, &y, &channels_in_file, required_channels);
         if (!pixels) {
             ::logger.error("Failed to decode pixels: stbi_load_from_memory is failed");
             return {};

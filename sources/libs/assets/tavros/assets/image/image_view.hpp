@@ -122,7 +122,7 @@ namespace tavros::assets
         /**
          * @brief Returns the row stride in bytes of the source image.
          *
-         * Use this to advance between rows — do NOT use width() * components().
+         * Use this to advance between rows - do NOT use width() * components().
          */
         [[nodiscard]] constexpr uint32 stride() const noexcept
         {

@@ -2,6 +2,7 @@
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/exception.hpp>
+#include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 
 namespace
@@ -41,58 +42,71 @@ namespace tavros::assets
         return false;
     }
 
-    core::unique_ptr<asset_stream> asset_manager::open(core::string_view path, asset_open_mode open_mode) const
+    core::unique_ptr<core::basic_stream_reader> asset_manager::open_reader(core::string_view path) const
     {
         auto [scheme, only_path] = parse_uri(path);
-
-        switch (open_mode) {
-        case asset_open_mode::read_only:
-            for (auto& p : m_providers) {
-                if ((p->scheme().empty() && scheme.empty() || p->scheme() == scheme) && p->exists(only_path)) {
-                    return p->open(only_path, asset_open_mode::read_only);
-                }
+        for (auto& p : m_providers) {
+            if ((p->scheme().empty() && scheme.empty() || p->scheme() == scheme) && p->exists(only_path)) {
+                return p->open_reader(only_path);
             }
-            break;
-
-        case asset_open_mode::write_only:
-            for (auto& p : m_providers) {
-                if (p->scheme().empty() && scheme.empty() || p->scheme() == scheme) {
-                    return p->open(only_path, asset_open_mode::write_only);
-                }
-            }
-            break;
-
-        default:
-            TAV_UNREACHABLE();
         }
-
-        throw core::file_error(core::file_error_tag::invalid_path, path, "open() failed");
+        throw core::file_error(core::file_error_tag::open_failed, path, "open_reader() failed");
     }
 
-    core::unique_ptr<asset_stream> asset_manager::try_open(core::string_view path, asset_open_mode open_mode) const noexcept
+    core::unique_ptr<core::basic_stream_writer> asset_manager::open_writer(core::string_view path) const
+    {
+        auto [scheme, only_path] = parse_uri(path);
+        for (auto& p : m_providers) {
+            if (p->scheme().empty() && scheme.empty() || p->scheme() == scheme) {
+                return p->open_writer(only_path);
+            }
+        }
+        throw core::file_error(core::file_error_tag::open_failed, path, "open_writer() failed");
+    }
+
+    core::unique_ptr<core::basic_stream_reader> asset_manager::try_open_reader(core::string_view path) const noexcept
     {
         try {
-            return open(path, open_mode);
+            return open_reader(path);
         } catch (core::file_error& ex) {
-            logger.error("An exception occurred while opening the file '{}'", ex.what());
+            logger.error("An exception occurred while opening file reader '{}'", ex.what());
         } catch (std::exception& ex) {
-            logger.error("An exception occurred while opening the file '{}'", ex.what());
+            logger.error("An exception occurred while opening file reader '{}'", ex.what());
         } catch (...) {
-            logger.error("An exception occurred while opening the file");
+            logger.error("An exception occurred while opening file reader");
+        }
+        return nullptr;
+    }
+
+    core::unique_ptr<core::basic_stream_writer> asset_manager::try_open_writer(core::string_view path) const noexcept
+    {
+        try {
+            return open_writer(path);
+        } catch (core::file_error& ex) {
+            logger.error("An exception occurred while opening file writer '{}'", ex.what());
+        } catch (std::exception& ex) {
+            logger.error("An exception occurred while opening file writer '{}'", ex.what());
+        } catch (...) {
+            logger.error("An exception occurred while opening file writer");
         }
         return nullptr;
     }
 
     core::string asset_manager::read_text(core::string_view path) const
     {
-        auto stream = open(path, asset_open_mode::read_only);
-        return stream->read_text();
+        auto         rd = open_reader(path);
+        core::string str(rd->size(), '\0');
+        auto         rd_sz = rd->read(reinterpret_cast<uint8*>(str.data()), str.size());
+        str.resize(rd_sz);
+        return str;
     }
 
     core::dynamic_buffer<uint8> asset_manager::read_binary(core::string_view path) const
     {
-        auto stream = open(path, asset_open_mode::read_only);
-        return stream->read_binary();
+        auto                        rd = open_reader(path);
+        core::dynamic_buffer<uint8> bytes(rd->size());
+        rd->read(bytes.data(), bytes.capacity());
+        return bytes;
     }
 
 } // namespace tavros::assets

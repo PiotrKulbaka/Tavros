@@ -3,7 +3,6 @@
 #include <tavros/core/string.hpp>
 #include <tavros/core/filesystem.hpp>
 #include <tavros/assets/asset_provider.hpp>
-#include <tavros/assets/asset_open_mode.hpp>
 
 namespace tavros::assets
 {
@@ -11,7 +10,7 @@ namespace tavros::assets
     class filesystem_provider final : public asset_provider
     {
     public:
-        filesystem_provider(core::string_view path, core::string_view scheme, asset_open_mode access);
+        filesystem_provider(core::string_view path, core::string_view scheme, bool for_read = true, bool for_write = false);
 
         ~filesystem_provider() noexcept override;
 
@@ -23,11 +22,15 @@ namespace tavros::assets
 
         [[nodiscard]] bool exists(core::string_view path) const override;
 
-        [[nodiscard]] core::unique_ptr<asset_stream> open(core::string_view path, asset_open_mode open_mode) override;
+        [[nodiscard]] core::unique_ptr<core::basic_stream_reader> open_reader(core::string_view path) override;
+
+        [[nodiscard]] core::unique_ptr<core::basic_stream_writer> open_writer(core::string_view path) override;
+
     private:
         filesystem::fixed_path m_base;
         core::fixed_string<32> m_scheme;
-        asset_open_mode        m_open_mode;
+        bool                   m_can_read;
+        bool                   m_can_write;
     };
 
 } // namespace tavros::assets

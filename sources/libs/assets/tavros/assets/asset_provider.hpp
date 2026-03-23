@@ -2,76 +2,81 @@
 
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/memory/memory.hpp>
-#include <tavros/assets/asset_stream.hpp>
-#include <tavros/assets/asset_open_mode.hpp>
+#include <tavros/core/io/stream_reader.hpp>
+#include <tavros/core/io/stream_writer.hpp>
 
 namespace tavros::assets
 {
 
     /**
-     * @brief Abstract interface for accessing and managing streams.
+     * @brief Abstract interface for asset providers.
      *
-     * An asset provider defines how streams are accessed for reading and writing.
-     * Concrete implementations can provide streams from the filesystem, memory archives,
-     * or virtual paths.
+     * An asset provider defines how assets are accessed for reading and writing.
+     * Concrete implementations can back assets with a filesystem, memory archive,
+     * network source, or any other storage backend.
+     *
+     * Providers are mounted into an @c asset_manager and searched in mount order
+     * to resolve asset paths. Scheme-based routing allows multiple providers to
+     * coexist without path conflicts.
      */
     class asset_provider
     {
     public:
-        /**
-         * @brief Virtual destructor.
-         */
         virtual ~asset_provider() noexcept = default;
 
         /**
          * @brief Returns the URI scheme this provider handles.
          *
-         * For scheme-based routing: "pack", "file", "http", "memory", etc.
-         * Returns empty string_view if the provider handles generic paths
-         * (no scheme) and participates in the fallback chain.
+         * Used for scheme-based routing. Examples: @c "pack", @c "file", @c "memory".
+         * Return an empty @c string_view to participate in the generic fallback chain
+         * (no scheme prefix required in the path).
          *
-         * @example
-         *   "pack"   matches "pack://textures/grass.png"
-         *   ""       matches "/textures/grass.png" (fallback chain)
+         * @par Examples
+         * - @c "pack"  matches @c "pack://textures/grass.png"
+         * - @c ""      matches @c "/textures/grass.png"
          */
         [[nodiscard]] virtual core::string_view scheme() const noexcept = 0;
 
         /**
-         * @brief Checks if the provider allows reading from the specified path.
+         * @brief Returns true if the provider can open the asset at @p path for reading.
          *
-         * @param path The path to the asset.
-         * @return true if the asset can be opened for reading, false otherwise.
+         * This is a lightweight check and must not throw.
          */
         [[nodiscard]] virtual bool can_read(core::string_view path) const noexcept = 0;
 
         /**
-         * @brief Checks if the provider allows writing to the specified path.
+         * @brief Returns true if the provider can open the asset at @p path for writing.
          *
-         * @param path The path to the asset.
-         * @return true if the asset can be opened for writing, false otherwise.
+         * This is a lightweight check and must not throw.
          */
         [[nodiscard]] virtual bool can_write(core::string_view path) const noexcept = 0;
 
         /**
-         * @brief Checks whether an asset exists at the specified path.
+         * @brief Returns true if an asset exists at @p path.
          *
-         * @param path The path to the asset.
-         * @return true if the asset exists, false otherwise.
-         *
-         * @throws core::file_error If the asset cannot be accessed due to permissions or other I/O errors.
+         * @throws core::file_error If existence cannot be determined due to I/O or permission errors.
          */
         [[nodiscard]] virtual bool exists(core::string_view path) const = 0;
 
         /**
-         * @brief Opens a stream to the specified asset for reading or writing.
+         * @brief Opens the asset at @p path for reading.
          *
          * @param path The path to the asset.
-         * @param access Specifies the desired access mode (read-only, write-only, etc.).
-         * @return A unique pointer to the opened stream.
+         * @return A non-null unique pointer to the opened reader.
          *
-         * @throws core::file_error If opening fails due to I/O errors, permission issues, or invalid access mode.
+         * @throws core::file_error If the asset cannot be opened due to I/O or permission errors.
          */
-        [[nodiscard]] virtual core::unique_ptr<asset_stream> open(core::string_view path, asset_open_mode access) = 0;
+        [[nodiscard]] virtual core::unique_ptr<core::basic_stream_reader> open_reader(core::string_view path) = 0;
+
+        /**
+         * @brief Opens the asset at @p path for writing.
+         *
+         * @param path The path to the asset.
+         * @return A non-null unique pointer to the opened writer.
+         *
+         * @throws core::file_error If the asset cannot be opened due to I/O or permission errors.
+         */
+        [[nodiscard]] virtual core::unique_ptr<core::basic_stream_writer> open_writer(core::string_view path) = 0;
     };
 
 } // namespace tavros::assets
