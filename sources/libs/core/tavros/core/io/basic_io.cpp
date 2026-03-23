@@ -5,6 +5,24 @@
 namespace tavros::core
 {
 
+    string_view to_string(file_open_mode mode) noexcept
+    {
+        switch (mode) {
+        case file_open_mode::open_existing:
+            return "open_existing";
+        case file_open_mode::create_new:
+            return "create_new";
+        case file_open_mode::open_or_create:
+            return "open_or_create";
+        case file_open_mode::truncate:
+            return "truncate";
+        case file_open_mode::append:
+            return "append";
+        default:
+            TAV_UNREACHABLE();
+        }
+    }
+
     string_view to_string(stream_state state) noexcept
     {
         switch (state) {

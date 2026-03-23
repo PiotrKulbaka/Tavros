@@ -23,7 +23,7 @@ namespace tavros::core
          */
         explicit file_reader(string_view path);
 
-        ~file_reader() override = default;
+        ~file_reader() noexcept override = default;
 
         /** @brief Reads up to @p size bytes into @p dst. Sets state to @c eos or @c bad on failure. */
         size_t read(uint8* dst, size_t size) override;
@@ -42,8 +42,8 @@ namespace tavros::core
 
     private:
         // mutable for tellg function
-        mutable std::fstream m_file;
-        size_t               m_size;
+        mutable std::ifstream m_file;
+        size_t                m_size;
     };
 
 } // namespace tavros::core

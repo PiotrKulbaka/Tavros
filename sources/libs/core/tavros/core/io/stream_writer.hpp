@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/io/basic_io.hpp>
+#include <tavros/core/io/stream_base.hpp>
 
 namespace tavros::core
 {
@@ -14,28 +14,12 @@ namespace tavros::core
      * - @c good -> @c bad  when write fails or stream is full
      * - Transition is irreversible - create a new writer to retry.
      */
-    class basic_stream_writer
+    class basic_stream_writer : public virtual stream_base
     {
     public:
-        virtual ~basic_stream_writer() = default;
+        basic_stream_writer() noexcept = default;
 
-        /** @brief Returns true if the writer is in a valid state and can be written to. */
-        [[nodiscard]] bool good() const noexcept
-        {
-            return m_state == stream_state::good;
-        }
-
-        /** @brief Returns true if the stream is in a bad state. */
-        [[nodiscard]] bool bad() const noexcept
-        {
-            return m_state == stream_state::bad;
-        }
-
-        /** @brief Returns true if the writer is in a good state. Equivalent to @c good(). */
-        [[nodiscard]] explicit operator bool() const noexcept
-        {
-            return good();
-        }
+        ~basic_stream_writer() override = default;
 
         /**
          * @brief Writes raw bytes from @p src.
@@ -48,30 +32,16 @@ namespace tavros::core
          */
         virtual size_t write(const uint8* src, size_t size) = 0;
 
-        /** @brief Returns true if the backend supports seeking. */
-        [[nodiscard]] virtual bool seekable() const noexcept
+        /**
+         * @brief Writes a value from an existing variable.
+         *
+         * @tparam T Must satisfy @c stream_writable (trivially copyable, not a string type).
+         * No-op if state is not @c good.
+         */
+        template<stream_writable T>
+        void write(const T& val)
         {
-            return false;
-        }
-
-        /** @brief Seeks to a position in the stream. No-op if not seekable. */
-        virtual bool seek(ssize_t offset, seek_dir dir = seek_dir::begin) noexcept
-        {
-            TAV_UNUSED(offset);
-            TAV_UNUSED(dir);
-            return false;
-        }
-
-        /** @brief Returns the current position, or -1 if not seekable. */
-        [[nodiscard]] virtual ssize_t tell() const noexcept
-        {
-            return -1;
-        }
-
-        /** @brief Returns the total size of the stream, or 0 if not seekable. */
-        [[nodiscard]] virtual size_t size() const noexcept
-        {
-            return 0;
+            write_as<T>(val);
         }
 
         /**
@@ -104,18 +74,6 @@ namespace tavros::core
         void write_as(const U& val)
         {
             write_as<T>(static_cast<T>(val));
-        }
-
-        /**
-         * @brief Writes a value from an existing variable.
-         *
-         * @tparam T Must satisfy @c stream_writable (trivially copyable, not a string type).
-         * No-op if state is not @c good.
-         */
-        template<stream_writable T>
-        void write(const T& val)
-        {
-            write_as<T>(val);
         }
 
         /**

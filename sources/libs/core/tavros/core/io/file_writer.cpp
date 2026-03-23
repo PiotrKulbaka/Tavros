@@ -4,6 +4,7 @@
 #include <tavros/core/debug/debug_break.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 #include <tavros/core/exception.hpp>
+#include <tavros/core/filesystem.hpp>
 
 namespace
 {
@@ -12,20 +13,54 @@ namespace
 
 namespace tavros::core
 {
-    file_writer::file_writer(string_view path)
+    file_writer::file_writer(string_view path, file_open_mode mode)
         : m_size(0)
     {
-        m_file.open(path.data(), std::ios::out | std::ios::binary);
+        const bool exists = filesystem::exists(path);
+
+        switch (mode) {
+        case file_open_mode::create_new:
+            if (exists) {
+                throw file_error(file_error_tag::open_failed, path, "file already exists (create_new mode)");
+            }
+            m_file.open(path, std::ios::out | std::ios::binary);
+            break;
+
+        case file_open_mode::open_existing:
+            if (!exists) {
+                throw file_error(file_error_tag::open_failed, path, "file does not exist (open_existing mode)");
+            }
+            m_file.open(path, std::ios::out | std::ios::binary);
+            break;
+
+        case file_open_mode::open_or_create:
+            m_file.open(path, std::ios::out | std::ios::binary);
+            break;
+
+        case file_open_mode::truncate:
+            m_file.open(path, std::ios::out | std::ios::binary | std::ios::trunc);
+            break;
+
+        case file_open_mode::append:
+            m_file.open(path, std::ios::out | std::ios::binary | std::ios::app);
+            break;
+
+        default:
+            TAV_UNREACHABLE();
+        }
 
         if (!m_file.is_open()) {
             throw file_error(file_error_tag::open_failed, path, "failed to open file for writing");
         }
 
-        // Determine initial file size if file already existed
+        // Determine current file size
         m_file.seekp(0, std::ios::end);
         auto end_pos = m_file.tellp();
         m_size = (end_pos == std::streampos(-1)) ? 0 : static_cast<size_t>(end_pos);
-        m_file.seekp(0, std::ios::beg);
+
+        if (mode != file_open_mode::append) {
+            m_file.seekp(0, std::ios::beg);
+        }
 
         if (!m_file.good()) {
             throw file_error(file_error_tag::other, path, "file opened but stream is in bad state");
@@ -37,6 +72,11 @@ namespace tavros::core
         if (size == 0) {
             ::logger.warning("Write called with empty size");
             TAV_DEBUG_BREAK();
+            return 0;
+        }
+
+        if (!good()) {
+            // Already in bad state
             return 0;
         }
 
@@ -103,16 +143,14 @@ namespace tavros::core
 
             if (!m_file.good()) {
                 ::logger.error("Failed to seek to position `{}` {}", to_string(dir), offset);
-                m_file.clear();
-                TAV_DEBUG_BREAK();
+                set_state(stream_state::bad);
                 return false;
             }
 
             return true;
         } catch (...) {
             ::logger.warning("Exception occurred during seek()");
-            m_file.clear();
-            TAV_DEBUG_BREAK();
+            set_state(stream_state::bad);
             return false;
         }
     }

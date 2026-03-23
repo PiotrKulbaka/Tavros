@@ -8,6 +8,37 @@ namespace tavros::core
 {
 
     /**
+     * @brief Controls how a file is opened or created.
+     *
+     * Used by file_reader, file_writer, and file_stream.
+     *
+     *  Mode           | File exists       | File missing
+     * ----------------|-------------------|-------------------
+     *  open_existing  | open              | throws
+     *  create_new     | throws            | create
+     *  open_or_create | open              | create
+     *  truncate       | open + clear      | create
+     *  append         | open, seek to end | create
+     */
+    enum class file_open_mode
+    {
+        /// Open an existing file. Throws if not found.
+        open_existing,
+
+        /// Create a new file. Throws if already exists.
+        create_new,
+
+        /// Open if exists, create if not.
+        open_or_create,
+
+        /// Open or create, truncate content to zero.
+        truncate,
+
+        /// Open or create, seek to end before each write.
+        append,
+    };
+
+    /**
      * @brief Represents the reference point for seeking within a stream.
      */
     enum class seek_dir
@@ -31,7 +62,7 @@ namespace tavros::core
     enum class stream_state : uint8
     {
         /// @brief Read operation completed successfully.
-        good = 0,
+        good,
 
         /// @brief End of stream reached before requested amount was read.
         eos,
@@ -57,6 +88,9 @@ namespace tavros::core
      */
     template<typename T>
     concept stream_writable = std::is_trivially_copyable_v<T> && !is_string_type_v<T>;
+
+    /** Returns a string representation of the file open mode. */
+    string_view to_string(file_open_mode mode) noexcept;
 
     /** Returns a string representation of the stream state. */
     string_view to_string(stream_state state) noexcept;

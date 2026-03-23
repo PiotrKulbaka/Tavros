@@ -1,7 +1,6 @@
 #pragma once
 
-#include <tavros/core/debug/assert.hpp>
-#include <tavros/core/io/basic_io.hpp>
+#include <tavros/core/io/stream_base.hpp>
 
 namespace tavros::core
 {
@@ -17,33 +16,15 @@ namespace tavros::core
      * - @c good -> @c bad  when a zstring has no null terminator
      * - Both transitions are irreversible - create a new reader to retry.
      */
-    class basic_stream_reader
+    class basic_stream_reader : public virtual stream_base
     {
     public:
-        virtual ~basic_stream_reader() = default;
-
-        /** @brief Returns true if the reader is in a valid state and can be read from. */
-        [[nodiscard]] bool good() const noexcept
-        {
-            return m_state == stream_state::good;
-        }
+        ~basic_stream_reader() override = default;
 
         /** @brief Returns true if the end of stream has been reached. */
         [[nodiscard]] bool eos() const noexcept
         {
             return m_state == stream_state::eos;
-        }
-
-        /** @brief Returns true if the stream is in a bad state (corrupted data). */
-        [[nodiscard]] bool bad() const noexcept
-        {
-            return m_state == stream_state::bad;
-        }
-
-        /** @brief Returns true if the reader is in a good state.Equivalent to @c good(). */
-        [[nodiscard]] explicit operator bool() const noexcept
-        {
-            return good();
         }
 
         /**
@@ -57,30 +38,25 @@ namespace tavros::core
          */
         virtual size_t read(uint8* dst, size_t size) = 0;
 
-        /** @brief Returns true if the backend supports seeking. */
-        [[nodiscard]] virtual bool seekable() const noexcept
+        /**
+         * @brief Reads into an existing variable @p out.
+         *
+         * @tparam T Must satisfy @c stream_readable (trivially copyable, not a string type).
+         * Sets state to @c eos if the stream has insufficient data.
+         * No-op if state is not @c good.
+         */
+        template<stream_readable T>
+        void read(T& out)
         {
-            return false;
-        }
+            if (!good()) {
+                return;
+            }
 
-        /** @brief Seeks to a position in the stream. No-op if not seekable. */
-        virtual bool seek(ssize_t offset, seek_dir dir = seek_dir::begin) noexcept
-        {
-            TAV_UNUSED(offset);
-            TAV_UNUSED(dir);
-            return false;
-        }
-
-        /** @brief Returns the current position, or -1 if not seekable. */
-        [[nodiscard]] virtual ssize_t tell() const noexcept
-        {
-            return -1;
-        }
-
-        /** @brief Returns the total size of the stream, or 0 if not seekable. */
-        [[nodiscard]] virtual size_t size() const noexcept
-        {
-            return 0;
+            auto bytes_read = read(reinterpret_cast<uint8*>(&out), sizeof(T));
+            if (bytes_read != sizeof(T)) {
+                set_state(stream_state::eos);
+                out = {};
+            }
         }
 
         /**
@@ -105,27 +81,6 @@ namespace tavros::core
             }
 
             return out;
-        }
-
-        /**
-         * @brief Reads into an existing variable @p out.
-         *
-         * @tparam T Must satisfy @c stream_readable (trivially copyable, not a string type).
-         * Sets state to @c eos if the stream has insufficient data.
-         * No-op if state is not @c good.
-         */
-        template<stream_readable T>
-        void read(T& out)
-        {
-            if (!good()) {
-                return;
-            }
-
-            auto bytes_read = read(reinterpret_cast<uint8*>(&out), sizeof(T));
-            if (bytes_read != sizeof(T)) {
-                set_state(stream_state::eos);
-                out = {};
-            }
         }
 
         /**
@@ -205,16 +160,6 @@ namespace tavros::core
                 }
             }
         }
-
-    protected:
-        /** @brief Sets the stream state.Used by derived classes and read methods. */
-        void set_state(stream_state new_state) noexcept
-        {
-            m_state = new_state;
-        }
-
-    private:
-        stream_state m_state = stream_state::good;
     };
 
 } // namespace tavros::core

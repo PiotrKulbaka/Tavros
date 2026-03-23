@@ -26,7 +26,7 @@ namespace tavros::core
         m_file.seekg(0, std::ios::beg);
 
         if (!m_file.good()) {
-            throw core::file_error(core::file_error_tag::other, path, "file opened but stream is in bad state");
+            throw file_error(file_error_tag::other, path, "file opened but stream is in bad state");
         }
     }
 
@@ -34,34 +34,38 @@ namespace tavros::core
     {
         if (size == 0) {
             ::logger.warning("Read called with empty size");
-            TAV_DEBUG_BREAK();
+            return 0;
+        }
+
+        if (!good()) {
+            // Already in bad state
             return 0;
         }
 
         if (!m_file.good()) {
-            set_state(stream_state::eos);
+            set_state(m_file.eof() ? stream_state::eos : stream_state::bad);
             return 0;
         }
 
         try {
             m_file.read(reinterpret_cast<char*>(dst), static_cast<std::streamsize>(size));
         } catch (const std::exception& e) {
-            throw core::file_error(core::file_error_tag::read_error, "", e.what());
+            throw file_error(file_error_tag::read_error, "", e.what());
         } catch (...) {
-            throw core::file_error(core::file_error_tag::read_error, "", "exception occurred during read");
+            throw file_error(file_error_tag::read_error, "", "exception occurred during read");
         }
 
-        auto readed = static_cast<size_t>(m_file.gcount());
-        if (readed < size) {
+        auto bytes_read = static_cast<size_t>(m_file.gcount());
+        if (bytes_read < size) {
             if (m_file.eof()) {
                 set_state(stream_state::eos);
             } else {
                 set_state(stream_state::bad);
-                throw core::file_error(core::file_error_tag::read_error, "", "read failure");
+                throw file_error(file_error_tag::read_error, "", "read failure");
             }
         }
 
-        return readed;
+        return bytes_read;
     }
 
     bool file_reader::seekable() const noexcept
@@ -87,19 +91,29 @@ namespace tavros::core
         }
 
         try {
+            const bool was_eos = eos() && m_file.eof();
+            if (was_eos) {
+                m_file.clear();
+            }
+
             m_file.seekg(static_cast<std::streamoff>(offset), sd);
 
             if (!m_file.good()) {
                 ::logger.error("Failed to seek to position `{}` {}", to_string(dir), offset);
-                m_file.clear();
-                TAV_DEBUG_BREAK();
                 return false;
+            }
+
+            // Check if new position is within readable range
+            if (was_eos) {
+                const auto pos = static_cast<size_t>(m_file.tellg());
+                if (pos < m_size) {
+                    set_state(stream_state::good);
+                }
             }
 
             return true;
         } catch (...) {
             ::logger.warning("Exception occurred during seek()");
-            m_file.clear();
             TAV_DEBUG_BREAK();
             return false;
         }
@@ -115,7 +129,6 @@ namespace tavros::core
             return static_cast<ssize_t>(pos);
         } catch (...) {
             ::logger.warning("Exception occurred during tell()");
-            m_file.clear();
             TAV_DEBUG_BREAK();
             return static_cast<ssize_t>(-1);
         }

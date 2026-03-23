@@ -7,36 +7,31 @@
 namespace tavros::core
 {
     /**
-     * @brief File-backed binary stream writer.
+     * @brief Binary writer backed by a file.
      *
-     * Writes binary data to a file using @c std::fstream.
-     * Supports seeking, telling, and size queries.
-     *
-     * Opens the file on construction. Throws @c file_error if the file cannot be opened.
-     *
-     * @see basic_stream_writer
+     * Opens the file in binary mode on construction according to @p mode.
+     * @throws file_error if the file cannot be opened.
      */
-    class file_writer : public basic_stream_writer, noncopyable
+    class file_writer final : public basic_stream_writer, noncopyable
     {
     public:
         /**
          * @brief Opens the file at @p path for writing.
          *
          * @param path Path to the file.
-         * @throws file_error if the file cannot be opened.
+         * @param mode Controls how the file is opened or created.
+         *   - @c truncate       - open or create, clear existing content (default).
+         *   - @c append         - open or create, seek to end before each write.
+         *   - @c open_or_create - open if exists, create if not, cursor at begin.
+         *   - @c create_new     - throws if file already exists.
+         *   - @c open_existing  - throws if file does not exist.
+         * @throws file_error if the file cannot be opened per the requested mode.
          */
-        explicit file_writer(string_view path);
+        explicit file_writer(string_view path, file_open_mode mode = file_open_mode::truncate);
 
-        ~file_writer() override = default;
+        ~file_writer() noexcept override = default;
 
-        /**
-         * @brief Writes @p size bytes from @p src to the file.
-         *
-         * Returns the number of bytes actually written.
-         * Sets state to @c bad and throws @c file_error on I/O failure.
-         *
-         * @throws file_error on I/O failure.
-         */
+        /** @brief Writes up to @p size bytes from @p src. Sets state to @c bad on failure. */
         size_t write(const uint8* src, size_t size) override;
 
         /** @brief Returns true for a file backend. */
@@ -53,8 +48,8 @@ namespace tavros::core
 
     private:
         // mutable for tellg function
-        mutable std::fstream m_file;
-        size_t               m_size;
+        mutable std::ofstream m_file;
+        size_t                m_size;
     };
 
 } // namespace tavros::core
