@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/memory/memory.hpp>
-#include <tavros/core/memory/object_pool.hpp>
+#include <tavros/core/resource/object_pool.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/rhi/frame_composer.hpp>
 

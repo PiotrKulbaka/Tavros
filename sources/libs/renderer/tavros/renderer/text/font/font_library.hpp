@@ -4,7 +4,7 @@
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/string.hpp>
 #include <tavros/core/string_view.hpp>
-#include <tavros/core/utils/string_string_view_comparator.hpp>
+#include <tavros/core/utils/string_hash.hpp>
 #include <tavros/renderer/text/font/font.hpp>
 #include <tavros/renderer/text/font/font_atlas.hpp>
 #include <tavros/renderer/text/font/font_data_provider.hpp>
@@ -104,7 +104,7 @@ namespace tavros::renderer
 
     private:
         using data_provider_type = core::unique_ptr<font_data_provider>;
-        using map_type = core::map<core::string, core::unique_ptr<font>, core::string_string_view_comparator>;
+        using map_type = core::map<core::string, core::unique_ptr<font>, core::string_less>;
         using font_vector_type = core::vector<font_view>;
 
         data_provider_type m_data_provider;

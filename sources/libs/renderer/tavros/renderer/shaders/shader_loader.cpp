@@ -121,7 +121,7 @@ namespace tavros::renderer
         core::vector<part_t> parts;
         size_t               total_size = 0;
 
-        std::set<core::string, core::string_string_view_comparator> included;
+        core::set<core::string, core::string_less> included;
 
         auto append_parts = [&](auto&& self, core::string_view cur_path) -> void {
             auto it = m_files.find(cur_path);

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/containers/map.hpp>
-#include <tavros/core/utils/string_string_view_comparator.hpp>
+#include <tavros/core/utils/string_hash.hpp>
 #include <tavros/renderer/shaders/shader_source.hpp>
 #include <tavros/renderer/shaders/shader_source_provider.hpp>
 #include <tavros/core/memory/memory.hpp>
@@ -100,7 +100,7 @@ namespace tavros::renderer
     private:
         core::unique_ptr<shader_source_provider> m_shaders_provider;
 
-        core::map<core::string, shader_source, core::string_string_view_comparator> m_files;
+        core::map<core::string, shader_source, core::string_less> m_files;
     };
 
 } // namespace tavros::renderer
