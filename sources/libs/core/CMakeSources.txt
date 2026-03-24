@@ -19,6 +19,7 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/nonmovable.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/optional.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/pimpl.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ref_counted.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/singleton.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/string.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/string_view.hpp
@@ -158,7 +159,6 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/mallocator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/mallocator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/memory.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/object_pool.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/raw_ptr.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/zone_allocator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/zone_allocator.hpp
@@ -166,6 +166,9 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/raii/scope_exit.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/raii/scoped_owner.hpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/utils/string_string_view_comparator.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/resource/object_pool.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/resource/resource_registry.hpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/utils/string_hash.hpp
 )
 

@@ -104,6 +104,41 @@ namespace tavros::core
             make_message(level, tag, fmt, std::forward<Args>(args)...);
         }
 
+        /** @brief Logs a debug message. */
+        template<typename... Args>
+        static void print_debug(string_view tag, fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        {
+            make_message(severity_level::debug, tag, fmt, std::forward<Args>(args)...);
+        }
+
+        /** @brief Logs an info message. */
+        template<typename... Args>
+        static void print_info(string_view tag, fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        {
+            make_message(severity_level::info, tag, fmt, std::forward<Args>(args)...);
+        }
+
+        /** @brief Logs an warning message. */
+        template<typename... Args>
+        static void print_warning(string_view tag, fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        {
+            make_message(severity_level::warning, tag, fmt, std::forward<Args>(args)...);
+        }
+
+        /** @brief Logs an error message. */
+        template<typename... Args>
+        static void print_error(string_view tag, fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        {
+            make_message(severity_level::error, tag, fmt, std::forward<Args>(args)...);
+        }
+
+        /** @brief Logs an fatal message. */
+        template<typename... Args>
+        static void print_fatal(string_view tag, fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        {
+            make_message(severity_level::fatal, tag, fmt, std::forward<Args>(args)...);
+        }
+
         /**
          * @brief Sets the global severity level. Messages below this level will be ignored.
          */

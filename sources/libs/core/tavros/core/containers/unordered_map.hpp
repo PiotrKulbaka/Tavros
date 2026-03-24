@@ -4,6 +4,6 @@
 
 namespace tavros::core
 {
-    template<class K, class V, class H = std::hash<K>>
-    using unordered_map = std::unordered_map<K, V, H>;
+    template<class Key, class Value, class Hasher = std::hash<Key>, class Eq = std::equal_to<Key>>
+    using unordered_map = std::unordered_map<Key, Value, Hasher, Eq>;
 } // namespace tavros::core

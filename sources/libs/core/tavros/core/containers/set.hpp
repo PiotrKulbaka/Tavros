@@ -4,6 +4,6 @@
 
 namespace tavros::core
 {
-    template<typename T>
-    using set = std::set<T>;
+    template<class Type, class Compare = std::less<Type>>
+    using set = std::set<Type, Compare>;
 } // namespace tavros::core

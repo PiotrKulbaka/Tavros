@@ -223,6 +223,16 @@ namespace tavros::core
         return !(lhs == rhs);
     }
 
+    template<typename T>
+    concept is_handle =
+        std::default_initializable<T> && requires(T a, T b) {
+            { static_cast<bool>(a) } -> std::same_as<bool>;
+            { a == b } -> std::same_as<bool>;
+            { a != b } -> std::same_as<bool>;
+            { a.generation() } -> std::convertible_to<std::size_t>;
+            { a.index() } -> std::convertible_to<std::size_t>;
+        };
+
 } // namespace tavros::core
 
 /**

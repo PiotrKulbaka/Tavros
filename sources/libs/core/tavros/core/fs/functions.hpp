@@ -334,9 +334,9 @@ namespace tavros::filesystem
 
     /** @brief Returns a normalized copy of @p path, resolving @c . and @c .., replacing @c \\ with @c / . */
     template<size_t N>
-    [[nodiscard]] inline core::fixed_string<N> normalize_path(const core::fixed_string<N>& path)
+    [[nodiscard]] inline core::fixed_string<N> normalize_path(core::string_view path)
     {
-        auto result = std::filesystem::path(path.data())
+        auto result = std::filesystem::path(path)
                           .lexically_normal()
                           .generic_string();
         return core::fixed_string<N>(core::string_view(result.data(), result.size()));
