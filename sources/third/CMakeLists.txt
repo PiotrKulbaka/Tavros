@@ -11,3 +11,12 @@ set_target_group(tinyobjloader "third")
 set_target_group(fmt "third")
 set_target_group(zlibstatic "third")
 set_target_group(TracyClient "third")
+
+if (MSVC)
+    target_compile_options(
+        fmt
+        PRIVATE
+        /wd26495 # uninitialized variable
+        /wd26498 # variable is not a constexpr used in a constexpr function
+    )
+endif()

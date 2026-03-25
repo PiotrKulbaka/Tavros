@@ -56,12 +56,13 @@ namespace tavros::assets
          * Supports common formats (PNG, JPEG, etc.) via the underlying decoder.
          * The input data must remain valid for the duration of the call.
          *
-         * @param data   View over the compressed image data.
-         * @param y_flip If true, flips the image vertically after decoding (e.g. for OpenGL UV conventions).
+         * @param data            View over the compressed image data.
+         * @param required_format Required pixel format, none - use source channel count.
+         * @param y_flip          If true, flips the image vertically after decoding (e.g. for OpenGL UV conventions).
          *
          * @return Decoded image. Check valid() on the result if decoding may fail.
          */
-        [[nodiscard]] static image decode(core::buffer_view<uint8> data, bool y_flip = false);
+        [[nodiscard]] static image decode(core::buffer_view<uint8> data, pixel_format required_format = pixel_format::none, bool y_flip = false);
 
         /**
          * @brief Encodes an image into a compressed byte buffer.
@@ -132,6 +133,26 @@ namespace tavros::assets
 
         constexpr image(const image&) = default;
         constexpr image& operator=(const image&) = default;
+
+        /**
+         * @brief Returns a resized copy of the image.
+         *
+         * Resamples the current image to the specified dimensions and returns
+         * the result as a new image instance. The original image remains unchanged.
+         *
+         * @param width  Target width in pixels.
+         * @param height Target height in pixels.
+         * @param srgb   If true, performs resizing in linear color space by converting
+         *               from sRGB before filtering and converting back after. This
+         *               produces more correct visual results for color textures.
+         *
+         * @return A new image containing the resized result.
+         *
+         * @note For non-color data (e.g., normal maps), `srgb` should typically be false.
+         * @note Resizing may involve filtering which can slightly blur the image depending
+         *       on the algorithm used.
+         */
+        [[nodiscard]] image resize(uint32 width, uint32 height, bool srgb = false) const;
 
         /** @brief Returns true if the image has allocated pixel data. */
         [[nodiscard]] bool valid() const noexcept
