@@ -142,7 +142,7 @@ namespace tavros::core
          * @brief Constructs a handle from a raw packed ID.
          * @param raw_id  Pre-packed 64-bit handle ID.
          */
-        explicit handle_base(handle_id_t raw_id)
+        explicit handle_base(handle_id_t raw_id) noexcept
             : id(raw_id)
         {
         }
@@ -152,10 +152,15 @@ namespace tavros::core
          * @param gen    Generation counter for this slot.
          * @param index  Slot index within the allocator.
          */
-        explicit handle_base(handle_gen_t gen, index_t index)
+        explicit handle_base(handle_gen_t gen, index_t index) noexcept
             : id(make_handle_id(k_type_id, gen, index))
         {
         }
+
+        handle_base(const handle_base&) noexcept = default;
+        handle_base(handle_base&&) noexcept = default;
+        handle_base& operator=(const handle_base&) noexcept = default;
+        handle_base& operator=(handle_base&&) noexcept = default;
 
         /**
          * @brief Returns the type ID embedded in this handle.

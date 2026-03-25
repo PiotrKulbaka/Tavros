@@ -191,6 +191,12 @@ namespace tavros::core
             return {&derived(), derived().find_first()};
         }
 
+        /// @copydoc begin()
+        [[nodiscard]] const_iterator cbegin() const noexcept
+        {
+            return {&derived(), derived().find_first()};
+        }
+
         /**
          * @brief Returns a sentinel iterator one past the last possible index.
          *
@@ -204,6 +210,12 @@ namespace tavros::core
 
         /// @copydoc end()
         [[nodiscard]] const_iterator end() const noexcept
+        {
+            return {&derived(), static_cast<index_t>(derived().capacity())};
+        }
+
+        /// @copydoc end()
+        [[nodiscard]] const_iterator cend() const noexcept
         {
             return {&derived(), static_cast<index_t>(derived().capacity())};
         }

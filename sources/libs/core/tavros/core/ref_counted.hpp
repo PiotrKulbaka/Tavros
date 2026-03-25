@@ -48,11 +48,13 @@ namespace tavros::core
 
         bool decrement() noexcept
         {
+            TAV_ASSERT(m_count > 0);
             return --m_count == 0;
         }
 
         int32 load() const noexcept
         {
+            TAV_ASSERT(m_count >= 0);
             return m_count;
         }
 
@@ -69,12 +71,12 @@ namespace tavros::core
      * @tparam T        Stored value type.
      * @tparam RefCount Reference counter policy.
      */
-    template<class T, class RefCount = atomic_ref_count>
+    template<class T, class RefCount = single_thread_ref_count>
         requires requires(RefCount rc) {
             { rc.increment() } -> std::same_as<void>;
             { rc.decrement() } -> std::same_as<bool>;
             { rc.load() } -> std::convertible_to<int32>;
-        }
+        } && std::is_nothrow_move_constructible_v<T>
     class ref_counted
     {
     public:
@@ -82,7 +84,7 @@ namespace tavros::core
          * @brief Constructs the wrapper, taking ownership of the value.
          * @param value Value to store. Moved into the wrapper.
          */
-        explicit ref_counted(T value)
+        explicit ref_counted(T value) noexcept
             : m_value(std::move(value))
         {
         }

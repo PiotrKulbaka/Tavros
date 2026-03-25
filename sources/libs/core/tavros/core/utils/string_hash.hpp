@@ -66,16 +66,6 @@ namespace tavros::core
         {
             return a == b;
         }
-
-        bool operator()(const string& a, string_view b) const noexcept
-        {
-            return a == b;
-        }
-
-        bool operator()(string_view a, const string& b) const noexcept
-        {
-            return a == b;
-        }
     };
 
 } // namespace tavros::core

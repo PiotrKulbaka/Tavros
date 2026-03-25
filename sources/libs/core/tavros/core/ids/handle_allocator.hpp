@@ -199,19 +199,29 @@ namespace tavros::core
             return {this, m_index_alloc.begin()};
         }
 
-        [[nodiscard]] iterator end() noexcept
-        {
-            return {this, m_index_alloc.end()};
-        }
-
         [[nodiscard]] const_iterator begin() const noexcept
         {
             return {this, m_index_alloc.begin()};
         }
 
+        [[nodiscard]] const_iterator cbegin() const noexcept
+        {
+            return {this, m_index_alloc.cbegin()};
+        }
+
+        [[nodiscard]] iterator end() noexcept
+        {
+            return {this, m_index_alloc.end()};
+        }
+
         [[nodiscard]] const_iterator end() const noexcept
         {
             return {this, m_index_alloc.end()};
+        }
+
+        [[nodiscard]] const_iterator cend() const noexcept
+        {
+            return {this, m_index_alloc.cend()};
         }
 
     private:
