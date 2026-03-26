@@ -53,17 +53,17 @@ namespace tavros::assets
         return image_codec::encode({im.data(), im.size_bytes()}, im.width(), im.height(), im.components(), im.stride(), image_codec::image_format::png, y_flip);
     }
 
-    image image::resize(uint32 width, uint32 height, bool srgb) const
+    image image::resize(image_view im, uint32 width, uint32 height, bool srgb)
     {
-        TAV_ASSERT(valid());
+        TAV_ASSERT(im.valid());
         TAV_ASSERT(width > 0 && height > 0);
 
-        auto sz = static_cast<size_t>(width) * static_cast<size_t>(height) * static_cast<size_t>(components());
+        auto sz = static_cast<size_t>(width) * static_cast<size_t>(height) * static_cast<size_t>(im.components());
 
         core::dynamic_buffer<uint8> dst(sz);
 
         stbir_pixel_layout layout;
-        switch (m_format) {
+        switch (im.format()) {
         case pixel_format::r8:
             layout = STBIR_1CHANNEL;
             break;
@@ -83,15 +83,15 @@ namespace tavros::assets
         if (srgb) {
             // sRGB resize
             auto* out = stbir_resize_uint8_srgb(
-                m_data.data(),              // input_pixels
-                static_cast<int>(m_width),  // input_w
-                static_cast<int>(m_height), // input_h
-                static_cast<int>(m_stride), // input_stride_in_bytes
-                dst.data(),                 // output_pixels
-                static_cast<int>(width),    // output_w
-                static_cast<int>(height),   // output_h
-                0,                          // output_stride_in_bytes
-                layout                      // pixel_layout
+                im.data(),                     // input_pixels
+                static_cast<int>(im.width()),  // input_w
+                static_cast<int>(im.height()), // input_h
+                static_cast<int>(im.stride()), // input_stride_in_bytes
+                dst.data(),                    // output_pixels
+                static_cast<int>(width),       // output_w
+                static_cast<int>(height),      // output_h
+                0,                             // output_stride_in_bytes
+                layout                         // pixel_layout
             );
 
             TAV_ASSERT(out == dst.data());
@@ -99,22 +99,27 @@ namespace tavros::assets
         } else {
             // linear resize
             auto* out = stbir_resize_uint8_linear(
-                m_data.data(),              // input_pixels
-                static_cast<int>(m_width),  // input_w
-                static_cast<int>(m_height), // input_h
-                static_cast<int>(m_stride), // input_stride_in_bytes
-                dst.data(),                 // output_pixels
-                static_cast<int>(width),    // output_w
-                static_cast<int>(height),   // output_h
-                0,                          // output_stride_in_bytes
-                layout                      // pixel_layout
+                im.data(),                     // input_pixels
+                static_cast<int>(im.width()),  // input_w
+                static_cast<int>(im.height()), // input_h
+                static_cast<int>(im.stride()), // input_stride_in_bytes
+                dst.data(),                    // output_pixels
+                static_cast<int>(width),       // output_w
+                static_cast<int>(height),      // output_h
+                0,                             // output_stride_in_bytes
+                layout                         // pixel_layout
             );
 
             TAV_ASSERT(out == dst.data());
             TAV_UNUSED(out);
         }
 
-        return image(std::move(dst), width, height, m_format);
+        return image(std::move(dst), width, height, im.format());
+    }
+
+    image image::resize(uint32 width, uint32 height, bool srgb) const
+    {
+        return resize(*this, width, height, srgb);
     }
 
 } // namespace tavros::assets

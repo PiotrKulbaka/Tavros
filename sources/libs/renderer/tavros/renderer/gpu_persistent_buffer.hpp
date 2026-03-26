@@ -3,6 +3,7 @@
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/debug/assert.hpp>
+#include <tavros/core/math/bitops.hpp>
 #include <tavros/renderer/gpu_buffer_view.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 

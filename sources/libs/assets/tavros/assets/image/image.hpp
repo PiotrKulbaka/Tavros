@@ -76,6 +76,27 @@ namespace tavros::assets
          */
         [[nodiscard]] static core::dynamic_buffer<uint8> encode(image_view im, bool y_flip = false);
 
+        /**
+         * @brief Returns a resized copy of the image.
+         *
+         * Resamples the current image to the specified dimensions and returns
+         * the result as a new image instance. The original image remains unchanged.
+         *
+         * @param im     Image for resizing
+         * @param width  Target width in pixels.
+         * @param height Target height in pixels.
+         * @param srgb   If true, performs resizing in linear color space by converting
+         *               from sRGB before filtering and converting back after. This
+         *               produces more correct visual results for color textures.
+         *
+         * @return A new image containing the resized result.
+         *
+         * @note For non-color data (e.g., normal maps), `srgb` should typically be false.
+         * @note Resizing may involve filtering which can slightly blur the image depending
+         *       on the algorithm used.
+         */
+        [[nodiscard]] static image resize(image_view im, uint32 width, uint32 height, bool srgb = false);
+
     public:
         /** @brief Constructs an empty invalid image. */
         constexpr image() noexcept = default;

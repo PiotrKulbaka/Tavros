@@ -5,6 +5,8 @@
 #include <tavros/core/containers/vector.hpp>
 #include <tavros/core/containers/fixed_vector.hpp>
 
+#include <tavros/assets/image/image.hpp>
+
 #include <tavros/renderer/text/font/font.hpp>
 
 namespace tavros::renderer
@@ -28,24 +30,6 @@ namespace tavros::renderer
     class font_atlas
     {
     public:
-        /**
-         * @brief Describes a baked atlas bitmap.
-         */
-        struct atlas_pixels
-        {
-            /// Pointer to 8-bit grayscale pixel data.
-            core::dynamic_buffer<uint8> pixels;
-
-            /// Atlas width in pixels.
-            uint32 width = 0;
-
-            /// Atlas height in pixels.
-            uint32 height = 0;
-
-            /// Number of bytes per row.
-            uint32 stride = 0;
-        };
-
         /// Maximum number of fonts the atlas can store without dynamic allocation.
         /// A fixed-capacity container is used because typical usage rarely requires
         /// many fonts in a single atlas, and this avoids heap overhead entirely.
@@ -93,9 +77,9 @@ namespace tavros::renderer
          * @param glyph_scale_pix  Glyph size in pixels used during baking.
          * @param glyph_sdf_pad_pix  Amount of SDF padding around each glyph, in pixels.
          *
-         * @return atlas_pixels     View describing the baked atlas.
+         * @return assets::image   Image describing the baked atlas.
          */
-        atlas_pixels invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix);
+        assets::image invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix);
 
     private:
         core::fixed_vector<font*, k_max_fonts> m_fonts;

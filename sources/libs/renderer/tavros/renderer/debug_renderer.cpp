@@ -1135,13 +1135,13 @@ namespace tavros::renderer
         atlas.register_font(m_font.get());
 
         auto atlas_pixels = atlas.invalidate_old_and_bake_new_atlas(k_atlas_font_scale_pix, k_atlas_sdf_size_pix);
-        m_atlas_texture_size.set(atlas_pixels.width, atlas_pixels.height);
+        m_atlas_texture_size.set(atlas_pixels.width(), atlas_pixels.height());
 
         rhi::texture_create_info tex_info;
         tex_info.type = rhi::texture_type::texture_2d;
         tex_info.format = rhi::pixel_format::r8un;
-        tex_info.width = atlas_pixels.width;
-        tex_info.height = atlas_pixels.height;
+        tex_info.width = atlas_pixels.width();
+        tex_info.height = atlas_pixels.height();
         tex_info.usage = rhi::k_default_texture_usage;
 
         m_font_atlas = m_gdevice->create_texture(tex_info);
@@ -1167,12 +1167,12 @@ namespace tavros::renderer
             return false;
         }
 
-        auto map = m_gdevice->map_buffer(m_stage, 0, atlas_pixels.width * atlas_pixels.height);
-        map.copy_from(atlas_pixels.pixels.data(), atlas_pixels.width * atlas_pixels.height);
+        auto map = m_gdevice->map_buffer(m_stage, 0, atlas_pixels.size_bytes());
+        map.copy_from(atlas_pixels.data(), atlas_pixels.size_bytes());
         m_gdevice->unmap_buffer(m_stage);
 
-        m_texture_copy_rgn.width = atlas_pixels.width;
-        m_texture_copy_rgn.height = atlas_pixels.height;
+        m_texture_copy_rgn.width = atlas_pixels.width();
+        m_texture_copy_rgn.height = atlas_pixels.height();
         m_need_upload_texture = true;
 
 

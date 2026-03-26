@@ -167,6 +167,7 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/raii/scoped_owner.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/resource/object_pool.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/resource/resource.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/resource/resource_registry.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/utils/string_hash.hpp

@@ -362,6 +362,7 @@ namespace tavros::renderer::rhi
     texture_handle graphics_device_opengl::create_texture(const texture_create_info& info)
     {
         auto gl_pixel_format = to_gl_pixel_format(info.format);
+        auto max_available_mip = math::mip_levels(info.width, info.height, info.depth);
 
         if (info.type == texture_type::texture_2d) {
             if (info.width == 0 || info.height == 0 || info.depth != 1) {
@@ -425,6 +426,11 @@ namespace tavros::renderer::rhi
                 return {};
             }
 
+            if (info.mip_levels > max_available_mip) {
+                ::logger.error("Failed to create `texture_2d`: requested {} mip levels, but only {} are possible for size {}x{}", fmt::styled_param(info.mip_levels), fmt::styled_param(max_available_mip), fmt::styled_param(info.width), fmt::styled_param(info.height));
+                return {};
+            }
+
             // Resolve source texture must be a render target
             if (info.usage.has_flag(texture_usage::resolve_source) && !info.usage.has_flag(texture_usage::render_target)) {
                 ::logger.error("Failed to create `texture_2d`: resolve source textures must be render targets");
@@ -461,6 +467,16 @@ namespace tavros::renderer::rhi
 
             if (info.sample_count != 1) {
                 ::logger.error("Failed to create `texture_3d`: sample count must be 1");
+                return {};
+            }
+
+            if (info.mip_levels == 0) {
+                ::logger.error("Failed to create `texture_3d`: mip levels must be at least 1");
+                return {};
+            }
+
+            if (info.mip_levels > max_available_mip) {
+                ::logger.error("Failed to create `texture_3d`: requested {} mip levels, but only {} are possible for size {}x{}x{}", fmt::styled_param(info.mip_levels), fmt::styled_param(max_available_mip), fmt::styled_param(info.width), fmt::styled_param(info.height), fmt::styled_param(info.depth));
                 return {};
             }
 
@@ -502,6 +518,16 @@ namespace tavros::renderer::rhi
 
             if (info.sample_count != 1) {
                 ::logger.error("Failed to create `texture_cube`: sample count must be 1");
+                return {};
+            }
+
+            if (info.mip_levels == 0) {
+                ::logger.error("Failed to create `texture_cube`: mip levels must be at least 1");
+                return {};
+            }
+
+            if (info.mip_levels > max_available_mip) {
+                ::logger.error("Failed to create `texture_cube`: requested {} mip levels, but only {} are possible for size {}x", fmt::styled_param(info.mip_levels), fmt::styled_param(max_available_mip), fmt::styled_param(info.width), fmt::styled_param(info.height));
                 return {};
             }
 
@@ -582,7 +608,7 @@ namespace tavros::renderer::rhi
         } else {
             // Otherwise, create a texture object
 
-            uint32 max_mip = info.mip_levels > 1 ? math::mip_levels(info.width, info.height, info.depth) : 1;
+            auto mip_levels = static_cast<GLsizei>(info.mip_levels);
 
             GLenum gl_target = 0;
             switch (info.type) {
@@ -626,39 +652,17 @@ namespace tavros::renderer::rhi
                 break;
 
             case GL_TEXTURE_2D:
-                GL_CALL(glTexImage2D(
-                    gl_target,
-                    0, // mip level
-                    gl_pixel_format.internal_format,
-                    info.width,
-                    info.height,
-                    0, // border, always 0
-                    gl_pixel_format.format,
-                    gl_pixel_format.type,
-                    nullptr
-                ));
-                break;
-
-            case GL_TEXTURE_3D:
-                GL_CALL(glTexImage3D(
-                    gl_target,
-                    0, // mip level
-                    gl_pixel_format.internal_format,
-                    info.width,
-                    info.height,
-                    info.depth,
-                    0, // border, always 0
-                    gl_pixel_format.format,
-                    gl_pixel_format.type,
-                    nullptr
-                ));
-                break;
-
-            case GL_TEXTURE_CUBE_MAP:
-                // Cubemap, allocate memory for all 6 faces
-                for (int32 i = 0; i < 6; ++i) {
+                if (mip_levels > 1) {
+                    GL_CALL(glTexStorage2D(
+                        gl_target,
+                        mip_levels,
+                        gl_pixel_format.internal_format,
+                        info.width,
+                        info.height
+                    ));
+                } else {
                     GL_CALL(glTexImage2D(
-                        GL_TEXTURE_CUBE_MAP_POSITIVE_X + i,
+                        gl_target,
                         0, // mip level
                         gl_pixel_format.internal_format,
                         info.width,
@@ -671,14 +675,71 @@ namespace tavros::renderer::rhi
                 }
                 break;
 
+            case GL_TEXTURE_3D:
+                if (mip_levels > 1) {
+                    GL_CALL(glTexStorage3D(
+                        gl_target,
+                        mip_levels,
+                        gl_pixel_format.internal_format,
+                        info.width,
+                        info.height,
+                        info.depth
+                    ));
+                } else {
+                    GL_CALL(glTexImage3D(
+                        gl_target,
+                        0, // mip level
+                        gl_pixel_format.internal_format,
+                        info.width,
+                        info.height,
+                        info.depth,
+                        0, // border, always 0
+                        gl_pixel_format.format,
+                        gl_pixel_format.type,
+                        nullptr
+                    ));
+                }
+                break;
+
+            case GL_TEXTURE_CUBE_MAP:
+                // Cubemap, allocate memory for all 6 faces
+                if (mip_levels > 1) {
+                    GL_CALL(glTexStorage2D(
+                        gl_target,
+                        mip_levels,
+                        gl_pixel_format.internal_format,
+                        info.width,
+                        info.height
+                    ));
+                } else {
+                    for (int32 i = 0; i < 6; ++i) {
+                        GL_CALL(glTexImage2D(
+                            static_cast<GLenum>(GL_TEXTURE_CUBE_MAP_POSITIVE_X + i),
+                            0, // mip level
+                            gl_pixel_format.internal_format,
+                            info.width,
+                            info.height,
+                            0, // border, always 0
+                            gl_pixel_format.format,
+                            gl_pixel_format.type,
+                            nullptr
+                        ));
+                    }
+                }
+
+                break;
+
             default:
                 TAV_UNREACHABLE();
                 break;
             }
 
+            GL_CALL(glTexParameteri(gl_target, GL_TEXTURE_BASE_LEVEL, 0));
+            GL_CALL(glTexParameteri(gl_target, GL_TEXTURE_MAX_LEVEL, static_cast<GLint>(mip_levels - 1)));
+
             GL_CALL(glBindTexture(gl_target, 0));
 
-            auto h = m_resources.create(gl_texture{info, tex, gl_target, 0, max_mip});
+            auto h = m_resources.create(gl_texture{info, tex, gl_target, 0, info.mip_levels});
             ::logger.debug("Texture ({}) {} created", info.type, h);
             return h;
         }

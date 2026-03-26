@@ -88,6 +88,13 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/font_library.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/truetype_font.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/text/font/truetype_font.hpp
+
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/mipmap_generator.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/mipmap_generator.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_manager.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_uploader.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_uploader.hpp
 )
 
 set(TAV_RENDERER_MACOS_SOURCES

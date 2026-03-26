@@ -89,6 +89,15 @@ namespace tavros::assets
             TAV_ASSERT(width > 0 && height > 0);
         }
 
+        /**
+         * @brief Returns a resized copy of the image.
+         * @see image::resize
+         */
+        [[nodiscard]] image resize(uint32 width, uint32 height, bool srgb = false)
+        {
+            return image::resize(*this, width, height, srgb);
+        }
+
         /** @brief Returns true if the view references valid pixel data. */
         [[nodiscard]] constexpr bool valid() const noexcept
         {

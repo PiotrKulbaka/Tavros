@@ -52,7 +52,7 @@ namespace tavros::renderer
         return m_atlas.need_to_recreate_atlas();
     }
 
-    font_atlas::atlas_pixels font_library::invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix)
+    assets::image font_library::invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix)
     {
         return m_atlas.invalidate_old_and_bake_new_atlas(glyph_scale_pix, glyph_sdf_pad_pix);
     }

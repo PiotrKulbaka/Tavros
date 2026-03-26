@@ -7,6 +7,7 @@
 #include <tavros/core/containers/unordered_map.hpp>
 #include <tavros/core/utils/string_hash.hpp>
 #include <tavros/core/resource/object_pool.hpp>
+#include <tavros/core/resource/resource.hpp>
 
 namespace tavros::core
 {
@@ -91,7 +92,7 @@ namespace tavros::core
          *
          * No-op if the handle is invalid or stale.
          */
-        void acquire(handle_type handle)
+        void acquire(handle_type handle) noexcept
         {
             if (auto* e = m_pool.find(handle)) {
                 e->rc.increment();

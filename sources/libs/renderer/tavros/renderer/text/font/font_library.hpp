@@ -90,7 +90,7 @@ namespace tavros::renderer
          *
          * @return Pixel data of the newly baked atlas.
          */
-        font_atlas::atlas_pixels invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix);
+        assets::image invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix);
 
         /**
          * @brief Returns a view of all loaded fonts.

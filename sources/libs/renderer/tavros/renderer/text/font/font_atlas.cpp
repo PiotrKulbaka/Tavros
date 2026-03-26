@@ -33,7 +33,7 @@ namespace tavros::renderer
         return m_need_to_recreate;
     }
 
-    font_atlas::atlas_pixels font_atlas::invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix)
+    assets::image font_atlas::invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix)
     {
         // 1. The first step is packing the rectangles
 
@@ -140,7 +140,7 @@ namespace tavros::renderer
             fnt->m_font_metrics.sdf_padding_pix = sdf_pad;
         }
 
-        return {pixels, atlas_width, atlas_height, stride};
+        return assets::image(pixels, atlas_width, atlas_height, assets::image::pixel_format::r8, stride);
     }
 
 } // namespace tavros::renderer
