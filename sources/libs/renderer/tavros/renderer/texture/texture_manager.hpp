@@ -38,6 +38,17 @@ namespace tavros::renderer
 
         ~texture_manager() noexcept = default;
 
+        texture_handle load_cube(
+            core::string_view path_px,
+            core::string_view path_nx,
+            core::string_view path_py,
+            core::string_view path_ny,
+            core::string_view path_pz,
+            core::string_view path_nz,
+            bool              gen_mipmaps = true,
+            rhi::pixel_format pf = rhi::pixel_format::none
+        );
+
         texture_handle load(
             assets::image     im,
             core::string_view key,
@@ -58,6 +69,8 @@ namespace tavros::renderer
         void release(texture_handle handle);
 
         [[nodiscard]] const gpu_texture_view* get(texture_handle handle) const noexcept;
+
+        [[nodiscard]] rhi::texture_handle get_gpu_handle(texture_handle handle) const noexcept;
 
         [[nodiscard]] bool has_pending() const noexcept;
 
@@ -95,11 +108,11 @@ namespace tavros::renderer
 
         struct pending_load
         {
-            texture_handle handle;
-            assets::image  im;
-            bool           gen_mipmaps = true;
-            bool           use_srgb = true;
-            core::string   path;
+            texture_handle                       handle;
+            core::fixed_vector<assets::image, 6> images;
+            bool                                 gen_mipmaps = true;
+            bool                                 use_srgb = true;
+            core::string                         path;
         };
         core::vector<pending_load>        m_pending;
         core::vector<rhi::texture_handle> m_deferred_destroy;

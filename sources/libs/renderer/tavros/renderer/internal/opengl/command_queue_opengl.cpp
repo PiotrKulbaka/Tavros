@@ -31,10 +31,12 @@ namespace tavros::renderer::rhi
         ::logger.debug("command_queue_opengl created");
 
         GL_CALL(glGenFramebuffers(1, &m_resolve_fbo));
+        init_push_constant_buffer();
     }
 
     command_queue_opengl::~command_queue_opengl()
     {
+        destroy_push_constant_buffer();
         GL_CALL(glDeleteFramebuffers(1, &m_resolve_fbo));
 
         ::logger.debug("command_queue_opengl destroyed");
@@ -1314,5 +1316,84 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_PIXEL_PACK_BUFFER, 0));
     }
 
+    void command_queue_opengl::push_constant(const void* constants, size_t size)
+    {
+        TAV_ASSERT(size <= k_max_push_constant_buffer_size_bytes);
+
+        auto& pc = m_push_constant_ring_buffer;
+
+        const GLuint k_constant_buffer_index = 15;
+
+        uint32_t aligned_size = math::align_up(static_cast<uint32_t>(size), pc.alignment);
+
+        // wrap-around
+        if (pc.head + aligned_size > pc.size) {
+            pc.head = 0;
+        }
+
+        size_t offset = pc.head;
+        pc.head += aligned_size;
+
+        // copy data
+        std::memcpy(pc.mapped + offset, constants, size);
+
+        GL_CALL(glBindBufferRange(
+            GL_UNIFORM_BUFFER,
+            k_constant_buffer_index,
+            pc.buffer,
+            static_cast<GLintptr>(offset),
+            static_cast<GLsizeiptr>(aligned_size)
+        ));
+    }
+
+    void command_queue_opengl::init_push_constant_buffer()
+    {
+        push_constant_ring pc{};
+
+        GLint alignment = 0;
+        glGetIntegerv(GL_UNIFORM_BUFFER_OFFSET_ALIGNMENT, &alignment);
+
+        pc.size = 1024ull * 1024ull;
+        pc.head = 0;
+        pc.alignment = static_cast<size_t>(alignment);
+
+        // Constant buffer
+        GL_CALL(glGenBuffers(1, &pc.buffer));
+        GL_CALL(glBindBuffer(GL_UNIFORM_BUFFER, pc.buffer));
+
+        GL_CALL(glBufferStorage(
+            GL_UNIFORM_BUFFER,
+            static_cast<GLsizeiptr>(pc.size),
+            nullptr,
+            GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT
+        ));
+
+        GL_CALL(pc.mapped = static_cast<uint8*>(glMapBufferRange(GL_UNIFORM_BUFFER, 0, static_cast<GLsizeiptr>(pc.size), GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT)));
+
+        TAV_VERIFY(pc.mapped != nullptr);
+
+        GL_CALL(glBindBuffer(GL_UNIFORM_BUFFER, 0));
+        m_push_constant_ring_buffer = pc;
+    }
+
+    void command_queue_opengl::destroy_push_constant_buffer()
+    {
+        auto& pc = m_push_constant_ring_buffer;
+
+        if (pc.buffer != 0) {
+            GL_CALL(glBindBuffer(GL_UNIFORM_BUFFER, pc.buffer));
+
+            if (pc.mapped) {
+                GL_CALL(glUnmapBuffer(GL_UNIFORM_BUFFER));
+                pc.mapped = nullptr;
+            }
+
+            GL_CALL(glDeleteBuffers(1, &pc.buffer));
+            pc.buffer = 0;
+        }
+
+        pc.head = 0;
+        pc.size = 0;
+    }
 
 } // namespace tavros::renderer::rhi

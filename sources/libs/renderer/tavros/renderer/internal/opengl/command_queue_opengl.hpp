@@ -45,6 +45,13 @@ namespace tavros::renderer::rhi
 
         void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, const texture_copy_region& region) override;
 
+        void push_constant(const void* constants, size_t size) override;
+
+    private:
+        void init_push_constant_buffer();
+
+        void destroy_push_constant_buffer();
+
     private:
         graphics_device_opengl* m_device = nullptr;
         pipeline_handle         m_current_pipeline;
@@ -54,6 +61,17 @@ namespace tavros::renderer::rhi
         index_buffer_format     m_current_index_buffer_format = index_buffer_format::u16;
 
         GLuint m_resolve_fbo = 0;
+
+        struct push_constant_ring
+        {
+            GLuint buffer = 0;
+            uint8* mapped = nullptr;
+            size_t size = 0;
+            size_t head = 0;
+            size_t alignment = 0;
+        };
+
+        push_constant_ring m_push_constant_ring_buffer;
     };
 
 } // namespace tavros::renderer::rhi

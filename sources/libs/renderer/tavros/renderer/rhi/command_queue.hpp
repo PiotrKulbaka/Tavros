@@ -218,6 +218,36 @@ namespace tavros::renderer::rhi
          * @note `buffer_row_length` of 0 means the buffer rows are tightly packed (row length equals `region.width`).
          */
         virtual void copy_texture_to_buffer(texture_handle src_texture, buffer_handle dst_buffer, const texture_copy_region& region) = 0;
+
+        /**
+         * @brief Updates push constant data for the current command buffer.
+         *
+         * Uploads a small block of data to be consumed by shaders in subsequent draw
+         * or dispatch commands.
+         *
+         * Push constants are intended for frequently changing, low-size data and
+         * are typically faster than updating uniform/storage buffers.
+         *
+         * @param constants Pointer to the data to upload.
+         * @param size Size of the data in bytes.
+         *
+         * @note The layout, size limits and shader visibility must match the
+         * pipeline's push constant definition.
+         *
+         * @warning The maximum allowed size is backend-dependent (usually 128 bytes per push).
+         * Exceeding this limit results in undefined behavior.
+         *
+         * @warning The data is not retained after the command is recorded; the caller
+         * must ensure the memory remains valid for the duration of the call.
+         */
+        virtual void push_constant(const void* constants, size_t size) = 0;
+
+        template<class T>
+            requires(sizeof(T) <= 256)
+        void push_constant(const T& constant)
+        {
+            push_constant(std::addressof(constant), sizeof(T));
+        }
     };
 
 } // namespace tavros::renderer::rhi

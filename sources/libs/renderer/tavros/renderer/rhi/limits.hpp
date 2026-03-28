@@ -11,5 +11,6 @@ namespace tavros::renderer::rhi
     constexpr uint32 k_max_vertex_buffers = 16;
     constexpr uint32 k_max_shader_textures = 16;
     constexpr uint32 k_max_shader_buffers = 16;
+    constexpr uint32 k_max_push_constant_buffer_size_bytes = 256;
 
 } // namespace tavros::renderer::rhi

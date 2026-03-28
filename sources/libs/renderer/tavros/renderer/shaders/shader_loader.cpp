@@ -7,7 +7,7 @@
 namespace
 {
 
-    tavros::core::string_view to_string(tavros::renderer::shader_language lang)
+    tavros::core::string_view to_version(tavros::renderer::shader_language lang)
     {
         using enum tavros::renderer::shader_language;
         switch (lang) {
@@ -17,6 +17,22 @@ namespace
             return "460";
         case glsl_330:
             return "330";
+        default:
+            TAV_UNREACHABLE();
+            break;
+        }
+    }
+
+    tavros::core::string_view to_backend_define(tavros::renderer::shader_language lang)
+    {
+        using enum tavros::renderer::shader_language;
+        switch (lang) {
+        case glsl_430:
+            [[fallthrough]];
+        case glsl_460:
+            [[fallthrough]];
+        case glsl_330:
+            return "#define TAV_OPEN_GL\n";
         default:
             TAV_UNREACHABLE();
             break;
@@ -78,14 +94,18 @@ namespace tavros::renderer
         constexpr auto define_sv = core::string_view("#define ");
         constexpr auto define_end_sv = core::string_view("\n");
 
-        size_t defines_number = args.defines.size() == 0 ? 0 : std::count(args.defines.begin(), args.defines.end(), ';') + 1;
-        size_t required_capacity = hash_ver_sv.size() + 3 + core_sv.size() + (define_sv.size() + define_end_sv.size()) * defines_number + args.defines.size();
+        core::string_view backend = to_backend_define(args.lang);
+        size_t            defines_number = args.defines.size() == 0 ? 0 : std::count(args.defines.begin(), args.defines.end(), ';') + 1;
+        size_t            required_capacity =
+            hash_ver_sv.size() + 3 + core_sv.size() +                                          // #version XYZ core\n
+            (define_sv.size() + define_end_sv.size()) * defines_number + args.defines.size() + // #define ...\n...
+            backend.size();                                                                    // #define TAV_OPEN_GL\n
 
         core::string result;
         result.reserve(required_capacity);
 
         result.append(hash_ver_sv);
-        result.append(to_string(args.lang));
+        result.append(to_version(args.lang));
         result.append(core_sv);
 
         // Add defines
@@ -103,6 +123,8 @@ namespace tavros::renderer
 
             beg = ++fwd;
         }
+
+        result.append(backend);
 
         return result;
     }

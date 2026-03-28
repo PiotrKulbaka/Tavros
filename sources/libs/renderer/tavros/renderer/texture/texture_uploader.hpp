@@ -30,7 +30,7 @@ namespace tavros::renderer
          * @param stage     Staging buffer used for the CPU->GPU transfer.
          * @param cmd       Command queue to record the copy command into.
          */
-        static void upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, gpu_stage_buffer& stage, rhi::command_queue& cmd);
+        static void upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, uint32 layer_index, gpu_stage_buffer& stage, rhi::command_queue& cmd);
 
         /**
          * @brief Uploads a base image and its mip chain to a 2D GPU texture.
@@ -46,7 +46,7 @@ namespace tavros::renderer
          * @param stage    Staging buffer used for the CPU->GPU transfer.
          * @param cmd      Command queue to record the copy commands into.
          */
-        static void upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, gpu_stage_buffer& stage, rhi::command_queue& cmd);
+        static void upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, gpu_stage_buffer& stage, rhi::command_queue& cmd);
     };
 
 } // namespace tavros::renderer
