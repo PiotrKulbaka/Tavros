@@ -6,6 +6,8 @@
 namespace tavros::math
 {
 
+    class mat4;
+
     /**
      * @brief Represents a 3x3 matrix of 32-bit floating point values in **column-major** layout.
      *
@@ -53,6 +55,8 @@ namespace tavros::math
 
         /// @brief Construct from 3 columns
         constexpr explicit mat3(const vec3& col0, const vec3& col1, const vec3& col2) noexcept;
+
+        constexpr explicit mat3(const mat4& mat) noexcept;
 
         /// @brief Construct from scalar (diagonal matrix)
         constexpr explicit mat3(float diag) noexcept;

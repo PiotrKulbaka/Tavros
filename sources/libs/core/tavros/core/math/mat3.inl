@@ -1,4 +1,5 @@
 #include <tavros/core/math/mat3.hpp>
+#include <tavros/core/math/mat4.hpp>
 
 #include <tavros/core/math/functions/make_mat.hpp>
 
@@ -27,6 +28,13 @@ namespace tavros::math
 
     inline constexpr mat3::mat3(const vec3& col0, const vec3& col1, const vec3& col2) noexcept
         : cols{col0, col1, col2}
+    {
+    }
+
+    inline constexpr mat3::mat3(const mat4& mat) noexcept
+        : col0(mat.col0.xyz)
+        , col1(mat.col1.xyz)
+        , col2(mat.col2.xyz)
     {
     }
 

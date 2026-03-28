@@ -45,6 +45,26 @@ namespace tavros::math
          */
         static quat look_rotation(const vec3& forward, const vec3& up) noexcept;
 
+        /**
+         * @brief Constructs a quaternion from an orthonormal basis.
+         *
+         * Creates a rotation quaternion from three perpendicular unit axes that define
+         * a coordinate frame.
+         *
+         * Internally, these axes form a 3x3 rotation matrix where each axis is used
+         * as a column, and the matrix is then converted to a quaternion.
+         *
+         * @note The input axes are expected to be orthonormal (unit length and mutually
+         * perpendicular). Behavior is undefined if the axes are not orthogonal or not normalized.
+         *
+         * @param x_axis The X-axis (forward direction) of the basis.
+         * @param y_axis The Y-axis (right direction) of the basis.
+         * @param z_axis The Z-axis (up direction) of the basis.
+         *
+         * @return A normalized quaternion representing the rotation defined by the basis.
+         */
+        static quat from_axes(const vec3& x_axis, const vec3& y_axis, const vec3& z_axis) noexcept;
+
     public:
         /// @brief Default constructor. Produces identity quaternion (no rotation).
         constexpr quat() noexcept;

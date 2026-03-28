@@ -35,6 +35,44 @@ namespace tavros::math
         return make_quat_forward_up(forward, up);
     }
 
+    inline quat quat::from_axes(const vec3& x_axis, const vec3& y_axis, const vec3& z_axis) noexcept
+    {
+        float m00 = x_axis.x, m01 = y_axis.x, m02 = z_axis.x;
+        float m10 = x_axis.y, m11 = y_axis.y, m12 = z_axis.y;
+        float m20 = x_axis.z, m21 = y_axis.z, m22 = z_axis.z;
+        float trace = m00 + m11 + m22;
+
+        quat q;
+
+        if (trace > 0.0f) {
+            float s = std::sqrt(trace + 1.0f) * 2.0f;
+            q.w = 0.25f * s;
+            q.x = (m21 - m12) / s;
+            q.y = (m02 - m20) / s;
+            q.z = (m10 - m01) / s;
+        } else if (m00 > m11 && m00 > m22) {
+            float s = std::sqrt(1.0f + m00 - m11 - m22) * 2.0f;
+            q.w = (m21 - m12) / s;
+            q.x = 0.25f * s;
+            q.y = (m01 + m10) / s;
+            q.z = (m02 + m20) / s;
+        } else if (m11 > m22) {
+            float s = std::sqrt(1.0f + m11 - m00 - m22) * 2.0f;
+            q.w = (m02 - m20) / s;
+            q.x = (m01 + m10) / s;
+            q.y = 0.25f * s;
+            q.z = (m12 + m21) / s;
+        } else {
+            float s = std::sqrt(1.0f + m22 - m00 - m11) * 2.0f;
+            q.w = (m10 - m01) / s;
+            q.x = (m02 + m20) / s;
+            q.y = (m12 + m21) / s;
+            q.z = 0.25f * s;
+        }
+
+        return normalize(q);
+    }
+
     inline constexpr quat::quat() noexcept
         : x(0.0f)
         , y(0.0f)
