@@ -36,20 +36,24 @@ namespace tavros::input
         m_last_frame_time_us = m_current_frame_time_us;
         m_current_frame_time_us = frame_time_us;
 
-        for (auto& state : m_keys) {
-            state.accumulated_us = 0;
-            state.is_key_down = false;
-            state.is_released = false;
+        for (auto& s : m_keys) {
+            s.accumulated_us = 0;
+            s.is_just_released = false;
+        }
+
+        for (auto& s : m_buttons) {
+            s.accumulated_us = 0;
+            s.is_just_released = false;
         }
 
         m_is_mouse_moved = false;
-        m_is_wheel_spinned = false;
+        m_is_wheel_scrolled = false;
         m_raw_mouse_delta = {};
         m_smooth_mouse_delta = {};
         m_wheel_delta = {};
 
-        m_is_wnd_resized = false;
-        m_is_wnd_moved = false;
+        m_is_window_resized = false;
+        m_is_window_moved = false;
     }
 
     void input_manager::end_frame() noexcept
@@ -92,8 +96,8 @@ namespace tavros::input
                 break;
 
             case event_type::mouse_wheel:
-                m_is_wheel_spinned = true;
-                m_wheel_delta += e.vec;
+                m_is_wheel_scrolled = true;
+                m_wheel_delta += e.wheel;
                 break;
 
             case event_type::key_down:
@@ -108,13 +112,13 @@ namespace tavros::input
                 break;
 
             case event_type::window_size:
-                m_is_wnd_resized = true;
-                m_wnd_size = math::isize2(static_cast<int32>(e.vec.x), static_cast<int32>(e.vec.y));
+                m_is_window_resized = true;
+                m_window_size = math::isize2(static_cast<int32>(e.vec.x), static_cast<int32>(e.vec.y));
                 break;
 
             case event_type::window_move:
-                m_is_wnd_moved = true;
-                m_wnd_pos = e.vec;
+                m_is_window_moved = true;
+                m_window_pos = e.vec;
                 break;
 
             case event_type::activate:
@@ -132,25 +136,25 @@ namespace tavros::input
         }
     }
 
-    bool input_manager::is_key_down(keyboard_key key) const noexcept
+    bool input_manager::is_key_just_pressed(keyboard_key key) const noexcept
     {
         const size_t idx = static_cast<size_t>(key);
         TAV_ASSERT(idx < k_keyboard_size);
-        return m_keys[idx].is_pressed && m_keys[idx].accumulated_us == 0;
+        return m_keys[idx].is_held && m_keys[idx].accumulated_us == 0;
     }
 
-    bool input_manager::is_key_up(keyboard_key key) const noexcept
+    bool input_manager::is_key_just_released(keyboard_key key) const noexcept
     {
         const size_t idx = static_cast<size_t>(key);
         TAV_ASSERT(idx < k_keyboard_size);
-        return m_keys[idx].is_released;
+        return m_keys[idx].is_just_released;
     }
 
-    bool input_manager::is_key_pressed(keyboard_key key) const noexcept
+    bool input_manager::is_key_held(keyboard_key key) const noexcept
     {
         const size_t idx = static_cast<size_t>(key);
         TAV_ASSERT(idx < k_keyboard_size);
-        return m_keys[idx].is_pressed;
+        return m_keys[idx].is_held;
     }
 
     float input_manager::key_hold_factor(keyboard_key key) const noexcept
@@ -160,31 +164,31 @@ namespace tavros::input
         return get_hold_factor(m_keys[idx]);
     }
 
-    bool input_manager::is_mouse_button_down(mouse_button button) const noexcept
+    bool input_manager::is_mouse_button_just_pressed(mouse_button button) const noexcept
     {
         const size_t idx = static_cast<size_t>(button);
-        TAV_ASSERT(idx < k_mouse_buttons_size);
-        return m_buttons[idx].is_pressed && m_buttons[idx].accumulated_us == 0;
+        TAV_ASSERT(idx < k_mouse_button_count);
+        return m_buttons[idx].is_held && m_buttons[idx].accumulated_us == 0;
     }
 
-    bool input_manager::is_mouse_button_up(mouse_button button) const noexcept
+    bool input_manager::is_mouse_button_just_released(mouse_button button) const noexcept
     {
         const size_t idx = static_cast<size_t>(button);
-        TAV_ASSERT(idx < k_mouse_buttons_size);
-        return m_buttons[idx].is_released;
+        TAV_ASSERT(idx < k_mouse_button_count);
+        return m_buttons[idx].is_just_released;
     }
 
-    bool input_manager::is_mouse_button_pressed(mouse_button button) const noexcept
+    bool input_manager::is_mouse_button_held(mouse_button button) const noexcept
     {
         const size_t idx = static_cast<size_t>(button);
-        TAV_ASSERT(idx < k_mouse_buttons_size);
-        return m_buttons[idx].is_pressed;
+        TAV_ASSERT(idx < k_mouse_button_count);
+        return m_buttons[idx].is_held;
     }
 
     float input_manager::mouse_button_hold_factor(mouse_button button) const noexcept
     {
         const size_t idx = static_cast<size_t>(button);
-        TAV_ASSERT(idx < k_mouse_buttons_size);
+        TAV_ASSERT(idx < k_mouse_button_count);
         return get_hold_factor(m_buttons[idx]);
     }
 
@@ -193,49 +197,49 @@ namespace tavros::input
         return m_is_mouse_moved;
     }
 
-    math::vec2 input_manager::get_raw_mouse_delta() const noexcept
+    math::vec2 input_manager::raw_mouse_delta() const noexcept
     {
         return m_raw_mouse_delta;
     }
 
-    math::vec2 input_manager::get_smooth_mouse_delta() const noexcept
+    math::vec2 input_manager::smooth_mouse_delta() const noexcept
     {
         return m_smooth_mouse_delta;
     }
 
-    math::vec2 input_manager::get_mouse_pos() const noexcept
+    math::vec2 input_manager::mouse_pos() const noexcept
     {
         return m_mouse_pos;
     }
 
-    bool input_manager::is_wheel_spinned() const noexcept
+    bool input_manager::is_wheel_scrolled() const noexcept
     {
-        return m_is_wheel_spinned;
+        return m_is_wheel_scrolled;
     }
 
-    math::vec2 input_manager::get_wheel_spin_delta() const noexcept
+    math::vec2 input_manager::wheel_scroll_delta() const noexcept
     {
         return m_wheel_delta;
     }
 
     bool input_manager::is_window_resized() const noexcept
     {
-        return m_is_wnd_resized;
+        return m_is_window_resized;
     }
 
-    math::isize2 input_manager::get_window_size() const noexcept
+    math::isize2 input_manager::window_size() const noexcept
     {
-        return m_wnd_size;
+        return m_window_size;
     }
 
     bool input_manager::is_window_moved() const noexcept
     {
-        return m_is_wnd_moved;
+        return m_is_window_moved;
     }
 
-    math::vec2 input_manager::get_window_pos() const noexcept
+    math::vec2 input_manager::window_pos() const noexcept
     {
-        return m_wnd_pos;
+        return m_window_pos;
     }
 
     void input_manager::on_key_down(keyboard_key key, uint64 time_us) noexcept
@@ -244,8 +248,8 @@ namespace tavros::input
         TAV_ASSERT(idx < k_keyboard_size);
 
         auto& s = m_keys[idx];
-        if (!s.is_pressed) {
-            s.is_pressed = true;
+        if (!s.is_held) {
+            s.is_held = true;
             s.press_time_us = time_us;
         }
     }
@@ -256,8 +260,8 @@ namespace tavros::input
         TAV_ASSERT(idx < k_keyboard_size);
 
         auto& s = m_keys[idx];
-        if (s.is_pressed) {
-            s.is_pressed = false;
+        if (s.is_held) {
+            s.is_held = false;
             s.release_time_us = time_us;
 
             // Add a gap us if the key was pressed within the frame
@@ -266,18 +270,18 @@ namespace tavros::input
                 s.accumulated_us += duration;
             }
 
-            s.is_released = true;
+            s.is_just_released = true;
         }
     }
 
     void input_manager::on_mouse_down(mouse_button btn, uint64 time_us) noexcept
     {
         const size_t idx = static_cast<size_t>(btn);
-        TAV_ASSERT(idx < k_mouse_buttons_size);
+        TAV_ASSERT(idx < k_mouse_button_count);
 
         auto& s = m_buttons[idx];
-        if (!s.is_pressed) {
-            s.is_pressed = true;
+        if (!s.is_held) {
+            s.is_held = true;
             s.press_time_us = time_us;
         }
     }
@@ -285,11 +289,11 @@ namespace tavros::input
     void input_manager::on_mouse_up(mouse_button btn, uint64 time_us) noexcept
     {
         const size_t idx = static_cast<size_t>(btn);
-        TAV_ASSERT(idx < k_mouse_buttons_size);
+        TAV_ASSERT(idx < k_mouse_button_count);
 
         auto& s = m_buttons[idx];
-        if (s.is_pressed) {
-            s.is_pressed = false;
+        if (s.is_held) {
+            s.is_held = false;
             s.release_time_us = time_us;
 
             // Add a gap us if the key was pressed within the frame
@@ -298,7 +302,7 @@ namespace tavros::input
                 s.accumulated_us += duration;
             }
 
-            s.is_released = true;
+            s.is_just_released = true;
         }
     }
 
@@ -340,7 +344,7 @@ namespace tavros::input
         uint64 total_us = state.accumulated_us;
 
         // If the key is pressed and still held, add the hold time to the current moment
-        if (state.is_pressed) {
+        if (state.is_held) {
             uint64 pressed_since = std::max(state.press_time_us, m_last_frame_time_us);
             total_us += m_current_frame_time_us - pressed_since;
         }
