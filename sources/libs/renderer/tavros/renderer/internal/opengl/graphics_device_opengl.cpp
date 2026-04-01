@@ -379,11 +379,6 @@ namespace tavros::renderer::rhi
                 );
             }
 
-            if (info.array_layers != 1) {
-                ::logger.error("Failed to create `texture_2d`: array layers must be 1");
-                return {};
-            }
-
             if (info.sample_count == 0 || !math::is_power_of_two(info.sample_count) || info.sample_count > 32) {
                 ::logger.error(
                     "Failed to create texture_2d: invalid sample count {}. Allowed values are 1, 2, 4, 8, 16, 32.",
@@ -559,6 +554,7 @@ namespace tavros::renderer::rhi
         bool need_create_renderbuffer =
             info.usage.has_flag(texture_usage::render_target)
             && info.type == texture_type::texture_2d
+            && info.array_layers == 1
             && !info.usage.has_flag(texture_usage::sampled);
 
         if (need_create_renderbuffer) {
@@ -613,7 +609,9 @@ namespace tavros::renderer::rhi
             GLenum gl_target = 0;
             switch (info.type) {
             case texture_type::texture_2d:
-                if (info.sample_count > 1) {
+                if (info.array_layers > 1) {
+                    gl_target = GL_TEXTURE_2D_ARRAY;
+                } else if (info.sample_count > 1) {
                     gl_target = GL_TEXTURE_2D_MULTISAMPLE;
                 } else {
                     gl_target = GL_TEXTURE_2D;
@@ -668,6 +666,33 @@ namespace tavros::renderer::rhi
                         info.width,
                         info.height,
                         0, // border, always 0
+                        gl_pixel_format.format,
+                        gl_pixel_format.type,
+                        nullptr
+                    ));
+                }
+                break;
+
+            case GL_TEXTURE_2D_ARRAY:
+                // glTexStorage3D / glTexImage3D — depth = array_layers
+                if (mip_levels > 1) {
+                    GL_CALL(glTexStorage3D(
+                        gl_target,
+                        mip_levels,
+                        gl_pixel_format.internal_format,
+                        info.width,
+                        info.height,
+                        static_cast<GLsizei>(info.array_layers)
+                    ));
+                } else {
+                    GL_CALL(glTexImage3D(
+                        gl_target,
+                        0,
+                        gl_pixel_format.internal_format,
+                        info.width,
+                        info.height,
+                        static_cast<GLsizei>(info.array_layers),
+                        0,
                         gl_pixel_format.format,
                         gl_pixel_format.type,
                         nullptr

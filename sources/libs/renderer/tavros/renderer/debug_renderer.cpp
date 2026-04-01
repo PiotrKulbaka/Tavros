@@ -1,6 +1,6 @@
 #include <tavros/renderer/debug_renderer.hpp>
 
-#include <tavros/renderer/geometry/builtin_geometry_generator.hpp>
+#include <tavros/renderer/geometry/geometry_generator.hpp>
 #include <tavros/renderer/resources/consola_mono_ttf.hpp>
 #include <tavros/renderer/text/text_layouter.hpp>
 #include <tavros/renderer/text/text_builder.hpp>
@@ -1030,12 +1030,12 @@ namespace tavros::renderer
 
     bool debug_renderer::create_static_geom()
     {
-        uint32 icosphere_subdivisions = 2;
-        auto   cube_info = builtin_geometry_generator::cube_info();
-        auto   icosphere_info = builtin_geometry_generator::icosphere_info(icosphere_subdivisions);
+        geometry_generator::icosphere_params ico_params{2};
+        auto                                 cube_info = geometry_generator::cube_info();
+        auto                                 icosphere_info = geometry_generator::icosphere_info(ico_params);
 
         size_t total_vertices = cube_info.vertices_count + icosphere_info.vertices_count;
-        size_t total_vertices_size_bytes = sizeof(builtin_geometry_vertex) * total_vertices;
+        size_t total_vertices_size_bytes = sizeof(geometry_generator::vertex_t) * total_vertices;
 
         size_t total_indices = cube_info.indices_count + icosphere_info.indices_count;
         size_t total_indices_size_bytes = sizeof(uint32) * total_indices;
@@ -1063,8 +1063,9 @@ namespace tavros::renderer
         }
 
         // Load data
-        auto                                          map_vertices = m_gdevice->map_buffer(m_static_verts_buffer);
-        linear_memory_cursor<builtin_geometry_vertex> vertex_cursor(map_vertices.begin(), map_vertices.size());
+        auto map_vertices = m_gdevice->map_buffer(m_static_verts_buffer);
+
+        linear_memory_cursor<geometry_generator::vertex_t> vertex_cursor(map_vertices.begin(), map_vertices.size());
 
         auto                         map_indices = m_gdevice->map_buffer(m_static_inds_buffer);
         linear_memory_cursor<uint32> index_cursor(map_indices.begin(), map_indices.size());
@@ -1077,7 +1078,7 @@ namespace tavros::renderer
             m_draw_cube_mesh_info.first_vertex = vertex_cursor.offset();
             auto cube_verts = vertex_cursor.allocate(m_draw_cube_mesh_info.vertex_count);
             auto cube_inds = index_cursor.allocate(m_draw_cube_mesh_info.index_count);
-            builtin_geometry_generator::gen_cube(cube_verts, cube_inds);
+            geometry_generator::gen_cube(cube_verts, cube_inds);
         }
 
         // Load icosphere
@@ -1089,7 +1090,7 @@ namespace tavros::renderer
             m_draw_icosphere_wireframe_info = m_draw_icosphere_mesh_info;
             auto icosphere_verts = vertex_cursor.allocate(m_draw_icosphere_mesh_info.vertex_count);
             auto icosphere_inds = index_cursor.allocate(m_draw_icosphere_mesh_info.index_count);
-            builtin_geometry_generator::gen_icosphere(icosphere_subdivisions, icosphere_verts, icosphere_inds);
+            geometry_generator::gen_icosphere(ico_params, icosphere_verts, icosphere_inds);
         }
 
         // For text use builtin quad (inside shader)

@@ -5,7 +5,7 @@ namespace tavros::renderer
 
     void texture_uploader::upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, uint32 layer_index, gpu_stage_buffer& stage, rhi::command_queue& cmd)
     {
-        auto slice = stage.slice<uint8>(im.size_bytes());
+        auto slice = stage.slice<uint8>(im.width() * im.height() * im.components());
 
         rhi::texture_copy_region region;
         region.mip_level = mip_level;
@@ -14,9 +14,17 @@ namespace tavros::renderer
         region.height = im.height();
         region.depth = 1;
         region.buffer_offset = slice.offset_bytes();
-        region.buffer_row_length = im.stride() / im.components();
+        region.buffer_row_length = 0; // tightly packed
 
-        slice.data().copy_from(im.data(), im.size_bytes());
+        auto   h = im.height();
+        auto   row_sz = im.row_size_bytes();
+        size_t offset = 0;
+        auto   dst = slice.data();
+        for (uint32 y = 0; y < h; ++y) {
+            dst.copy_from(im.row(y), row_sz, offset);
+            offset += row_sz;
+        }
+
         cmd.copy_buffer_to_texture(stage.gpu_buffer(), gpu_tex, region);
     }
 

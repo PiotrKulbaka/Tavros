@@ -1007,7 +1007,7 @@ namespace tavros::renderer::rhi
         auto max_w = math::mip_side(tinfo.width, region.mip_level);
         auto max_h = math::mip_side(tinfo.height, region.mip_level);
 
-        if (region.x_offset + region.width > max_w || region.y_offset + max_h > tinfo.height) {
+        if (region.x_offset + region.width > max_w || region.y_offset + region.height > max_h) {
             ::logger.error(
                 "Failed to copy buffer {} to texture {}: region out of bounds. "
                 "Region (x_offset={}, y_offset={}, width={}, height={}) exceeds mip level () size ({}x{}).",
@@ -1074,7 +1074,7 @@ namespace tavros::renderer::rhi
 
         auto* gl_buffer_offset = reinterpret_cast<const void*>(region.buffer_offset);
 
-        static constexpr GLenum faces[6] = {
+        static constexpr GLenum cubemap_faces[6] = {
             GL_TEXTURE_CUBE_MAP_POSITIVE_X,
             GL_TEXTURE_CUBE_MAP_NEGATIVE_X,
             GL_TEXTURE_CUBE_MAP_POSITIVE_Y,
@@ -1085,17 +1085,34 @@ namespace tavros::renderer::rhi
 
         switch (tinfo.type) {
         case texture_type::texture_2d:
-            GL_CALL(glTexSubImage2D(
-                GL_TEXTURE_2D,
-                static_cast<GLint>(region.mip_level),
-                static_cast<GLint>(region.x_offset),
-                static_cast<GLint>(region.y_offset),
-                static_cast<GLsizei>(region.width),
-                static_cast<GLsizei>(region.height),
-                gl_pixel_format.format,
-                gl_pixel_format.type,
-                gl_buffer_offset
-            ));
+            if (tinfo.array_layers == 1) {
+                GL_CALL(glTexSubImage2D(
+                    GL_TEXTURE_2D,
+                    static_cast<GLint>(region.mip_level),
+                    static_cast<GLint>(region.x_offset),
+                    static_cast<GLint>(region.y_offset),
+                    static_cast<GLsizei>(region.width),
+                    static_cast<GLsizei>(region.height),
+                    gl_pixel_format.format,
+                    gl_pixel_format.type,
+                    gl_buffer_offset
+                ));
+            } else {
+                // texture_2d_array: glTexSubImage3D, layer_index = z_offset
+                GL_CALL(glTexSubImage3D(
+                    GL_TEXTURE_2D_ARRAY,
+                    static_cast<GLint>(region.mip_level),
+                    static_cast<GLint>(region.x_offset),
+                    static_cast<GLint>(region.y_offset),
+                    static_cast<GLint>(region.layer_index),
+                    static_cast<GLsizei>(region.width),
+                    static_cast<GLsizei>(region.height),
+                    1,
+                    gl_pixel_format.format,
+                    gl_pixel_format.type,
+                    gl_buffer_offset
+                ));
+            }
             break;
 
         case texture_type::texture_3d:
@@ -1116,7 +1133,7 @@ namespace tavros::renderer::rhi
 
         case texture_type::texture_cube:
             GL_CALL(glTexSubImage2D(
-                faces[region.layer_index % 6],
+                cubemap_faces[region.layer_index % 6],
                 static_cast<GLint>(region.mip_level),
                 static_cast<GLint>(region.x_offset),
                 static_cast<GLint>(region.y_offset),
