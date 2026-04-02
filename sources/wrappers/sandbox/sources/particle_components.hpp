@@ -25,7 +25,7 @@ namespace tavros::particles
         float cross_area = 0.0f;
     };
 
-    struct color_c
+    struct color0_c
     {
         static constexpr int k_max_colors = 4;
 
@@ -79,6 +79,12 @@ namespace tavros::particles
         }
     };
 
+    struct computed_c
+    {
+        uint32 color = 0;
+        float  size = 0;
+    };
+
     struct rotation_c
     {
         float value = 0.0f;
@@ -109,11 +115,12 @@ namespace tavros::particles
         velocity_c,
         physics_c,
         force_c,
-        color_c,
+        color0_c,
         size_c,
         lifetime_c,
         rotation_c,
-        angular_velocity_c>;
+        angular_velocity_c,
+        computed_c>;
 
     // -------------------------------------------------------------------------
     // GPU instance struct (matches layout in particle.vert)

@@ -11,8 +11,8 @@ void main()
     float sdf = texture(u_sdf_atlas, v_uv).r;
 
     // Thresholds and smoothing for SDF
-    float smooth_th = 0.05;
-    float text_th = 0.5;
+    float smooth_th = 0.15;
+    float text_th = 0.45;
     float outline_th = 0.35;
 
     // Alpha masks for text and outline

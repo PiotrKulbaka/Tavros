@@ -76,13 +76,13 @@ namespace tavros::assets
          *
          * @note The region [x, x + width) x [y, y + height) must be fully contained within the source image.
          */
-        image_view(const image& im, uint32 x, uint32 y, uint32 width, uint32 height) noexcept
+        image_view(const image_view& im, uint32 x, uint32 y, uint32 width, uint32 height) noexcept
             : m_width(width)
             , m_height(height)
             , m_format(im.format())
             , m_components(im.components())
             , m_stride(im.stride())
-            , m_data({im.data() + y * im.stride() + x * im.components(), im.size_bytes() - y * im.stride() + x * im.components()})
+            , m_data({im.data() + y * im.stride() + x * im.components(), im.size_bytes() - y * im.stride() - x * im.components()})
         {
             TAV_ASSERT(x + width <= im.width());
             TAV_ASSERT(y + height <= im.height());

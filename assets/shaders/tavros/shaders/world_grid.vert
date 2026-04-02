@@ -1,49 +1,66 @@
-#include <tavros/shaders/plane_quad.glsl>
 #include <tavros/shaders/scene.glsl>
 
-out vec3 v_world_pos;
-out vec3 v_cam_pos;
-out float v_minor_grid_step;
-out float v_major_grid_step;
-out float v_line_width;
+// ----------------------------------------------------------------
+// Inputs
+// ----------------------------------------------------------------
+layout(PUSH_CONSTANT) uniform PushConstants
+{
+    uint  minor_color;
+    uint  major_color;
+    uint  axis_u_color;      // color of the first axis  (X for XY/ZX, Y for YZ)
+    uint  axis_v_color;      // color of the second axis (Y for XY, Z for YZ/ZX)
+    float minor_line_width;  // pixels
+    float major_line_width;  // pixels
+    float axis_line_width;   // pixels
+    float minor_grid_step;   // world units
+    float major_grid_step;   // world units
+    uint  flags;             // bits [1:0] — plane: 0 = XY, 1 = YZ, 2 = ZX
+} pc;
+
+// ----------------------------------------------------------------
+// Outputs
+// ----------------------------------------------------------------
+out vec2  v_uv;
+out vec3  v_cam_pos;
+out vec3  v_plane_normal;   // world-space normal of the grid plane
+out vec3  v_world_pos;
 out float v_view_space_depth;
-out float v_near;
-out float v_far;
+
+// ----------------------------------------------------------------
+
+const vec2 k_quad_verts[4] = vec2[](
+    vec2(-1.0, -1.0),
+    vec2( 1.0, -1.0),
+    vec2(-1.0,  1.0),
+    vec2( 1.0,  1.0)
+);
 
 void main()
 {
-    v_near = s_near_plane;
-    v_far = s_far_plane;
-    float view_space_depth = s_far_plane - s_near_plane;
+    float view_space_depth = scene.far_plane - scene.near_plane;
+    float plane_scale      = view_space_depth * 2.0;
 
-    float plane_scale = (view_space_depth) * 1.5f;
-    v_cam_pos = (s_inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
-
-    float minor_step_base = 1.0;
-    float major_step_base = 10.0;
-
+    v_cam_pos          = (scene.inverse_view * vec4(0.0, 0.0, 0.0, 1.0)).xyz;
     v_view_space_depth = view_space_depth;
 
-    // thresholds
-    float t1 = view_space_depth * 0.03;
-    float t2 = view_space_depth * 0.3;
+    uint plane_id = pc.flags & 0x3u;
 
-    float cam_height = abs(v_cam_pos.z);
-    float mask1 = 1.0 - step(t1, cam_height);
-    float mask10 = step(t1, cam_height) * (1.0 - step(t2, cam_height));
-    float mask100 = step(t2, cam_height); 
+    // Each plane: quad is centered at camera projected onto that plane,
+    // normal is the axis perpendicular to it.
+    vec2 pos = k_quad_verts[gl_VertexID] * plane_scale;
+    if (plane_id == 0u) { // XY plane (Z = 0) — normal is Z
+        v_plane_normal = vec3(0.0, 0.0, 1.0);
+        v_world_pos    = vec3(v_cam_pos.xy, 0.0) + vec3(pos, 0.0);
+        v_uv           = v_world_pos.xy;
+    } else if (plane_id == 1u) { // YZ plane (X = 0) — normal is X
+        v_plane_normal = vec3(1.0, 0.0, 0.0);
+        v_world_pos    = vec3(0.0, v_cam_pos.yz) + vec3(0.0, pos);
+        v_uv           = v_world_pos.yz;
+    } else { // ZX plane (Y = 0) — normal is Y
+        v_plane_normal = vec3(0.0, 1.0, 0.0);
+        v_world_pos    = vec3(v_cam_pos.x, 0.0, v_cam_pos.z) + vec3(pos.x, 0.0, pos.y);
+        v_uv           = v_world_pos.zx;
+    }
 
-    float step1 = 1.0;
-    float step10 = 10.0;
-    float step100 = 100.0;
-
-    float scale_factor = step1 * mask1 + step10 * mask10 + step100 * mask100;
-    v_minor_grid_step = minor_step_base * scale_factor;
-    v_major_grid_step = major_step_base * scale_factor;
-    
-    v_line_width = 0.01 * pow(cam_height, 0.63);
-
-    vec2 pos = k_quad_verts[gl_VertexID] * 2.0f * plane_scale ;
-    v_world_pos = vec3(pos.x + v_cam_pos.x, pos.y + v_cam_pos.y, 0.0);
-    gl_Position = s_view_projection * vec4(v_world_pos, 1.0);
+    gl_Position = scene.view_projection * vec4(v_world_pos, 1.0);
 }

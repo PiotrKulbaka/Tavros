@@ -31,9 +31,9 @@ namespace app
         tavros::renderer::glyph_c,
         tavros::renderer::atlas_rect_t,
         tavros::renderer::rect_layout_c,
-        tavros::renderer::pos2_c,
-        tavros::renderer::primary_color_c,
-        tavros::renderer::outline_color_c>;
+        tavros::renderer::position2d_c,
+        tavros::renderer::color0_c,
+        tavros::renderer::color1_c>;
 
     // -------------------------------------------------------------------------
     // Helpers
@@ -46,9 +46,9 @@ namespace app
     template<tavros::core::archetype_with<
         tavros::renderer::atlas_rect_t,
         tavros::renderer::rect_layout_c,
-        tavros::renderer::pos2_c,
-        tavros::renderer::primary_color_c,
-        tavros::renderer::outline_color_c>
+        tavros::renderer::position2d_c,
+        tavros::renderer::color0_c,
+        tavros::renderer::color1_c>
                  T>
     size_t fill_glyph_instances(
         T&                                        data,
@@ -64,9 +64,9 @@ namespace app
         data.view<
                 const tavros::renderer::atlas_rect_t,
                 const tavros::renderer::rect_layout_c,
-                const tavros::renderer::pos2_c,
-                const tavros::renderer::primary_color_c,
-                const tavros::renderer::outline_color_c>()
+                const tavros::renderer::position2d_c,
+                const tavros::renderer::color0_c,
+                const tavros::renderer::color1_c>()
             .each([&](const auto& r, const auto& l, const auto& p, const auto& pc, const auto& oc) {
                 const auto size = l.size();
 
@@ -74,11 +74,11 @@ namespace app
                 dst->mat[0][1] = 0.0f;
                 dst->mat[1][0] = 0.0f;
                 dst->mat[1][1] = size.height;
-                dst->mat[2][0] = pos_text.x + p.x + l.left;
-                dst->mat[2][1] = pos_text.y + p.y + l.top;
+                dst->mat[2][0] = pos_text.x + p.value.x + l.left;
+                dst->mat[2][1] = pos_text.y + p.value.y + l.top;
                 dst->rect = r;
-                dst->fill_color = pc;
-                dst->outline_color = oc;
+                dst->fill_color = pc.value;
+                dst->outline_color = oc.value;
 
                 ++dst;
                 ++len;
@@ -91,8 +91,8 @@ namespace app
      * @brief Sets fill and outline colors for a range of glyphs in @p data.
      */
     template<tavros::core::archetype_with<
-        tavros::renderer::primary_color_c,
-        tavros::renderer::outline_color_c>
+        tavros::renderer::color0_c,
+        tavros::renderer::color1_c>
                  T>
     void set_glyph_colors(
         T&                 data,
@@ -102,10 +102,10 @@ namespace app
         tavros::math::vec4 outline
     ) noexcept
     {
-        const tavros::renderer::primary_color_c pc{tavros::math::rgba8{primary}};
-        const tavros::renderer::outline_color_c oc{tavros::math::rgba8{outline}};
+        const tavros::renderer::color0_c pc{tavros::math::rgba8{primary}};
+        const tavros::renderer::color1_c oc{tavros::math::rgba8{outline}};
 
-        data.view<tavros::renderer::primary_color_c, tavros::renderer::outline_color_c>()
+        data.view<tavros::renderer::color0_c, tavros::renderer::color1_c>()
             .each_n(first, count, [&](auto& p, auto& o) {
                 p = pc;
                 o = oc;
@@ -119,8 +119,8 @@ namespace app
         tavros::renderer::glyph_c,
         tavros::renderer::atlas_rect_t,
         tavros::renderer::rect_layout_c,
-        tavros::renderer::primary_color_c,
-        tavros::renderer::outline_color_c>
+        tavros::renderer::color0_c,
+        tavros::renderer::color1_c>
                  Text>
     void append_colored_text(
         Text&                         text,

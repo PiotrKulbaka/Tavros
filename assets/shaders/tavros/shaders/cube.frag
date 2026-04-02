@@ -18,5 +18,5 @@ void main()
 
     vec3 base_color = texture(uTex, v_tex_coord).rgb;
 
-    out_color = vec4(base_color * lighting, 1.0);
+    out_color = vec4(base_color, 1.0);
 }

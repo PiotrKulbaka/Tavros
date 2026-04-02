@@ -59,31 +59,31 @@ namespace tavros::core
          * @brief Returns the parent node.
          * @return Pointer to the parent node, or nullptr if this is a root node.
          */
-        [[nodiscard]] node_ptr parent() const noexcept;
+        [[nodiscard]] const node_ptr parent() const noexcept;
 
         /**
          * @brief Returns the next sibling node.
          * @return Pointer to the next sibling, or nullptr if this is the last sibling.
          */
-        [[nodiscard]] node_ptr next() const noexcept;
+        [[nodiscard]] const node_ptr next() const noexcept;
 
         /**
          * @brief Returns the previous sibling node.
          * @return Pointer to the previous sibling, or nullptr if this is the first sibling.
          */
-        [[nodiscard]] node_ptr prev() const noexcept;
+        [[nodiscard]] const node_ptr prev() const noexcept;
 
         /**
          * @brief Returns the first child node.
          * @return Pointer to the first child, or nullptr if there are no children.
          */
-        [[nodiscard]] node_ptr first_child() const noexcept;
+        [[nodiscard]] const node_ptr first_child() const noexcept;
 
         /**
          * @brief Returns the last child node.
          * @return Pointer to the last child, or nullptr if there are no children.
          */
-        [[nodiscard]] node_ptr last_child() const noexcept;
+        [[nodiscard]] const node_ptr last_child() const noexcept;
 
         /**
          * @brief Inserts a node (or range of nodes) as the first child.
@@ -96,6 +96,12 @@ namespace tavros::core
          * @param insert Node to insert as the last child.
          */
         void insert_last_child(node_ptr insert) noexcept;
+
+        /**
+         * @brief Inserts a node (or range of nodes) as the last child.
+         * @param insert Node to insert as the last child. (alias to insert_last_child)
+         */
+        void add_child(node_ptr insert) noexcept;
 
         /**
          * @brief Inserts a node (or range of nodes) before the current node.
@@ -134,21 +140,21 @@ namespace tavros::core
          * @param node Any node in the list.
          * @return Pointer to the first node in the chain.
          */
-        /* static */ node_ptr first_of(node_ptr node) noexcept;
+        static node_ptr first_of(node_ptr node) noexcept;
 
         /**
          * @brief Returns the last node in a sibling list.
          * @param node Any node in the list.
          * @return Pointer to the last node in the chain.
          */
-        /* static */ node_ptr last_of(node_ptr node) noexcept;
+        static node_ptr last_of(node_ptr node) noexcept;
 
         /**
          * @brief Returns the root node of the hierarchy.
          * @param node Any node in the hierarchy.
          * @return Pointer to the root node.
          */
-        /* static */ node_ptr root_of(node_ptr node) noexcept;
+        static node_ptr root_of(node_ptr node) noexcept;
 
     protected:
         /**
@@ -157,7 +163,7 @@ namespace tavros::core
          * Links the range [first_insert, last_insert] between @p left and @p right,
          * updating their parent pointers and sibling links.
          */
-        /* static */ void insertion_helper(node_ptr left, node_ptr right, node_ptr parent, node_ptr first_insert, node_ptr last_insert) noexcept;
+        void insertion_helper(node_ptr left, node_ptr right, node_ptr parent, node_ptr first_insert, node_ptr last_insert) noexcept;
 
         /**
          * @brief Internal helper for extracting a sequence of nodes.
@@ -165,7 +171,7 @@ namespace tavros::core
          * Detaches the range [left, right] from the hierarchy while keeping internal
          * links between nodes intact. Returns pointer to the first node in the range.
          */
-        /* static */ node_ptr extraction_helper(node_ptr left, node_ptr right) noexcept;
+        node_ptr extraction_helper(node_ptr left, node_ptr right) noexcept;
 
     private:
         node_ptr get_this() noexcept
@@ -218,31 +224,31 @@ namespace tavros::core
     }
 
     template<class D>
-    inline hierarchy<D>::node_ptr hierarchy<D>::parent() const noexcept
+    inline const hierarchy<D>::node_ptr hierarchy<D>::parent() const noexcept
     {
         return m_parent;
     }
 
     template<class D>
-    inline hierarchy<D>::node_ptr hierarchy<D>::next() const noexcept
+    inline const hierarchy<D>::node_ptr hierarchy<D>::next() const noexcept
     {
         return m_next;
     }
 
     template<class D>
-    inline hierarchy<D>::node_ptr hierarchy<D>::prev() const noexcept
+    inline const hierarchy<D>::node_ptr hierarchy<D>::prev() const noexcept
     {
         return m_prev;
     }
 
     template<class D>
-    inline hierarchy<D>::node_ptr hierarchy<D>::first_child() const noexcept
+    inline const hierarchy<D>::node_ptr hierarchy<D>::first_child() const noexcept
     {
         return m_first_child;
     }
 
     template<class D>
-    inline hierarchy<D>::node_ptr hierarchy<D>::last_child() const noexcept
+    inline const hierarchy<D>::node_ptr hierarchy<D>::last_child() const noexcept
     {
         return m_last_child;
     }
@@ -251,6 +257,7 @@ namespace tavros::core
     void hierarchy<D>::insert_first_child(node_ptr insert) noexcept
     {
         TAV_ASSERT(insert);
+        TAV_ASSERT(!insert->m_parent);
         insertion_helper(nullptr, m_first_child, get_this(), first_of(insert), last_of(insert));
     }
 
@@ -258,13 +265,21 @@ namespace tavros::core
     void hierarchy<D>::insert_last_child(node_ptr insert) noexcept
     {
         TAV_ASSERT(insert);
+        TAV_ASSERT(!insert->m_parent);
         insertion_helper(m_last_child, nullptr, get_this(), first_of(insert), last_of(insert));
+    }
+
+    template<class D>
+    void hierarchy<D>::add_child(node_ptr insert) noexcept
+    {
+        insert_last_child(insert);
     }
 
     template<class D>
     void hierarchy<D>::insert_before(node_ptr insert) noexcept
     {
         TAV_ASSERT(insert);
+        TAV_ASSERT(!insert->m_parent);
         insertion_helper(m_prev, get_this(), m_parent, first_of(insert), last_of(insert));
     }
 
@@ -272,6 +287,7 @@ namespace tavros::core
     void hierarchy<D>::insert_after(node_ptr insert) noexcept
     {
         TAV_ASSERT(insert);
+        TAV_ASSERT(!insert->m_parent);
         insertion_helper(get_this(), m_next, m_parent, first_of(insert), last_of(insert));
     }
 
@@ -284,6 +300,9 @@ namespace tavros::core
     template<class D>
     hierarchy<D>::node_ptr hierarchy<D>::extract_children() noexcept
     {
+        if (!m_first_child) {
+            return nullptr;
+        }
         return extraction_helper(m_first_child, m_last_child);
     }
 

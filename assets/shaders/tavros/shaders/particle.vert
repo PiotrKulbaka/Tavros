@@ -19,9 +19,9 @@ void main()
     vec2 rotated = vec2(corner.x * c - corner.y * s, corner.x * s + corner.y * c) * a_size;
 
     // Billboarding
-    vec4 view_center = s_view * vec4(a_pos, 1.0);
+    vec4 view_center = scene.view * vec4(a_pos, 1.0);
     view_center.xy += rotated;
-    gl_Position = s_projection * view_center;
+    gl_Position = scene.projection * view_center;
 
     v_uv = k_quad_uvs[gl_VertexID];
     v_color = unpack_color(a_color);

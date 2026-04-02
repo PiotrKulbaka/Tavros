@@ -211,9 +211,8 @@ namespace tavros::renderer
             if (array_layers > 1) {
                 if (array_cols == 0 && array_rows == 0) {
                     // Auto-detect grid
-                    const uint32 aligned = static_cast<uint32>(math::ceil_power_of_two(array_layers));
-                    array_cols = static_cast<uint32>(std::sqrt(static_cast<double>(aligned)));
-                    array_rows = math::align_up(array_layers, array_cols) / array_cols;
+                    array_cols = static_cast<uint32>(std::ceil(std::sqrt(static_cast<double>(array_layers))));
+                    array_rows = static_cast<uint32>(std::ceil(static_cast<double>(array_layers) / array_cols));
                 } else if (array_cols != 0 && array_rows == 0) {
                     // cols known, derive rows
                     array_rows = math::align_up(array_layers, array_cols) / array_cols;

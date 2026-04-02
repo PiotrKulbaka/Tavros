@@ -37,6 +37,24 @@ namespace app::pipeline_builder
         return s;
     }
 
+    inline rhi::depth_stencil_state depth_on_write_off() noexcept
+    {
+        rhi::depth_stencil_state s;
+        s.depth_test_enable = true;
+        s.depth_write_enable = false;
+        s.depth_compare = rhi::compare_op::less;
+        return s;
+    }
+
+    inline rhi::depth_stencil_state depth_test_leq() noexcept
+    {
+        rhi::depth_stencil_state s;
+        s.depth_compare = rhi::compare_op::less_equal;
+        s.depth_test_enable = true;
+        s.depth_write_enable = false;
+        return s;
+    }
+
     // -------------------------------------------------------------------------
     // Common blend presets
     // -------------------------------------------------------------------------

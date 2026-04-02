@@ -68,6 +68,17 @@ namespace tavros::particles
         });
     }
 
+    template<core::archetype_with<position_c, velocity_c, force_c, physics_c, lifetime_c> T>
+    inline void integrate_lt(T& arch, size_t begin, size_t count) noexcept
+    {
+        auto view = arch.view<lifetime_c, computed_c, color0_c, size_c>();
+        view.each_n(begin, count, [](auto& lt, auto& cc, auto& c, auto& sz) {
+            float t = lt.normalized();
+            cc.color = c.sample(t).color;
+            cc.size = sz.sample(t);
+        });
+    }
+
     template<tavros::core::archetype_with<rotation_c, angular_velocity_c> T>
     inline void integrate_rotation(T& arch, float dt, size_t begin, size_t count) noexcept
     {

@@ -16,6 +16,8 @@ target_link_libraries(
         tav_ui
         tinyobjloader
         stb
+        TracyClient
+        glad
 )
 
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")

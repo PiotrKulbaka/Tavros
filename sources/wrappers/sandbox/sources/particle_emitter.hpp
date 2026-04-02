@@ -19,13 +19,13 @@ namespace tavros::particles
             math::rgba8 color_max;
         };
 
-        static constexpr int k_max = color_c::k_max_colors;
+        static constexpr int k_max = color0_c::k_max_colors;
         stop_range           stops[k_max];
 
         template<typename Rng>
-        [[nodiscard]] color_c sample(Rng&& rng) const noexcept
+        [[nodiscard]] color0_c sample(Rng&& rng) const noexcept
         {
-            color_c result;
+            color0_c result;
             for (int i = 0; i < k_max; ++i) {
                 result.stops[i] = stops[i].t;
                 result.colors[i] = math::rgba8::lerp(stops[i].color_min, stops[i].color_max, rng(0.0f, 1.0f));
