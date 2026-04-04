@@ -1,0 +1,740 @@
+________________________________________________________________________________
+
+                      TAVROS ENGINE FILE FORMAT (TEFF)
+                           Language Specification
+                                Version 0.1
+________________________________________________________________________________
+
+
+TABLE OF CONTENTS
+
+  1. Introduction
+  2. Source file
+  3. Lexical elements
+     3.1  Characters
+     3.2  Whitespace and comments
+     3.3  Identifiers
+     3.4  Literals
+          3.4.1  Integer literals
+          3.4.2  Floating-point literals
+          3.4.3  Boolean literals
+          3.4.4  String literals
+     3.5  Punctuators
+     3.6  Directives
+  4. Syntax
+     4.1  Source file
+     4.2  Element
+     4.3  Value
+     4.4  Node
+     4.5  Inheritance
+     4.6  Path
+  5. Semantic rules
+     5.1  Key uniqueness
+     5.2  Value sequences
+     5.3  Inheritance
+          5.3.1  Resolution
+          5.3.2  Merge semantics
+          5.3.3  Cycle detection
+          5.3.4  Visibility
+     5.4  Include directives
+  6. Errors
+  7. Examples
+
+
+________________________________________________________________________________
+1.  Introduction                                                   [teff.intro]
+________________________________________________________________________________
+
+1   The Tavros Engine File Format (TEFF) is a human-readable, tree-structured
+    data format designed for use in game engine configuration files. A TEFF file
+    describes a hierarchy of named values. The hierarchy is ordered: the position
+    of each element within its parent node is significant and is preserved by all
+    conforming implementations.
+
+2   TEFF supports scalar values (integers, floating-point numbers, booleans, and
+    strings), nested nodes, value sequences, single inheritance, and file
+    inclusion.
+
+3   This document defines the lexical structure, grammar, and semantics of TEFF
+    version 0.1.
+
+________________________________________________________________________________
+2.  Source file                                                     [teff.src]
+________________________________________________________________________________
+
+1   A TEFF source file is a sequence of Unicode code points encoded in UTF-8.
+    A conforming implementation shall accept any valid UTF-8 encoded file.
+
+2   A source file consists of an optional include section followed by a sequence
+    of zero or more elements. This sequence forms the implicit root node of the
+    file.
+
+3   The include section, if present, shall appear before any element. An
+    @include directive appearing after the first element is an error.
+    [See 5.4]
+
+
+________________________________________________________________________________
+3.  Lexical elements                                                 [teff.lex]
+________________________________________________________________________________
+
+1   The text of a source file is decomposed into a sequence of tokens. Tokens
+    are: identifiers, literals, punctuators, and directives. Whitespace and
+    comments separate tokens and are otherwise ignored.
+
+
+  3.1  Characters                                             [teff.lex.chars]
+  ____________________________________________________________________________
+
+1   The following character categories are used in this specification:
+
+        digit:
+                one of  0 1 2 3 4 5 6 7 8 9
+
+        hex-digit:
+                one of  0 1 2 3 4 5 6 7 8 9
+                        a b c d e f
+                        A B C D E F
+
+        letter:
+                one of  a b c d e f g h i j k l m n o p q r s t u v w x y z
+                        A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
+        id-start:
+                letter | '_'
+
+        id-continue:
+                letter | digit | '_'
+
+        printable:
+                any Unicode code point with value >= U+0020,
+                excluding U+007F (DEL)
+
+
+  3.2  Whitespace and comments                             [teff.lex.whitespace]
+  ____________________________________________________________________________
+
+1   Whitespace consists of one or more of the following characters:
+
+        whitespace-char:
+                ' '    (U+0020, space)
+                '\t'   (U+0009, horizontal tab)
+                '\n'   (U+000A, line feed)
+                '\r'   (U+000D, carriage return)
+
+    Whitespace is used only to separate tokens and carries no semantic meaning.
+
+2   A comment begins with the character '#' (U+0023) and extends to the end of
+    the current line. Comments are treated as whitespace and ignored by the
+    parser.
+
+        comment:
+                '#' <any character except '\n'>* '\n'?
+
+    [Example:
+        # This is a comment
+        name = "value"    # inline comment
+    --end example]
+
+
+  3.3  Identifiers                                           [teff.lex.ident]
+  ____________________________________________________________________________
+
+1   An identifier is a sequence of characters of the form:
+
+        identifier:
+                id-start id-continue*
+
+2   Identifiers are case-sensitive. The identifiers 'true' and 'false' are
+    reserved as keyword literals and shall not be used as keys.
+    [See 3.4.3]
+
+3   If a token begins with an id-start character, it shall form a valid
+    identifier. An identifier that appears at a position where a key is
+    expected shall be followed by '='. Otherwise it is an error.
+    [See 6, error E-03]
+
+
+  3.4  Literals                                             [teff.lex.literal]
+  ____________________________________________________________________________
+
+    3.4.1  Integer literals                               [teff.lex.lit.int]
+    __________________________________________________________________________
+
+1   An integer literal represents a whole number value of type integer.
+
+        integer-literal:
+                decimal-literal
+                hexadecimal-literal
+                binary-literal
+
+        decimal-literal:
+                '-'? digit+
+
+        hexadecimal-literal:
+                '0x' hex-digit+
+                '0X' hex-digit+
+
+        binary-literal:
+                '0b' ( '0' | '1' )+
+                '0B' ( '0' | '1' )+
+
+2   The value of a decimal-literal is interpreted in base 10. The optional
+    leading '-' denotes a negative value.
+
+3   The value of a hexadecimal-literal is interpreted in base 16.
+    Hexadecimal literals are always non-negative.
+
+4   The value of a binary-literal is interpreted in base 2.
+    Binary literals are always non-negative.
+
+5   Integer values are stored as signed 64-bit integers (int64).
+    It is an error if a literal value is outside the range
+    [-(2^63), 2^63 - 1].  [See 6, error E-06]
+
+    [Example:
+        count     = 42
+        offset    = -7
+        mask      = 0xFF00FF
+        flags     = 0b1010
+    --end example]
+
+
+    3.4.2  Floating-point literals                      [teff.lex.lit.float]
+    __________________________________________________________________________
+
+1   A floating-point literal represents a real number value.
+
+        floating-point-literal:
+                '-'? digit+ '.' digit* exponent?
+                '-'? digit+ exponent
+                '-'? 'inf'
+                'nan'
+
+        exponent:
+                ( 'e' | 'E' ) ( '+' | '-' )? digit+
+
+2   Floating-point values are stored as IEEE 754 double-precision (64-bit)
+    values.
+
+3   'inf' denotes positive infinity. '-inf' denotes negative infinity.
+    'nan' denotes a not-a-number value.
+
+    [Example:
+        scale     = 1.5
+        gravity   = -9.81
+        threshold = 1e-6
+        ratio     = 3.14159
+    --end example]
+
+
+    3.4.3  Boolean literals                              [teff.lex.lit.bool]
+    __________________________________________________________________________
+
+1   A boolean literal is one of the following keywords:
+
+        boolean-literal:
+                'true'
+                'false'
+
+2   Boolean literals are reserved keywords and shall not be used as
+    identifiers.  [See 3.3]
+
+
+    3.4.4  String literals                              [teff.lex.lit.string]
+    __________________________________________________________________________
+
+1   A string literal is a sequence of printable characters enclosed in
+    double-quote characters:
+
+        string-literal:
+                '"' string-char* '"'
+
+        string-char:
+                printable character other than '"' and '\'
+                escape-sequence
+
+        escape-sequence:
+                '\' '"'     quotation mark      (U+0022)
+                '\' '\'     backslash           (U+005C)
+                '\' 'n'     line feed           (U+000A)
+                '\' 't'     horizontal tab      (U+0009)
+                '\' 'r'     carriage return     (U+000D)
+
+2   A string literal may not span multiple lines. It is an error if a
+    line-feed character appears inside a string literal without being
+    part of an escape sequence.  [See 6, error E-07]
+
+3   An unrecognized escape sequence is an error.  [See 6, error E-08]
+
+    [Example:
+        label   = "Hello, world!"
+        path    = "textures\\diffuse.png"
+        tooltip = "Press \"Enter\" to continue"
+    --end example]
+
+
+  3.5  Punctuators                                         [teff.lex.punct]
+  ____________________________________________________________________________
+
+1   The following single characters are punctuators:
+
+        punctuator:
+                '='     assignment
+                ':'     inheritance separator
+                '{'     node begin
+                '}'     node end
+                '.'     path separator
+
+
+  3.6  Directives                                       [teff.lex.directive]
+  ____________________________________________________________________________
+
+1   A directive begins with '@' and extends to the end of the line.
+
+        directive:
+                include-directive
+
+        include-directive:
+                '@include' whitespace string-literal
+
+2   The '@include' directive instructs the parser to insert the content
+    of the referenced file at the point of the directive, as if its
+    elements were written directly in the including file.
+
+3   Include directives shall appear only before the first element of a
+    source file. An include directive appearing after any element is
+    an error.  [See 6, error E-09]
+
+    [Example:
+        @include "base/weapons.teff"
+        @include "base/items.teff"
+
+        ak74 : base_weapon = {
+            damage = 15
+        }
+    --end example]
+
+
+________________________________________________________________________________
+4.  Syntax                                                         [teff.syntax]
+________________________________________________________________________________
+
+  4.1  Source file                                          [teff.syn.file]
+  ____________________________________________________________________________
+
+        source-file:
+                include-directive*  element*
+
+
+  4.2  Element                                           [teff.syn.element]
+  ____________________________________________________________________________
+
+1   An element is a key-value binding or a bare value.
+
+        element:
+                identifier inheritance? '=' value value*
+                value
+
+2   The identifier is the key of the element. All subsequent values on the
+    same nesting level, until the next keyed element or the closing '}' of
+    the enclosing node, are part of the same value sequence.
+    [See 5.2]
+
+  4.3  Value                                              [teff.syn.value]
+  ____________________________________________________________________________
+
+        value:
+                scalar
+                node
+
+        scalar:
+                integer-literal
+                floating-point-literal
+                boolean-literal
+                string-literal
+
+
+  4.4  Node                                                [teff.syn.node]
+  ____________________________________________________________________________
+
+        node:
+                '{' element* '}'
+
+1   A node is an ordered sequence of zero or more elements enclosed in
+    curly braces. Nodes may be nested to arbitrary depth.
+
+2   The implicit root of a source file is itself a node whose content is
+    the top-level element sequence.
+
+
+  4.5  Inheritance                                     [teff.syn.inherit]
+  ____________________________________________________________________________
+
+        inheritance:
+                ':' path
+
+1   Inheritance may appear only in a keyed element whose value is a node:
+
+        identifier ':' path '=' node
+
+2   It is an error to specify inheritance for an element whose value is
+    a scalar.  [See 6, error E-10]
+
+
+  4.6  Path                                              [teff.syn.path]
+  ____________________________________________________________________________
+
+        path:
+                identifier ( '.' identifier )*
+
+1   A path identifies a node by navigating the key hierarchy of the
+    source file, starting from the root of the current document.
+
+2   Each segment of a path is an identifier that names a direct child
+    of the node selected by the preceding segments.
+
+    [Example:
+        weapons.base_weapon
+        ui.themes.dark
+    --end example]
+
+
+________________________________________________________________________________
+5.  Semantic rules                                             [teff.semantics]
+________________________________________________________________________________
+
+  5.1  Key uniqueness                                     [teff.sem.keys]
+  ____________________________________________________________________________
+
+1   Within a single node, each key shall be unique. It is an error to
+    define two elements with the same key within the same node.
+    [See 6, error E-01]
+
+2   Keys in different nodes, or at different nesting levels, are
+    independent and do not conflict.
+
+    [Example:
+        # Error: duplicate key 'name' in the same node
+        group = {
+            name = "first"
+            name = "second"    # E-01
+        }
+
+        # OK: same key in different nodes
+        group_a = { name = "a" }
+        group_b = { name = "b" }
+    --end example]
+
+
+  5.2  Value sequences                                 [teff.sem.sequence]
+  ____________________________________________________________________________
+
+1   A value sequence is initiated by a keyed element. It consists of
+    that element and all immediately following bare values within the
+    same enclosing node, up to (but not including) the next keyed
+    element or the closing '}' of that node.
+
+2   The key is logically associated with the entire sequence. However,
+    physically, only the first element in the sequence carries the key.
+    Subsequent elements in the sequence have no key.
+
+3   Lookup by key returns the first element of the sequence.
+    Subsequent elements are accessed by advancing from the returned
+    element through its siblings while they remain keyless.
+
+4   Value sequences are not a distinct data type. They are a syntactic
+    shorthand for ordered, keyless siblings following a keyed element.
+
+    [Example:
+        # Sequence of three floats under key 'position':
+        position = 1.0 2.0 3.0
+
+        # Sequence of two nodes under key 'command':
+        command =
+            { id = "key_left"  exe = "left"  }
+            { id = "key_right" exe = "right" }
+
+        # Accessing the sequence:
+        #   find("position")     -> node(key="position", value=1.0)
+        #   find("position")[0]  -> 1.0
+        #   find("position")[1]  -> 2.0
+        #   find("position")[2]  -> 3.0
+    --end example]
+
+
+  5.3  Inheritance                                     [teff.sem.inherit]
+  ____________________________________________________________________________
+
+1   Inheritance allows a node to extend another node, called the base
+    node, copying its elements and then applying overrides.
+
+        identifier ':' path '=' node
+
+    The resulting node contains the merged set of elements from the base
+    node and the derived node.  [See 5.3.2]
+
+    3.3.1  Resolution                             [teff.sem.inherit.resolve]
+    __________________________________________________________________________
+
+1   The base node is identified by path.  [See 4.6]
+    Path resolution always starts from the root of the current document.
+
+2   The base node shall be defined earlier in the source file than the
+    derived node (textual order, top to bottom). Forward references to
+    base nodes are an error.  [See 6, error E-11]
+
+3   It is an error if the path does not refer to an existing node.
+    [See 6, error E-12]
+
+    [Example:
+        weapons = {
+            base_weapon = { damage = 10  range = 50 }
+        }
+
+        # OK: path 'weapons.base_weapon' is defined above
+        ak74 : weapons.base_weapon = {
+            damage = 15
+        }
+    --end example]
+
+
+    5.3.2  Merge semantics                          [teff.sem.inherit.merge]
+    __________________________________________________________________________
+
+1   The derived node is constructed by the following procedure:
+
+    (1) Start with a copy of all elements of the base node, in their
+        original order.
+
+    (2) For each keyed element in the derived node body:
+        (a) If an element with the same key exists in the base, replace
+            it (and its associated value sequence) with the derived
+            element.
+        (b) If no such element exists in the base, append the derived
+            element at the end.
+
+    (3) Bare values in the derived node body that follow a keyed element
+        replace the entire value sequence of the corresponding base key.
+
+2   Elements present in the base but absent in the derived node are
+    inherited unchanged.
+
+    [Example:
+        base_weapon = {
+            damage   = 10
+            accuracy = 0.8
+            range    = 50
+            tags     = "weapon" "item"
+        }
+
+        ak74 : base_weapon = {
+            damage = 15           # overrides base damage
+            range  = 100          # overrides base range
+            tags   = "assault"    # replaces entire sequence
+            # accuracy is inherited: 0.8
+        }
+
+        # Resulting ak74:
+        # damage   = 15
+        # accuracy = 0.8
+        # range    = 100
+        # tags     = "assault"
+    --end example]
+
+
+    5.3.3  Cycle detection                         [teff.sem.inherit.cycle]
+    __________________________________________________________________________
+
+1   It is an error if the inheritance graph contains a cycle.
+    [See 6, error E-13]
+
+2   A conforming implementation shall detect cycles before applying
+    any merge operation.
+
+    [Example:
+        # Error: cycle  a -> b -> a
+        a : b = { }
+        b : a = { }    # E-13
+    --end example]
+
+
+    5.3.4  Visibility                             [teff.sem.inherit.visibility]
+    __________________________________________________________________________
+
+1   A path used in inheritance is resolved from the root of the document.
+    Only nodes that are visible from the root via key navigation are
+    valid base nodes.
+
+2   A node defined inside another node is a valid base if and only if
+    its full path from the root is used.
+
+    [Example:
+        weapons = {
+            base_weapon = { damage = 10 }
+
+            # OK: path from root 'weapons.base_weapon'
+            ak74 : weapons.base_weapon = { damage = 15 }
+        }
+
+        other = {
+            # Error: 'base_weapon' is not a root-level key
+            m4 : base_weapon = { }    # E-12
+
+            # OK: full path from root
+            m4 : weapons.base_weapon = { damage = 12 }
+        }
+    --end example]
+
+
+  5.4  Include directives                               [teff.sem.include]
+  ____________________________________________________________________________
+
+1   An @include directive causes the parser to process the referenced
+    file as if its content were inserted at the point of the directive.
+
+2   All @include directives in a file shall appear before the first
+    element of that file.  [See 6, error E-09]
+
+3   Include directives may be nested: an included file may itself
+    contain @include directives, subject to the same rule.
+
+4   It is an error if an included file cannot be found or cannot be
+    read.  [See 6, error E-14]
+
+5   It is an error if including a file would create a cycle in the
+    include graph (file A includes file B which includes file A).
+    [See 6, error E-15]
+
+6   The root namespace is shared across all included files. Keys defined
+    in an included file are visible in the including file and vice versa,
+    subject to textual order.
+
+    [Example:
+        @include "base/weapons.teff"
+        @include "base/items.teff"
+
+        ak74 : base_weapon = {
+            damage = 15
+        }
+    --end example]
+
+
+________________________________________________________________________________
+6.  Errors                                                        [teff.errors]
+________________________________________________________________________________
+
+1   A conforming implementation shall report the following errors. Each
+    error report shall include the file name, line number, and column
+    number of the offending token.
+
+    Code    Description
+    --------------------------------------------------------------------------
+    E-01    Duplicate key within the same node.
+    E-02    Identifier not followed by '='.
+    E-03    Token begins with id-start character but is not a valid identifier.
+    E-04    Missing value after '='.
+    E-05    Unmatched '{' or '}'.
+    E-06    Integer literal out of range [-2^63, 2^63-1].
+    E-07    Newline inside string literal.
+    E-08    Unrecognized escape sequence in string literal.
+    E-09    @include directive after the first element.
+    E-10    Inheritance specified for a scalar value.
+    E-11    Forward reference to base node (base defined after derived).
+    E-12    Inheritance path does not refer to an existing node.
+    E-13    Cycle detected in inheritance graph.
+    E-14    Included file not found or not readable.
+    E-15    Cycle detected in include graph.
+    E-16    Reserved keyword used as identifier.
+    --------------------------------------------------------------------------
+
+
+________________________________________________________________________________
+7.  Examples                                                    [teff.examples]
+________________________________________________________________________________
+
+  Example 1 - Scalar value sequence
+
+        position = 1.0 2.0 3.0
+        color    = 1.0 0.0 0.0 1.0
+
+  Example 2 - Nested node
+
+        transform = {
+            position = 0.0 0.0 0.0
+            rotation = 0.0 0.0 0.0 1.0
+            scale    = 1.0 1.0 1.0
+        }
+
+  Example 3 - Value sequence of nodes
+
+        command =
+            { id = "key_left"  exe = "left"  }
+            { id = "key_right" exe = "right" }
+            { id = "key_up"    exe = "up"    }
+            { id = "key_down"  exe = "down"  }
+
+  Example 4 - Inheritance
+
+        base_weapon = {
+            damage   = 10
+            accuracy = 0.8
+            range    = 50
+            tags     = "weapon" "item"
+        }
+
+        ak74 : base_weapon = {
+            damage = 15
+            range  = 100
+            tags   = "assault" "automatic"
+        }
+
+  Example 5 - Include and inheritance across files
+
+        # weapons.teff
+        @include "base.teff"
+
+        ak74 : section_in_base.base_weapon = {
+            damage = 15
+            tags   = "assault"
+        }
+
+  Example 6 - Full configuration file
+
+        @include "base/weapons.teff"
+
+        # Graphics settings
+        graphics = {
+            fullscreen  = false
+            resolution  = { width = 1920  height = 1080 }
+            vsync       = true
+            fov         = 90.0
+        }
+
+        # Keybindings
+        keybinding = {
+            group =
+                {
+                    name = "movement"
+                    command =
+                        { id = "key_forward" exe = "forward" }
+                        { id = "key_back"    exe = "back"    }
+                } {
+                    name = "combat"
+                    command =
+                        { id = "key_fire"   exe = "wpn_fire"   }
+                        { id = "key_reload" exe = "wpn_reload" }
+                }
+        }
+
+        # Weapon definitions
+        ak74 : base_weapon = {
+            damage   = 15
+            range    = 100
+            accuracy = 0.75
+            tags     = "assault" "automatic" "rifle"
+        }
+
+________________________________________________________________________________
+                        End of TEFF Language Specification
+________________________________________________________________________________
