@@ -274,4 +274,39 @@ namespace tavros::core
     template<typename T>
     inline constexpr bool is_string_type_v = is_string_type<T>::value;
 
+
+    /** @brief Trait to determine whether a type is considered string-like. */
+    template<typename T>
+    struct is_string_like : std::false_type
+    {
+    };
+
+    /** @brief Specialization for dynamic string type. */
+    template<>
+    struct is_string_like<core::string> : std::true_type
+    {
+    };
+
+    /** @brief Specialization for string view type. */
+    template<>
+    struct is_string_like<core::string_view> : std::true_type
+    {
+    };
+
+    /** @brief Specialization for C-style string pointer. */
+    template<>
+    struct is_string_like<const char*> : std::true_type
+    {
+    };
+
+    /** @brief Specialization for C-style string array. */
+    template<size_t N>
+    struct is_string_like<const char[N]> : std::true_type
+    {
+    };
+
+    /** @brief Convenience variable template for @ref is_string_like. */
+    template<typename T>
+    inline constexpr bool is_string_like_v = is_string_like<T>::value;
+
 } // namespace tavros::core

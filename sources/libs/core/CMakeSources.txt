@@ -17,7 +17,6 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/nonconstructable.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/noncopyable.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/nonmovable.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/optional.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/pimpl.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/ref_counted.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/singleton.hpp
@@ -159,6 +158,7 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/mallocator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/mallocator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/memory.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/pool_allocator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/raw_ptr.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/zone_allocator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/memory/zone_allocator.hpp

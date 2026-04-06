@@ -57,7 +57,7 @@ namespace tavros::core
     template<size_t Capacity, class Char, class Traits = std::char_traits<Char>>
     class basic_fixed_string
     {
-        static_assert(Capacity > 0 && (Capacity % 8 == 0), "Capacity must be positive and a multiple of 8");
+        static_assert(Capacity > 0, "Capacity must be greater than zero");
         static_assert(std::is_same_v<Char, typename Traits::char_type>);
         static_assert(
             !std::is_array_v<Char>
@@ -70,6 +70,7 @@ namespace tavros::core
         using traits_type = Traits;
         using value_type = Char;
         using size_type = size_t;
+        using smallest_size_type = smallest_size_t<Capacity>;
         using difference_type = ptrdiff_t;
         using pointer = value_type*;
         using const_pointer = const value_type*;
@@ -89,7 +90,7 @@ namespace tavros::core
 
         [[nodiscard]] constexpr view_type as_view() const noexcept
         {
-            return view_type{m_data, m_size};
+            return view_type{m_data, size()};
         }
 
     public:
@@ -113,7 +114,7 @@ namespace tavros::core
         {
             TAV_ASSERT(count < Capacity);
             Traits::copy(m_data, s, count);
-            m_data[m_size] = Char{};
+            m_data[size()] = Char{};
         }
 
         constexpr basic_fixed_string(size_type count, Char ch)
@@ -121,16 +122,16 @@ namespace tavros::core
         {
             TAV_ASSERT(count < Capacity);
             Traits::assign(m_data, count, ch);
-            m_data[m_size] = Char{};
+            m_data[size()] = Char{};
         }
 
         template<class InputIt>
         constexpr basic_fixed_string(InputIt first, InputIt last)
             : m_size(static_cast<size_type>(std::distance(first, last)))
         {
-            TAV_ASSERT(m_size < Capacity);
+            TAV_ASSERT(size() < Capacity);
             std::copy(first, last, m_data);
-            m_data[m_size] = Char{};
+            m_data[size()] = Char{};
         }
 
         constexpr basic_fixed_string(std::initializer_list<Char> list)
@@ -186,19 +187,19 @@ namespace tavros::core
 
         [[nodiscard]] constexpr reference operator[](size_type index) noexcept
         {
-            TAV_ASSERT(index <= m_size);
+            TAV_ASSERT(index <= size());
             return m_data[index];
         }
 
         [[nodiscard]] constexpr const_reference operator[](size_type index) const noexcept
         {
-            TAV_ASSERT(index <= m_size);
+            TAV_ASSERT(index <= size());
             return m_data[index];
         }
 
         [[nodiscard]] constexpr reference at(size_type index)
         {
-            if (index >= m_size) {
+            if (index >= size()) {
                 throw std::out_of_range("basic_fixed_string::at: index out of range");
             }
             return m_data[index];
@@ -206,7 +207,7 @@ namespace tavros::core
 
         [[nodiscard]] constexpr const_reference at(size_type index) const
         {
-            if (index >= m_size) {
+            if (index >= size()) {
                 throw std::out_of_range("basic_fixed_string::at: index out of range");
             }
             return m_data[index];
@@ -214,26 +215,26 @@ namespace tavros::core
 
         [[nodiscard]] constexpr reference front() noexcept
         {
-            TAV_ASSERT(m_size > 0);
+            TAV_ASSERT(size() > 0);
             return m_data[0];
         }
 
         [[nodiscard]] constexpr const_reference front() const noexcept
         {
-            TAV_ASSERT(m_size > 0);
+            TAV_ASSERT(size() > 0);
             return m_data[0];
         }
 
         [[nodiscard]] constexpr reference back() noexcept
         {
-            TAV_ASSERT(m_size > 0);
-            return m_data[m_size - 1];
+            TAV_ASSERT(size() > 0);
+            return m_data[size() - 1];
         }
 
         [[nodiscard]] constexpr const_reference back() const noexcept
         {
-            TAV_ASSERT(m_size > 0);
-            return m_data[m_size - 1];
+            TAV_ASSERT(size() > 0);
+            return m_data[size() - 1];
         }
 
 
@@ -264,12 +265,12 @@ namespace tavros::core
 
         [[nodiscard]] constexpr size_type size() const noexcept
         {
-            return m_size;
+            return static_cast<size_type>(m_size);
         }
 
         [[nodiscard]] constexpr size_type length() const noexcept
         {
-            return m_size;
+            return static_cast<size_type>(m_size);
         }
 
         [[nodiscard]] constexpr size_type max_size() const noexcept
@@ -284,17 +285,17 @@ namespace tavros::core
 
         [[nodiscard]] constexpr bool empty() const noexcept
         {
-            return m_size == 0;
+            return size() == 0;
         }
 
         [[nodiscard]] constexpr bool full() const noexcept
         {
-            return m_size >= Capacity - 1;
+            return size() >= Capacity - 1;
         }
 
         [[nodiscard]] constexpr size_type remaining() const noexcept
         {
-            return Capacity - 1 - m_size;
+            return Capacity - 1 - size();
         }
 
 
@@ -320,17 +321,17 @@ namespace tavros::core
 
         [[nodiscard]] constexpr iterator end() noexcept
         {
-            return m_data + m_size;
+            return m_data + size();
         }
 
         [[nodiscard]] constexpr const_iterator end() const noexcept
         {
-            return m_data + m_size;
+            return m_data + size();
         }
 
         [[nodiscard]] constexpr const_iterator cend() const noexcept
         {
-            return m_data + m_size;
+            return m_data + size();
         }
 
 
@@ -411,29 +412,29 @@ namespace tavros::core
 
         constexpr void push_back(Char ch)
         {
-            TAV_ASSERT(m_size + 1 < Capacity);
+            TAV_ASSERT(size() + 1 < Capacity);
             m_data[m_size++] = ch;
             m_data[m_size] = Char{};
         }
 
         constexpr void pop_back() noexcept
         {
-            TAV_ASSERT(m_size > 0);
-            if (m_size > 0) {
+            TAV_ASSERT(size() > 0);
+            if (size() > 0) {
                 m_data[--m_size] = Char{};
             }
         }
 
         constexpr void resize(size_type count, Char ch = Char{})
         {
-            if (count <= m_size) {
-                m_size = count;
-                m_data[m_size] = Char{};
+            if (count <= size()) {
+                m_size = static_cast<smallest_size_type>(count);
+                m_data[size()] = Char{};
             } else {
                 TAV_ASSERT(count < Capacity);
-                Traits::assign(m_data + m_size, count - m_size, ch);
-                m_size = count;
-                m_data[m_size] = Char{};
+                Traits::assign(m_data + size(), count - size(), ch);
+                m_size = static_cast<smallest_size_type>(count);
+                m_data[size()] = Char{};
             }
         }
 
@@ -441,9 +442,9 @@ namespace tavros::core
         {
             // Both objects live on the stack - swap via a local buffer
             Char      tmp[Capacity];
-            size_type tmp_size = other.m_size;
-            Traits::copy(tmp, other.m_data, other.m_size + 1);
-            Traits::copy(other.m_data, m_data, m_size + 1);
+            size_type tmp_size = other.size();
+            Traits::copy(tmp, other.m_data, other.size() + 1);
+            Traits::copy(other.m_data, m_data, size() + 1);
             other.m_size = m_size;
             Traits::copy(m_data, tmp, tmp_size + 1);
             m_size = tmp_size;
@@ -457,9 +458,9 @@ namespace tavros::core
         constexpr basic_fixed_string& assign(const Char* s, size_type count)
         {
             TAV_ASSERT(count < Capacity);
-            m_size = count;
+            m_size = static_cast<smallest_size_t>(count);
             Traits::copy(m_data, s, count);
-            m_data[m_size] = Char{};
+            m_data[size()] = Char{};
             return *this;
         }
 
@@ -471,9 +472,9 @@ namespace tavros::core
         constexpr basic_fixed_string& assign(size_type count, Char ch)
         {
             TAV_ASSERT(count < Capacity);
-            m_size = count;
+            m_size = static_cast<smallest_size_t>(count);
             Traits::assign(m_data, count, ch);
-            m_data[m_size] = Char{};
+            m_data[size()] = Char{};
             return *this;
         }
 
@@ -510,9 +511,9 @@ namespace tavros::core
         {
             const auto count = static_cast<size_type>(std::distance(first, last));
             TAV_ASSERT(count < Capacity);
-            m_size = count;
+            m_size = static_cast<smallest_size_type>(count);
             std::copy(first, last, m_data);
-            m_data[m_size] = Char{};
+            m_data[size()] = Char{};
             return *this;
         }
 
@@ -523,10 +524,10 @@ namespace tavros::core
 
         constexpr basic_fixed_string& append(const Char* s, size_type count)
         {
-            TAV_ASSERT(m_size + count < Capacity);
-            Traits::copy(m_data + m_size, s, count);
-            m_size += count;
-            m_data[m_size] = Char{};
+            TAV_ASSERT(size() + count < Capacity);
+            Traits::copy(m_data + size(), s, count);
+            m_size += static_cast<smallest_size_type>(count);
+            m_data[size()] = Char{};
             return *this;
         }
 
@@ -537,10 +538,10 @@ namespace tavros::core
 
         constexpr basic_fixed_string& append(size_type count, Char ch)
         {
-            TAV_ASSERT(m_size + count < Capacity);
-            Traits::assign(m_data + m_size, count, ch);
+            TAV_ASSERT(size() + count < Capacity);
+            Traits::assign(m_data + size(), count, ch);
             m_size += count;
-            m_data[m_size] = Char{};
+            m_data[size()] = Char{};
             return *this;
         }
 
@@ -556,7 +557,7 @@ namespace tavros::core
 
         constexpr basic_fixed_string& append(const basic_fixed_string& other)
         {
-            return append(other.m_data, other.m_size);
+            return append(other.m_data, other.size());
         }
 
         constexpr basic_fixed_string& append(
@@ -575,10 +576,10 @@ namespace tavros::core
         constexpr basic_fixed_string& append(InputIt first, InputIt last)
         {
             const auto count = static_cast<size_type>(std::distance(first, last));
-            TAV_ASSERT(m_size + count < Capacity);
-            std::copy(first, last, m_data + m_size);
-            m_size += count;
-            m_data[m_size] = Char{};
+            TAV_ASSERT(size() + count < Capacity);
+            std::copy(first, last, m_data + size());
+            m_size += static_cast<smallest_size_type>(count);
+            m_data[size()] = Char{};
             return *this;
         }
 
@@ -654,10 +655,10 @@ namespace tavros::core
 
         constexpr basic_fixed_string& insert(size_type pos, const Char* s, size_type count)
         {
-            TAV_ASSERT(pos <= m_size && m_size + count < Capacity);
-            Traits::move(m_data + pos + count, m_data + pos, m_size - pos + 1); // shift suffix + null
+            TAV_ASSERT(pos <= size() && size() + count < Capacity);
+            Traits::move(m_data + pos + count, m_data + pos, size() - pos + 1); // shift suffix + null
             Traits::copy(m_data + pos, s, count);
-            m_size += count;
+            m_size += static_cast<smallest_size_type>(count);
             return *this;
         }
 
@@ -668,10 +669,10 @@ namespace tavros::core
 
         constexpr basic_fixed_string& insert(size_type pos, size_type count, Char ch)
         {
-            TAV_ASSERT(pos <= m_size && m_size + count < Capacity);
-            Traits::move(m_data + pos + count, m_data + pos, m_size - pos + 1);
+            TAV_ASSERT(pos <= size() && size() + count < Capacity);
+            Traits::move(m_data + pos + count, m_data + pos, size() - pos + 1);
             Traits::assign(m_data + pos, count, ch);
-            m_size += count;
+            m_size += static_cast<smallest_size_type>(count);
             return *this;
         }
 
@@ -687,7 +688,7 @@ namespace tavros::core
 
         constexpr basic_fixed_string& insert(size_type pos, const basic_fixed_string& other)
         {
-            return insert(pos, other.m_data, other.m_size);
+            return insert(pos, other.m_data, other.size());
         }
 
         constexpr basic_fixed_string& insert(size_type pos, const basic_fixed_string& other, size_type other_pos, size_type count = npos)
@@ -721,10 +722,10 @@ namespace tavros::core
         {
             const auto pos = static_cast<size_type>(where - m_data);
             const auto count = static_cast<size_type>(std::distance(first, last));
-            TAV_ASSERT(pos <= m_size && m_size + count < Capacity);
-            Traits::move(m_data + pos + count, m_data + pos, m_size - pos + 1);
+            TAV_ASSERT(pos <= size() && size() + count < Capacity);
+            Traits::move(m_data + pos + count, m_data + pos, size() - pos + 1);
             std::copy(first, last, m_data + pos);
-            m_size += count;
+            m_size += static_cast<smallest_size_type>(count);
             return m_data + pos;
         }
 
@@ -735,10 +736,10 @@ namespace tavros::core
 
         constexpr basic_fixed_string& erase(size_type pos = 0, size_type count = npos)
         {
-            TAV_ASSERT(pos <= m_size);
-            const size_type actual = std::min(count, m_size - pos);
-            Traits::move(m_data + pos, m_data + pos + actual, m_size - pos - actual + 1);
-            m_size -= actual;
+            TAV_ASSERT(pos <= size());
+            const size_type actual = (count < size() - pos ? count : size() - pos);
+            Traits::move(m_data + pos, m_data + pos + actual, size() - pos - actual + 1);
+            m_size -= static_cast<smallest_size_type>(actual);
             return *this;
         }
 
@@ -764,13 +765,13 @@ namespace tavros::core
 
         constexpr basic_fixed_string& replace(size_type pos, size_type count, const Char* s, size_type s_count)
         {
-            TAV_ASSERT(pos <= m_size);
-            const size_type actual = std::min(count, m_size - pos);
-            const size_type new_size = m_size - actual + s_count;
+            TAV_ASSERT(pos <= size());
+            const size_type actual = (count < size() - pos ? count : size() - pos);
+            const size_type new_size = size() - actual + s_count;
             TAV_ASSERT(new_size < Capacity);
-            Traits::move(m_data + pos + s_count, m_data + pos + actual, m_size - pos - actual + 1);
+            Traits::move(m_data + pos + s_count, m_data + pos + actual, size() - pos - actual + 1);
             Traits::copy(m_data + pos, s, s_count);
-            m_size = new_size;
+            m_size = static_cast<smallest_size_type>(new_size);
             return *this;
         }
 
@@ -781,13 +782,13 @@ namespace tavros::core
 
         constexpr basic_fixed_string& replace(size_type pos, size_type count, size_type n, Char ch)
         {
-            TAV_ASSERT(pos <= m_size);
-            const size_type actual = std::min(count, m_size - pos);
-            const size_type new_size = m_size - actual + n;
+            TAV_ASSERT(pos <= size());
+            const size_type actual = (count < size() - pos ? count : size() - pos);
+            const size_type new_size = size() - actual + n;
             TAV_ASSERT(new_size < Capacity);
-            Traits::move(m_data + pos + n, m_data + pos + actual, m_size - pos - actual + 1);
+            Traits::move(m_data + pos + n, m_data + pos + actual, size() - pos - actual + 1);
             Traits::assign(m_data + pos, n, ch);
-            m_size = new_size;
+            m_size = static_cast<smallest_size_type>(new_size);
             return *this;
         }
 
@@ -803,7 +804,7 @@ namespace tavros::core
 
         constexpr basic_fixed_string& replace(size_type pos, size_type count, const basic_fixed_string& other)
         {
-            return replace(pos, count, other.m_data, other.m_size);
+            return replace(pos, count, other.m_data, other.size());
         }
 
         constexpr basic_fixed_string& replace(size_type pos, size_type count, const basic_fixed_string& other, size_type other_pos, size_type other_count = npos)
@@ -865,7 +866,7 @@ namespace tavros::core
         constexpr basic_fixed_string& replace(const_iterator first, const_iterator last, InputIt s_first, InputIt s_last)
         {
             const basic_fixed_string tmp(s_first, s_last);
-            return replace(first, last, tmp.m_data, tmp.m_size);
+            return replace(first, last, tmp.m_data, tmp.size());
         }
 
 
@@ -875,8 +876,8 @@ namespace tavros::core
 
         constexpr size_type copy(Char* dest, size_type count, size_type pos = 0) const
         {
-            TAV_ASSERT(pos <= m_size);
-            const size_type actual = std::min(count, m_size - pos);
+            TAV_ASSERT(pos <= size());
+            const size_type actual = (count < size() - pos ? count : size() - pos);
             Traits::copy(dest, m_data + pos, actual);
             return actual;
         }
@@ -1164,8 +1165,8 @@ namespace tavros::core
                 throw std::overflow_error("basic_fixed_string::format: result exceeds capacity");
             }
 
-            result.m_size = static_cast<size_type>(r.out - result.m_data);
-            result.m_data[result.m_size] = Char{};
+            result.m_size = static_cast<smallest_size_type>(r.out - result.m_data);
+            result.m_data[result.size()] = Char{};
             return result;
         }
 
@@ -1181,13 +1182,13 @@ namespace tavros::core
             );
 
             result.m_size = static_cast<size_type>(r.out - result.m_data);
-            result.m_data[result.m_size] = Char{};
+            result.m_data[result.size()] = Char{};
             return result;
         }
 
     private:
-        size_type  m_size;
-        value_type m_data[Capacity];
+        smallest_size_type m_size;
+        value_type         m_data[Capacity];
     };
 
     // --------------------------------------------------------------------------

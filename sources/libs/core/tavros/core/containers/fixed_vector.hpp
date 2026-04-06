@@ -3,6 +3,7 @@
 #include <tavros/core/memory/buffer_view.hpp>
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/verify.hpp>
+#include <tavros/core/traits.hpp>
 
 #include <type_traits>
 #include <initializer_list>
@@ -145,7 +146,7 @@ namespace tavros::core
          */
         constexpr size_t size() const noexcept
         {
-            return m_size;
+            return static_cast<size_t>(m_size);
         }
 
         /**
@@ -280,8 +281,8 @@ namespace tavros::core
         }
 
     private:
-        std::array<T, N> m_data{};
-        size_t           m_size = 0;
+        smallest_size_t<N> m_size = 0;
+        std::array<T, N>   m_data{};
     };
 
 } // namespace tavros::core

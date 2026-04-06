@@ -2,6 +2,7 @@
 
 #include <cstddef>
 #include <atomic>
+#include <limits>
 
 using uint8 = uint8_t;
 using int8 = int8_t;
@@ -43,6 +44,16 @@ static_assert(sizeof(size_t) == sizeof(void*));
 
 namespace tavros::core
 {
+
+    // clang-format off
+    template<size_t N>
+    using smallest_size_t =
+        std::conditional_t<(N <= std::numeric_limits<uint8>::max()), uint8,
+            std::conditional_t<(N <= std::numeric_limits<uint16>::max()), uint16,
+                std::conditional_t<(N <= std::numeric_limits<uint32>::max()), uint32, size_t>
+            >
+        >;
+    // clang-format on
 
     /**
      * @brief Tag type used to explicitly enable unsafe operations.

@@ -2,17 +2,15 @@ include(CMakeSources.txt)
 
 tavros_add_library(
     LIB_NAME
-        tav_core
+        tav_teff
     LIB_TYPE
         STATIC
     LIB_CROSSPLATFORM_SOURCES
-        ${TAV_CORE_CROSSPLATFORM_SOURCES}
+        ${TAV_TEFF_CROSSPLATFORM_SOURCES}
     LIB_DEPENDS
         PUBLIC
-            fmt
-            zlibstatic
-            toml
+            tav_core
     LIB_DEFINES
 )
 
-set_target_group(tav_core "libs")
+set_target_group(tav_teff "libs")
