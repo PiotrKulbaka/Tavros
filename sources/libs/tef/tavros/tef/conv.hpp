@@ -4,7 +4,7 @@
 
 #include <optional>
 
-namespace tavros::teff
+namespace tavros::tef
 {
 
     class node;
@@ -69,4 +69,4 @@ namespace tavros::teff
         std::optional<math::rgba8> operator()(const node* n) const noexcept;
     };
 
-} // namespace tavros::teff
+} // namespace tavros::tef

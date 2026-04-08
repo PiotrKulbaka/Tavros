@@ -1,6 +1,6 @@
-#include <tavros/teff/node.hpp>
+#include <tavros/tef/node.hpp>
 
-#include <tavros/teff/doc.hpp>
+#include <tavros/tef/registry.hpp>
 
 namespace
 {
@@ -16,7 +16,7 @@ namespace
     }
 } // namespace
 
-namespace tavros::teff
+namespace tavros::tef
 {
 
     node* node::child(core::string_view key) noexcept
@@ -40,7 +40,7 @@ namespace tavros::teff
         auto segment = is_npos ? path : path.substr(0, dot);
         path = is_npos ? core::string_view() : path.substr(dot + 1);
 
-        if (segment.empty() || !is_object()) {
+        if (segment.empty() || !is_container()) {
             return nullptr;
         }
 
@@ -62,7 +62,7 @@ namespace tavros::teff
         auto segment = is_npos ? path : path.substr(0, dot);
         path = is_npos ? core::string_view() : path.substr(dot + 1);
 
-        if (segment.empty() || !is_object()) {
+        if (segment.empty() || !is_container()) {
             return nullptr;
         }
 
@@ -77,36 +77,36 @@ namespace tavros::teff
     {
         auto* ch = extract_children();
         if (ch) {
-            doc::free_nodes(ch);
+            registry::free_nodes(ch);
         }
     }
 
-    node* node::make_obj_node(doc* owner, core::string_view key)
+    node* node::make_obj_node(registry* owner, core::string_view key)
     {
-        return new (owner->alloc_node()) node(owner, key, value_type::object, nullptr);
+        return new (owner->alloc_node()) node(owner, key, node_type::object, nullptr);
     }
 
-    node* node::make_str_node(doc* owner, core::string_view key, core::string_view val)
+    node* node::make_str_node(registry* owner, core::string_view key, core::string_view val)
     {
-        return new (owner->alloc_node()) node(owner, key, value_type::string, core::string(val));
+        return new (owner->alloc_node()) node(owner, key, node_type::string, core::string(val));
     }
 
-    node* node::make_int_node(doc* owner, core::string_view key, int64 val)
+    node* node::make_int_node(registry* owner, core::string_view key, int64 val)
     {
-        return new (owner->alloc_node()) node(owner, key, value_type::integer, val);
+        return new (owner->alloc_node()) node(owner, key, node_type::integer, val);
     }
 
-    node* node::make_flt_node(doc* owner, core::string_view key, double val)
+    node* node::make_flt_node(registry* owner, core::string_view key, double val)
     {
-        return new (owner->alloc_node()) node(owner, key, value_type::floating_point, val);
+        return new (owner->alloc_node()) node(owner, key, node_type::floating_point, val);
     }
 
-    node* node::make_bool_node(doc* owner, core::string_view key, bool val)
+    node* node::make_bool_node(registry* owner, core::string_view key, bool val)
     {
-        return new (owner->alloc_node()) node(owner, key, value_type::boolean, static_cast<int64>(val));
+        return new (owner->alloc_node()) node(owner, key, node_type::boolean, static_cast<int64>(val));
     }
 
-    node::node(doc* owner, core::string_view key, value_type type, value_variant value)
+    node::node(registry* owner, core::string_view key, node_type type, value_variant value)
         : m_owner(owner)
         , m_key(key)
         , m_type(type)
@@ -114,4 +114,4 @@ namespace tavros::teff
     {
     }
 
-} // namespace tavros::teff
+} // namespace tavros::tef

@@ -1,20 +1,20 @@
-#include <tavros/teff/conv.hpp>
+#include <tavros/tef/conv.hpp>
 
-#include <tavros/teff/node.hpp>
+#include <tavros/tef/node.hpp>
 
 namespace
 {
-    bool valid_n(const tavros::teff::node* n) noexcept
+    bool valid_n(const tavros::tef::node* n) noexcept
     {
         return n && n->is_number();
     }
 
-    bool valid_cont(const tavros::teff::node* n) noexcept
+    bool valid_cont(const tavros::tef::node* n) noexcept
     {
         return n && n->is_number() && !n->has_key();
     }
 
-    const tavros::teff::node* next_cont(const tavros::teff::node* n) noexcept
+    const tavros::tef::node* next_cont(const tavros::tef::node* n) noexcept
     {
         if (!n) {
             return nullptr;
@@ -24,7 +24,7 @@ namespace
     }
 } // namespace
 
-namespace tavros::teff
+namespace tavros::tef
 {
 
     std::optional<math::euler3> conv<math::euler3>::operator()(const node* n) const noexcept
@@ -182,4 +182,4 @@ namespace tavros::teff
         );
     }
 
-} // namespace tavros::teff
+} // namespace tavros::tef

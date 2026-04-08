@@ -9,21 +9,21 @@
 #include <tavros/core/debug/verify.hpp>
 #include <tavros/core/traits.hpp>
 
-#include <tavros/teff/conv.hpp>
+#include <tavros/tef/conv.hpp>
 
 #include <variant>
 #include <optional>
 
-namespace tavros::teff
+namespace tavros::tef
 {
 
-    class doc;
+    class registry;
 
     /**
      * @brief A single node in a TEFF document tree.
      *
-     * Nodes are owned exclusively by a @ref doc and must not outlive it.
-     * Creation is only possible through @ref doc or another node's mutation
+     * Nodes are owned exclusively by a @ref registry and must not outlive it.
+     * Creation is only possible through @ref registry or another node's mutation
      * methods (append, append_object).
      *
      * A node is either:
@@ -35,34 +35,53 @@ namespace tavros::teff
      * sibling. [See TEFF spec 4.2, 5.2]
      *
      * @note Nodes are non-copyable and non-movable. Always access them
-     *       through pointers or references returned by @ref doc and @ref node
+     *       through pointers or references returned by @ref registry and @ref node
      *       mutation methods.
      */
-    class node : protected core::hierarchy<node>, core::noncopyable, core::nonmovable
+    class node : protected core::hierarchy<node>, core::noncopyable
     {
     private:
-        friend class doc;
+        friend class registry;
         friend class core::hierarchy<node>;
 
     public:
+        using iterator = core::hierarchy<node>::iteration_range;
+        using const_iterator = const core::hierarchy<node>::iteration_range;
+
         /**
-         * @brief Discriminator for the value stored in this node.
+         * @brief Discriminator for the type of data stored in a node.
+         *
+         * This enum defines both container and scalar node types used in TEFF.
+         *
+         * Notes:
+         * - @ref document represents a top-level container and does not have a parent.
+         * - @ref object is a nested container.
+         * - Other types represent scalar values.
          */
-        enum class value_type : uint8
+        enum class node_type : uint8
         {
-            /// Node is a container for child nodes; holds no scalar value.
+            /**
+             * @brief Top-level document node.
+             *
+             * Acts as the root of a parsed file. It owns a hierarchy of child nodes.
+             * A document node: has no parent; cannot be nested inside other nodes
+             * may contain objects and scalar values.
+             */
+            document,
+
+            /// Object node containing child nodes.
             object,
 
-            /// Node holds a UTF-8 string value.
+            /// UTF-8 string value.
             string,
 
-            /// Node holds a signed 64-bit integer value.
+            /// 64-bit floating-point value.
             integer,
 
-            /// Node holds a 64-bit floating-point value.
+            /// 64-bit floating-point value.
             floating_point,
 
-            /// Node holds a boolean value.
+            /// Boolean value.
             boolean,
         };
 
@@ -74,17 +93,33 @@ namespace tavros::teff
         /**
          * @brief Returns the value type of this node.
          */
-        [[nodiscard]] value_type type() const noexcept
+        [[nodiscard]] node_type type() const noexcept
         {
             return m_type;
         }
 
         /**
-         * @brief Returns true if this node is an object(container for children).
+         * @brief Returns true if this node is an root (container for children).
+         */
+        [[nodiscard]] bool is_document() const noexcept
+        {
+            return m_type == node_type::document;
+        }
+
+        /**
+         * @brief Returns true if this node is an object (container for children).
          */
         [[nodiscard]] bool is_object() const noexcept
         {
-            return m_type == value_type::object;
+            return m_type == node_type::object;
+        }
+
+        /**
+         * @brief Returns true if this node is a container.
+         */
+        [[nodiscard]] bool is_container() const noexcept
+        {
+            return m_type == node_type::object || m_type == node_type::document;
         }
 
         /**
@@ -92,7 +127,7 @@ namespace tavros::teff
          */
         [[nodiscard]] bool is_string() const noexcept
         {
-            return m_type == value_type::string;
+            return m_type == node_type::string;
         }
 
         /**
@@ -100,7 +135,7 @@ namespace tavros::teff
          */
         [[nodiscard]] bool is_integer() const noexcept
         {
-            return m_type == value_type::integer;
+            return m_type == node_type::integer;
         }
 
         /**
@@ -108,7 +143,7 @@ namespace tavros::teff
          */
         [[nodiscard]] bool is_floating_point() const noexcept
         {
-            return m_type == value_type::floating_point;
+            return m_type == node_type::floating_point;
         }
 
         /**
@@ -116,7 +151,7 @@ namespace tavros::teff
          */
         [[nodiscard]] bool is_number() const noexcept
         {
-            return m_type == value_type::integer || m_type == value_type::floating_point;
+            return m_type == node_type::integer || m_type == node_type::floating_point;
         }
 
         /**
@@ -124,7 +159,7 @@ namespace tavros::teff
          */
         [[nodiscard]] bool is_boolean() const noexcept
         {
-            return m_type == value_type::boolean;
+            return m_type == node_type::boolean;
         }
 
         /**
@@ -132,7 +167,7 @@ namespace tavros::teff
          */
         [[nodiscard]] bool is_scalar() const noexcept
         {
-            return !is_object();
+            return !is_container();
         }
 
     public:
@@ -152,7 +187,7 @@ namespace tavros::teff
          * @brief Returns the key of this node as a string view.
          *
          * Returns an empty string_view if the node has no key.
-         * The returned view is valid for the lifetime of the owning @ref doc.
+         * The returned view is valid for the lifetime of the owning @ref registry.
          */
         [[nodiscard]] core::string_view key() const noexcept
         {
@@ -382,14 +417,14 @@ namespace tavros::teff
 
     public:
         // ----------------------------------------------------------------
-        // Tree - mutation (nodes are allocated by owning doc)
+        // Tree - mutation (nodes are allocated by owning registry)
         // ----------------------------------------------------------------
 
         /**
          * @brief Appends a new object child node.
          *
          * This node must be an object; a failed assertion is triggered otherwise.
-         * The returned pointer is valid for the lifetime of the owning @ref doc.
+         * The returned pointer is valid for the lifetime of the owning @ref registry.
          *
          * @param key Key for the new child node.
          * @return Pointer to the newly created object node.
@@ -397,7 +432,7 @@ namespace tavros::teff
          */
         node* append_object(core::string_view key)
         {
-            TAV_VERIFY(is_object());
+            TAV_VERIFY(is_container());
             auto* n = make_obj_node(m_owner, key);
             insert_last_child(n);
             return n;
@@ -407,7 +442,7 @@ namespace tavros::teff
          * @brief Appends a new scalar child node.
          *
          * This node must be an object; a failed assertion is triggered otherwise.
-         * The returned pointer is valid for the lifetime of the owning @ref doc.
+         * The returned pointer is valid for the lifetime of the owning @ref registry.
          *
          * Supported value types: bool, integral types, floating-point types,
          * core::string, core::string_view, and other string-like types.
@@ -424,7 +459,7 @@ namespace tavros::teff
         template<class T>
         node* append(core::string_view key, T val)
         {
-            TAV_VERIFY(is_object());
+            TAV_VERIFY(is_container());
             using U = std::remove_cvref_t<T>;
 
             node* n = nullptr;
@@ -456,20 +491,20 @@ namespace tavros::teff
     private:
         using value_variant = std::variant<std::nullptr_t /* for object */, int64, double, core::string>;
 
-        static [[nodiscard]] node* make_obj_node(doc* owner, core::string_view key);
-        static [[nodiscard]] node* make_str_node(doc* owner, core::string_view key, core::string_view val);
-        static [[nodiscard]] node* make_int_node(doc* owner, core::string_view key, int64 val);
-        static [[nodiscard]] node* make_flt_node(doc* owner, core::string_view key, double val);
-        static [[nodiscard]] node* make_bool_node(doc* owner, core::string_view key, bool val);
+        static [[nodiscard]] node* make_obj_node(registry* owner, core::string_view key);
+        static [[nodiscard]] node* make_str_node(registry* owner, core::string_view key, core::string_view val);
+        static [[nodiscard]] node* make_int_node(registry* owner, core::string_view key, int64 val);
+        static [[nodiscard]] node* make_flt_node(registry* owner, core::string_view key, double val);
+        static [[nodiscard]] node* make_bool_node(registry* owner, core::string_view key, bool val);
 
-        node(doc* owner, core::string_view key, value_type type, value_variant value);
+        node(registry* owner, core::string_view key, node_type type, value_variant value);
         ~node() noexcept = default;
 
     private:
-        doc*          m_owner;
-        value_type    m_type;
+        registry*     m_owner;
+        node_type     m_type;
         core::string  m_key;
         value_variant m_value;
     };
 
-} // namespace tavros::teff
+} // namespace tavros::tef
