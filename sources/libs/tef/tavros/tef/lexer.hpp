@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/tef/token.hpp>
 
@@ -105,9 +106,11 @@ namespace tavros::tef
         int32 m_col;
 
         bool m_is_start_of_line;
-        bool m_in_dir;           // Inside the directive
-        bool m_required_end_dir; // Required directive end
+        bool m_in_dir;
         bool m_end_of_source;
+
+        // Small token stack
+        core::fixed_vector<token, 4> m_token_stack;
 
         token m_current_token;
     };

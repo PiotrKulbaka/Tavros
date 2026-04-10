@@ -35,6 +35,9 @@ namespace tavros::tef
             /// The 'end' directive at the end of line
             directive_end,
 
+            /// Keyword ('true', 'false' etc.)
+            keyword,
+
             /// Identifier or directive name
             identifier,
 

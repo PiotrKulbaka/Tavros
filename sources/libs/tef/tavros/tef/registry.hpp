@@ -8,6 +8,17 @@
 namespace tavros::tef
 {
 
+    /**
+     * @brief TEF node registry and memory owner.
+     *
+     * The registry owns all nodes allocated for TEF documents and provides
+     * facilities for creating, accessing, and destroying document trees.
+     *
+     * Memory for nodes is managed using an internal pool allocator, ensuring
+     * stable pointers and fast allocations.
+     *
+     * The registry stores multiple documents in a linked sequence.
+     */
     class registry final : core::noncopyable
     {
     private:
@@ -20,13 +31,23 @@ namespace tavros::tef
         /// @brief Maximum supported nesting depth for free_nodes traversal.
         static constexpr size_t k_max_nesting_level = 64;
 
+        /// @brief Internal node pool type.
         using pool_type = core::pool_allocator<node, k_pool_capacity>;
 
     public:
-        /** @brief Constructs an empty registry. */
+        /**
+         * @brief Constructs an empty registry.
+         *
+         * Initializes the internal memory pool and document list.
+         */
         registry();
 
-        /** @brief Destroys the document and releases all allocated nodes. */
+        /**
+         * @brief Destroys the registry and all owned nodes.
+         *
+         * All allocated nodes are destroyed and their memory is released.
+         * All previously obtained pointers become invalid.
+         */
         ~registry() noexcept;
 
         /** @brief Move constructor. */
@@ -53,35 +74,61 @@ namespace tavros::tef
          */
         [[nodiscard]] node* new_document(core::string_view path, node* pos = nullptr);
 
+        /**
+         * @brief Finds a document by its path.
+         *
+         * @param path Path associated with the document.
+         *
+         * @return Pointer to the document node, or nullptr if not found.
+         */
         [[nodiscard]] node* document(core::string_view path) noexcept;
 
+        /// @copydoc document(core::string_view)
         [[nodiscard]] const node* document(core::string_view path) const noexcept;
 
+        /**
+         * @brief Returns the first document in the registry.
+         *
+         * @return Pointer to the first document, or nullptr if empty.
+         */
         [[nodiscard]] node* first_document() noexcept
         {
             return m_first;
         }
 
+        /// @copydoc first_document()
         [[nodiscard]] const node* first_document() const noexcept
         {
             return m_first;
         }
 
+        /**
+         * @brief Returns the last document in the registry.
+         *
+         * @return Pointer to the last document, or nullptr if empty.
+         */
         [[nodiscard]] node* last_document() noexcept
         {
             return m_last;
         }
 
+        /// @copydoc last_document()
         [[nodiscard]] const node* last_document() const noexcept
         {
             return m_last;
         }
 
+        /**
+         * @brief Returns an iterator over all documents.
+         *
+         * Iterates documents in insertion order (from first to last).
+         */
         [[nodiscard]] node::iterator documents() noexcept
         {
             return node::iterator{m_first};
         }
 
+        /// @copydoc documents()
         [[nodiscard]] node::const_iterator documents() const noexcept
         {
             return node::const_iterator{m_first};
@@ -111,27 +158,30 @@ namespace tavros::tef
         const node* at_path(core::string_view path) const noexcept;
 
         /**
-         * @brief Destroys all nodes and resets the document to an empty state.
+         * @brief Destroys all nodes and resets the registry.
          *
-         * All previously returned pointers and references become invalid
-         * after this call.
+         * Clears all documents and releases all memory back to the pool.
+         *
+         * @warning All pointers, references, and iterators to nodes become invalid.
          */
         void clear() noexcept;
 
     private:
         /**
-         * @brief Allocates raw memory for a single node from the pool.
+         * @brief Allocates memory for a single node from the pool.
+         * @return Pointer to uninitialized node memory.
          */
         [[nodiscard]] node* alloc_node();
 
         /**
-         * @brief Destroys a subtree of nodes and returns their memory to the pool.
+         * @brief Destroys a subtree of nodes and returns memory to the pool.
          *
-         * Performs a depth-first traversal. A node is destroyed only after
-         * all of its descendants have been destroyed. The traversal starts
-         * from the root of the subtree containing @p n.
+         * Performs a depth-first traversal starting from @p n.
+         * A node is destroyed only after all its descendants.
          *
          * @param n Any node within the subtree to destroy.
+         *
+         * @note The traversal depth must not exceed @ref k_max_nesting_level.
          */
         static void free_nodes(node* n) noexcept;
 

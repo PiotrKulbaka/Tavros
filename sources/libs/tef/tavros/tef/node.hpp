@@ -86,10 +86,6 @@ namespace tavros::tef
         };
 
     public:
-        // ----------------------------------------------------------------
-        // Type
-        // ----------------------------------------------------------------
-
         /**
          * @brief Returns the value type of this node.
          */
@@ -171,10 +167,6 @@ namespace tavros::tef
         }
 
     public:
-        // ----------------------------------------------------------------
-        // Key
-        // ----------------------------------------------------------------
-
         /**
          * @brief Returns true if this node has a non - empty key.
          */
@@ -195,10 +187,6 @@ namespace tavros::tef
         }
 
     public:
-        // ----------------------------------------------------------------
-        // Value
-        // ----------------------------------------------------------------
-
         /**
          * @brief Returns the node value as type @p T, with numeric cross-conversion.
          *
@@ -222,7 +210,7 @@ namespace tavros::tef
                     return static_cast<bool>(std::get<int64>(m_value));
                 }
             } else if constexpr (std::is_same_v<T, core::string_view> || std::is_same_v<T, core::string>) {
-                if (is_string()) {
+                if (is_string() || is_document()) {
                     return std::get<core::string>(m_value);
                 }
             } else if constexpr (std::is_integral_v<T>) {
@@ -252,10 +240,7 @@ namespace tavros::tef
         template<typename T>
         [[nodiscard]] T value_or(T fallback) const noexcept
         {
-            if (auto val = value<T>()) {
-                return *val;
-            }
-            return fallback;
+            return value<T>().value_or(fallback);
         }
 
         /**
@@ -289,10 +274,6 @@ namespace tavros::tef
         }
 
     public:
-        // ----------------------------------------------------------------
-        // Tree navigation
-        // ----------------------------------------------------------------
-
         /**
          * @brief Returns the parent node, or nullptr if this is a root node.
          */
@@ -416,10 +397,6 @@ namespace tavros::tef
         const node* at_path(core::string_view path) const noexcept;
 
     public:
-        // ----------------------------------------------------------------
-        // Tree - mutation (nodes are allocated by owning registry)
-        // ----------------------------------------------------------------
-
         /**
          * @brief Appends a new object child node.
          *
