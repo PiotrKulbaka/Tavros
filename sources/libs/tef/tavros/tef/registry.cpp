@@ -17,26 +17,6 @@ namespace tavros::tef
         clear();
     }
 
-    registry::registry(registry&& other) noexcept
-        : m_pool(std::move(other.m_pool))
-        , m_first(other.m_first)
-        , m_last(other.m_last)
-    {
-        other.m_first = other.m_last = nullptr;
-    }
-
-    registry& registry::operator=(registry&& other) noexcept
-    {
-        if (this != &other) {
-            clear();
-            m_pool = std::move(other.m_pool);
-            m_first = other.m_first;
-            m_last = other.m_last;
-            other.m_first = other.m_last = nullptr;
-        }
-        return *this;
-    }
-
     node* registry::new_document(core::string_view path, node* pos)
     {
         auto* new_n = new (alloc_node()) node(this, {}, node::node_type::document, core::string(path));
@@ -76,7 +56,7 @@ namespace tavros::tef
 
     const node* registry::document(core::string_view path) const noexcept
     {
-        node* n = m_first;
+        const node* n = m_first;
         while (n) {
             TAV_ASSERT(n->is_document());
             auto sv = n->value<core::string_view>();

@@ -30,10 +30,10 @@ namespace tavros::tef
         enum class formatting
         {
             /// Human-readable output with indentation and line breaks.
-            pretty,  
+            pretty,
 
             /// Compact output with minimal whitespace.
-            compact, 
+            compact,
         };
 
         /**
@@ -45,10 +45,10 @@ namespace tavros::tef
             formatting fmt = formatting::pretty;
 
             /// Number of spaces per nesting level (used in pretty mode).
-            uint32     nested_indent = 4;
+            uint32 nested_indent = 4;
 
             /// Base indentation applied to the root level (used in pretty mode).
-            uint32     base_indent = 0;
+            uint32 base_indent = 0;
         };
 
     public:

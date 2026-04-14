@@ -29,23 +29,23 @@ namespace tavros::tef
          */
         enum class token_type
         {
-            /// The '@' character starting a directive at the beginning of a line
-            directive_at,
+            /// No token (invalid state)
+            none,
 
-            /// The 'end' directive at the end of line
-            directive_end,
+            /// Directive without leading '@'
+            directive,
 
             /// Keyword ('true', 'false' etc.)
             keyword,
 
-            /// Identifier or directive name
+            /// Identifier name
             identifier,
 
             /// Numeric literal
             number,
 
             /// Punctuation character
-            punctuator,
+            punctuation,
 
             /// String literal
             string_literal,
@@ -108,6 +108,14 @@ namespace tavros::tef
         }
 
         /**
+         * @brief Returns true if the token is at the start of a line.
+         */
+        bool is_line_start() const noexcept
+        {
+            return m_is_line_start;
+        }
+
+        /**
          * @brief Returns an error description if the token represents an error.
          */
         core::string_view error_string() const noexcept
@@ -122,23 +130,26 @@ namespace tavros::tef
             core::string_view line,
             int32             row,
             int32             col,
+            bool              is_line_start,
             core::string_view error = {}
         ) noexcept
             : m_type(type)
-            , m_lexeme(lexeme)
-            , m_line(line)
             , m_row(row)
             , m_col(col)
+            , m_is_line_start(is_line_start)
+            , m_lexeme(lexeme)
+            , m_line(line)
             , m_error(error)
         {
         }
 
     private:
-        token_type        m_type = token_type::error;
+        token_type        m_type = token_type::none;
+        int32             m_row = 0;
+        int32             m_col = 0;
+        bool              m_is_line_start = false;
         core::string_view m_lexeme;
         core::string_view m_line;
-        int32             m_row = -1;
-        int32             m_col = -1;
         core::string_view m_error;
     };
 

@@ -1,6 +1,5 @@
 #pragma once
 
-#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/tef/token.hpp>
 
@@ -11,7 +10,7 @@ namespace tavros::tef
      * @brief Lexer for the TEFF (Tavros Engine File Format) language.
      *
      * Scans a range of UTF-8 source text and produces a sequence of tokens.
-     * The lexer does not validate token values — for example, a number token
+     * The lexer does not validate token values - for example, a number token
      * may contain an arbitrary sequence of digits, letters, dots and underscores.
      * Validation and conversion are the responsibility of the parser.
      *
@@ -20,14 +19,14 @@ namespace tavros::tef
      * the lexer.
      *
      * Token types produced:
-     *   - identifier      — key or keyword (true, false, null)
-     *   - number          — numeric literal sequence (validated by parser)
-     *   - string_literal  — quoted string, content without quotes
-     *   - punctuator      — '=', ':', '{', '}', '.'
-     *   - directive_at    — '@' at start of line, begins a directive
-     *   - directive_end   — implicit token emitted after a directive line ends
-     *   - end_of_source   — emitted once when the source is exhausted
-     *   - error           — lexical error with a description
+     *   - identifier      - key or keyword (true, false, null)
+     *   - number          - numeric literal sequence (validated by parser)
+     *   - string_literal  - quoted string, content without quotes
+     *   - punctuator      - '=', ':', '{', '}', '.'
+     *   - directive_at    - '@' at start of line, begins a directive
+     *   - directive_end   - implicit token emitted after a directive line ends
+     *   - end_of_source   - emitted once when the source is exhausted
+     *   - error           - lexical error with a description
      */
     class lexer : core::noncopyable
     {
@@ -78,11 +77,14 @@ namespace tavros::tef
     private:
         token scan_next_token() noexcept;
 
-        void adv() noexcept;
-        void adv_ln() noexcept;
-        char peek() const noexcept;
-        bool eos() const noexcept;
+        void               adv(size_t n = 1) noexcept;
+        void               adv_ln() noexcept;
+        [[nodiscard]] char peek(size_t n = 0) const noexcept;
+        [[nodiscard]] bool eos(size_t n = 0) const noexcept;
+        [[nodiscard]] bool more(size_t n = 0) const noexcept;
+        [[nodiscard]] bool match(core::string_view sv) const noexcept;
 
+        token scan_special() noexcept;
         token scan_punctuation() noexcept;
         token scan_identifier() noexcept;
         token scan_number() noexcept;
@@ -92,7 +94,7 @@ namespace tavros::tef
 
         static token make_error(core::string_view line, int32 row, int32 col, core::string_view error) noexcept
         {
-            return {token::token_type::error, {}, line, row, col, error};
+            return {token::token_type::error, {}, line, row, col, false, error};
         }
 
     private:
@@ -105,12 +107,8 @@ namespace tavros::tef
         int32 m_row;
         int32 m_col;
 
-        bool m_is_start_of_line;
-        bool m_in_dir;
+        bool m_is_line_start;
         bool m_end_of_source;
-
-        // Small token stack
-        core::fixed_vector<token, 4> m_token_stack;
 
         token m_current_token;
     };

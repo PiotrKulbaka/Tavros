@@ -27,8 +27,8 @@ namespace tavros::tef
      * methods (append, append_object).
      *
      * A node is either:
-     *   - an **object** — has children, no scalar value
-     *   - a **scalar** — holds a typed value (string, integer, float, bool)
+     *   - an **object** - has children, no scalar value
+     *   - a **scalar** - holds a typed value (string, integer, float, bool)
      *
      * Each node has an optional string key. Nodes without a key are
      * continuations of a value sequence initiated by the preceding keyed
@@ -46,7 +46,7 @@ namespace tavros::tef
 
     public:
         using iterator = core::hierarchy<node>::iteration_range;
-        using const_iterator = const core::hierarchy<node>::iteration_range;
+        using const_iterator = const core::hierarchy<const node>::iteration_range;
 
         /**
          * @brief Discriminator for the type of data stored in a node.

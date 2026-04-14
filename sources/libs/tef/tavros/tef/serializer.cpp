@@ -16,10 +16,12 @@ namespace tavros::tef
     {
         core::string result;
         for (auto& doc : reg.documents()) {
-            result.append("# ");
+            result.append("# ================================================================\n");
+            result.append("# file: ");
             result.append(doc.value_or<core::string_view>({}));
-            result.append("\n");
+            result.append("\n# ================================================================\n");
             serialize_into(doc, result);
+            result.append("\n");
         }
         return result;
     }
@@ -101,7 +103,7 @@ namespace tavros::tef
             return;
         }
 
-        // Keyless node — continuation of a value sequence.
+        // Keyless node - continuation of a value sequence.
         // Indent is suppressed; caller already placed a space before us.
         const bool is_continuation = !n.has_key();
         const bool is_first_child = n.prev() == nullptr;
@@ -127,7 +129,7 @@ namespace tavros::tef
             } else {
                 out.append("{}");
             }
-            // After closing brace — check if next sibling is a continuation
+            // After closing brace - check if next sibling is a continuation
             const node* nx = n.next();
             if (pretty) {
                 if (nx && !nx->has_key()) {
@@ -142,7 +144,7 @@ namespace tavros::tef
             }
         } else {
             write_scalar(n, out);
-            // After scalar — check if next sibling is a continuation
+            // After scalar - check if next sibling is a continuation
             const node* nx = n.next();
             if (pretty) {
                 if (nx && !nx->has_key()) {

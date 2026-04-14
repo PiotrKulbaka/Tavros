@@ -51,24 +51,6 @@ namespace
     }
 
     using tt = tavros::tef::token::token_type;
-
-    bool is_keyword(tavros::core::string_view sv) noexcept
-    {
-        static constexpr tavros::core::string_view keywords[] = {
-            "true",
-            "false",
-            "inf",
-            "nan",
-        };
-        for (const auto& kw : keywords) {
-            if (kw == sv) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
 } // namespace
 
 namespace tavros::tef
@@ -81,8 +63,7 @@ namespace tavros::tef
         , m_line(begin, begin)
         , m_row(1)
         , m_col(1)
-        , m_is_start_of_line(true)
-        , m_in_dir(false)
+        , m_is_line_start(true)
         , m_end_of_source(false)
     {
         const auto* end_line = begin;
@@ -95,81 +76,65 @@ namespace tavros::tef
 
     token lexer::scan_next_token() noexcept
     {
-        if (!m_token_stack.empty()) {
-            auto tok = m_token_stack.back();
-            m_token_stack.pop_back();
-            return tok;
+        skip_trivia();
+
+        if (eos()) {
+            m_end_of_source = true;
+            return {tt::end_of_source, {}, m_line, m_row, m_col, false};
         }
 
-        do {
-            skip_trivia();
-
-            // Emit pending directive_end produced by skip_trivia
-            if (!m_token_stack.empty()) {
-                auto tok = m_token_stack.back();
-                m_token_stack.pop_back();
-                return tok;
-            }
-
-            if (eos()) {
-                break;
-            }
-
-            // Identifier or directive name
-            if (is_start_identifier(peek())) {
-                return scan_identifier();
-            }
-
-            // Number
-            if (is_start_number(peek()) || peek() == '-' || peek() == '+') {
-                return scan_number();
-            }
-
-            // String literal or character literal
-            if (peek() == '"') {
-                return scan_string_literal();
-            }
-
-            // Directive or punctuation
-            if (peek() == '@') {
-                return scan_at();
-            }
-
-            return scan_punctuation();
-        } while (true);
-
-        if (m_in_dir) {
-            m_in_dir = false;
-            return {tt::directive_end, {m_forward, m_forward}, m_line, m_row, m_col};
+        // Check for special tokens (inf, +inf, -inf, nan, true, false)
+        auto special_tok = scan_special();
+        if (special_tok.type() != tt::none) {
+            return special_tok;
         }
 
-        m_end_of_source = true;
-        return {tt::end_of_source, {}, m_line, m_row, m_col};
+        // Identifier or directive name
+        if (is_start_identifier(peek())) {
+            return scan_identifier();
+        }
+
+        // Number
+        if (is_start_number(peek()) || peek() == '-' || peek() == '+') {
+            return scan_number();
+        }
+
+        // String literal or character literal
+        if (peek() == '"') {
+            return scan_string_literal();
+        }
+
+        // Directive or punctuation
+        if (peek() == '@') {
+            return scan_at();
+        }
+
+        return scan_punctuation();
     }
 
-    void lexer::adv() noexcept
+    void lexer::adv(size_t n) noexcept
     {
-        TAV_ASSERT(!eos());
-        TAV_ASSERT(peek() != '\n');
+        TAV_ASSERT(n >= 1);
+        TAV_ASSERT(more(n - 1));
+#if TAV_DEBUG
+        for (size_t i = 0; i < n; ++i) {
+            TAV_ASSERT(peek(i) != '\n');
+        }
+#endif
 
-        ++m_forward;
-        ++m_col;
+        m_forward += n;
+        m_col += static_cast<int32>(n);
     }
 
     void lexer::adv_ln() noexcept
     {
-        TAV_ASSERT(!eos());
+        TAV_ASSERT(more());
         TAV_ASSERT(peek() == '\n');
-
-        if (m_in_dir) {
-            m_in_dir = false;
-            m_token_stack.emplace_back(token{tt::directive_end, {}, m_line, m_row, m_col});
-        }
 
         m_col = 1;
         ++m_row;
         ++m_forward;
-        m_is_start_of_line = true;
+        m_is_line_start = true;
 
         const auto* end_line = m_forward;
         while (end_line < m_end && *end_line != '\n') {
@@ -178,53 +143,116 @@ namespace tavros::tef
         m_line = {m_forward, end_line};
     }
 
-    char lexer::peek() const noexcept
+    char lexer::peek(size_t n) const noexcept
     {
-        TAV_ASSERT(!eos());
-        return *m_forward;
+        TAV_ASSERT(more(n));
+        return *(m_forward + n);
     }
 
-    bool lexer::eos() const noexcept
+    bool lexer::eos(size_t n) const noexcept
     {
-        return m_forward >= m_end;
+        return (m_forward + n) >= m_end;
+    }
+
+    bool lexer::more(size_t n) const noexcept
+    {
+        return (m_forward + n) < m_end;
+    }
+
+    bool lexer::match(core::string_view sv) const noexcept
+    {
+        if (core::string_view{m_forward, m_end}.starts_with(sv)) {
+            if (more(sv.size())) {
+                // Ensure that the matched keyword is not a prefix of a longer identifier
+                return !is_part_identifier(peek(sv.size()));
+            }
+            return true;
+        }
+        return false;
     }
 
     token lexer::scan_identifier() noexcept
     {
         TAV_ASSERT(is_start_identifier(peek()));
 
-        m_is_start_of_line = false;
+        auto is_line_start = m_is_line_start;
+        m_is_line_start = false;
+
         auto        col = m_col;
         const auto* beg = m_forward;
 
         do {
             adv();
-        } while (!eos() && is_part_identifier(peek()));
-        auto lex = core::string_view{beg, m_forward};
-        auto tok_type = is_keyword(lex) ? tt::keyword : tt::identifier;
-        return {tok_type, lex, m_line, m_row, col};
+        } while (more() && is_part_identifier(peek()));
+        return {tt::identifier, {beg, m_forward}, m_line, m_row, col, is_line_start};
+    }
+
+    token lexer::scan_special() noexcept
+    {
+        auto is_line_start = m_is_line_start;
+        m_is_line_start = false;
+
+        auto        col = m_col;
+        const auto* beg = m_forward;
+
+        if (match("inf")) {
+            adv(3);
+            return {tt::number, {beg, m_forward}, m_line, m_row, col, is_line_start};
+        }
+
+        if (match("+inf")) {
+            adv(4);
+            return {tt::number, {beg, m_forward}, m_line, m_row, col, is_line_start};
+        }
+
+        if (match("-inf")) {
+            adv(4);
+            return {tt::number, {beg, m_forward}, m_line, m_row, col, is_line_start};
+        }
+
+        if (match("nan")) {
+            adv(3);
+            return {tt::number, {beg, m_forward}, m_line, m_row, col, is_line_start};
+        }
+
+        if (match("true")) {
+            adv(4);
+            return {tt::keyword, {beg, m_forward}, m_line, m_row, col, is_line_start};
+        }
+
+        if (match("false")) {
+            adv(5);
+            return {tt::keyword, {beg, m_forward}, m_line, m_row, col, is_line_start};
+        }
+
+        return {};
     }
 
     token lexer::scan_punctuation() noexcept
     {
-        TAV_ASSERT(!eos());
+        TAV_ASSERT(more());
+
+        auto is_line_start = m_is_line_start;
+        m_is_line_start = false;
 
         const auto* beg = m_forward;
         auto        col = m_col;
-        m_is_start_of_line = false;
         adv();
 
         if (is_punct(*beg)) {
-            return {tt::punctuator, {beg, m_forward}, m_line, m_row, col};
+            return {tt::punctuation, {beg, m_forward}, m_line, m_row, col, is_line_start};
         }
-        return {tt::error, {beg, m_forward}, m_line, m_row, col, "Unexpected character"};
+
+        return {tt::error, {beg, m_forward}, m_line, m_row, col, is_line_start, "Unexpected character"};
     }
 
     token lexer::scan_number() noexcept
     {
         TAV_ASSERT(is_start_number(peek()) || peek() == '-' || peek() == '+');
 
-        m_is_start_of_line = false;
+        auto is_line_start = m_is_line_start;
+        m_is_line_start = false;
+
         auto        col = m_col;
         const auto* beg = m_forward;
 
@@ -233,52 +261,41 @@ namespace tavros::tef
             adv();
         }
 
-        auto punct_tok = token{tt::punctuator, {beg, m_forward}, m_line, m_row, col};
+        auto punct_tok = token{tt::punctuation, {beg, m_forward}, m_line, m_row, col, is_line_start};
 
         if (eos()) {
             // Just a pinctuation
             return punct_tok;
         }
 
-        if (!is_start_number(peek())) {
-            if (is_start_identifier(peek())) {
-                auto tok = scan_identifier();
-                if (tok.lexeme() == "inf") {
-                    // Lexeme inf with a sign
-                    return token{tt::keyword, {beg, m_forward}, m_line, m_row, col};
-                }
-                m_token_stack.push_back(tok);
-            }
-            // Just a pinctuation
-            return punct_tok;
-        }
-
         do {
             adv();
-        } while (!eos() && is_part_number(peek()));
+        } while (more() && is_part_number(peek()));
 
-        if (!eos() && peek() == '.') {
+        if (more() && peek() == '.') {
             // Skip dot and scan fractional part
             do {
                 adv();
-            } while (!eos() && is_part_number(peek()));
+            } while (more() && is_part_number(peek()));
         }
 
-        return {tt::number, {beg, m_forward}, m_line, m_row, col};
+        return {tt::number, {beg, m_forward}, m_line, m_row, col, is_line_start};
     }
 
     token lexer::scan_string_literal() noexcept
     {
         TAV_ASSERT(peek() == '"');
 
-        m_is_start_of_line = false;
+        auto is_line_start = m_is_line_start;
+        m_is_line_start = false;
+
         auto ln = m_row;
         auto col = m_col;
 
         adv(); // skip opening '"'
         const auto* beg = m_forward;
 
-        while (!eos() && peek() != '\n' && peek() != '"') {
+        while (more() && peek() != '\n' && peek() != '"') {
             if (peek() == '\\') {
                 // Escape sequence
                 adv(); // skip backslash
@@ -303,33 +320,38 @@ namespace tavros::tef
         const auto* end_of_str = m_forward;
         adv(); // skip closing '"'
 
-        return {tt::string_literal, {beg, end_of_str}, m_line, ln, col};
+        return {tt::string_literal, {beg, end_of_str}, m_line, ln, col, is_line_start};
     }
 
     token lexer::scan_at() noexcept
     {
         TAV_ASSERT(peek() == '@');
 
-        auto        is_start_line = m_is_start_of_line;
+        auto is_line_start = m_is_line_start;
+        m_is_line_start = false;
+
         const auto* at_beg = m_forward;
         auto        col = m_col;
 
-        m_is_start_of_line = false;
         adv(); // skip '@'
 
-        if (is_start_line) {
-            // Directive '@ can be only at the start of the line
-            m_in_dir = true;
-            return {tt::directive_at, {at_beg, m_forward}, m_line, m_row, col};
+        if (more() && is_start_identifier(peek())) {
+            const auto* dir_beg = m_forward;
+            // Directive name
+            do {
+                adv();
+            } while (more() && is_part_identifier(peek()));
+
+            return {tt::directive, {dir_beg, m_forward}, m_line, m_row, col, is_line_start};
         }
 
         // Just a punctuation token
-        return {tt::punctuator, {at_beg, m_forward}, m_line, m_row, col};
+        return {tt::punctuation, {at_beg, m_forward}, m_line, m_row, col, is_line_start};
     }
 
     void lexer::skip_trivia() noexcept
     {
-        while (!eos()) {
+        while (more()) {
             if (peek() == '\n') {
                 adv_ln();
             } else if (is_whitespace(peek())) {
@@ -338,7 +360,7 @@ namespace tavros::tef
                 // Line comment - skip to end of line
                 do {
                     adv();
-                } while (!eos() && peek() != '\n');
+                } while (more() && peek() != '\n');
             } else {
                 // Not trivia
                 return;

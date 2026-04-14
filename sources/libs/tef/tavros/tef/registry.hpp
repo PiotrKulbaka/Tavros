@@ -19,7 +19,7 @@ namespace tavros::tef
      *
      * The registry stores multiple documents in a linked sequence.
      */
-    class registry final : core::noncopyable
+    class registry final : core::noncopyable, core::nonmovable
     {
     private:
         friend class node;
@@ -49,12 +49,6 @@ namespace tavros::tef
          * All previously obtained pointers become invalid.
          */
         ~registry() noexcept;
-
-        /** @brief Move constructor. */
-        registry(registry&& other) noexcept;
-
-        /** @brief Move assignment. */
-        registry& operator=(registry&& other) noexcept;
 
         /**
          * @brief Creates and inserts a new document node into the registry.

@@ -31,7 +31,34 @@ namespace tavros::tef
          * Stores paths or identifiers of all @c include directives
          * found in the source. The order is preserved as encountered.
          */
-        core::vector<core::string> includes;
+        core::vector<core::string> inclusions;
+
+        /**
+         * @brief Deferred inheritance link description.
+         *
+         * Stores a node together with the prototype path that shall be
+         * resolved after the main parse stage.
+         */
+        struct inherit_node_t
+        {
+            /**
+             * @brief Target node that declares inheritance.
+             */
+            node* n = nullptr;
+
+            /**
+             * @brief Prototype path referenced by the node.
+             */
+            core::string path;
+        };
+
+        /**
+         * @brief List of nodes requiring inheritance resolution.
+         *
+         * Each entry describes a node and the prototype path that must
+         * be linked after parsing completes.
+         */
+        core::vector<inherit_node_t> inheritance;
     };
 
     /**
