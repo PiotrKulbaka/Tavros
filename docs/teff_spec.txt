@@ -2,7 +2,7 @@ ________________________________________________________________________________
 
                       TAVROS ENGINE FILE FORMAT (TEFF)
                            Language Specification
-                                Version 0.1
+                                Version 0.2
 ________________________________________________________________________________
 
 
@@ -26,19 +26,20 @@ TABLE OF CONTENTS
      4.2  Element
      4.3  Value
      4.4  Node
-     4.5  Inheritance
+     4.5  Prototype reference
      4.6  Path
   5. Semantic rules
      5.1  Key uniqueness
      5.2  Value sequences
-     5.3  Inheritance
+     5.3  Prototype reference
           5.3.1  Resolution
-          5.3.2  Merge semantics
+          5.3.2  Lookup semantics
           5.3.3  Cycle detection
           5.3.4  Visibility
      5.4  Include directives
-  6. Errors
-  7. Examples
+  6. Nesting depth
+  7. Errors
+  8. Examples
 
 
 ________________________________________________________________________________
@@ -52,26 +53,27 @@ ________________________________________________________________________________
     conforming implementations.
 
 2   TEFF supports scalar values (integers, floating-point numbers, booleans, and
-    strings), nested nodes, value sequences, single inheritance, and file
+    strings), nested nodes, value sequences, prototype-based extension, and file
     inclusion.
 
 3   This document defines the lexical structure, grammar, and semantics of TEFF
-    version 0.1.
+    version 0.2.
+
 
 ________________________________________________________________________________
-2.  Source file                                                     [teff.src]
+2.  Source file                                                      [teff.src]
 ________________________________________________________________________________
 
 1   A TEFF source file is a sequence of Unicode code points encoded in UTF-8.
     A conforming implementation shall accept any valid UTF-8 encoded file.
 
-2   A source file consists of an optional include section followed by a sequence
-    of zero or more elements. This sequence forms the implicit root node of the
-    file.
+2   A source file consists of an optional directive section followed by a
+    sequence of zero or more elements. This sequence forms the implicit root
+    node of the file.
 
-3   The include section, if present, shall appear before any element. An
+3   @include directives, if present, shall appear before any element. An
     @include directive appearing after the first element is an error.
-    [See 5.4]
+    [See [teff.errors] E-09]
 
 
 ________________________________________________________________________________
@@ -133,11 +135,11 @@ ________________________________________________________________________________
 
     [Example:
         # This is a comment
-        name = "value"    # inline comment
+        label = "value"    # inline comment
     --end example]
 
 
-  3.3  Identifiers                                           [teff.lex.ident]
+  3.3  Identifiers                                            [teff.lex.ident]
   ____________________________________________________________________________
 
 1   An identifier is a sequence of characters of the form:
@@ -147,18 +149,18 @@ ________________________________________________________________________________
 
 2   Identifiers are case-sensitive. The identifiers 'true' and 'false' are
     reserved as keyword literals and shall not be used as keys.
-    [See 3.4.3]
+    [See [teff.lex.lit.bool]]
 
 3   If a token begins with an id-start character, it shall form a valid
     identifier. An identifier that appears at a position where a key is
     expected shall be followed by '='. Otherwise it is an error.
-    [See 6, error E-03]
+    [See [teff.errors] E-02]
 
 
-  3.4  Literals                                             [teff.lex.literal]
+  3.4  Literals                                              [teff.lex.literal]
   ____________________________________________________________________________
 
-    3.4.1  Integer literals                               [teff.lex.lit.int]
+    3.4.1  Integer literals                                [teff.lex.lit.int]
     __________________________________________________________________________
 
 1   An integer literal represents a whole number value of type integer.
@@ -190,17 +192,17 @@ ________________________________________________________________________________
 
 5   Integer values are stored as signed 64-bit integers (int64).
     It is an error if a literal value is outside the range
-    [-(2^63), 2^63 - 1].  [See 6, error E-06]
+    [-(2^63), 2^63 - 1].  [See [teff.errors] E-06]
 
     [Example:
-        count     = 42
-        offset    = -7
-        mask      = 0xFF00FF
-        flags     = 0b1010
+        count  = 42
+        offset = -7
+        mask   = 0xFF00FF
+        flags  = 0b1010
     --end example]
 
 
-    3.4.2  Floating-point literals                      [teff.lex.lit.float]
+    3.4.2  Floating-point literals                       [teff.lex.lit.float]
     __________________________________________________________________________
 
 1   A floating-point literal represents a real number value.
@@ -222,13 +224,13 @@ ________________________________________________________________________________
 
     [Example:
         scale     = 1.5
-        gravity   = -9.81
         threshold = 1e-6
         ratio     = 3.14159
+        gravity   = -9.81
     --end example]
 
 
-    3.4.3  Boolean literals                              [teff.lex.lit.bool]
+    3.4.3  Boolean literals                               [teff.lex.lit.bool]
     __________________________________________________________________________
 
 1   A boolean literal is one of the following keywords:
@@ -238,10 +240,10 @@ ________________________________________________________________________________
                 'false'
 
 2   Boolean literals are reserved keywords and shall not be used as
-    identifiers.  [See 3.3]
+    identifiers.  [See [teff.lex.ident]]
 
 
-    3.4.4  String literals                              [teff.lex.lit.string]
+    3.4.4  String literals                               [teff.lex.lit.string]
     __________________________________________________________________________
 
 1   A string literal is a sequence of printable characters enclosed in
@@ -263,85 +265,98 @@ ________________________________________________________________________________
 
 2   A string literal may not span multiple lines. It is an error if a
     line-feed character appears inside a string literal without being
-    part of an escape sequence.  [See 6, error E-07]
+    part of an escape sequence.  [See [teff.errors] E-07]
 
-3   An unrecognized escape sequence is an error.  [See 6, error E-08]
+3   An unrecognized escape sequence is an error.
+    [See [teff.errors] E-08]
 
     [Example:
         label   = "Hello, world!"
-        path    = "textures\\diffuse.png"
-        tooltip = "Press \"Enter\" to continue"
+        path    = "assets\\textures\\diffuse.png"
+        tooltip = "Press \"Enter\" to confirm"
     --end example]
 
 
-  3.5  Punctuators                                         [teff.lex.punct]
+  3.5  Punctuators                                          [teff.lex.punct]
   ____________________________________________________________________________
 
 1   The following single characters are punctuators:
 
         punctuator:
                 '='     assignment
-                ':'     inheritance separator
+                ':'     prototype separator
                 '{'     node begin
                 '}'     node end
                 '.'     path separator
 
 
-  3.6  Directives                                       [teff.lex.directive]
+  3.6  Directives                                        [teff.lex.directive]
   ____________________________________________________________________________
 
-1   A directive begins with '@' and extends to the end of the line.
+1   A directive begins with the '@' character.
+
+    The '@' character appearing outside of a directive is an error.
 
         directive:
-                include-directive
+                '@' identifier directive-arguments
 
-        include-directive:
-                '@include' whitespace string-literal
+2   Directives may appear at any position in the file unless explicitly
+    restricted.
 
-2   The '@include' directive instructs the parser to insert the content
-    of the referenced file at the point of the directive, as if its
-    elements were written directly in the including file.
+3   The following directives are defined in this version of the specification:
 
-3   Include directives shall appear only before the first element of a
-    source file. An include directive appearing after any element is
-    an error.  [See 6, error E-09]
+        @include  string-literal
 
-    [Example:
-        @include "base/weapons.teff"
-        @include "base/items.teff"
+4   An unknown directive name is an error.
+    [See [teff.errors] E-17]
 
-        ak74 : base_weapon = {
-            damage = 15
-        }
-    --end example]
+5   The '@include' directive shall appear only at the beginning of a file.
+    Its presence in any other position is an error.
+
+    The '@include' directive instructs the parser to insert the content of
+    the referenced file at the point of the directive, as if its elements
+    were written directly in the including file.
+    [See [teff.sem.include]]
 
 
 ________________________________________________________________________________
 4.  Syntax                                                         [teff.syntax]
 ________________________________________________________________________________
 
-  4.1  Source file                                          [teff.syn.file]
+  4.1  Source file                                           [teff.syn.file]
   ____________________________________________________________________________
 
         source-file:
-                include-directive*  element*
+                top-level-item*
+
+        top-level-item:
+                directive
+                element
+
+1   Directives and elements may appear in any order within a source file,
+    unless explicitly restricted by a specific directive.
+
+2   Some directives may impose positional constraints.
+    Violating such constraints is an error.
+    [See [teff.errors]]
 
 
-  4.2  Element                                           [teff.syn.element]
+  4.2  Element                                            [teff.syn.element]
   ____________________________________________________________________________
 
 1   An element is a key-value binding or a bare value.
 
         element:
-                identifier inheritance? '=' value value*
+                identifier proto-ref? '=' value value*
                 value
 
-2   The identifier is the key of the element. All subsequent values on the
-    same nesting level, until the next keyed element or the closing '}' of
-    the enclosing node, are part of the same value sequence.
-    [See 5.2]
+2   The identifier is the key of the element. All subsequent bare values on
+    the same nesting level, until the next keyed element or the closing '}'
+    of the enclosing node, are part of the same value sequence.
+    [See [teff.sem.sequence]]
 
-  4.3  Value                                              [teff.syn.value]
+
+  4.3  Value                                               [teff.syn.value]
   ____________________________________________________________________________
 
         value:
@@ -355,48 +370,60 @@ ________________________________________________________________________________
                 string-literal
 
 
-  4.4  Node                                                [teff.syn.node]
+  4.4  Node                                                 [teff.syn.node]
   ____________________________________________________________________________
 
         node:
-                '{' element* '}'
+                '{' (element | directive)* '}'
 
-1   A node is an ordered sequence of zero or more elements enclosed in
-    curly braces. Nodes may be nested to arbitrary depth.
+1   A node is an ordered sequence of zero or more elements and directives
+    enclosed in curly braces. Nodes may be nested to arbitrary depth subject
+    to the implementation-defined nesting limit.
+    [See [teff.nesting]]
 
 2   The implicit root of a source file is itself a node whose content is
-    the top-level element sequence.
+    the top-level item sequence.
 
 
-  4.5  Inheritance                                     [teff.syn.inherit]
+  4.5  Prototype reference                                 [teff.syn.proto]
   ____________________________________________________________________________
 
-        inheritance:
+        proto-ref:
                 ':' path
 
-1   Inheritance may appear only in a keyed element whose value is a node:
+1   A prototype reference establishes a link from a derived node to a
+    prototype node:
 
         identifier ':' path '=' node
 
-2   It is an error to specify inheritance for an element whose value is
-    a scalar.  [See 6, error E-10]
+2   A prototype reference may appear only in a keyed element whose first
+    value is a node. It is an error to specify a prototype reference for
+    an element whose value is a scalar.
+    [See [teff.errors] E-10]
+
+3   A prototype reference is not inheritance in the classical sense. It does
+    not copy or merge data from the prototype into the derived node. Instead,
+    it stores a reference (link) to the prototype node. Property lookup on
+    the derived node follows the prototype chain when a key is not found
+    locally.
+    [See [teff.sem.proto]]
 
 
-  4.6  Path                                              [teff.syn.path]
+  4.6  Path                                                [teff.syn.path]
   ____________________________________________________________________________
 
         path:
                 identifier ( '.' identifier )*
 
-1   A path identifies a node by navigating the key hierarchy of the
-    source file, starting from the root of the current document.
+1   A path identifies a node by navigating the key hierarchy starting from
+    the root of the current document.
 
-2   Each segment of a path is an identifier that names a direct child
-    of the node selected by the preceding segments.
+2   Each segment of a path names a direct child of the node selected by the
+    preceding segments.
 
     [Example:
-        weapons.base_weapon
-        ui.themes.dark
+        ui.button
+        config.defaults.color
     --end example]
 
 
@@ -404,153 +431,202 @@ ________________________________________________________________________________
 5.  Semantic rules                                             [teff.semantics]
 ________________________________________________________________________________
 
-  5.1  Key uniqueness                                     [teff.sem.keys]
+  5.1  Key uniqueness                                      [teff.sem.keys]
   ____________________________________________________________________________
 
 1   Within a single node, each key shall be unique. It is an error to
     define two elements with the same key within the same node.
-    [See 6, error E-01]
+    [See [teff.errors] E-01]
 
 2   Keys in different nodes, or at different nesting levels, are
     independent and do not conflict.
 
     [Example:
-        # Error: duplicate key 'name' in the same node
-        group = {
-            name = "first"
-            name = "second"    # E-01
+        # Error: duplicate key within one node
+        config = {
+            width  = 800
+            width  = 1024    # E-01
         }
 
-        # OK: same key in different nodes
-        group_a = { name = "a" }
-        group_b = { name = "b" }
+        # OK: same key in sibling nodes
+        panel_a = { width = 800  }
+        panel_b = { width = 1024 }
     --end example]
 
 
-  5.2  Value sequences                                 [teff.sem.sequence]
+  5.2  Value sequences                                  [teff.sem.sequence]
   ____________________________________________________________________________
 
-1   A value sequence is initiated by a keyed element. It consists of
-    that element and all immediately following bare values within the
-    same enclosing node, up to (but not including) the next keyed
-    element or the closing '}' of that node.
+1   A value sequence is initiated by a keyed element. It consists of that
+    element and all immediately following bare values within the same
+    enclosing node, up to (but not including) the next keyed element or
+    the closing '}' of that node.
 
-2   The key is logically associated with the entire sequence. However,
-    physically, only the first element in the sequence carries the key.
-    Subsequent elements in the sequence have no key.
+2   The key is logically associated with the entire sequence. Physically,
+    only the first element in the sequence carries the key. Subsequent
+    elements in the sequence have no key.
 
-3   Lookup by key returns the first element of the sequence.
-    Subsequent elements are accessed by advancing from the returned
-    element through its siblings while they remain keyless.
+3   Lookup by key returns the first element of the sequence. Subsequent
+    elements are accessed by advancing through the keyless siblings that
+    follow the returned element.
 
 4   Value sequences are not a distinct data type. They are a syntactic
     shorthand for ordered, keyless siblings following a keyed element.
 
     [Example:
-        # Sequence of three floats under key 'position':
-        position = 1.0 2.0 3.0
+        # Sequence of three floats:
+        origin = 0.0 0.0 0.0
 
-        # Sequence of two nodes under key 'command':
-        command =
-            { id = "key_left"  exe = "left"  }
-            { id = "key_right" exe = "right" }
+        # Sequence of two nodes:
+        variant =
+            { width = 100  height = 30 }
+            { width = 200  height = 60 }
 
-        # Accessing the sequence:
-        #   find("position")     -> node(key="position", value=1.0)
-        #   find("position")[0]  -> 1.0
-        #   find("position")[1]  -> 2.0
-        #   find("position")[2]  -> 3.0
+        # Lookup:
+        #   find("origin")     -> node(key="origin", value=0.0)
+        #   find("origin")[0]  -> 0.0
+        #   find("origin")[1]  -> 0.0
+        #   find("origin")[2]  -> 0.0
     --end example]
 
 
-  5.3  Inheritance                                     [teff.sem.inherit]
+  5.3  Prototype reference                               [teff.sem.proto]
   ____________________________________________________________________________
 
-1   Inheritance allows a node to extend another node, called the base
-    node, copying its elements and then applying overrides.
+1   A prototype reference associates a derived node with a prototype node.
+    The association is a stored link, not a data copy. The derived node
+    retains only its own explicitly declared elements; prototype data is
+    accessed through the link at lookup time.
 
-        identifier ':' path '=' node
+2   Property lookup on a derived node proceeds as follows:
 
-    The resulting node contains the merged set of elements from the base
-    node and the derived node.  [See 5.3.2]
+    (1) Search the derived node's own children for the requested key.
+    (2) If not found, follow the prototype link and search the prototype
+        node's own children.
+    (3) Repeat step (2) along the prototype chain until the key is found
+        or the chain is exhausted.
+    (4) If the key is not found anywhere in the chain, the lookup fails.
 
-    3.3.1  Resolution                             [teff.sem.inherit.resolve]
+3   Iteration over a node's children yields only that node's own elements.
+    Prototype elements are not included in direct iteration. Use explicit
+    lookup [See [teff.sem.proto]] to access inherited properties.
+
+4   The prototype chain may be of arbitrary length, subject to the cycle
+    detection rule.  [See [teff.sem.proto.cycle]]
+
+    [Example:
+        # Prototype node
+        base_widget = {
+            width   = 100
+            height  = 30
+            visible = true
+        }
+
+        # Derived node - stores only its own elements
+        icon_widget : base_widget = {
+            icon = "assets/icons/default.png"
+        }
+
+        # Lookup on icon_widget:
+        #   icon_widget.child("icon")    -> "assets/icons/default.png"  (own)
+        #   icon_widget.child("width")   -> 100   (found in base_widget via chain)
+        #   icon_widget.child("visible") -> true  (found in base_widget via chain)
+
+        # Direct iteration over icon_widget yields only:
+        #   icon = "assets/icons/default.png"
+    --end example]
+
+
+    5.3.1  Resolution                              [teff.sem.proto.resolve]
     __________________________________________________________________________
 
-1   The base node is identified by path.  [See 4.6]
+1   The prototype node is identified by a path.  [See [teff.syn.path]]
     Path resolution always starts from the root of the current document.
 
-2   The base node shall be defined earlier in the source file than the
-    derived node (textual order, top to bottom). Forward references to
-    base nodes are an error.  [See 6, error E-11]
+2   By default, the prototype node shall be defined earlier in the source
+    file than the derived node (textual order, top to bottom).
+
+    A reference to a prototype defined later in the file is a forward
+    reference. An implementation may either reject such references or
+    support them as an extension.
+
+    If forward references are not supported, a forward reference is an
+    error.  [See [teff.errors] E-11]
 
 3   It is an error if the path does not refer to an existing node.
-    [See 6, error E-12]
+    [See [teff.errors] E-12]
+
+4   A prototype reference may only point to a node (object). Pointing to a
+    scalar value is an error.  [See [teff.errors] E-10]
+
+5   A prototype reference shall not refer to the derived node itself or to
+    any structural ancestor of the derived node. [See [teff.errors] E-20]
+
+6   The maximum prototype chain depth is 32 levels. Exceeding this limit is
+    an error. [See [teff.errors] E-19]
 
     [Example:
-        weapons = {
-            base_weapon = { damage = 10  range = 50 }
+        defaults = {
+            color   = 1.0 1.0 1.0 1.0
+            visible = true
         }
 
-        # OK: path 'weapons.base_weapon' is defined above
-        ak74 : weapons.base_weapon = {
-            damage = 15
+        # OK: prototype defined above, path resolves to a node
+        label : defaults = {
+            text = "Hello"
         }
+
+        # May be rejected if forward references are not supported
+        early : not_yet_defined = { }
+
+        not_yet_defined = { }
     --end example]
 
 
-    5.3.2  Merge semantics                          [teff.sem.inherit.merge]
+    5.3.2  Lookup semantics                         [teff.sem.proto.lookup]
     __________________________________________________________________________
 
-1   The derived node is constructed by the following procedure:
+1   Key lookup on a derived node first searches the node's own children.
+    If the key is not found, the search continues up the prototype chain.
 
-    (1) Start with a copy of all elements of the base node, in their
-        original order.
+2   The prototype chain is followed by repeatedly visiting the prototype
+    of the current node until either the key is found or a node with no
+    prototype is reached.
 
-    (2) For each keyed element in the derived node body:
-        (a) If an element with the same key exists in the base, replace
-            it (and its associated value sequence) with the derived
-            element.
-        (b) If no such element exists in the base, append the derived
-            element at the end.
-
-    (3) Bare values in the derived node body that follow a keyed element
-        replace the entire value sequence of the corresponding base key.
-
-2   Elements present in the base but absent in the derived node are
-    inherited unchanged.
+3   If multiple levels of the chain define the same key, the definition
+    closest to the derived node takes precedence (i.e., the most-derived
+    value wins).
 
     [Example:
-        base_weapon = {
-            damage   = 10
-            accuracy = 0.8
-            range    = 50
-            tags     = "weapon" "item"
+        level_a = {
+            x = 1
+            y = 2
         }
 
-        ak74 : base_weapon = {
-            damage = 15           # overrides base damage
-            range  = 100          # overrides base range
-            tags   = "assault"    # replaces entire sequence
-            # accuracy is inherited: 0.8
+        level_b : level_a = {
+            y = 20    # overrides level_a.y
+            z = 3
         }
 
-        # Resulting ak74:
-        # damage   = 15
-        # accuracy = 0.8
-        # range    = 100
-        # tags     = "assault"
+        level_c : level_b = {
+            z = 30    # overrides level_b.z
+        }
+
+        # Lookup on level_c:
+        #   x -> 1   (from level_a, via level_b)
+        #   y -> 20  (from level_b, overrides level_a)
+        #   z -> 30  (from level_c, overrides level_b)
     --end example]
 
 
-    5.3.3  Cycle detection                         [teff.sem.inherit.cycle]
+    5.3.3  Cycle detection                          [teff.sem.proto.cycle]
     __________________________________________________________________________
 
-1   It is an error if the inheritance graph contains a cycle.
-    [See 6, error E-13]
+1   It is an error if the prototype reference graph contains a cycle.
+    [See [teff.errors] E-13]
 
-2   A conforming implementation shall detect cycles before applying
-    any merge operation.
+2   A conforming implementation shall detect cycles before performing any
+    lookup along the prototype chain.
 
     [Example:
         # Error: cycle  a -> b -> a
@@ -559,69 +635,101 @@ ________________________________________________________________________________
     --end example]
 
 
-    5.3.4  Visibility                             [teff.sem.inherit.visibility]
+    5.3.4  Visibility                              [teff.sem.proto.visibility]
     __________________________________________________________________________
 
-1   A path used in inheritance is resolved from the root of the document.
-    Only nodes that are visible from the root via key navigation are
-    valid base nodes.
+1   A path used in a prototype reference is resolved from the root of the
+    current document. Only nodes reachable from the root via key navigation
+    are valid prototypes.
 
-2   A node defined inside another node is a valid base if and only if
+2   A node defined inside another node is a valid prototype if and only if
     its full path from the root is used.
 
     [Example:
-        weapons = {
-            base_weapon = { damage = 10 }
+        ui = {
+            base_button = { width = 100  height = 30 }
 
-            # OK: path from root 'weapons.base_weapon'
-            ak74 : weapons.base_weapon = { damage = 15 }
+            # OK: full path from root used
+            submit : ui.base_button = { label = "Submit" }
         }
 
-        other = {
-            # Error: 'base_weapon' is not a root-level key
-            m4 : base_weapon = { }    # E-12
+        forms = {
+            # Error: 'base_button' is not a root-level key
+            cancel : base_button = { }           # E-12
 
-            # OK: full path from root
-            m4 : weapons.base_weapon = { damage = 12 }
+            # OK: full absolute path
+            cancel : ui.base_button = { label = "Cancel" }
         }
     --end example]
 
 
-  5.4  Include directives                               [teff.sem.include]
+  5.4  Include directives                                [teff.sem.include]
   ____________________________________________________________________________
 
-1   An @include directive causes the parser to process the referenced
+1   An '@include' directive causes the parser to process the referenced
     file as if its content were inserted at the point of the directive.
 
-2   All @include directives in a file shall appear before the first
-    element of that file.  [See 6, error E-09]
+2   All '@include' directives in a file shall appear before the first
+    element of that file.  [See [teff.errors] E-09]
 
-3   Include directives may be nested: an included file may itself
-    contain @include directives, subject to the same rule.
+3   Include directives may be nested: an included file may itself contain
+    '@include' directives, subject to the same rule.
 
-4   It is an error if an included file cannot be found or cannot be
-    read.  [See 6, error E-14]
+4   It is an error if an included file cannot be found or cannot be read.
+    [See [teff.errors] E-14]
 
-5   It is an error if including a file would create a cycle in the
-    include graph (file A includes file B which includes file A).
-    [See 6, error E-15]
+5   It is an error if including a file would create a cycle in the include
+    graph (file A includes file B which includes file A).
+    [See [teff.errors] E-15]
 
-6   The root namespace is shared across all included files. Keys defined
-    in an included file are visible in the including file and vice versa,
+6   The root namespace is shared across all included files. Keys defined in
+    an included file are visible in the including file and vice versa,
     subject to textual order.
 
     [Example:
-        @include "base/weapons.teff"
-        @include "base/items.teff"
+        @include "defaults.teff"
+        @include "palette.teff"
 
-        ak74 : base_weapon = {
-            damage = 15
+        primary_button : base_button = {
+            color = 1.0 0.4 0.0 1.0
         }
     --end example]
 
 
 ________________________________________________________________________________
-6.  Errors                                                        [teff.errors]
+6.  Nesting depth                                               [teff.nesting]
+________________________________________________________________________________
+
+1   TEFF imposes a limit on the maximum nesting depth of nodes. Nesting depth
+    is defined as the number of enclosing '{' ... '}' blocks at any point in
+    a source file.
+
+2   A conforming implementation shall support a minimum nesting depth of 64.
+    An implementation may support a greater depth; the actual limit is
+    implementation-defined.
+
+3   It is an error if the nesting depth of a source file exceeds the limit
+    supported by the implementation.
+    [See [teff.errors] E-18]
+
+4   A nesting depth greater than 10 to 15 levels is uncommon in
+    well-structured data files. Exceeding this range may indicate a
+    structural design issue in the data.
+
+    [Example:
+        # Nesting depth illustration:
+        level_1 = {           # depth 1
+            level_2 = {       # depth 2
+                level_3 = {   # depth 3
+                    x = 1     # depth 3 (scalar)
+                }
+            }
+        }
+    --end example]
+
+
+________________________________________________________________________________
+7.  Errors                                                        [teff.errors]
 ________________________________________________________________________________
 
 1   A conforming implementation shall report the following errors. Each
@@ -631,32 +739,75 @@ ________________________________________________________________________________
     Code    Description
     --------------------------------------------------------------------------
     E-01    Duplicate key within the same node.
+            [See [teff.sem.keys]]
+
     E-02    Identifier not followed by '='.
+
     E-03    Token begins with id-start character but is not a valid identifier.
+
     E-04    Missing value after '='.
+
     E-05    Unmatched '{' or '}'.
-    E-06    Integer literal out of range [-2^63, 2^63-1].
+
+    E-06    Integer literal out of range [-(2^63), 2^63-1].
+            [See [teff.lex.lit.int]]
+
     E-07    Newline inside string literal.
+            [See [teff.lex.lit.string]]
+
     E-08    Unrecognized escape sequence in string literal.
-    E-09    @include directive after the first element.
-    E-10    Inheritance specified for a scalar value.
-    E-11    Forward reference to base node (base defined after derived).
-    E-12    Inheritance path does not refer to an existing node.
-    E-13    Cycle detected in inheritance graph.
+            [See [teff.lex.lit.string]]
+
+    E-09    Directive appears after the first element.
+            [See [teff.sem.include]]
+
+    E-10    Prototype reference specified for an element whose value
+            is a scalar, or the prototype path resolves to a scalar.
+            [See [teff.syn.proto]]
+
+    E-11    Forward reference: prototype node is defined after the
+            derived node in textual order.
+            [See [teff.sem.proto.resolve]]
+
+    E-12    Prototype path does not refer to an existing node.
+            [See [teff.sem.proto.resolve]]
+
+    E-13    Cycle detected in the prototype reference graph.
+            [See [teff.sem.proto.cycle]]
+
     E-14    Included file not found or not readable.
-    E-15    Cycle detected in include graph.
-    E-16    Reserved keyword used as identifier.
+            [See [teff.sem.include]]
+
+    E-15    Cycle detected in the include graph.
+            [See [teff.sem.include]]
+
+    E-16    Reserved keyword used as an identifier.
+            [See [teff.lex.ident]]
+
+    E-17    Unknown directive name.
+            [See [teff.lex.directive]]
+
+    E-18    Nesting depth exceeds the implementation limit.
+            [See [teff.nesting]]
+
+    E-19    Prototype chain depth exceeds the maximum limit of 32 levels.
+            [See [teff.sem.proto.resolve]]
+
+    E-20    Prototype reference to the derived node itself or to a structural
+            ancestor is not allowed.
+            [See [teff.sem.proto.resolve]]
     --------------------------------------------------------------------------
 
 
 ________________________________________________________________________________
-7.  Examples                                                    [teff.examples]
+8.  Examples                                                    [teff.examples]
 ________________________________________________________________________________
 
   Example 1 - Scalar value sequence
 
-        position = 1.0 2.0 3.0
+        origin   = 0.0 0.0 0.0
         color    = 1.0 0.0 0.0 1.0
+        size     = 1920 1080
 
   Example 2 - Nested node
 
@@ -668,73 +819,92 @@ ________________________________________________________________________________
 
   Example 3 - Value sequence of nodes
 
-        command =
-            { id = "key_left"  exe = "left"  }
-            { id = "key_right" exe = "right" }
-            { id = "key_up"    exe = "up"    }
-            { id = "key_down"  exe = "down"  }
+        variant =
+            { width = 100  height = 30  label = "Small"  }
+            { width = 200  height = 60  label = "Medium" }
+            { width = 400  height = 90  label = "Large"  }
 
-  Example 4 - Inheritance
+  Example 4 - Prototype reference and lookup
 
-        base_weapon = {
-            damage   = 10
-            accuracy = 0.8
-            range    = 50
-            tags     = "weapon" "item"
+        base_widget = {
+            width   = 100
+            height  = 30
+            visible = true
         }
 
-        ak74 : base_weapon = {
-            damage = 15
-            range  = 100
-            tags   = "assault" "automatic"
+        # icon_widget stores only 'icon'; width/height/visible resolved via chain
+        icon_widget : base_widget = {
+            icon = "assets/icons/default.png"
         }
 
-  Example 5 - Include and inheritance across files
+  Example 5 - Include directives
 
-        # weapons.teff
-        @include "base.teff"
+        @include "defaults.teff"
+        @include "palette.teff"
 
-        ak74 : section_in_base.base_weapon = {
-            damage = 15
-            tags   = "assault"
+        title_label : base_label = {
+            text      = "Welcome"
+            font_size = 24
         }
 
-  Example 6 - Full configuration file
+  Example 6 - Prototype chain of depth 3
 
-        @include "base/weapons.teff"
-
-        # Graphics settings
-        graphics = {
-            fullscreen  = false
-            resolution  = { width = 1920  height = 1080 }
-            vsync       = true
-            fov         = 90.0
+        level_a = {
+            x = 1
+            y = 2
         }
 
-        # Keybindings
-        keybinding = {
-            group =
-                {
-                    name = "movement"
-                    command =
-                        { id = "key_forward" exe = "forward" }
-                        { id = "key_back"    exe = "back"    }
-                } {
-                    name = "combat"
-                    command =
-                        { id = "key_fire"   exe = "wpn_fire"   }
-                        { id = "key_reload" exe = "wpn_reload" }
-                }
+        level_b : level_a = {
+            y = 20
+            z = 3
         }
 
-        # Weapon definitions
-        ak74 : base_weapon = {
-            damage   = 15
-            range    = 100
-            accuracy = 0.75
-            tags     = "assault" "automatic" "rifle"
+        level_c : level_b = {
+            z = 30
+            w = 4
+        }
+
+        # Lookup on level_c:
+        #   x -> 1   (level_a)
+        #   y -> 20  (level_b, overrides level_a)
+        #   z -> 30  (level_c, overrides level_b)
+        #   w -> 4   (level_c)
+
+  Example 7 - Full file with includes and prototypes
+
+        @include "base/widgets.teff"
+        @include "base/palette.teff"
+
+        # Configuration
+        config = {
+            version  = 2
+            debug    = false
+            max_items = 64
+        }
+
+        form_field : base_input = {
+            width   = 300
+            height  = 36
+            enabled = true
+        }
+
+        # Concrete derived nodes
+        text_field : form_field = {
+            placeholder = "Enter text..."
+            max_length  = 256
+        }
+
+        number_field : form_field = {
+            placeholder = "0"
+            min         = 0
+            max         = 100
+        }
+
+        checkbox_field : form_field = {
+            checked = false
+            label   = "Enable option"
         }
 
 ________________________________________________________________________________
-                        End of TEFF Language Specification
+                         End of TEFF Language Specification
 ________________________________________________________________________________

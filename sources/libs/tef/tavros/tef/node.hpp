@@ -19,6 +19,8 @@ namespace tavros::tef
 
     class registry;
 
+    using node_path = core::fixed_string<256>;
+
     /**
      * @brief A single node in a TEFF document tree.
      *
@@ -376,10 +378,10 @@ namespace tavros::tef
          * @param key Key to search for.
          * @return Pointer to the matching child, or nullptr if not found.
          */
-        node* child(core::string_view key) noexcept;
+        [[nodiscard]] node* child(core::string_view key) noexcept;
 
         /// @copydoc child(core::string_view)
-        const node* child(core::string_view key) const noexcept;
+        [[nodiscard]] const node* child(core::string_view key) const noexcept;
 
         /**
          * @brief Navigates a dot-separated path starting from this node.
@@ -391,10 +393,36 @@ namespace tavros::tef
          * @param path Dot-separated key path, e.g. @c "resolution.width".
          * @return Pointer to the target node, or nullptr if not found.
          */
-        node* at_path(core::string_view path) noexcept;
+        [[nodiscard]] node* at_path(core::string_view path) noexcept;
 
         /// @copydoc at_path(core::string_view)
-        const node* at_path(core::string_view path) const noexcept;
+        [[nodiscard]] const node* at_path(core::string_view path) const noexcept;
+
+        /**
+         * @brief Returns the prototype node of this node.
+         *
+         * @return Pointer to the prototype node if it exists, otherwise @c nullptr.
+         */
+        [[nodiscard]] node* prototype() noexcept
+        {
+            return m_prototype;
+        }
+
+        /// @copydoc prototype()
+        [[nodiscard]] const node* prototype() const noexcept
+        {
+            return m_prototype;
+        }
+
+        /**
+         * @brief Returns the full path of the node within the document.
+         *
+         * @return The node path representing its location in the hierarchy.
+         *
+         * @note The returned path reflects structural position in the document
+         *       and is independent of prototype relationships.
+         */
+        [[nodiscard]] node_path path() const noexcept;
 
     public:
         /**
@@ -404,13 +432,14 @@ namespace tavros::tef
          * The returned pointer is valid for the lifetime of the owning @ref registry.
          *
          * @param key Key for the new child node.
+         * @param prototype Inherited prototype node.
          * @return Pointer to the newly created object node.
          * @throws std::bad_alloc if the node pool is exhausted.
          */
-        node* append_object(core::string_view key)
+        node* append_object(core::string_view key, node* prototype)
         {
             TAV_VERIFY(is_container());
-            auto* n = make_obj_node(m_owner, key);
+            auto* n = make_obj_node(m_owner, key, prototype);
             insert_last_child(n);
             return n;
         }
@@ -465,16 +494,18 @@ namespace tavros::tef
          */
         void clear_children() noexcept;
 
+        friend void set_prototype(node* n, node* prototype) noexcept;
+
     private:
         using value_variant = std::variant<std::nullptr_t /* for object */, int64, double, core::string>;
 
-        static [[nodiscard]] node* make_obj_node(registry* owner, core::string_view key);
+        static [[nodiscard]] node* make_obj_node(registry* owner, core::string_view key, node* prototype);
         static [[nodiscard]] node* make_str_node(registry* owner, core::string_view key, core::string_view val);
         static [[nodiscard]] node* make_int_node(registry* owner, core::string_view key, int64 val);
         static [[nodiscard]] node* make_flt_node(registry* owner, core::string_view key, double val);
         static [[nodiscard]] node* make_bool_node(registry* owner, core::string_view key, bool val);
 
-        node(registry* owner, core::string_view key, node_type type, value_variant value);
+        node(registry* owner, core::string_view key, node_type type, value_variant value, node* prototype);
         ~node() noexcept = default;
 
     private:
@@ -482,6 +513,12 @@ namespace tavros::tef
         node_type     m_type;
         core::string  m_key;
         value_variant m_value;
+        node*         m_prototype;
     };
+
+    inline void set_prototype(node* n, node* prototype) noexcept
+    {
+        n->m_prototype = prototype;
+    }
 
 } // namespace tavros::tef

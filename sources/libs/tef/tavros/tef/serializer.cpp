@@ -115,6 +115,10 @@ namespace tavros::tef
         // Write key
         if (n.has_key()) {
             out.append(n.key());
+            if (const auto* proto = n.prototype()) {
+                out.append(pretty ? " : " : ":");
+                out.append(proto->path());
+            }
             out.append(pretty ? " = " : "=");
         }
 

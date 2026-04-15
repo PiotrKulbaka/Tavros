@@ -29,7 +29,7 @@ namespace
 
     using ps = parsing_state;
 
-    using inheritance_t = tavros::core::vector<tavros::tef::parse_result::inherit_node_t>;
+    using inheritance_t = tavros::core::vector<tavros::tef::parse_result::inherit_proto_t>;
     using includes_t = tavros::core::vector<tavros::core::string>;
 
     struct parser_impl
@@ -48,42 +48,82 @@ namespace
         includes_t&    inclusions;
         inheritance_t& inheritance;
 
-        ps   state = ps::any;
-        bool has_error = false;
-        bool in_file_header = true;
+        ps     state = ps::any;
+        uint32 number_of_errors = 0;
+        bool   in_file_header = true;
+
+        string_view root_file_path = {};
 
         string_view                     pending_key = {};
         tavros::core::fixed_string<512> pending_proto = {};
+        int32                           pending_proto_row = 0;
+        int32                           pending_proto_col = 0;
 
         tavros::core::fixed_vector<node*, tavros::tef::registry::k_max_nesting_level> stack;
 
         // gcc-style error reporting
         void report_error(string_view code, string_view msg)
         {
+            tavros::core::fixed_string<2048> err_msg;
+
             const auto& t = lex.current_token();
             auto        file = root.value_or<string_view>({});
             auto        line = t.line();
 
             if (!file.empty()) {
-                errors.append(file);
-                errors.append(":");
+                err_msg.append(file);
+                err_msg.append(":");
             }
-            errors.append(tavros::core::fixed_string<512>::format("{}:{}: error: {}: {}\n", t.row(), t.col(), code, msg));
+            err_msg.append(tavros::core::fixed_string<512>::format("{}:{}: error: {}: {}\n", t.row(), t.col(), code, msg));
 
             // Source line
             if (!line.empty()) {
-                errors.append("    ");
-                errors.append(line);
-                errors.append("\n");
+                constexpr size_t prefix_len = 4;  // "    "
+                constexpr size_t max_total = 120; // full printed line
+                constexpr size_t max_content = max_total - prefix_len;
+
+                size_t col = static_cast<size_t>(t.col() > 0 ? t.col() - 1 : 0);
+
+                string_view visible_line = line;
+                size_t      visible_col = col;
+                size_t      caret_pos = 0;
+
+                if (line.size() > max_content) {
+                    constexpr size_t dots_len = 3;
+                    constexpr size_t body_len = max_content - dots_len * 2;
+
+                    size_t start = 0;
+
+                    if (col > body_len / 2) {
+                        start = col - body_len / 2;
+                    }
+
+                    if (start + body_len > line.size()) {
+                        start = line.size() - body_len;
+                    }
+
+                    visible_line = line.substr(start, body_len);
+                    visible_col = col - start;
+
+                    err_msg.append("    ...");
+                    err_msg.append(visible_line);
+                    err_msg.append("...\n");
+
+                    caret_pos = visible_col + dots_len + prefix_len;
+                } else {
+                    err_msg.append("    ");
+                    err_msg.append(line);
+                    err_msg.append("\n");
+                    caret_pos = col + prefix_len;
+                }
 
                 // Caret pointing to column
-                errors.append("    ");
-                auto col = static_cast<size_t>(t.col() > 0 ? t.col() - 1 : 0);
-                errors.append(col, ' ');
-                errors.append("^\n");
+                err_msg.append(caret_pos, ' ');
+                err_msg.append("^\n");
             }
 
-            has_error = true;
+            errors.append(err_msg);
+            ++number_of_errors;
         }
 
         void adv() noexcept
@@ -206,24 +246,33 @@ namespace
             }
 
             if (check_p('{')) {
+                node* n = nullptr;
                 if (stack.size() >= stack.max_size()) {
                     // Nesting limit exceeded - still create the node to allow
                     // continued parsing, but report the error
                     report_error("E-18", small_string::format("maximum nesting depth ({}) exceeded", tavros::tef::registry::k_max_nesting_level));
 
                     // Create node in current parent without pushing
-                    node* n = parent.append_object(pending_key);
-                    inheritance.push_back({n, string(pending_proto)});
+                    n = parent.append_object(pending_key, nullptr);
                 } else {
-                    node* n = parent.append_object(pending_key);
-                    inheritance.push_back({n, string(pending_proto)});
+                    n = parent.append_object(pending_key, nullptr);
                     stack.push_back(n);
+                }
+
+                if (!pending_proto.empty()) {
+                    // Deferred inheritance
+                    inheritance.push_back({n, string(pending_proto), root_file_path, pending_proto_row, pending_proto_col});
                 }
             } else {
                 if (!pending_proto.empty()) {
-                    report_error("E-10", small_string::format("prototype reference '{}' specified for a scalar value: "
-                                                              "only object nodes may have a prototype reference",
-                                                              pending_proto));
+                    report_error(
+                        "E-10",
+                        small_string::format(
+                            "prototype reference '{}' specified for a scalar value: "
+                            "only object nodes may have a prototype reference",
+                            pending_proto
+                        )
+                    );
                 }
 
                 if (check(tt::keyword)) {
@@ -251,6 +300,7 @@ namespace
         void parse()
         {
             stack.push_back(&root);
+            root_file_path = root.value_or<string_view>({});
             adv();
 
             while (!check(tt::end_of_source)) {
@@ -262,9 +312,15 @@ namespace
 
                     // Map lexer errors to error codes
                     if (e.find("escape") != string_view::npos) {
-                        report_error("E-08", small_string::format("unrecognized escape sequence in string literal: {}", e));
+                        report_error(
+                            "E-08",
+                            small_string::format("unrecognized escape sequence in string literal: {}", e)
+                        );
                     } else if (e.find("Unterminated") != string_view::npos || e.find("Newline") != string_view::npos) {
-                        report_error("E-07", small_string::format("newline inside string literal (string must be closed on the same line): {}", e));
+                        report_error(
+                            "E-07",
+                            small_string::format("newline inside string literal (string must be closed on the same line): {}", e)
+                        );
                     } else {
                         report_error("E-03", small_string::format("lexical error: {}", e));
                     }
@@ -319,9 +375,11 @@ namespace
                         adv();
                         if (check(tt::string_literal)) {
                             if (!in_file_header) {
-                                report_error("E-09",
-                                             "'@include' directive must appear before any element: "
-                                             "move all @include directives to the top of the file");
+                                report_error(
+                                    "E-09",
+                                    "'@include' directive must appear before any element: "
+                                    "move all @include directives to the top of the file"
+                                );
                             } else {
                                 inclusions.push_back(string(lexeme()));
                             }
@@ -330,9 +388,12 @@ namespace
                             report_error("E-14", small_string::format("'@include' requires a string literal file path, got '{}'", lexeme()));
                         }
                     } else {
-                        report_error("E-17", small_string::format("unknown directive '@{}': "
-                                                                  "supported directives are: @include, @abstract",
-                                                                  lexeme()));
+                        report_error(
+                            "E-17",
+                            small_string::format("unknown directive '@{}': "
+                                                 "supported directives are: @include, @abstract",
+                                                 lexeme())
+                        );
                         adv();
                     }
 
@@ -363,10 +424,15 @@ namespace
                     if (check(tt::identifier)) {
                         to_state(ps::in_proto_path);
                     } else {
-                        report_error("E-12", small_string::format("expected prototype path after ':', got '{}': "
-                                                                  "prototype path must be a dot-separated sequence of identifiers "
-                                                                  "(e.g. 'base_widget' or 'ui.base_widget')",
-                                                                  lexeme()));
+                        report_error(
+                            "E-12",
+                            small_string::format(
+                                "expected prototype path after ':', got '{}': "
+                                "prototype path must be a dot-separated sequence of identifiers "
+                                "(e.g. 'base_widget' or 'ui.base_widget')",
+                                lexeme()
+                            )
+                        );
                         pending_key = {};
                         to_state(ps::any);
                     }
@@ -379,10 +445,15 @@ namespace
                     if (is_value()) {
                         to_state(ps::in_value);
                     } else {
-                        report_error("E-04", small_string::format("expected a value after '=' for key '{}', got '{}': "
-                                                                  "valid values are: integer, float, boolean (true/false), "
-                                                                  "string literal, or object '{{...}}'",
-                                                                  string_view(pending_key), lexeme()));
+                        report_error(
+                            "E-04",
+                            small_string::format(
+                                "expected a value after '=' for key '{}', got '{}': "
+                                "valid values are: integer, float, boolean (true/false), "
+                                "string literal, or object '{{...}}'",
+                                string_view(pending_key), lexeme()
+                            )
+                        );
                         pending_key = {};
                         to_state(ps::any);
                     }
@@ -391,6 +462,8 @@ namespace
                 case ps::in_proto_path:
                     TAV_ASSERT(check(tt::identifier));
 
+                    pending_proto_row = lex.current_token().row();
+                    pending_proto_col = lex.current_token().col();
                     pending_proto.append(lexeme());
                     adv();
 
@@ -398,9 +471,14 @@ namespace
                     while (check_p('.')) {
                         adv();
                         if (!check(tt::identifier)) {
-                            report_error("E-12", small_string::format("expected identifier after '.' in prototype path '{}', got '{}': "
-                                                                      "prototype path segments must be valid identifiers",
-                                                                      pending_proto, lexeme()));
+                            report_error(
+                                "E-12",
+                                small_string::format(
+                                    "expected identifier after '.' in prototype path '{}', got '{}': "
+                                    "prototype path segments must be valid identifiers",
+                                    pending_proto, lexeme()
+                                )
+                            );
                             break;
                         }
                         pending_proto.append(".");
@@ -411,9 +489,14 @@ namespace
                     if (check_p('=')) {
                         to_state(ps::in_eq);
                     } else {
-                        report_error("E-02", small_string::format("expected '=' after prototype path '{}' for key '{}', got '{}': "
-                                                                  "syntax is: key : prototype_path = {{ ... }}",
-                                                                  pending_proto, pending_key, lexeme()));
+                        report_error(
+                            "E-02",
+                            small_string::format(
+                                "expected '=' after prototype path '{}' for key '{}', got '{}': "
+                                "syntax is: key : prototype_path = {{ ... }}",
+                                pending_proto, pending_key, lexeme()
+                            )
+                        );
                         pending_key = {};
                         pending_proto.clear();
                         to_state(ps::any);
@@ -436,9 +519,14 @@ namespace
 
             // End of source - check for unclosed nodes
             if (stack.size() > 1) {
-                report_error("E-05", small_string::format("unexpected end of source: {} unclosed node(s) - "
-                                                          "check for missing '}}' brace(s)",
-                                                          stack.size() - 1));
+                report_error(
+                    "E-05",
+                    small_string::format(
+                        "unexpected end of source: {} unclosed node(s) - "
+                        "check for missing '}}' brace(s)",
+                        stack.size() - 1
+                    )
+                );
             }
         }
     };
@@ -457,7 +545,7 @@ namespace tavros::tef
         parser_impl  p{lex, errors, doc, result.inclusions, result.inheritance};
         p.parse();
 
-        result.success = !p.has_error;
+        result.number_of_errors = p.number_of_errors;
         return result;
     }
 } // namespace tavros::tef

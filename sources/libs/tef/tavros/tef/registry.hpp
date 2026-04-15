@@ -28,8 +28,11 @@ namespace tavros::tef
         /// @brief Number of nodes the internal pool can hold.
         static constexpr size_t k_pool_capacity = 1024 * 32;
 
-        /// @brief Maximum supported nesting depth for free_nodes traversal.
+        /// @brief Maximum supported nesting depth.
         static constexpr size_t k_max_nesting_level = 64;
+
+        /// @brief Maximum supported prototype inheritance depth.
+        static constexpr size_t k_max_proto_depth = 32;
 
         /// @brief Internal node pool type.
         using pool_type = core::pool_allocator<node, k_pool_capacity>;

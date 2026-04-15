@@ -19,7 +19,7 @@ namespace tavros::tef
 
     node* registry::new_document(core::string_view path, node* pos)
     {
-        auto* new_n = new (alloc_node()) node(this, {}, node::node_type::document, core::string(path));
+        auto* new_n = new (alloc_node()) node(this, {}, node::node_type::document, core::string(path), nullptr);
         if (pos) {
             TAV_ASSERT(pos->m_owner == this);
             pos->insert_before(new_n);

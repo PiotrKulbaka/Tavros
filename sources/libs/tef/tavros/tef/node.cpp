@@ -1,5 +1,6 @@
 #include <tavros/tef/node.hpp>
 
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/tef/registry.hpp>
 
 namespace
@@ -73,6 +74,25 @@ namespace tavros::tef
         return nullptr;
     }
 
+    [[nodiscard]] node_path node::path() const noexcept
+    {
+        core::fixed_vector<const node*, registry::k_max_nesting_level> stack;
+        const node*                                                    current = this;
+        while (current) {
+            stack.push_back(current);
+            current = current->parent();
+        }
+
+        node_path result;
+        for (auto it = stack.rbegin(); it != stack.rend(); ++it) {
+            if (!result.empty()) {
+                result.append(".");
+            }
+            result.append((*it)->key());
+        }
+        return result;
+    }
+
     void node::clear_children() noexcept
     {
         auto* ch = extract_children();
@@ -81,36 +101,37 @@ namespace tavros::tef
         }
     }
 
-    node* node::make_obj_node(registry* owner, core::string_view key)
+    node* node::make_obj_node(registry* owner, core::string_view key, node* prototype)
     {
-        return new (owner->alloc_node()) node(owner, key, node_type::object, nullptr);
+        return new (owner->alloc_node()) node(owner, key, node_type::object, nullptr, prototype);
     }
 
     node* node::make_str_node(registry* owner, core::string_view key, core::string_view val)
     {
-        return new (owner->alloc_node()) node(owner, key, node_type::string, core::string(val));
+        return new (owner->alloc_node()) node(owner, key, node_type::string, core::string(val), nullptr);
     }
 
     node* node::make_int_node(registry* owner, core::string_view key, int64 val)
     {
-        return new (owner->alloc_node()) node(owner, key, node_type::integer, val);
+        return new (owner->alloc_node()) node(owner, key, node_type::integer, val, nullptr);
     }
 
     node* node::make_flt_node(registry* owner, core::string_view key, double val)
     {
-        return new (owner->alloc_node()) node(owner, key, node_type::floating_point, val);
+        return new (owner->alloc_node()) node(owner, key, node_type::floating_point, val, nullptr);
     }
 
     node* node::make_bool_node(registry* owner, core::string_view key, bool val)
     {
-        return new (owner->alloc_node()) node(owner, key, node_type::boolean, static_cast<int64>(val));
+        return new (owner->alloc_node()) node(owner, key, node_type::boolean, static_cast<int64>(val), nullptr);
     }
 
-    node::node(registry* owner, core::string_view key, node_type type, value_variant value)
+    node::node(registry* owner, core::string_view key, node_type type, value_variant value, node* prototype)
         : m_owner(owner)
         , m_key(key)
         , m_type(type)
         , m_value(std::move(value))
+        , m_prototype(prototype)
     {
     }
 

@@ -18,12 +18,13 @@ namespace tavros::tef
     struct parse_result
     {
         /**
-         * @brief Indicates whether parsing completed successfully.
+         * @brief Number of errors reported during parsing.
          *
-         * If @c true, the document was parsed without critical errors.
-         * If @c false, the output document may be incomplete or invalid.
+         * A value of @c 0 indicates that no errors were detected.
+         * A non-zero value indicates that parsing failed or completed
+         * with one or more reported errors.
          */
-        bool success = false;
+        uint32 number_of_errors = 0;
 
         /**
          * @brief List of included resources encountered during parsing.
@@ -39,17 +40,22 @@ namespace tavros::tef
          * Stores a node together with the prototype path that shall be
          * resolved after the main parse stage.
          */
-        struct inherit_node_t
+        struct inherit_proto_t
         {
-            /**
-             * @brief Target node that declares inheritance.
-             */
+            /// Target node that declares inheritance.
             node* n = nullptr;
 
-            /**
-             * @brief Prototype path referenced by the node.
-             */
+            /// Prototype path referenced by the node.
             core::string path;
+
+            /// Source location for error reporting.
+            core::string_view file = {};
+
+            /// Source line for error reporting.
+            int32 row = 0;
+
+            /// Source column for error reporting.
+            int32 col = 0;
         };
 
         /**
@@ -58,7 +64,7 @@ namespace tavros::tef
          * Each entry describes a node and the prototype path that must
          * be linked after parsing completes.
          */
-        core::vector<inherit_node_t> inheritance;
+        core::vector<inherit_proto_t> inheritance;
     };
 
     /**

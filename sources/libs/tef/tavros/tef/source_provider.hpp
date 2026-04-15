@@ -12,11 +12,11 @@ namespace tavros::tef
      * Implementations of this interface are responsible for loading
      * tef source text from an external source.
      */
-    class tef_provider
+    class source_provider
     {
     public:
         /** Virtual destructor. */
-        virtual ~tef_provider() noexcept = default;
+        virtual ~source_provider() noexcept = default;
 
         virtual core::string load(core::string_view path) = 0;
     };
