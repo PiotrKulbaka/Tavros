@@ -3,7 +3,6 @@
 #include <tavros/core/memory/buffer_view.hpp>
 #include <tavros/core/memory/buffer_span.hpp>
 #include <tavros/core/memory/memory.hpp>
-#include <tavros/core/optional.hpp>
 
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/frame_composer.hpp>

@@ -674,7 +674,7 @@ namespace tavros::renderer::rhi
                 break;
 
             case GL_TEXTURE_2D_ARRAY:
-                // glTexStorage3D / glTexImage3D — depth = array_layers
+                // glTexStorage3D / glTexImage3D - depth = array_layers
                 if (mip_levels > 1) {
                     GL_CALL(glTexStorage3D(
                         gl_target,
@@ -944,7 +944,7 @@ namespace tavros::renderer::rhi
 
             bool is_flt = attribute_format::f32 == binding.format || attribute_format::f16 == binding.format || attribute_format::f64 == binding.format;
             auto gl_attrib_info = to_gl_attribute_info(binding.type, binding.format);
-            for (uint32 col = 0; col < gl_attrib_info.cols; ++col) {
+            for (int32 col = 0; col < gl_attrib_info.cols; ++col) {
                 GLuint location = binding.location + col;
                 GLuint offset = binding.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
 
@@ -1188,7 +1188,7 @@ namespace tavros::renderer::rhi
                 );
             }
             // Drawing onto color attachments
-            GL_CALL(glDrawBuffers(draw_buffers.size(), draw_buffers.data()));
+            GL_CALL(glDrawBuffers(static_cast<GLsizei>(draw_buffers.size()), draw_buffers.data()));
         }
 
         // Enable depth/stencil attachment
@@ -1443,7 +1443,6 @@ namespace tavros::renderer::rhi
         }
 
         // Validate resolve attachments
-        uint32 need_resolve_textures_number = 0;
         for (auto i = 0; i < info.color_attachments.size(); ++i) {
             auto& attachment = info.color_attachments[i];
             if (store_op::resolve == attachment.store) {

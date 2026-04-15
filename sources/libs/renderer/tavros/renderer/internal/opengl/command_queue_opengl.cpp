@@ -1341,7 +1341,7 @@ namespace tavros::renderer::rhi
 
         const GLuint k_constant_buffer_index = 15;
 
-        uint32_t aligned_size = math::align_up(static_cast<uint32_t>(size), pc.alignment);
+        uint32 aligned_size = static_cast<uint32>(math::align_up(static_cast<uint32>(size), pc.alignment));
 
         // wrap-around
         if (pc.head + aligned_size > pc.size) {

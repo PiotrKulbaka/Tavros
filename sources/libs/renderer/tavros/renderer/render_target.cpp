@@ -318,7 +318,6 @@ namespace tavros::renderer
 
         rhi::render_pass_create_info rp_info;
 
-        uint32 resolve_index = 0;
         for (uint32 index = 0; index < m_cl_fmt.size(); ++index) {
             rhi::color_attachment_info ca_info;
             ca_info.format = m_cl_fmt[index];
