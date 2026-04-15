@@ -4,6 +4,6 @@
 
 namespace tavros::core
 {
-    template<typename T>
-    using unordered_set = std::unordered_set<T>;
+    template<class T, class Hasher = std::hash<T>, class KeyEq = std::equal_to<T>>
+    using unordered_set = std::unordered_set<T, Hasher, KeyEq>;
 } // namespace tavros::core

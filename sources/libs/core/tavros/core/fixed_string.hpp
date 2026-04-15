@@ -110,7 +110,7 @@ namespace tavros::core
         }
 
         constexpr basic_fixed_string(const Char* s, size_type count)
-            : m_size(count)
+            : m_size(static_cast<smallest_size_type>(count))
         {
             TAV_ASSERT(count < Capacity);
             Traits::copy(m_data, s, count);
@@ -118,7 +118,7 @@ namespace tavros::core
         }
 
         constexpr basic_fixed_string(size_type count, Char ch)
-            : m_size(count)
+            : m_size(static_cast<smallest_size_type>(count))
         {
             TAV_ASSERT(count < Capacity);
             Traits::assign(m_data, count, ch);
@@ -127,7 +127,7 @@ namespace tavros::core
 
         template<class InputIt>
         constexpr basic_fixed_string(InputIt first, InputIt last)
-            : m_size(static_cast<size_type>(std::distance(first, last)))
+            : m_size(static_cast<smallest_size_type>(std::distance(first, last)))
         {
             TAV_ASSERT(size() < Capacity);
             std::copy(first, last, m_data);
@@ -1160,10 +1160,6 @@ namespace tavros::core
                 fmt,
                 std::forward<Args>(args)...
             );
-
-            if (static_cast<size_type>(r.size) > Capacity - 1) {
-                throw std::overflow_error("basic_fixed_string::format: result exceeds capacity");
-            }
 
             result.m_size = static_cast<smallest_size_type>(r.out - result.m_data);
             result.m_data[result.size()] = Char{};

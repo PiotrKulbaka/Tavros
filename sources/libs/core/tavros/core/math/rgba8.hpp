@@ -40,6 +40,16 @@ namespace tavros::math
         }
 
         /**
+         * @brief Initializes the color from uint32 color.
+         *
+         * @param rgba Red Green Blue and Alpha channels.
+         */
+        constexpr rgba8(uint32 rgba) noexcept
+            : color(rgba)
+        {
+        }
+
+        /**
          * @brief Converts a floating-point vec4 color to 8-bit RGBA.
          *
          * @param color Input color where each component is in [0.0, 1.0].

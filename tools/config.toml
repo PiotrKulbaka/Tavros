@@ -15,6 +15,7 @@ lib_renderer = "${path.libs}/renderer"
 lib_system = "${path.libs}/system"
 lib_assets = "${path.libs}/assets"
 lib_ui = "${path.libs}/ui"
+lib_tef = "${path.libs}/tef"
 
 
 [command.autoformat]
@@ -28,6 +29,7 @@ include = [
     "${path.lib_system}",
     "${path.lib_assets}",
     "${path.lib_ui}",
+    "${path.lib_tef}",
     "${path.wrappers}/sandbox",
 ]
 
@@ -42,8 +44,8 @@ collect_paths = [
     "${path.lib_system}",
     "${path.lib_assets}",
     "${path.lib_ui}",
+    "${path.lib_tef}",
     "${path.wrappers}/sandbox",
-    "${path.tests}/sources",
     "${path.tests}/sources",
 ]
 
