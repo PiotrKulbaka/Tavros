@@ -44,9 +44,21 @@ namespace tavros::renderer::rhi
 
         /// Blend operation for alpha channel
         blend_op alpha_blend_op = blend_op::add;
+    };
+
+    /**
+     * Describes the configuration for a color attachment in a render pass.
+     */
+    struct color_attachment_state
+    {
+        /// Format of the attachment
+        pixel_format format = pixel_format::none;
 
         /// Mask specifying which color channels are written
         core::flags<color_mask> mask = k_rgba_color_mask;
+
+        /// Blending configuration
+        blend_state blend;
     };
 
     /**
@@ -137,6 +149,9 @@ namespace tavros::renderer::rhi
      */
     struct depth_stencil_state
     {
+        /// Depth stencil attachment format
+        pixel_format format = pixel_format::none;
+
         /// Enables or disables depth testing
         bool depth_test_enable = false;
 
@@ -187,18 +202,6 @@ namespace tavros::renderer::rhi
         uint32 instance_divisor = 0;
     };
 
-    /**
-     * Describes the color attachments and depth attachment for a pipeline
-     */
-    struct render_targets
-    {
-        /// Color attachment formats
-        core::fixed_vector<pixel_format, k_max_color_attachments> color_formats;
-
-        /// Depth attachment format
-        pixel_format depth_stencil_format = pixel_format::depth24_stencil8;
-    };
-
     struct pipeline_create_info
     {
         /// List with descriptions of shaders to be used in the pipeline
@@ -208,10 +211,10 @@ namespace tavros::renderer::rhi
         core::fixed_vector<vertex_attribute, k_max_vertex_attributes> bindings;
 
         /// Describes the properties of a blend state for a multiple render targets
-        core::fixed_vector<blend_state, k_max_color_attachments> blend_states;
+        core::fixed_vector<color_attachment_state, k_max_color_attachments> color_attachments;
 
         /// Describes the properties of depth and stencil testing
-        depth_stencil_state depth_stencil;
+        depth_stencil_state depth_stencil_attachment;
 
         /// Defines how the GPU interprets and assembles vertex data into geometric primitives
         primitive_topology topology = primitive_topology::triangles;
@@ -221,8 +224,6 @@ namespace tavros::renderer::rhi
 
         /// Describes the multisample state (MSAA) for a pipeline
         multisample_state multisample;
-
-        render_targets targets;
     };
 
 } // namespace tavros::renderer::rhi

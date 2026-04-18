@@ -65,12 +65,12 @@ namespace tavros::renderer::rhi
         }
 
         auto& pass_info = pass->info;
-        if (pass_info.color_attachments.size() != info.blend_states.size()) {
+        if (pass_info.color_attachments.size() != info.color_attachments.size()) {
             ::logger.error(
-                "Failed to bind pipeline {}: mismatch between color attachments in current render pass {} and blend states in pipeline {}",
+                "Failed to bind pipeline {}: mismatch between color attachments in current render pass {} and color attachments in pipeline {}",
                 pipeline,
                 fmt::styled_param(pass_info.color_attachments.size()),
-                fmt::styled_param(info.blend_states.size())
+                fmt::styled_param(info.color_attachments.size())
             );
             GL_CALL(glUseProgram(0));
             GL_CALL(glBindVertexArray(0));
@@ -80,104 +80,128 @@ namespace tavros::renderer::rhi
         m_current_pipeline = pipeline;
 
         // Enable/disable blending and color maks
-        bool need_enable_blending = false;
-        for (size_t i = 0; i < info.blend_states.size(); ++i) {
-            auto& blend_state = info.blend_states[i];
+        for (size_t i = 0; i < info.color_attachments.size(); ++i) {
+            auto& cl = info.color_attachments[i];
+            auto& bs = cl.blend;
             auto  gl_attachment_index = static_cast<GLuint>(i);
-            if (blend_state.blend_enabled) {
-                // Convert to gl format
-                auto src_color_factor = to_gl_blend_factor(blend_state.src_color_factor);
-                auto dst_color_factor = to_gl_blend_factor(blend_state.dst_color_factor);
-                auto color_blend_op = to_gl_blend_op(blend_state.color_blend_op);
-                auto src_alpha_factor = to_gl_blend_factor(blend_state.src_alpha_factor);
-                auto dst_alpha_factor = to_gl_blend_factor(blend_state.dst_alpha_factor);
-                auto alpha_blend_op = to_gl_blend_op(blend_state.alpha_blend_op);
 
-                // Set params
-                if (gl_attachment_index == 0) {
-                    // Also enable blending for default framebuffer
-                    GL_CALL(glBlendFuncSeparate(src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor));
-                    GL_CALL(glBlendEquationSeparate(color_blend_op, alpha_blend_op));
-                }
+            if (cl.format == pixel_format::none) {
+                // Disable blending for attachment
+                GL_CALL(glBlendFunci(gl_attachment_index, GL_ONE, GL_ZERO));
+                GL_CALL(glBlendEquationi(gl_attachment_index, GL_FUNC_ADD));
+                GL_CALL(glColorMaski(gl_attachment_index, GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
+                continue;
+            }
+
+            if (cl.format != pass_info.color_attachments[i].format) {
+                ::logger.error(
+                    "Failed to bind pipeline {}: mismatch between {}-th color attachment format {} in current render pass, and color attachment format {} in pipeline",
+                    pipeline,
+                    fmt::styled_param(i),
+                    fmt::styled_param(to_string(cl.format)),
+                    fmt::styled_param(to_string(pass_info.color_attachments[i].format))
+                );
+                GL_CALL(glUseProgram(0));
+                GL_CALL(glBindVertexArray(0));
+                return;
+            }
+
+            if (bs.blend_enabled) {
+                // Convert to gl format
+                auto src_color_factor = to_gl_blend_factor(bs.src_color_factor);
+                auto dst_color_factor = to_gl_blend_factor(bs.dst_color_factor);
+                auto color_blend_op = to_gl_blend_op(bs.color_blend_op);
+                auto src_alpha_factor = to_gl_blend_factor(bs.src_alpha_factor);
+                auto dst_alpha_factor = to_gl_blend_factor(bs.dst_alpha_factor);
+                auto alpha_blend_op = to_gl_blend_op(bs.alpha_blend_op);
+
                 // Enable blending for i attachment
+                GL_CALL(glEnablei(GL_BLEND, gl_attachment_index));
                 GL_CALL(glBlendFuncSeparatei(gl_attachment_index, src_color_factor, dst_color_factor, src_alpha_factor, dst_alpha_factor));
                 GL_CALL(glBlendEquationSeparatei(gl_attachment_index, color_blend_op, alpha_blend_op));
-
-                need_enable_blending = true;
             } else {
                 // Disable blending for i attachment
+                GL_CALL(glDisablei(GL_BLEND, gl_attachment_index));
                 GL_CALL(glBlendFunci(gl_attachment_index, GL_ONE, GL_ZERO));
                 GL_CALL(glBlendEquationi(gl_attachment_index, GL_FUNC_ADD));
             }
 
             // Enable color mask
-            auto r_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::red));
-            auto g_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::green));
-            auto b_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::blue));
-            auto a_color_enabled = to_gl_bool(blend_state.mask.has_flag(color_mask::alpha));
-            if (gl_attachment_index == 0) {
-                // Also enable for default framebuffer
-                GL_CALL(glColorMask(r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled));
-            }
+            auto r_color_enabled = to_gl_bool(cl.mask.has_flag(color_mask::red));
+            auto g_color_enabled = to_gl_bool(cl.mask.has_flag(color_mask::green));
+            auto b_color_enabled = to_gl_bool(cl.mask.has_flag(color_mask::blue));
+            auto a_color_enabled = to_gl_bool(cl.mask.has_flag(color_mask::alpha));
             GL_CALL(glColorMaski(gl_attachment_index, r_color_enabled, g_color_enabled, b_color_enabled, a_color_enabled));
         }
 
-        if (need_enable_blending) {
-            GL_CALL(glEnable(GL_BLEND));
-        } else {
-            GL_CALL(glDisable(GL_BLEND));
-        }
-
-        // depth test
-        if (info.depth_stencil.depth_test_enable) {
-            GL_CALL(glEnable(GL_DEPTH_TEST));
-
-            // depth write
-            auto depth_write = to_gl_bool(info.depth_stencil.depth_write_enable);
-            GL_CALL(glDepthMask(depth_write));
-
-            // depth compare func
-            auto depth_compare = to_gl_compare_func(info.depth_stencil.depth_compare);
-            GL_CALL(glDepthFunc(depth_compare));
-        } else {
+        if (info.depth_stencil_attachment.format == pixel_format::none) {
+            // Disable depth test and stencil test
             GL_CALL(glDisable(GL_DEPTH_TEST));
-        }
-
-        // stencil test
-        if (info.depth_stencil.stencil_test_enable) {
-            GL_CALL(glEnable(GL_STENCIL_TEST));
-
-            // stencil front
-            GL_CALL(glStencilFuncSeparate(
-                GL_FRONT,
-                to_gl_compare_func(info.depth_stencil.stencil_front.compare),
-                info.depth_stencil.stencil_front.reference_value,
-                info.depth_stencil.stencil_front.read_mask
-            ));
-            GL_CALL(glStencilOpSeparate(
-                GL_FRONT,
-                to_gl_stencil_op(info.depth_stencil.stencil_front.stencil_fail_op),
-                to_gl_stencil_op(info.depth_stencil.stencil_front.depth_fail_op),
-                to_gl_stencil_op(info.depth_stencil.stencil_front.pass_op)
-            ));
-            GL_CALL(glStencilMaskSeparate(GL_FRONT, info.depth_stencil.stencil_front.write_mask));
-
-            // stencil back
-            GL_CALL(glStencilFuncSeparate(
-                GL_BACK,
-                to_gl_compare_func(info.depth_stencil.stencil_back.compare),
-                info.depth_stencil.stencil_back.reference_value,
-                info.depth_stencil.stencil_back.read_mask
-            ));
-            GL_CALL(glStencilOpSeparate(
-                GL_BACK,
-                to_gl_stencil_op(info.depth_stencil.stencil_back.stencil_fail_op),
-                to_gl_stencil_op(info.depth_stencil.stencil_back.depth_fail_op),
-                to_gl_stencil_op(info.depth_stencil.stencil_back.pass_op)
-            ));
-            GL_CALL(glStencilMaskSeparate(GL_BACK, info.depth_stencil.stencil_back.write_mask));
-        } else {
             GL_CALL(glDisable(GL_STENCIL_TEST));
+        } else {
+            if (pass_info.depth_stencil_attachment.format != info.depth_stencil_attachment.format) {
+                ::logger.error(
+                    "Failed to bind pipeline {}: mismatch between depth stencil attachment format {} in current render pass, and depth stencil attachment format {} in pipeline",
+                    pipeline,
+                    fmt::styled_param(to_string(pass_info.depth_stencil_attachment.format)),
+                    fmt::styled_param(to_string(info.depth_stencil_attachment.format))
+                );
+                GL_CALL(glUseProgram(0));
+                GL_CALL(glBindVertexArray(0));
+                return;
+            }
+
+            // depth test
+            if (info.depth_stencil_attachment.depth_test_enable) {
+                GL_CALL(glEnable(GL_DEPTH_TEST));
+
+                // depth write
+                auto depth_write = to_gl_bool(info.depth_stencil_attachment.depth_write_enable);
+                GL_CALL(glDepthMask(depth_write));
+
+                // depth compare func
+                auto depth_compare = to_gl_compare_func(info.depth_stencil_attachment.depth_compare);
+                GL_CALL(glDepthFunc(depth_compare));
+            } else {
+                GL_CALL(glDisable(GL_DEPTH_TEST));
+            }
+
+            // stencil test
+            if (info.depth_stencil_attachment.stencil_test_enable) {
+                GL_CALL(glEnable(GL_STENCIL_TEST));
+
+                // stencil front
+                GL_CALL(glStencilFuncSeparate(
+                    GL_FRONT,
+                    to_gl_compare_func(info.depth_stencil_attachment.stencil_front.compare),
+                    info.depth_stencil_attachment.stencil_front.reference_value,
+                    info.depth_stencil_attachment.stencil_front.read_mask
+                ));
+                GL_CALL(glStencilOpSeparate(
+                    GL_FRONT,
+                    to_gl_stencil_op(info.depth_stencil_attachment.stencil_front.stencil_fail_op),
+                    to_gl_stencil_op(info.depth_stencil_attachment.stencil_front.depth_fail_op),
+                    to_gl_stencil_op(info.depth_stencil_attachment.stencil_front.pass_op)
+                ));
+                GL_CALL(glStencilMaskSeparate(GL_FRONT, info.depth_stencil_attachment.stencil_front.write_mask));
+
+                // stencil back
+                GL_CALL(glStencilFuncSeparate(
+                    GL_BACK,
+                    to_gl_compare_func(info.depth_stencil_attachment.stencil_back.compare),
+                    info.depth_stencil_attachment.stencil_back.reference_value,
+                    info.depth_stencil_attachment.stencil_back.read_mask
+                ));
+                GL_CALL(glStencilOpSeparate(
+                    GL_BACK,
+                    to_gl_stencil_op(info.depth_stencil_attachment.stencil_back.stencil_fail_op),
+                    to_gl_stencil_op(info.depth_stencil_attachment.stencil_back.depth_fail_op),
+                    to_gl_stencil_op(info.depth_stencil_attachment.stencil_back.pass_op)
+                ));
+                GL_CALL(glStencilMaskSeparate(GL_BACK, info.depth_stencil_attachment.stencil_back.write_mask));
+            } else {
+                GL_CALL(glDisable(GL_STENCIL_TEST));
+            }
         }
 
         // rasterizer state
@@ -213,11 +237,10 @@ namespace tavros::renderer::rhi
         }
 
         // Scissor test
-
         if (info.rasterizer.scissor_enable) {
-            glEnable(GL_SCISSOR_TEST);
+            GL_CALL(glEnable(GL_SCISSOR_TEST));
         } else {
-            glDisable(GL_SCISSOR_TEST);
+            GL_CALL(glDisable(GL_SCISSOR_TEST));
         }
 
         // multisample state
