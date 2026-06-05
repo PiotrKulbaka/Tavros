@@ -1,7 +1,7 @@
 #include <tavros/tef/node.hpp>
 
 #include <tavros/core/containers/fixed_vector.hpp>
-#include <tavros/tef/registry.hpp>
+#include <tavros/tef/workspace.hpp>
 
 namespace
 {
@@ -74,10 +74,66 @@ namespace tavros::tef
         return nullptr;
     }
 
+    node* node::resolve_path(core::string_view path) noexcept
+    {
+        if (path.empty()) {
+            return nullptr;
+        }
+
+        auto dot = path.find('.');
+        auto is_npos = dot == core::string_view::npos;
+        auto segment = is_npos ? path : path.substr(0, dot);
+        path = is_npos ? core::string_view() : path.substr(dot + 1);
+
+        if (segment.empty() || !is_container()) {
+            return nullptr;
+        }
+
+        if (auto child = find_child_by_key(this, segment)) {
+            return path.empty() ? child : child->resolve_path(path);
+        }
+
+        if (m_prototype) {
+            if (auto proto_child = find_child_by_key(m_prototype, segment)) {
+                return path.empty() ? proto_child : proto_child->resolve_path(path);
+            }
+        }
+
+        return nullptr;
+    }
+
+    const node* node::resolve_path(core::string_view path) const noexcept
+    {
+        if (path.empty()) {
+            return nullptr;
+        }
+
+        auto dot = path.find('.');
+        auto is_npos = dot == core::string_view::npos;
+        auto segment = is_npos ? path : path.substr(0, dot);
+        path = is_npos ? core::string_view() : path.substr(dot + 1);
+
+        if (segment.empty() || !is_container()) {
+            return nullptr;
+        }
+
+        if (auto child = find_child_by_key(this, segment)) {
+            return path.empty() ? child : child->resolve_path(path);
+        }
+
+        if (m_prototype) {
+            if (auto proto_child = find_child_by_key(m_prototype, segment)) {
+                return path.empty() ? proto_child : proto_child->resolve_path(path);
+            }
+        }
+
+        return nullptr;
+    }
+
     [[nodiscard]] node_path node::path() const noexcept
     {
-        core::fixed_vector<const node*, registry::k_max_nesting_level> stack;
-        const node*                                                    current = this;
+        core::fixed_vector<const node*, workspace::k_max_nesting_level> stack;
+        const node*                                                     current = this;
         while (current) {
             stack.push_back(current);
             current = current->parent();
@@ -97,36 +153,36 @@ namespace tavros::tef
     {
         auto* ch = extract_children();
         if (ch) {
-            registry::free_nodes(ch);
+            workspace::free_nodes(ch);
         }
     }
 
-    node* node::make_obj_node(registry* owner, core::string_view key, node* prototype)
+    node* node::make_obj_node(workspace* owner, core::string_view key, node* prototype)
     {
         return new (owner->alloc_node()) node(owner, key, node_type::object, nullptr, prototype);
     }
 
-    node* node::make_str_node(registry* owner, core::string_view key, core::string_view val)
+    node* node::make_str_node(workspace* owner, core::string_view key, core::string_view val)
     {
         return new (owner->alloc_node()) node(owner, key, node_type::string, core::string(val), nullptr);
     }
 
-    node* node::make_int_node(registry* owner, core::string_view key, int64 val)
+    node* node::make_int_node(workspace* owner, core::string_view key, int64 val)
     {
         return new (owner->alloc_node()) node(owner, key, node_type::integer, val, nullptr);
     }
 
-    node* node::make_flt_node(registry* owner, core::string_view key, double val)
+    node* node::make_flt_node(workspace* owner, core::string_view key, double val)
     {
         return new (owner->alloc_node()) node(owner, key, node_type::floating_point, val, nullptr);
     }
 
-    node* node::make_bool_node(registry* owner, core::string_view key, bool val)
+    node* node::make_bool_node(workspace* owner, core::string_view key, bool val)
     {
         return new (owner->alloc_node()) node(owner, key, node_type::boolean, static_cast<int64>(val), nullptr);
     }
 
-    node::node(registry* owner, core::string_view key, node_type type, value_variant value, node* prototype)
+    node::node(workspace* owner, core::string_view key, node_type type, value_variant value, node* prototype)
         : m_owner(owner)
         , m_key(key)
         , m_type(type)

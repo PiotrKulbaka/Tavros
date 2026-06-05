@@ -3,7 +3,7 @@
 #include <tavros/core/string.hpp>
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/types.hpp>
-#include <tavros/tef/registry.hpp>
+#include <tavros/tef/workspace.hpp>
 
 namespace tavros::tef
 {
@@ -11,17 +11,17 @@ namespace tavros::tef
     /**
      * @brief Serializes TEFF node trees into textual representation.
      *
-     * Converts a node hierarchy (or a set of documents from a registry)
+     * Converts a node hierarchy (or a set of documents from a workspace)
      * back into TEFF source format.
      *
      * Serialization is performed in two passes:
      *   1. Estimate the required buffer size to minimize reallocations.
      *   2. Reserve memory and write the output.
      *
-     * The serializer does not perform any validation and assumes that
+     * The saver does not perform any validation and assumes that
      * the input node tree is well-formed.
      */
-    class serializer
+    class saver
     {
     public:
         /**
@@ -53,19 +53,19 @@ namespace tavros::tef
 
     public:
         /**
-         * @brief Constructs a serializer with default formatting options.
+         * @brief Constructs a saver with default formatting options.
          */
-        serializer() noexcept = default;
+        saver() noexcept = default;
 
         /**
-         * @brief Constructs a serializer with custom formatting options.
+         * @brief Constructs a saver with custom formatting options.
          */
-        explicit serializer(const formatting_options& opt) noexcept
+        explicit saver(const formatting_options& opt) noexcept
             : m_options(opt)
         {
         }
 
-        ~serializer() noexcept = default;
+        ~saver() noexcept = default;
 
         /**
          * @brief Returns mutable access to formatting options.
@@ -84,14 +84,14 @@ namespace tavros::tef
         }
 
         /**
-         * @brief Serializes all documents stored in a registry.
+         * @brief Serializes all documents stored in a workspace.
          *
          * Documents are serialized in their storage order.
          *
-         * @param reg Registry containing documents.
+         * @param ws Workspace containing documents.
          * @return Serialized text.
          */
-        [[nodiscard]] core::string serialize_all(const registry& reg);
+        [[nodiscard]] core::string serialize_all(const workspace& ws);
 
         /**
          * @brief Serializes a single node (and its subtree) to a string.

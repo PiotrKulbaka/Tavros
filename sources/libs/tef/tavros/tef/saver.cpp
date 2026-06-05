@@ -1,4 +1,4 @@
-#include <tavros/tef/serializer.hpp>
+#include <tavros/tef/saver.hpp>
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 
@@ -12,10 +12,10 @@
 namespace tavros::tef
 {
 
-    core::string serializer::serialize_all(const registry& reg)
+    core::string saver::serialize_all(const workspace& ws)
     {
         core::string result;
-        for (auto& doc : reg.documents()) {
+        for (auto& doc : ws.documents()) {
             result.append("# ================================================================\n");
             result.append("# file: ");
             result.append(doc.value_or<core::string_view>({}));
@@ -26,21 +26,21 @@ namespace tavros::tef
         return result;
     }
 
-    core::string serializer::serialize(const node& n)
+    core::string saver::serialize(const node& n)
     {
         core::string out;
         serialize_into(n, out);
         return out;
     }
 
-    void serializer::serialize_into(const node& n, core::string& out)
+    void saver::serialize_into(const node& n, core::string& out)
     {
         const size_t estimate_size = estimate(n, 0);
         out.reserve(out.size() + estimate_size);
         write_node(n, out, 0);
     }
 
-    size_t serializer::estimate(const node& n, uint32 nesting_level) const noexcept
+    size_t saver::estimate(const node& n, uint32 nesting_level) const noexcept
     {
         size_t sz = 0;
 
@@ -83,7 +83,7 @@ namespace tavros::tef
         return sz;
     }
 
-    size_t serializer::indent_for(uint32 nesting_level) const noexcept
+    size_t saver::indent_for(uint32 nesting_level) const noexcept
     {
         if (m_options.fmt == formatting::compact) {
             return 0;
@@ -91,7 +91,7 @@ namespace tavros::tef
         return static_cast<size_t>(m_options.base_indent) + static_cast<size_t>(nesting_level) * m_options.nested_indent;
     }
 
-    void serializer::write_node(const node& n, core::string& out, uint32 nesting_level) const
+    void saver::write_node(const node& n, core::string& out, uint32 nesting_level) const
     {
         const bool pretty = formatting::pretty == m_options.fmt;
 
@@ -164,7 +164,7 @@ namespace tavros::tef
         }
     }
 
-    void serializer::write_scalar(const node& n, core::string& out) const
+    void saver::write_scalar(const node& n, core::string& out) const
     {
         if (n.is_integer()) {
             const auto val = n.value_or<int64>(0);

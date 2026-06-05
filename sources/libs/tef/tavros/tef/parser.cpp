@@ -2,7 +2,7 @@
 
 #include <tavros/tef/token.hpp>
 #include <tavros/tef/lexer.hpp>
-#include <tavros/tef/registry.hpp>
+#include <tavros/tef/workspace.hpp>
 
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/unreachable.hpp>
@@ -37,20 +37,20 @@ namespace
         using lexer = tavros::tef::lexer;
         using token = tavros::tef::token;
         using node = tavros::tef::node;
-        using registry = tavros::tef::registry;
+        using workspace = tavros::tef::workspace;
         using string_view = tavros::core::string_view;
         using string = tavros::core::string;
         using small_string = tavros::core::fixed_string<256>;
+        using diagnostics_t = tavros::core::diagnostics;
 
         lexer&         lex;
-        string&        errors;
+        diagnostics_t& diagnostics;
         node&          root;
         includes_t&    inclusions;
         inheritance_t& inheritance;
 
-        ps     state = ps::any;
-        uint32 number_of_errors = 0;
-        bool   in_file_header = true;
+        ps   state = ps::any;
+        bool in_file_header = true;
 
         string_view root_file_path = {};
 
@@ -59,22 +59,21 @@ namespace
         int32                           pending_proto_row = 0;
         int32                           pending_proto_col = 0;
 
-        tavros::core::fixed_vector<node*, tavros::tef::registry::k_max_nesting_level> stack;
+        tavros::core::fixed_vector<node*, tavros::tef::workspace::k_max_nesting_level> stack;
 
         // gcc-style error reporting
-        void report_error(string_view code, string_view msg)
+        void report_error(string_view error_code, string_view msg)
         {
-            tavros::core::fixed_string<2048> err_msg;
+            tavros::core::fixed_string<2048> full_msg;
 
             const auto& t = lex.current_token();
-            auto        file = root.value_or<string_view>({});
+            auto        filename = root.value_or<string_view>({});
             auto        line = t.line();
 
-            if (!file.empty()) {
-                err_msg.append(file);
-                err_msg.append(":");
+            if (!filename.empty()) {
+                full_msg.fprint("{}:", filename);
             }
-            err_msg.append(tavros::core::fixed_string<512>::format("{}:{}: error: {}: {}\n", t.row(), t.col(), code, msg));
+            full_msg.fprintln("{}:{}: {}: {}", t.row(), t.col(), error_code, msg);
 
             // Source line
             if (!line.empty()) {
@@ -105,25 +104,19 @@ namespace
                     visible_line = line.substr(start, body_len);
                     visible_col = col - start;
 
-                    err_msg.append("    ...");
-                    err_msg.append(visible_line);
-                    err_msg.append("...\n");
-
+                    full_msg.fprintln("    ...{}...", visible_line);
                     caret_pos = visible_col + dots_len + prefix_len;
                 } else {
-                    err_msg.append("    ");
-                    err_msg.append(line);
-                    err_msg.append("\n");
+                    full_msg.fprintln("    {}", line);
                     caret_pos = col + prefix_len;
                 }
 
                 // Caret pointing to column
-                err_msg.append(caret_pos, ' ');
-                err_msg.append("^\n");
+                full_msg.append(caret_pos, ' ');
+                full_msg.fprintln("^");
             }
 
-            errors.append(err_msg);
-            ++number_of_errors;
+            diagnostics.error("{}", full_msg);
         }
 
         void adv() noexcept
@@ -250,7 +243,7 @@ namespace
                 if (stack.size() >= stack.max_size()) {
                     // Nesting limit exceeded - still create the node to allow
                     // continued parsing, but report the error
-                    report_error("E-18", small_string::format("maximum nesting depth ({}) exceeded", tavros::tef::registry::k_max_nesting_level));
+                    report_error("E-18", small_string::format("maximum nesting depth ({}) exceeded", tavros::tef::workspace::k_max_nesting_level));
 
                     // Create node in current parent without pushing
                     n = parent.append_object(pending_key, nullptr);
@@ -535,17 +528,16 @@ namespace
 
 namespace tavros::tef
 {
-    parse_result parser::parse(core::string_view source, node& doc, core::string& errors)
+    parse_result parser::parse(core::string_view source, node& doc, core::diagnostics& ds)
     {
         TAV_ASSERT(doc.parent() == nullptr);
 
         lexer lex(source.data(), source.data() + source.size());
 
         parse_result result;
-        parser_impl  p{lex, errors, doc, result.inclusions, result.inheritance};
+        parser_impl  p{lex, ds, doc, result.inclusions, result.inheritance};
         p.parse();
 
-        result.number_of_errors = p.number_of_errors;
         return result;
     }
 } // namespace tavros::tef

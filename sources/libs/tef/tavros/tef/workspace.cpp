@@ -1,23 +1,23 @@
-#include <tavros/tef/registry.hpp>
+#include <tavros/tef/workspace.hpp>
 
 #include <tavros/core/containers/fixed_vector.hpp>
 
 namespace tavros::tef
 {
 
-    registry::registry()
+    workspace::workspace()
         : m_pool(core::make_unique<pool_type>())
         , m_first(nullptr)
         , m_last(nullptr)
     {
     }
 
-    registry::~registry() noexcept
+    workspace::~workspace() noexcept
     {
         clear();
     }
 
-    node* registry::new_document(core::string_view path, node* pos)
+    node* workspace::new_document(core::string_view path, node* pos)
     {
         auto* new_n = new (alloc_node()) node(this, {}, node::node_type::document, core::string(path), nullptr);
         if (pos) {
@@ -39,7 +39,7 @@ namespace tavros::tef
         return new_n;
     }
 
-    node* registry::document(core::string_view path) noexcept
+    node* workspace::document(core::string_view path) noexcept
     {
         node* n = m_first;
         while (n) {
@@ -54,7 +54,7 @@ namespace tavros::tef
         return nullptr;
     }
 
-    const node* registry::document(core::string_view path) const noexcept
+    const node* workspace::document(core::string_view path) const noexcept
     {
         const node* n = m_first;
         while (n) {
@@ -69,7 +69,7 @@ namespace tavros::tef
         return nullptr;
     }
 
-    node* registry::at_path(core::string_view path) noexcept
+    node* workspace::at_path(core::string_view path) noexcept
     {
         node* n = m_first;
         while (n) {
@@ -84,7 +84,7 @@ namespace tavros::tef
         return nullptr;
     }
 
-    const node* registry::at_path(core::string_view path) const noexcept
+    const node* workspace::at_path(core::string_view path) const noexcept
     {
         const node* n = m_first;
         while (n) {
@@ -99,7 +99,35 @@ namespace tavros::tef
         return nullptr;
     }
 
-    void registry::clear() noexcept
+    node* workspace::resolve_path(core::string_view path) noexcept
+    {
+        auto* n = m_first;
+        while (n) {
+            TAV_ASSERT(n->is_document());
+            if (auto* res = n->resolve_path(path)) {
+                return res;
+            }
+            n = n->next();
+        }
+
+        return nullptr;
+    }
+
+    const node* workspace::resolve_path(core::string_view path) const noexcept
+    {
+        const auto* n = m_first;
+        while (n) {
+            TAV_ASSERT(n->is_document());
+            if (const auto* res = n->resolve_path(path)) {
+                return res;
+            }
+            n = n->next();
+        }
+
+        return nullptr;
+    }
+
+    void workspace::clear() noexcept
     {
         if (m_first) {
             free_nodes(m_first);
@@ -107,7 +135,7 @@ namespace tavros::tef
         }
     }
 
-    node* registry::alloc_node()
+    node* workspace::alloc_node()
     {
         auto* ptr = m_pool->allocate();
         if (!ptr) {
@@ -116,7 +144,7 @@ namespace tavros::tef
         return ptr;
     }
 
-    void registry::free_nodes(node* n) noexcept
+    void workspace::free_nodes(node* n) noexcept
     {
         TAV_ASSERT(n);
 

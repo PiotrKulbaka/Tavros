@@ -17,15 +17,15 @@
 namespace tavros::tef
 {
 
-    class registry;
+    class workspace;
 
     using node_path = core::fixed_string<256>;
 
     /**
      * @brief A single node in a TEFF document tree.
      *
-     * Nodes are owned exclusively by a @ref registry and must not outlive it.
-     * Creation is only possible through @ref registry or another node's mutation
+     * Nodes are owned exclusively by a @ref workspace and must not outlive it.
+     * Creation is only possible through @ref workspace or another node's mutation
      * methods (append, append_object).
      *
      * A node is either:
@@ -37,13 +37,13 @@ namespace tavros::tef
      * sibling. [See TEFF spec 4.2, 5.2]
      *
      * @note Nodes are non-copyable and non-movable. Always access them
-     *       through pointers or references returned by @ref registry and @ref node
+     *       through pointers or references returned by @ref workspace and @ref node
      *       mutation methods.
      */
     class node : protected core::hierarchy<node>, core::noncopyable
     {
     private:
-        friend class registry;
+        friend class workspace;
         friend class core::hierarchy<node>;
 
     public:
@@ -181,7 +181,7 @@ namespace tavros::tef
          * @brief Returns the key of this node as a string view.
          *
          * Returns an empty string_view if the node has no key.
-         * The returned view is valid for the lifetime of the owning @ref registry.
+         * The returned view is valid for the lifetime of the owning @ref workspace.
          */
         [[nodiscard]] core::string_view key() const noexcept
         {
@@ -259,7 +259,7 @@ namespace tavros::tef
         template<typename T>
         [[nodiscard]] std::optional<T> as() const noexcept
         {
-            return conv<T>{}(this);
+            return conv<T>{}.read(this);
         }
 
         /**
@@ -399,6 +399,25 @@ namespace tavros::tef
         [[nodiscard]] const node* at_path(core::string_view path) const noexcept;
 
         /**
+         * @brief Resolves a node by dot-separated path with prototype-aware lookup.
+         *
+         * Searches for a node using the provided hierarchical path. If a node is
+         * not found in the local structure at a given level, the search continues
+         * through the prototype chain of the current node.
+         *
+         * This method performs a semantic lookup rather than a strict structural
+         * traversal.
+         *
+         * @param path  Hierarchical path to the target node.
+         *
+         * @return Pointer to the resolved node if found, otherwise @c nullptr.
+         */
+        [[nodiscard]] node* resolve_path(core::string_view path) noexcept;
+
+        /// @copydoc resolve_path(core::string_view)
+        [[nodiscard]] const node* resolve_path(core::string_view path) const noexcept;
+
+        /**
          * @brief Returns the prototype node of this node.
          *
          * @return Pointer to the prototype node if it exists, otherwise @c nullptr.
@@ -429,7 +448,7 @@ namespace tavros::tef
          * @brief Appends a new object child node.
          *
          * This node must be an object; a failed assertion is triggered otherwise.
-         * The returned pointer is valid for the lifetime of the owning @ref registry.
+         * The returned pointer is valid for the lifetime of the owning @ref workspace.
          *
          * @param key Key for the new child node.
          * @param prototype Inherited prototype node.
@@ -448,7 +467,7 @@ namespace tavros::tef
          * @brief Appends a new scalar child node.
          *
          * This node must be an object; a failed assertion is triggered otherwise.
-         * The returned pointer is valid for the lifetime of the owning @ref registry.
+         * The returned pointer is valid for the lifetime of the owning @ref workspace.
          *
          * Supported value types: bool, integral types, floating-point types,
          * core::string, core::string_view, and other string-like types.
@@ -499,17 +518,17 @@ namespace tavros::tef
     private:
         using value_variant = std::variant<std::nullptr_t /* for object */, int64, double, core::string>;
 
-        static [[nodiscard]] node* make_obj_node(registry* owner, core::string_view key, node* prototype);
-        static [[nodiscard]] node* make_str_node(registry* owner, core::string_view key, core::string_view val);
-        static [[nodiscard]] node* make_int_node(registry* owner, core::string_view key, int64 val);
-        static [[nodiscard]] node* make_flt_node(registry* owner, core::string_view key, double val);
-        static [[nodiscard]] node* make_bool_node(registry* owner, core::string_view key, bool val);
+        static [[nodiscard]] node* make_obj_node(workspace* owner, core::string_view key, node* prototype);
+        static [[nodiscard]] node* make_str_node(workspace* owner, core::string_view key, core::string_view val);
+        static [[nodiscard]] node* make_int_node(workspace* owner, core::string_view key, int64 val);
+        static [[nodiscard]] node* make_flt_node(workspace* owner, core::string_view key, double val);
+        static [[nodiscard]] node* make_bool_node(workspace* owner, core::string_view key, bool val);
 
-        node(registry* owner, core::string_view key, node_type type, value_variant value, node* prototype);
+        node(workspace* owner, core::string_view key, node_type type, value_variant value, node* prototype);
         ~node() noexcept = default;
 
     private:
-        registry*     m_owner;
+        workspace*    m_owner;
         node_type     m_type;
         core::string  m_key;
         value_variant m_value;

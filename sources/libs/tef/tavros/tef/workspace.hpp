@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/memory/pool_allocator.hpp>
+#include <tavros/core/memory/fixed_pool_allocator.hpp>
 #include <tavros/core/memory/memory.hpp>
 
 #include <tavros/tef/node.hpp>
@@ -9,17 +9,17 @@ namespace tavros::tef
 {
 
     /**
-     * @brief TEF node registry and memory owner.
+     * @brief TEF node workspace and memory owner.
      *
-     * The registry owns all nodes allocated for TEF documents and provides
+     * The workspace owns all nodes allocated for TEF documents and provides
      * facilities for creating, accessing, and destroying document trees.
      *
      * Memory for nodes is managed using an internal pool allocator, ensuring
      * stable pointers and fast allocations.
      *
-     * The registry stores multiple documents in a linked sequence.
+     * The workspace stores multiple documents in a linked sequence.
      */
-    class registry final : core::noncopyable, core::nonmovable
+    class workspace final : core::noncopyable
     {
     private:
         friend class node;
@@ -35,26 +35,26 @@ namespace tavros::tef
         static constexpr size_t k_max_proto_depth = 32;
 
         /// @brief Internal node pool type.
-        using pool_type = core::pool_allocator<node, k_pool_capacity>;
+        using pool_type = core::fixed_pool_allocator<node, k_pool_capacity>;
 
     public:
         /**
-         * @brief Constructs an empty registry.
+         * @brief Constructs an empty workspace.
          *
          * Initializes the internal memory pool and document list.
          */
-        registry();
+        workspace();
 
         /**
-         * @brief Destroys the registry and all owned nodes.
+         * @brief Destroys the workspace and all owned nodes.
          *
          * All allocated nodes are destroyed and their memory is released.
          * All previously obtained pointers become invalid.
          */
-        ~registry() noexcept;
+        ~workspace() noexcept;
 
         /**
-         * @brief Creates and inserts a new document node into the registry.
+         * @brief Creates and inserts a new document node into the workspace.
          *
          * @param path Path associated with the document (e.g. source file path).
          *
@@ -64,10 +64,10 @@ namespace tavros::tef
          *
          * @return Pointer to the newly created document node.
          *
-         * @note The returned pointer remains valid as long as the owning registry exists.
+         * @note The returned pointer remains valid as long as the owning workspace exists.
          *
-         * @warning The @p pos node must belong to the same registry. Passing a node from
-         * another registry results in undefined behavior.
+         * @warning The @p pos node must belong to the same workspace. Passing a node from
+         * another workspace results in undefined behavior.
          */
         [[nodiscard]] node* new_document(core::string_view path, node* pos = nullptr);
 
@@ -84,7 +84,7 @@ namespace tavros::tef
         [[nodiscard]] const node* document(core::string_view path) const noexcept;
 
         /**
-         * @brief Returns the first document in the registry.
+         * @brief Returns the first document in the workspace.
          *
          * @return Pointer to the first document, or nullptr if empty.
          */
@@ -100,7 +100,7 @@ namespace tavros::tef
         }
 
         /**
-         * @brief Returns the last document in the registry.
+         * @brief Returns the last document in the workspace.
          *
          * @return Pointer to the last document, or nullptr if empty.
          */
@@ -155,7 +155,26 @@ namespace tavros::tef
         const node* at_path(core::string_view path) const noexcept;
 
         /**
-         * @brief Destroys all nodes and resets the registry.
+         * @brief Resolves a node by dot-separated path with prototype-aware lookup.
+         *
+         * Searches for a node using the provided hierarchical path. If a node is
+         * not found in the local structure at a given level, the search continues
+         * through the prototype chain of the current node.
+         *
+         * This method performs a semantic lookup rather than a strict structural
+         * traversal.
+         *
+         * @param path  Hierarchical path to the target node.
+         *
+         * @return Pointer to the resolved node if found, otherwise @c nullptr.
+         */
+        node* resolve_path(core::string_view path) noexcept;
+
+        /// @copydoc resolve_path(core::string_view)
+        const node* resolve_path(core::string_view path) const noexcept;
+
+        /**
+         * @brief Destroys all nodes and resets the workspace.
          *
          * Clears all documents and releases all memory back to the pool.
          *

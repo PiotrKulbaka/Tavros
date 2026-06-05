@@ -4,7 +4,8 @@
 #include <tavros/core/containers/vector.hpp>
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/string.hpp>
-#include <tavros/tef/registry.hpp>
+#include <tavros/core/logger/diagnostics.hpp>
+#include <tavros/tef/workspace.hpp>
 
 namespace tavros::tef
 {
@@ -17,15 +18,6 @@ namespace tavros::tef
      */
     struct parse_result
     {
-        /**
-         * @brief Number of errors reported during parsing.
-         *
-         * A value of @c 0 indicates that no errors were detected.
-         * A non-zero value indicates that parsing failed or completed
-         * with one or more reported errors.
-         */
-        uint32 number_of_errors = 0;
-
         /**
          * @brief List of included resources encountered during parsing.
          *
@@ -83,15 +75,15 @@ namespace tavros::tef
          *
          * @param source The input text to parse. Must remain valid for the duration of the call.
          * @param doc Output root node that will be populated with parsed data.
-         * @param errors Output string used to store parsing error messages.
-         *               The string is appended to, not cleared automatically.
-         *               It is the caller's responsibility to clear it if needed.
+         * @param ds Output string used to store parsing error messages.
+         *           The string is appended to, not cleared automatically.
+         *           It is the caller's responsibility to clear it if needed.
          *
          * @return parse_result Structure containing the parsing status and collected include directives.
          *
          * @note On failure, @p doc may be partially filled.
          */
-        static [[nodiscard]] parse_result parse(core::string_view source, node& doc, core::string& errors);
+        static [[nodiscard]] parse_result parse(core::string_view source, node& doc, core::diagnostics& ds);
     };
 
 } // namespace tavros::tef

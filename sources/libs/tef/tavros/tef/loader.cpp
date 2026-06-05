@@ -12,8 +12,6 @@
 
 namespace
 {
-    tavros::core::logger logger("tef_loader");
-
     tavros::core::string_view to_string(tavros::tef::node::node_type type) noexcept
     {
         switch (type) {
@@ -45,12 +43,11 @@ namespace
         using string_view = tavros::core::string_view;
         using node = tavros::tef::node;
         using small_string = tavros::core::fixed_string<512>;
+        using diagnostics_t = tavros::core::diagnostics;
 
         tavros::tef::source_provider& provider;
-        string&                       errors;
-        tavros::tef::registry&        reg;
-
-        uint32 total_errors = 0;
+        diagnostics_t&                diagnostics;
+        tavros::tef::workspace&       ws;
 
         path_set visited;
         path_set loaded;
@@ -58,20 +55,18 @@ namespace
         inheritance_t inheritance;
 
 
-        void report_error(string_view path, string_view code, string_view msg)
+        void report_error(string_view path, string_view error_code, string_view msg)
         {
-            errors.append(small_string::format("{}: error: {}: {}\n", path, code, msg));
-            ++total_errors;
+            diagnostics.error("{}: {}: {}", path, error_code, msg);
         }
 
         void report_resolve_error(const tavros::tef::parse_result::inherit_proto_t& inh, string_view code, string_view msg)
         {
-            if (!inh.file.empty()) {
-                errors.append(inh.file);
-                errors.append(":");
+            if (inh.file.empty()) {
+                diagnostics.error("{}:{}: {}: {}", inh.row, inh.col, code, msg);
+            } else {
+                diagnostics.error("{}:{}:{}: {}: {}", inh.file, inh.row, inh.col, code, msg);
             }
-            errors.append(small_string::format("{}:{}: error: {}: {}\n", inh.row, inh.col, code, msg));
-            ++total_errors;
         }
 
         string load_source(string_view path) noexcept
@@ -112,20 +107,18 @@ namespace
                 return;
             }
 
-            node* doc = reg.new_document(path, pos);
+            node* doc = ws.new_document(path, pos);
             visited.insert(tavros::core::string(path));
 
-            tavros::tef::parse_result result = tavros::tef::parser::parse(source, *doc, errors);
+            tavros::tef::parse_result result = tavros::tef::parser::parse(source, *doc, diagnostics);
             source = {}; // Source no longer needed
-
-            total_errors += result.number_of_errors;
 
             if (!result.inheritance.empty()) {
                 inheritance.append_range(result.inheritance);
             }
 
             // Process includes - insert each before the current doc so that
-            // base definitions appear before derived ones in registry order.
+            // base definitions appear before derived ones in workspace order.
             for (const auto& include_path : result.inclusions) {
                 auto resolved_path = resolve_path(path, include_path);
 
@@ -145,7 +138,7 @@ namespace
         // cycle is found. 0 - no cycle.
         uint32 check_cycle(const node* start) const noexcept
         {
-            tavros::core::fixed_vector<const node*, tavros::tef::registry::k_max_proto_depth> visited;
+            tavros::core::fixed_vector<const node*, tavros::tef::workspace::k_max_proto_depth> visited;
 
             const node* current = start;
             while (current != nullptr) {
@@ -183,7 +176,7 @@ namespace
 
                 TAV_ASSERT(!proto_path.empty());
 
-                auto* proto = reg.at_path(proto_path);
+                auto* proto = ws.at_path(proto_path);
                 if (!proto) {
                     report_resolve_error(
                         inh, "E-12",
@@ -262,29 +255,27 @@ namespace
 namespace tavros::tef
 {
 
-    core::unique_ptr<registry> loader::load(core::string_view path)
+    core::unique_ptr<workspace> loader::load(core::string_view path)
     {
-        core::string errors;
-        auto         reg = load(path, errors);
+        core::diagnostics diagnostics;
+        auto              reg = load(path, diagnostics);
 
-        if (!errors.empty()) {
-            logger.error("Error parsing file: {}\n{}", path, errors);
+        if (diagnostics.error_count() > 0) {
+            tavros::core::logger::print_error("tef_loader", "Error parsing file: {}\n{}", path, diagnostics.text());
+        } else if (diagnostics.total_count() > 0) {
+            tavros::core::logger::print_warning("tef_loader", "File parsing diagnostics: {}\n{}", path, diagnostics.text());
         }
 
         return reg;
     }
 
-    core::unique_ptr<registry> loader::load(core::string_view path, core::string& errors)
+    core::unique_ptr<workspace> loader::load(core::string_view path, core::diagnostics& diagnostics)
     {
-        auto        reg = core::make_unique<registry>();
-        loader_impl ldr{*m_provider, errors, *reg};
+        auto        reg = core::make_unique<workspace>();
+        loader_impl ldr{*m_provider, diagnostics, *reg};
 
         ldr.load(path, nullptr);
         ldr.resolve_inheritance();
-
-        if (ldr.total_errors > 0) {
-            errors.append(tavros::core::fixed_string<64>::format("Total of {} errors", ldr.total_errors));
-        }
 
         return reg;
     }
