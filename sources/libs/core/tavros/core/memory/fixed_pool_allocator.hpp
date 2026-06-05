@@ -2,7 +2,7 @@
 
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/memory/raw_ptr.hpp>
-#include <tavros/core/ids/l3_bitmap_index_allocator.hpp>
+#include <tavros/core/ids/bitmap_index_allocator.hpp>
 #include <tavros/core/types.hpp>
 #include <tavros/core/debug/verify.hpp>
 
@@ -14,16 +14,19 @@ namespace tavros::core
 {
 
     template<typename T, size_t Capacity>
-    class pool_allocator final : noncopyable
+    class fixed_pool_allocator final : noncopyable
     {
+        using index_allocator_type = bitmap_index_allocator<Capacity>;
+
         static_assert(Capacity > 0, "Capacity must be > 0");
-        static_assert(Capacity <= l3_bitmap_index_allocator::k_capacity, "Capacity exceeds index allocator limit");
+        static_assert(Capacity <= index_allocator_type::k_capacity, "Capacity exceeds index allocator limit");
 
     private:
         struct alignas(T) slot_t
         {
             uint8 data[sizeof(T)];
         };
+
 
     public:
         // -----------------------------------------------------------------------
@@ -42,8 +45,8 @@ namespace tavros::core
         template<bool IsConst>
         class iterator_base
         {
-            using pool_ptr = std::conditional_t<IsConst, const pool_allocator*, pool_allocator*>;
-            using index_iter = std::conditional_t<IsConst, typename l3_bitmap_index_allocator::const_iterator, typename l3_bitmap_index_allocator::iterator>;
+            using pool_ptr = std::conditional_t<IsConst, const fixed_pool_allocator*, fixed_pool_allocator*>;
+            using index_iter = std::conditional_t<IsConst, typename index_allocator_type::const_iterator, typename index_allocator_type::iterator>;
             using object_ptr = std::conditional_t<IsConst, const T*, T*>;
 
         public:
@@ -105,10 +108,10 @@ namespace tavros::core
         using const_iterator = iterator_base<true>;
 
     public:
-        pool_allocator() noexcept = default;
-        ~pool_allocator() noexcept = default;
-        pool_allocator(pool_allocator&&) noexcept = default;
-        pool_allocator& operator=(pool_allocator&&) noexcept = default;
+        fixed_pool_allocator() noexcept = default;
+        ~fixed_pool_allocator() noexcept = default;
+        fixed_pool_allocator(fixed_pool_allocator&&) noexcept = default;
+        fixed_pool_allocator& operator=(fixed_pool_allocator&&) noexcept = default;
 
         [[nodiscard]] static constexpr size_t capacity() noexcept
         {
@@ -217,8 +220,8 @@ namespace tavros::core
         }
 
     private:
-        slot_t                    m_storage[Capacity];
-        l3_bitmap_index_allocator m_index_alloc;
+        slot_t               m_storage[Capacity];
+        index_allocator_type m_index_alloc;
     };
 
 } // namespace tavros::core

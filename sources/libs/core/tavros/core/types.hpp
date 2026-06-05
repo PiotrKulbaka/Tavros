@@ -42,6 +42,15 @@ static_assert(sizeof(size_t) == sizeof(void*));
 
 #define TAV_UNUSED(x) ((void) (x))
 
+constexpr size_t operator""_mib(unsigned long long v) noexcept
+{
+    return v * 1024ull * 1024ull;
+}
+constexpr size_t operator""_kib(unsigned long long v) noexcept
+{
+    return v * 1024ull;
+}
+
 namespace tavros::core
 {
 

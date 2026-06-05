@@ -6,7 +6,7 @@
 #include <tavros/core/memory/raw_ptr.hpp>
 #include <tavros/core/containers/vector.hpp>
 #include <tavros/core/ids/handle_allocator.hpp>
-#include <tavros/core/ids/l3_bitmap_index_allocator.hpp>
+#include <tavros/core/ids/bitmap_index_allocator.hpp>
 
 #include <type_traits>
 

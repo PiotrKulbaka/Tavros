@@ -458,7 +458,7 @@ namespace tavros::core
         constexpr basic_fixed_string& assign(const Char* s, size_type count)
         {
             TAV_ASSERT(count < Capacity);
-            m_size = static_cast<smallest_size_t>(count);
+            m_size = static_cast<smallest_size_type>(count);
             Traits::copy(m_data, s, count);
             m_data[size()] = Char{};
             return *this;
@@ -472,7 +472,7 @@ namespace tavros::core
         constexpr basic_fixed_string& assign(size_type count, Char ch)
         {
             TAV_ASSERT(count < Capacity);
-            m_size = static_cast<smallest_size_t>(count);
+            m_size = static_cast<smallest_size_type>(count);
             Traits::assign(m_data, count, ch);
             m_data[size()] = Char{};
             return *this;
@@ -1151,7 +1151,40 @@ namespace tavros::core
 
     public:
         template<class... Args>
-        [[nodiscard]] static basic_fixed_string format(fmt::format_string<Args...> fmt, Args&&... args)
+        [[nodiscard]] size_type fprint(fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        {
+            auto*      dst = m_data + m_size;
+            const auto available = static_cast<std::ptrdiff_t>(Capacity - 1) - static_cast<std::ptrdiff_t>(m_size);
+
+            auto r = fmt::format_to_n(dst, available, fmt, std::forward<Args>(args)...);
+
+            m_size += static_cast<smallest_size_type>(r.out - dst);
+            m_data[size()] = Char{};
+            return static_cast<size_type>(r.size);
+        }
+
+        template<class... Args>
+        [[nodiscard]] size_t fprintln(fmt::format_string<Args...> fmt_str, Args&&... args) noexcept
+        {
+            auto*      dst = m_data + m_size;
+            const auto available = static_cast<std::ptrdiff_t>(Capacity - 1) - static_cast<std::ptrdiff_t>(m_size);
+
+            auto r = fmt::format_to_n(dst, available, fmt_str, std::forward<Args>(args)...);
+
+            auto written = static_cast<smallest_size_type>(r.out - dst);
+            m_size += written;
+
+            if (m_size < Capacity - 1) {
+                m_data[m_size++] = static_cast<Char>('\n');
+            }
+
+            m_data[size()] = Char{};
+            return r.size + 1;
+        }
+
+    public:
+        template<class... Args>
+        [[nodiscard]] static basic_fixed_string format(fmt::format_string<Args...> fmt, Args&&... args) noexcept
         {
             basic_fixed_string result;
             auto               r = fmt::format_to_n(
