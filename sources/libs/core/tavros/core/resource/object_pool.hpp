@@ -265,7 +265,7 @@ namespace tavros::core
          *
          * @return @c true if erased, @c false if the handle was invalid.
          */
-        bool erase(handle_type handle)
+        bool erase(handle_type handle) noexcept
         {
             if (m_handle_alloc.deallocate(handle)) {
                 std::destroy_at(slot_ptr(handle.index()));
@@ -279,7 +279,7 @@ namespace tavros::core
          *
          * Storage capacity is retained. All issued handles become invalid.
          */
-        void clear()
+        void clear() noexcept
         {
             destroy_all();
             m_handle_alloc.reset();

@@ -1285,6 +1285,12 @@ namespace tavros::core
     template<size_t Capacity>
     using fixed_u32string = basic_fixed_string<Capacity, char32_t>;
 
+    using string64 = fixed_string<64>;
+    using string256 = fixed_string<256>;
+
+    inline constexpr size_t k_fixed_path_size = 256;
+    using fixed_path = core::fixed_string<k_fixed_path_size>;
+
 } // namespace tavros::core
 
 // --------------------------------------------------------------------------

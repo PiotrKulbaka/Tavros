@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/logger/severity_level.hpp>
+#include <tavros/core/logger/diagnostics.hpp>
 #include <tavros/core/string.hpp>
 #include <tavros/core/string_view.hpp>
 
@@ -84,6 +85,30 @@ namespace tavros::core
         void fatal(fmt::format_string<Args...> fmt, Args&&... args) const noexcept
         {
             make_message(severity_level::fatal, m_tag, fmt, std::forward<Args>(args)...);
+        }
+
+        /**
+         * @brief Flushes diagnostics messages as a single log entry, with severity determined by the highest level of messages contained in diagnostics.
+         */
+        void flush(diagnostics& ds) const noexcept
+        {
+            severity_level lvl = severity_level::debug;
+            if (ds.info_count() > 0) {
+                lvl = severity_level::info;
+            }
+            if (ds.warning_count() > 0) {
+                lvl = severity_level::warning;
+            }
+            if (ds.error_count() > 0) {
+                lvl = severity_level::error;
+            }
+            if (ds.fatal_count() > 0) {
+                lvl = severity_level::fatal;
+            }
+            if (ds.total_count() > 0) {
+                make_message(lvl, m_tag, "diagnostics:\n{}", ds.text());
+                ds.clear();
+            }
         }
 
         /**

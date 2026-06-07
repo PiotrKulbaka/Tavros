@@ -11,8 +11,8 @@
 
 namespace tavros::filesystem
 {
-    inline constexpr size_t k_fixed_path_size = 256;
-    using fixed_path = core::fixed_string<k_fixed_path_size>;
+    inline constexpr size_t k_fixed_path_size = core::k_fixed_path_size;
+    using fixed_path = core::fixed_path;
 
     namespace detail
     {

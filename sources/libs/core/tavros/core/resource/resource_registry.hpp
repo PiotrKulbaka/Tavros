@@ -26,7 +26,7 @@ namespace tavros::core
      * @tparam Resource Resource type.
      * @tparam Tag      Handle tag type.
      */
-    template<class Resource, handle_tagged Tag>
+    template<class Resource, handle_tagged Tag, class Derived = void>
     class resource_registry : noncopyable
     {
     public:
@@ -56,6 +56,11 @@ namespace tavros::core
     public:
         resource_registry() noexcept = default;
 
+        ~resource_registry() noexcept
+        {
+            clear();
+        }
+
         /**
          * @brief Inserts a resource or acquires an existing one.
          *
@@ -76,6 +81,7 @@ namespace tavros::core
                     e->rc.increment();
                     return it->second;
                 }
+                m_key_to_h.erase(it);
             }
 
             auto handle = m_pool.emplace(entry{std::move(res), string{key}, ref_count{}});
@@ -105,14 +111,26 @@ namespace tavros::core
          * @param handle Resource handle.
          * @return @c true if the count reached zero.
          *
-         * @note When this returns true, caller must:
-         *       1. destroy resource data (unload)
-         *       2. call @ref erase
+         * @note When this returns true, also erases the entry from the registry and invalidates the handle.
          */
-        [[nodiscard]] bool release(handle_type handle)
+        [[nodiscard]] bool release(handle_type handle) noexcept
         {
             auto* e = m_pool.find(handle);
-            return e ? e->rc.decrement() : false;
+            if (!e) {
+                return false;
+            }
+
+            if (!e->rc.decrement()) {
+                return false;
+            }
+
+            if constexpr (!std::same_as<Derived, void>) {
+                static_cast<Derived*>(this)->release_resource(e->res);
+            }
+
+            erase(handle);
+
+            return true;
         }
 
         /**
@@ -122,7 +140,7 @@ namespace tavros::core
          *
          * @note Must be called only after @ref release returned true.
          */
-        void erase(handle_type handle)
+        void erase(handle_type handle) noexcept
         {
             auto* e = m_pool.find(handle);
             if (!e) {
@@ -221,8 +239,14 @@ namespace tavros::core
          *
          * All handles become invalid. Capacity is preserved.
          */
-        void clear()
+        void clear() noexcept
         {
+            if constexpr (!std::same_as<Derived, void>) {
+                for (auto [h, entry_ptr] : m_pool) {
+                    TAV_UNUSED(h);
+                    static_cast<Derived*>(this)->release_resource(entry_ptr->res);
+                }
+            }
             m_pool.clear();
             m_key_to_h.clear();
         }

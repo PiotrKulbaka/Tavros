@@ -309,4 +309,22 @@ namespace tavros::core
     template<typename T>
     inline constexpr bool is_string_like_v = is_string_like<T>::value;
 
+    /** @brief Evaluates to `true` for `std::optional<T>`. */
+    template<class T>
+    struct is_optional : std::false_type
+    {
+    };
+
+    /** @brief Specialization for `std::optional<T>`. */
+    template<class T>
+    struct is_optional<std::optional<T>> : std::true_type
+    {
+    };
+
+    /**
+     * @brief Matches `std::optional<T>` types.
+     */
+    template<class T>
+    concept optional_type = is_optional<T>::value;
+
 } // namespace tavros::core
