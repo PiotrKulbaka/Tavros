@@ -899,7 +899,7 @@ namespace tavros::renderer
 
     bool debug_renderer::create_pipelines()
     {
-        static const rhi::blend_state bs{true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask};
+        static const rhi::blend_state bs{true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
 
         auto create_simple_geom_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
             rhi::pipeline_create_info info;
@@ -907,14 +907,15 @@ namespace tavros::renderer
             info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 1, sizeof(xyz_sz_cl_t), offsetof(xyz_sz_cl_t, xyz_sz_cl_t::color), 0});
             info.shaders.push_back(vs);
             info.shaders.push_back(fs);
-            info.depth_stencil.depth_test_enable = z_test;
-            info.depth_stencil.depth_write_enable = z_test;
-            info.depth_stencil.depth_compare = rhi::compare_op::less;
+            info.depth_stencil_attachment.format = rhi::pixel_format::depth32f;
+            info.depth_stencil_attachment.depth_test_enable = z_test;
+            info.depth_stencil_attachment.depth_write_enable = z_test;
+            info.depth_stencil_attachment.depth_compare = rhi::compare_op::less;
             info.rasterizer.cull = cull;
             info.rasterizer.face = rhi::front_face::counter_clockwise;
             info.rasterizer.polygon = r_mode;
             info.topology = r_topo;
-            info.blend_states.push_back(bs);
+            info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, bs});
             return d->create_pipeline(info);
         };
 
@@ -927,14 +928,15 @@ namespace tavros::renderer
             info.bindings.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
             info.shaders.push_back(vs);
             info.shaders.push_back(fs);
-            info.depth_stencil.depth_test_enable = z_test;
-            info.depth_stencil.depth_write_enable = z_write;
-            info.depth_stencil.depth_compare = rhi::compare_op::less;
+            info.depth_stencil_attachment.format = rhi::pixel_format::depth32f;
+            info.depth_stencil_attachment.depth_test_enable = z_test;
+            info.depth_stencil_attachment.depth_write_enable = z_write;
+            info.depth_stencil_attachment.depth_compare = rhi::compare_op::less;
             info.rasterizer.cull = cull;
             info.rasterizer.face = rhi::front_face::counter_clockwise;
             info.rasterizer.polygon = r_mode;
             info.topology = r_topo;
-            info.blend_states.push_back(bs);
+            info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, bs});
             return d->create_pipeline(info);
         };
 
@@ -945,14 +947,15 @@ namespace tavros::renderer
             info.bindings.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
             info.shaders.push_back(vs);
             info.shaders.push_back(fs);
-            info.depth_stencil.depth_test_enable = z_test;
-            info.depth_stencil.depth_write_enable = z_write;
-            info.depth_stencil.depth_compare = rhi::compare_op::less;
+            info.depth_stencil_attachment.format = rhi::pixel_format::depth32f;
+            info.depth_stencil_attachment.depth_test_enable = z_test;
+            info.depth_stencil_attachment.depth_write_enable = z_write;
+            info.depth_stencil_attachment.depth_compare = rhi::compare_op::less;
             info.rasterizer.cull = cull;
             info.rasterizer.face = rhi::front_face::counter_clockwise;
             info.rasterizer.polygon = r_mode;
             info.topology = r_topo;
-            info.blend_states.push_back(bs);
+            info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, bs});
             return d->create_pipeline(info);
         };
 

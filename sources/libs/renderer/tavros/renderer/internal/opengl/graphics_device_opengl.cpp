@@ -1538,7 +1538,7 @@ namespace tavros::renderer::rhi
             }
 
             if (ds_info.stencil_bits == 0 && need_stencil_resolve) {
-                // No dtencil component, but required stencil resolve
+                // No stencil component, but required stencil resolve
                 ::logger.error(
                     "Failed to create render pass: no stencil component {} but `resolve` required",
                     ds_attachment.format

@@ -15,6 +15,7 @@ tavros_add_library(
         PRIVATE
             tav_core
             tav_assets
+            tav_tef
             glad
             stb
     LIB_DEFINES

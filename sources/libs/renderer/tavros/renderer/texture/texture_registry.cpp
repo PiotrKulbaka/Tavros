@@ -1,4 +1,4 @@
-#include <tavros/renderer/texture/texture_manager.hpp>
+#include <tavros/renderer/texture/texture_registry.hpp>
 
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/assert.hpp>
@@ -8,6 +8,7 @@
 #include <tavros/renderer/rhi/string_utils.hpp>
 #include <tavros/renderer/texture/mipmap_generator.hpp>
 #include <tavros/renderer/texture/texture_uploader.hpp>
+#include <tavros/renderer/resource_manager.hpp>
 
 namespace
 {
@@ -29,7 +30,7 @@ namespace
         );
     }
 
-    tavros::core::fixed_string<1024> make_key(tavros::core::string_view path, const tavros::renderer::texture_manager::load_params& params)
+    tavros::core::fixed_string<1024> make_key(tavros::core::string_view path, const tavros::renderer::texture_registry::load_params& params)
     {
         return tavros::core::fixed_string<1024>::format(
             "{}:w={};h={};d={};mip={};type={};fmt={};al={};ar={};ac={}",
@@ -81,36 +82,22 @@ namespace
         }
     }
 
-    static tavros::core::logger logger("texture_manager");
+    static tavros::core::logger logger("texture_registry");
 } // namespace
 
 namespace tavros::renderer
 {
 
-    texture_manager::texture_manager(core::shared_ptr<assets::asset_manager> am) noexcept
-        : m_am(am)
+    texture_registry::texture_registry(resource_manager* rrm) noexcept
+        : m_rrm(rrm)
     {
-        TAV_ASSERT(m_am);
+        TAV_ASSERT(rrm);
     }
 
-    void texture_manager::init(rhi::graphics_device* device) noexcept
-    {
-        TAV_ASSERT(device);
-        TAV_ASSERT(!m_gdevice);
-        m_gdevice = device;
-    }
-
-    void texture_manager::shutdown() noexcept
-    {
-        TAV_ASSERT(m_gdevice);
-        clear();
-        m_gdevice = nullptr;
-    }
-
-    texture_handle texture_manager::load(gpu_stage_buffer& stage, rhi::command_queue& cmd, core::string_view path, const load_params& params)
+    texture_handle texture_registry::load(gpu_stage_buffer& stage, rhi::command_queue& cmd, core::string_view path, const load_params& params)
     {
         auto key = make_key(path, params);
-        if (auto h = m_registry.find_handle(key); h.valid()) {
+        if (auto h = find_handle(key); h.valid()) {
             // Already loaded
             acquire(h);
             return h;
@@ -120,7 +107,7 @@ namespace tavros::renderer
         assets::image im;
         try {
             auto im_fmt = to_im_format(params.pixel_format);
-            auto data = m_am->read_binary(path);
+            auto data = m_rrm->asset_manager().read_binary(path);
             im = assets::image::decode(data, im_fmt, true);
         } catch (const core::file_error& e) {
             logger.error("Failed to open image '{}'", path);
@@ -130,9 +117,9 @@ namespace tavros::renderer
         return upload(stage, cmd, im, key, params, true);
     }
 
-    texture_handle texture_manager::load(gpu_stage_buffer& stage, rhi::command_queue& cmd, assets::image_view im, core::string_view key, const load_params& params)
+    texture_handle texture_registry::load(gpu_stage_buffer& stage, rhi::command_queue& cmd, assets::image_view im, core::string_view key, const load_params& params)
     {
-        if (auto h = m_registry.find_handle(key); h.valid()) {
+        if (auto h = find_handle(key); h.valid()) {
             // Already loaded
             acquire(h);
             return h;
@@ -141,52 +128,21 @@ namespace tavros::renderer
         return upload(stage, cmd, im, key, params, true);
     }
 
-    void texture_manager::acquire(texture_handle handle) noexcept
+    rhi::texture_handle texture_registry::get_gpu_handle(texture_handle handle) const noexcept
     {
-        m_registry.acquire(handle);
-    }
-
-    void texture_manager::release(texture_handle handle)
-    {
-        rhi::texture_handle gpu_handle{};
-        if (const gpu_texture_view* tex_info = m_registry.find(handle)) {
-            gpu_handle = tex_info->gpu_handle;
-        }
-
-        if (m_registry.release(handle)) {
-            m_gdevice->safe_destroy(gpu_handle);
-            m_registry.erase(handle);
-        }
-    }
-
-    [[nodiscard]] const gpu_texture_view* texture_manager::get(texture_handle handle) const noexcept
-    {
-        return m_registry.find(handle);
-    }
-
-    rhi::texture_handle texture_manager::get_gpu_handle(texture_handle handle) const noexcept
-    {
-        if (const auto* tex = m_registry.find(handle)) {
+        if (const auto* tex = find(handle)) {
             return tex->gpu_handle;
         }
         return {};
     }
 
-    void texture_manager::clear()
+    void texture_registry::release_resource(gpu_texture_view& tex_view) noexcept
     {
-        TAV_ASSERT(m_gdevice);
-        for (auto [h, entry] : m_registry) {
-            TAV_UNUSED(h);
-            auto rhi_h = entry->res.gpu_handle;
-            m_gdevice->safe_destroy(rhi_h);
-        }
-        m_registry.clear();
+        m_rrm->graphics_device()->safe_destroy(tex_view.gpu_handle);
     }
 
-    texture_handle texture_manager::upload(gpu_stage_buffer& stage, rhi::command_queue& cmd, assets::image_view im, core::string_view key, const load_params& params, bool y_flip)
+    texture_handle texture_registry::upload(gpu_stage_buffer& stage, rhi::command_queue& cmd, assets::image_view im, core::string_view key, const load_params& params, bool y_flip)
     {
-        TAV_ASSERT(m_gdevice);
-
         const auto type = params.type;
 
         // Resolve source rect
@@ -275,7 +231,7 @@ namespace tavros::renderer
         rhi_tex.array_layers = array_layers;
         rhi_tex.sample_count = 1;
 
-        auto gpu_tex = m_gdevice->create_texture(rhi_tex);
+        auto gpu_tex = m_rrm->graphics_device()->create_texture(rhi_tex);
         if (!gpu_tex) {
             logger.error("Failed to create GPU texture");
             return {};
@@ -323,10 +279,10 @@ namespace tavros::renderer
         tex_info.gpu_handle = gpu_tex;
         tex_info.status = core::resource_status::ready;
 
-        auto handle = m_registry.insert(key, std::move(tex_info));
+        auto handle = insert(key, std::move(tex_info));
         if (!handle.valid()) {
             logger.error("Failed to insert texture '{}'", key);
-            m_gdevice->safe_destroy(gpu_tex);
+            m_rrm->graphics_device()->safe_destroy(gpu_tex);
             return {};
         }
 

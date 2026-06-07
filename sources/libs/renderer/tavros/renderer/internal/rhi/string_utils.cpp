@@ -145,8 +145,6 @@ namespace tavros::renderer::rhi
             return "triangles";
         case primitive_topology::triangle_strip:
             return "triangle_strip";
-        case primitive_topology::triangle_fan:
-            return "triangle_fan";
         }
         TAV_UNREACHABLE();
     }

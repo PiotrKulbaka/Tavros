@@ -3,6 +3,7 @@
 #include <tavros/core/types.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
+#include <tavros/renderer/render_target/render_target_desc.hpp>
 
 namespace tavros::renderer
 {
@@ -22,7 +23,6 @@ namespace tavros::renderer
      * @code
      * rhi::pixel_format formats[] = { rhi::pixel_format::rgba8 };
      * render_target rt(formats, rhi::pixel_format::depth24_stencil8);
-     * rt.init(device);
      * rt.resize(1920, 1080, 4);
      *
      * // render loop
@@ -35,53 +35,21 @@ namespace tavros::renderer
      * @endcode
      *
      * @note Not copyable. Movable.
-     * @note init() must be called before resize() or any getters.
      */
     class render_target : core::noncopyable
     {
     public:
         /** @brief Default constructor. */
-        render_target() noexcept;
+        render_target(rhi::graphics_device* gdevice, const render_target_desc& desc) noexcept;
 
-        /**
-         * @brief Move constructor.
-         */
+        /** @brief Move constructor. */
         render_target(render_target&& other) noexcept;
 
-        /**
-         * @brief Destroys the render target, releasing all GPU resources.
-         *
-         * Calls shutdown() internally. Safe to call even if init() was never called.
-         */
+        /** @brief Destroys the render target, releasing all GPU resources. */
         ~render_target() noexcept;
 
-        /**
-         * @brief Move assignment.
-         */
+        /** @brief Move assignment. */
         render_target& operator=(render_target&& other) noexcept;
-
-        /**
-         * @brief Binds a graphics device to this render target.
-         *
-         * Must be called exactly once before resize().
-         *
-         * @param gdevice  Non-owning pointer to the graphics device.
-         *                 Must outlive this render target.
-         * @param color_attachment_formats  Pixel formats for each color attachment.
-         *                                  Must not contain pixel_format::none.
-         * @param depth_stencil_attachment_format  Pixel format for the depth/stencil attachment.
-         *                                         Pass pixel_format::none to omit it.
-         * @pre  gdevice != nullptr
-         * @pre  init() has not been called before on this instance
-         */
-        void init(rhi::graphics_device* gdevice, core::buffer_view<rhi::pixel_format> color_attachment_formats, rhi::pixel_format depth_stencil_attachment_format);
-
-        /**
-         * @brief Releases all GPU resources created by resize().
-         *
-         * Safe to call multiple times. Does nothing if no resources are allocated.
-         */
-        void shutdown();
 
         /**
          * @brief Allocates or reallocates GPU resources at the given resolution and sample count.
@@ -92,9 +60,8 @@ namespace tavros::renderer
          * @param width   Render target width in pixels. Must be > 0.
          * @param height  Render target height in pixels. Must be > 0.
          * @param msaa    Sample count. Pass 1 to disable MSAA.
-         * @pre  init() must have been called before resize()
          */
-        void resize(uint32 width, uint32 height, uint32 msaa = 0);
+        void resize(uint32 width, uint32 height, uint32 max_msaa = 0);
 
         /**
          * @brief Returns the number of color attachments.
@@ -112,7 +79,12 @@ namespace tavros::renderer
          * @param index  Attachment index. Must be < attachment_count().
          * @pre  m_is_created == true
          */
-        rhi::texture_handle color_attachment(uint32 index) const;
+        rhi::texture_handle color_attachment_at(uint32 index) const noexcept;
+
+        /**
+         * @brief Returns the resolved color attachment texture with the given name.
+         */
+        rhi::texture_handle color_attachment_by_name(core::string_view name) const noexcept;
 
         /**
          * @brief Returns the resolved depth/stencil attachment texture.
@@ -147,33 +119,36 @@ namespace tavros::renderer
     private:
         void destroy_all();
 
-        rhi::framebuffer_handle create_fb(uint32 width, uint32 height, uint32 msaa);
+        rhi::framebuffer_handle create_fb(uint32 width, uint32 height);
 
         rhi::texture_handle create_texture(uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa);
 
-        rhi::render_pass_handle create_rp(bool need_resolve);
+        rhi::render_pass_handle create_rp();
 
     private:
+        using color_attachment_config = render_target_desc::color_attachment_config;
+        using depth_attachment_config = render_target_desc::depth_attachment_config;
+        using stencil_attachment_config = render_target_desc::stencil_attachment_config;
+
         template<class T>
         using vector_t = core::fixed_vector<T, rhi::k_max_color_attachments>;
 
-        bool m_is_init;
-        bool m_is_created;
-        bool m_is_msaa_enabled;
+        uint32 m_required_msaa;
+        uint32 m_current_msaa;
 
-        rhi::graphics_device* m_gdevice;        // Non-owning pointer to the graphics
+        rhi::graphics_device* m_gdevice;            // Non-owning pointer to the graphics
 
-        vector_t<rhi::pixel_format> m_cl_fmt;   // Color ttachment formats
-        rhi::pixel_format           m_ds_fmt;   // Depth stencil color ttachment format
+        vector_t<color_attachment_config> m_ca_cfg; // Color attachments config
+        depth_attachment_config           m_da_cfg; // Depth attachment config
+        stencil_attachment_config         m_sa_cfg; // Stencil attachment config
 
-        vector_t<rhi::texture_handle> m_src_cl; // Source color attachment
-        vector_t<rhi::texture_handle> m_dst_cl; // Destination color attachment
-        rhi::texture_handle           m_src_ds; // Source depth stencil attachment
-        rhi::texture_handle           m_dst_ds; // Destination depth stencil attachment
+        vector_t<rhi::texture_handle> m_src_cl;     // Source color attachment
+        vector_t<rhi::texture_handle> m_dst_cl;     // Destination color attachment
+        rhi::texture_handle           m_src_ds;     // Source depth stencil attachment
+        rhi::texture_handle           m_dst_ds;     // Destination depth stencil attachment
 
-        rhi::framebuffer_handle m_framebuffer;  // Framebuffer referencing src attachments
-        rhi::render_pass_handle m_render_pass;  // Render pass with load/store/resolve ops
+        rhi::framebuffer_handle m_framebuffer;      // Framebuffer referencing src attachments
+        rhi::render_pass_handle m_render_pass;      // Render pass with load/store/resolve ops
     };
-
 
 } // namespace tavros::renderer

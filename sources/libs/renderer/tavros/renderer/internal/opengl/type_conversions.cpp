@@ -461,8 +461,6 @@ namespace tavros::renderer::rhi
             return GL_TRIANGLES;
         case tavros::renderer::rhi::primitive_topology::triangle_strip:
             return GL_TRIANGLE_STRIP;
-        case tavros::renderer::rhi::primitive_topology::triangle_fan:
-            return GL_TRIANGLE_FAN;
         default:
             TAV_UNREACHABLE();
         }
