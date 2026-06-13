@@ -374,18 +374,6 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_shader_stage(shader_stage type)
-    {
-        switch (type) {
-        case shader_stage::vertex:
-            return GL_VERTEX_SHADER;
-        case shader_stage::fragment:
-            return GL_FRAGMENT_SHADER;
-        default:
-            TAV_UNREACHABLE();
-        }
-    }
-
     GLenum to_gl_stencil_op(stencil_op op)
     {
         switch (op) {

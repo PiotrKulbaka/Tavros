@@ -31,6 +31,7 @@ namespace tavros::renderer::rhi
     enum class render_backend_type : uint8;
     enum class load_op : uint8;
     enum class store_op : uint8;
+    enum class shader_resource_type : uint8;
 
     core::string_view to_string(buffer_usage val) noexcept;
     core::string_view to_string(buffer_access val) noexcept;
@@ -52,10 +53,10 @@ namespace tavros::renderer::rhi
     core::string_view to_string(filter_mode val) noexcept;
     core::string_view to_string(mipmap_filter_mode val) noexcept;
     core::string_view to_string(wrap_mode val) noexcept;
-    core::string_view to_string(shader_stage val) noexcept;
     core::string_view to_string(render_backend_type val) noexcept;
     core::string_view to_string(load_op val) noexcept;
     core::string_view to_string(store_op val) noexcept;
+    core::string_view to_string(shader_resource_type val) noexcept;
 
     pixel_format combine_depth_stencil_formats(pixel_format df, pixel_format sf) noexcept;
 

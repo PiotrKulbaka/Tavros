@@ -498,17 +498,6 @@ namespace tavros::renderer::rhi
         TAV_UNREACHABLE();
     }
 
-    core::string_view to_string(shader_stage val) noexcept
-    {
-        switch (val) {
-        case shader_stage::vertex:
-            return "vertex";
-        case shader_stage::fragment:
-            return "fragment";
-        }
-        TAV_UNREACHABLE();
-    }
-
     core::string_view to_string(render_backend_type val) noexcept
     {
         switch (val) {
@@ -546,6 +535,93 @@ namespace tavros::renderer::rhi
             return "resolve";
         case store_op::dont_care:
             return "dont_care";
+        }
+        TAV_UNREACHABLE();
+    }
+
+    core::string_view to_string(shader_resource_type val) noexcept
+    {
+        switch (val) {
+        case shader_resource_type::sampler_2d:
+            return "sampler_2d";
+        case shader_resource_type::sampler_2d_shadow:
+            return "sampler_2d_shadow";
+        case shader_resource_type::sampler_2d_array:
+            return "sampler_2d_array";
+        case shader_resource_type::sampler_2d_array_shadow:
+            return "sampler_2d_array_shadow";
+        case shader_resource_type::usampler_2d:
+            return "usampler_2d";
+        case shader_resource_type::usampler_2d_array:
+            return "usampler_2d_array";
+        case shader_resource_type::isampler_2d:
+            return "isampler_2d";
+        case shader_resource_type::isampler_2d_array:
+            return "isampler_2d_array";
+        case shader_resource_type::sampler_3d:
+            return "sampler_3d";
+        case shader_resource_type::usampler_3d:
+            return "usampler_3d";
+        case shader_resource_type::isampler_3d:
+            return "isampler_3d";
+        case shader_resource_type::sampler_cube:
+            return "sampler_cube";
+        case shader_resource_type::sampler_cube_shadow:
+            return "sampler_cube_shadow";
+        case shader_resource_type::sampler_cube_array:
+            return "sampler_cube_array";
+        case shader_resource_type::sampler_cube_array_shadow:
+            return "sampler_cube_array_shadow";
+        case shader_resource_type::usampler_cube:
+            return "usampler_cube";
+        case shader_resource_type::usampler_cube_array:
+            return "usampler_cube_array";
+        case shader_resource_type::isampler_cube:
+            return "isampler_cube";
+        case shader_resource_type::isampler_cube_array:
+            return "isampler_cube_array";
+        case shader_resource_type::sampler_buffer:
+            return "sampler_buffer";
+        case shader_resource_type::usampler_buffer:
+            return "usampler_buffer";
+        case shader_resource_type::isampler_buffer:
+            return "isampler_buffer";
+        case shader_resource_type::image_2d:
+            return "image_2d";
+        case shader_resource_type::image_2d_array:
+            return "image_2d_array";
+        case shader_resource_type::uimage_2d:
+            return "uimage_2d";
+        case shader_resource_type::uimage_2d_array:
+            return "uimage_2d_array";
+        case shader_resource_type::iimage_2d:
+            return "iimage_2d";
+        case shader_resource_type::iimage_2d_array:
+            return "iimage_2d_array";
+        case shader_resource_type::image_3d:
+            return "image_3d";
+        case shader_resource_type::uimage_3d:
+            return "uimage_3d";
+        case shader_resource_type::iimage_3d:
+            return "iimage_3d";
+        case shader_resource_type::image_cube:
+            return "image_cube";
+        case shader_resource_type::image_cube_array:
+            return "image_cube_array";
+        case shader_resource_type::uimage_cube:
+            return "uimage_cube";
+        case shader_resource_type::uimage_cube_array:
+            return "uimage_cube_array";
+        case shader_resource_type::iimage_cube:
+            return "iimage_cube";
+        case shader_resource_type::iimage_cube_array:
+            return "iimage_cube_array";
+        case shader_resource_type::image_buffer:
+            return "image_buffer";
+        case shader_resource_type::uimage_buffer:
+            return "uimage_buffer";
+        case shader_resource_type::iimage_buffer:
+            return "iimage_buffer";
         }
         TAV_UNREACHABLE();
     }

@@ -1,13 +1,13 @@
 #pragma once
 
-#include <tavros/renderer/rhi/shader_program_reflect.hpp>
+#include <tavros/renderer/rhi/shader_reflect.hpp>
 #include <tavros/core/containers/vector.hpp>
 #include <glad/glad.h>
 
 namespace tavros::renderer::rhi
 {
 
-    class gl_shader_program_reflect : public shader_program_reflect
+    class gl_shader_program_reflect : public shader_reflect
     {
     public:
         struct ubo_range

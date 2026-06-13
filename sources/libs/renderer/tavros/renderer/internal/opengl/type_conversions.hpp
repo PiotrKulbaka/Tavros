@@ -1,7 +1,6 @@
 #pragma once
 
 #include <tavros/renderer/rhi/sampler_create_info.hpp>
-#include <tavros/renderer/rhi/shader_create_info.hpp>
 #include <tavros/renderer/rhi/pipeline_create_info.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 
@@ -80,8 +79,6 @@ namespace tavros::renderer::rhi
     GLenum to_gl_wrap_mode(wrap_mode mode);
 
     GLenum to_gl_compare_func(compare_op func);
-
-    GLenum to_gl_shader_stage(shader_stage type);
 
     GLenum to_gl_stencil_op(stencil_op op);
 

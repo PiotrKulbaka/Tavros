@@ -19,7 +19,7 @@ namespace
 {
     tavros::core::logger logger("graphics_device_opengl");
 
-    GLuint compile_shader(tavros::core::string_view program, GLenum shader_type)
+    GLuint compile_shader_module(tavros::core::string_view program, GLenum shader_type)
     {
         auto shader = glCreateShader(shader_type);
         if (shader == 0) {
@@ -189,11 +189,26 @@ namespace tavros::renderer::rhi
         m_limits.max_framebuffer_height = static_cast<uint32>(value);
     }
 
+    void graphics_device_opengl::release_program(gl_program_handle handle) noexcept
+    {
+        if (auto* p = m_resources.find(handle)) {
+            if (p->rc.decrement()) {
+                GL_CALL(glDeleteProgram(p->prog_obj));
+                m_resources.remove(handle);
+                ::logger.debug("Program {} deleted", handle);
+            }
+        } else {
+            ::logger.error("Failed to release program {}: not found", handle);
+        }
+    }
+
     void graphics_device_opengl::destroy()
     {
         destroy_for<sampler_handle>(m_resources, [this](auto h) { destroy_sampler(h); });
 
         destroy_for<texture_handle>(m_resources, [this](auto h) { destroy_texture(h); });
+
+        destroy_for<shader_handle>(m_resources, [this](auto h) { destroy_shader(h); });
 
         destroy_for<pipeline_handle>(m_resources, [this](auto h) { destroy_pipeline(h); });
 
@@ -213,9 +228,9 @@ namespace tavros::renderer::rhi
 
         destroy_for<buffer_handle>(m_resources, [this](auto h) { destroy_buffer(h); });
 
-        destroy_for<shader_handle>(m_resources, [this](auto h) { destroy_shader(h); });
-
         destroy_for<render_pass_handle>(m_resources, [this](auto h) { destroy_render_pass(h); });
+
+        destroy_for<fence_handle>(m_resources, [this](auto h) { destroy_fence(h); });
 
         // Should be removed in last turn because swapchain owns the OpenGL context
         destroy_for<frame_composer_handle>(m_resources, [this](auto h) { destroy_frame_composer(h); });
@@ -250,7 +265,9 @@ namespace tavros::renderer::rhi
 
         // Initialize debug callback for OpenGL here, because it's not possible to do it in the constructor
         // the first call of frame_composer_opengl::create() will create the context
+#if TAV_DEBUG
         init_gl_debug();
+#endif
 
         init_limits();
 
@@ -289,94 +306,55 @@ namespace tavros::renderer::rhi
         }
     }
 
-    shader_program_handle graphics_device_opengl::compile_shader_program(const shader_program_sources& sources)
+    shader_handle graphics_device_opengl::compile_shader(const shader_program_sources& sources)
     {
         auto deleter = [](GLuint o) { if (o != 0) {GL_CALL(glDeleteShader(o));} };
-        auto vso_owner = core::make_scoped_owner(compile_shader(sources.vertex_shader_source, GL_VERTEX_SHADER), deleter);
-        auto fso_owner = core::make_scoped_owner(compile_shader(sources.fragment_shader_source, GL_FRAGMENT_SHADER), deleter);
+        auto vso_owner = core::make_scoped_owner(compile_shader_module(sources.vertex_shader_source, GL_VERTEX_SHADER), deleter);
+        auto fso_owner = core::make_scoped_owner(compile_shader_module(sources.fragment_shader_source, GL_FRAGMENT_SHADER), deleter);
 
         if (vso_owner.get() == 0 || fso_owner.get() == 0) {
-            ::logger.error("Failed to create shader program: compilation failed");
-            return {};
-        }
-
-        auto gl_prog = link_program(vso_owner.get(), fso_owner.get());
-
-        if (gl_prog == 0) {
-            ::logger.error("Failed to create shader program: failed to link program");
-            return {};
-        }
-
-        bool is_compute = false;
-        auto h = m_resources.create(gl_program{gl_prog, is_compute, nullptr});
-        ::logger.debug("Shader program {} created", h);
-        return h;
-    }
-
-    void graphics_device_opengl::destroy_shader_program(shader_program_handle program)
-    {
-        if (auto* p = m_resources.find(program)) {
-            GL_CALL(glDeleteProgram(p->prog));
-            p->prog = 0;
-            ::logger.debug("Shader program {} destroyed", program);
-        } else {
-            ::logger.error("Failed to destroy shader program {}: not found", program);
-        }
-    }
-
-    const shader_program_reflect* graphics_device_opengl::get_shader_program_reflection_ptr(shader_program_handle program) const noexcept
-    {
-        if (auto* p = m_resources.find(program)) {
-            if (!p->reflect) {
-                p->reflect = core::make_unique<gl_shader_program_reflect>(p->prog, p->is_compute);
-            }
-            return p->reflect.get();
-        } else {
-            ::logger.error("Failed to get shader program reflection {}: not found", program);
-        }
-    }
-
-    shader_handle graphics_device_opengl::create_shader(const shader_create_info& info)
-    {
-        if (info.entry_point != "main") {
-            ::logger.error(
-                "Failed to create shader: not supported entry point name {} only 'main' entry point is supported",
-                fmt::styled_name(info.entry_point)
-            );
-            return shader_handle();
-        }
-
-        auto shader_obj = compile_shader(info.source_code, to_gl_shader_stage(info.stage));
-        if (shader_obj == 0) {
             ::logger.error("Failed to create shader: compilation failed");
-            return shader_handle();
+            return {};
         }
 
-        auto inf = info;
-        inf.source_code = "";
-        auto h = m_resources.create(gl_shader{info, shader_obj});
-        ::logger.debug("Shader ({}) {} created", info.stage, h);
+        auto prog = link_program(vso_owner.get(), fso_owner.get());
+        if (prog == 0) {
+            ::logger.error("Failed to create shader: failed to link program");
+            return {};
+        }
+
+        const bool is_compute = false;
+        auto       reflect = core::make_unique<gl_shader_program_reflect>(prog, is_compute);
+        if (!reflect->is_valid()) {
+            ::logger.error("Failed to create shader: conventions are violated");
+            GL_CALL(glDeleteProgram(prog));
+            return {};
+        }
+
+        auto sh_h = m_resources.create(gl_program{prog, {}});
+        auto h = m_resources.create(gl_shader{sh_h, std::move(reflect)});
+        ::logger.debug("Shader {} created", h);
         return h;
     }
 
     void graphics_device_opengl::destroy_shader(shader_handle shader)
     {
-        if (auto* s = m_resources.find(shader)) {
-            GL_CALL(glDeleteShader(s->shader_obj));
-            s->shader_obj = 0;
+        if (auto* sh = m_resources.find(shader)) {
+            release_program(sh->program_h);
             m_resources.remove(shader);
-            ::logger.debug("Shader ({}) {} destroyed", s->info.stage, shader);
+            ::logger.debug("Shader {} destroyed", shader);
         } else {
             ::logger.error("Failed to destroy shader {}: not found", shader);
         }
     }
 
-    const shader_create_info* graphics_device_opengl::get_shader_create_info(shader_handle shader) const noexcept
+    const shader_reflect* graphics_device_opengl::get_shader_reflect_ptr(shader_handle shader) const noexcept
     {
-        if (auto* s = m_resources.find(shader)) {
-            return &s->info;
+        if (auto* p = m_resources.find(shader)) {
+            return p->reflect.get();
+        } else {
+            ::logger.error("Failed to get shader reflection {}: not found", shader);
         }
-        return nullptr;
     }
 
     sampler_handle graphics_device_opengl::create_sampler(const sampler_create_info& info)
@@ -877,59 +855,17 @@ namespace tavros::renderer::rhi
 
     pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_create_info& info)
     {
-        if (info.shaders.size() != 2) {
-            ::logger.error("Failed to create pipeline: exactly 2 shaders required (vertex and fragment)");
+        auto* sh = m_resources.find(info.shader_program);
+        if (!sh) {
+            ::logger.error("Failed to create pipeline: shader {} not found", info.shader_program);
             return {};
         }
 
-        gl_shader* vs = nullptr;
-        gl_shader* fs = nullptr;
-        for (size_t i = 0; i < info.shaders.size(); ++i) {
-            auto* s = m_resources.find(info.shaders[i]);
-            if (!s) {
-                ::logger.error("Failed to create pipeline: shader {} not found", info.shaders[i]);
-                return {};
-            }
-
-            if (s->info.stage == shader_stage::vertex) {
-                if (vs) {
-                    ::logger.error("Failed to create pipeline: multiple vertex shaders provided");
-                    return {};
-                }
-                vs = s;
-            } else if (s->info.stage == shader_stage::fragment) {
-                if (fs) {
-                    ::logger.error("Failed to create pipeline: multiple fragment shaders provided");
-                    return {};
-                }
-                fs = s;
-            } else {
-                ::logger.error("Failed to create pipeline: unsupported shader stage");
-                return {};
-            }
-        }
-
-        if (!vs) {
-            ::logger.error("Failed to create pipeline: missing vertex shader");
+        auto* p = m_resources.find(sh->program_h);
+        if (!p) {
+            ::logger.error("Failed to create pipeline: program {} not found", sh->program_h);
             return {};
         }
-        if (!fs) {
-            ::logger.error("Failed to create pipeline: missing fragment shader");
-            return {};
-        }
-
-        GLuint gl_prog = link_program(vs->shader_obj, fs->shader_obj);
-
-        // Validate program
-        if (gl_prog == 0) {
-            ::logger.error("Failed to create pipeline: failed to link program");
-            return {};
-        }
-
-        auto program_owner = core::make_scoped_owner(gl_prog, [](GLuint id) {
-            GL_CALL(glDeleteProgram(id));
-        });
-
 
         // Validate attributes
 
@@ -944,9 +880,11 @@ namespace tavros::renderer::rhi
             mapped_attributes[attr.location] = attr;
         }
 
+        auto prog = p->prog_obj;
+
         // Get number of attributes in compiled shader
         GLint gl_prog_attrib_count;
-        GL_CALL(glGetProgramiv(gl_prog, GL_ACTIVE_ATTRIBUTES, &gl_prog_attrib_count));
+        GL_CALL(glGetProgramiv(prog, GL_ACTIVE_ATTRIBUTES, &gl_prog_attrib_count));
 
         // And validate each attribute
         size_t total_gl_attributes = 0;
@@ -954,9 +892,9 @@ namespace tavros::renderer::rhi
             GLchar attrib_name[256] = {0};
             GLint  size;
             GLenum type;
-            GL_CALL(glGetActiveAttrib(gl_prog, i, sizeof(attrib_name), nullptr, &size, &type, attrib_name));
+            GL_CALL(glGetActiveAttrib(prog, i, sizeof(attrib_name), nullptr, &size, &type, attrib_name));
 
-            GLint gl_attrib_location = glGetAttribLocation(gl_prog, attrib_name);
+            GLint gl_attrib_location = glGetAttribLocation(prog, attrib_name);
             if (gl_attrib_location < 0) {
                 // builtin attribute, just ignore it
                 continue;
@@ -1043,17 +981,18 @@ namespace tavros::renderer::rhi
 
         GL_CALL(glBindVertexArray(0));
 
+        p->rc.increment();
         // create pipeline
-        auto h = m_resources.create(gl_pipeline{info, program_owner.release(), vao});
+        auto h = m_resources.create(gl_pipeline{info, sh->program_h, p->prog_obj, vao});
         ::logger.debug("Pipeline {} created", h);
         return h;
     }
 
     void graphics_device_opengl::destroy_pipeline(pipeline_handle handle)
     {
-        if (auto* p = m_resources.find(handle)) {
-            GL_CALL(glDeleteProgram(p->program_obj));
-            GL_CALL(glDeleteVertexArrays(1, &p->vao_obj));
+        if (auto* sh = m_resources.find(handle)) {
+            release_program(sh->program_h);
+            GL_CALL(glDeleteVertexArrays(1, &sh->vao_obj));
             m_resources.remove(handle);
             ::logger.debug("Pipeline {} destroyed", handle);
         } else {

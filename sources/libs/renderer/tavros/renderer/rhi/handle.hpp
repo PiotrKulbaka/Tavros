@@ -26,10 +26,7 @@ namespace tavros::renderer::rhi
     struct render_pass_tag : core::handle_type_registration<0x1007>
     {
     };
-    struct shader_tag : core::handle_type_registration<0x1008>
-    {
-    };
-    struct shader_program_tag : core::handle_type_registration<0x1009>
+    struct shader_tag : core::handle_type_registration<0x1009>
     {
     };
     struct fence_tag : core::handle_type_registration<0x100a>
@@ -44,7 +41,6 @@ namespace tavros::renderer::rhi
     using buffer_handle = core::handle_base<buffer_tag>;
     using render_pass_handle = core::handle_base<render_pass_tag>;
     using shader_handle = core::handle_base<shader_tag>;
-    using shader_program_handle = core::handle_base<shader_program_tag>;
     using fence_handle = core::handle_base<fence_tag>;
 
 } // namespace tavros::renderer::rhi

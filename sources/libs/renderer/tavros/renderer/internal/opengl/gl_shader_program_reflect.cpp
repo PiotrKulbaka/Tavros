@@ -233,7 +233,7 @@ namespace
 
             GLsizei len = 0;
             GL_CALL(glGetProgramResourceName(prog, GL_PROGRAM_INPUT, i, name.capacity(), &len, name.data()));
-            name.set_size(tavros::core::unsafe, static_cast<size_t>(len + 1));
+            name.set_size(tavros::core::unsafe, static_cast<size_t>(len));
 
             if (static_cast<size_t>(len) > k_max_name_len) {
                 logger.error("[vertex_attributes] Attribute name '{}' exceeds max length ({} > {}).", name, len, k_max_name_len);
@@ -311,16 +311,16 @@ namespace
             auto gl_type = static_cast<GLenum>(vals[0]);
             auto t = to_rhi_opaque_type(gl_type);
 
+            GLsizei len = 0;
+            GL_CALL(glGetProgramResourceName(prog, GL_UNIFORM, i, name.capacity(), &len, name.data()));
+            name.set_size(tavros::core::unsafe, static_cast<size_t>(len));
+
             // Skip non-opaque types (plain float/vec/mat - should live in UBO)
             if (!t.valid) {
                 logger.error("[shader_resources] Unsupported type of resource '{}'.", name);
                 success = false;
                 continue;
             }
-
-            GLsizei len = 0;
-            GL_CALL(glGetProgramResourceName(prog, GL_UNIFORM, i, name.capacity(), &len, name.data()));
-            name.set_size(tavros::core::unsafe, static_cast<size_t>(len + 1));
 
             if (static_cast<size_t>(len) > k_max_name_len) {
                 logger.error("[shader_resources] Resource name '{}' exceeds max length ({} > {}).", name, len, k_max_name_len);
@@ -407,7 +407,7 @@ namespace
             // -- Block metadata --
             GLsizei block_name_len = 0;
             GL_CALL(glGetProgramResourceName(prog, GL_UNIFORM_BLOCK, bi, block_name_buf.capacity(), &block_name_len, block_name_buf.data()));
-            block_name_buf.set_size(tavros::core::unsafe, static_cast<size_t>(block_name_len + 1));
+            block_name_buf.set_size(tavros::core::unsafe, static_cast<size_t>(block_name_len));
 
             if (static_cast<size_t>(block_name_len) > k_max_name_len) {
                 logger.error("[ubos] Block name '{}' exceeds max length ({} > {}).", block_name_buf, block_name_len, k_max_name_len);
@@ -455,7 +455,7 @@ namespace
 
                 GLsizei member_name_len = 0;
                 GL_CALL(glGetProgramResourceName(prog, GL_UNIFORM, mi, member_name_buf.capacity(), &member_name_len, member_name_buf.data()));
-                member_name_buf.set_size(tavros::core::unsafe, static_cast<size_t>(member_name_len + 1));
+                member_name_buf.set_size(tavros::core::unsafe, static_cast<size_t>(member_name_len));
 
                 // Strip "BlockName." prefix - keep only the member part
                 auto stripped = strip_block_prefix({member_name_buf.data(), static_cast<size_t>(member_name_len)});
@@ -528,7 +528,7 @@ namespace
         for (GLint i = 0; i < count; ++i) {
             GLsizei len = 0;
             GL_CALL(glGetProgramResourceName(prog, GL_SHADER_STORAGE_BLOCK, i, name.capacity(), &len, name.data()));
-            name.set_size(tavros::core::unsafe, static_cast<size_t>(len + 1));
+            name.set_size(tavros::core::unsafe, static_cast<size_t>(len));
 
             if (static_cast<size_t>(len) > k_max_name_len) {
                 logger.error("[ssbos] Storage block name '{}' exceeds max length ({} > {}).", name, len, k_max_name_len);
@@ -583,7 +583,7 @@ namespace
 
             GLsizei len = 0;
             GL_CALL(glGetProgramResourceName(prog, GL_PROGRAM_OUTPUT, i, name.capacity(), &len, name.data()));
-            name.set_size(tavros::core::unsafe, static_cast<size_t>(len + 1));
+            name.set_size(tavros::core::unsafe, static_cast<size_t>(len));
 
             if (static_cast<size_t>(len) > k_max_name_len) {
                 logger.error("[outputs] Output name '{}' exceeds max length ({} > {}).", name, len, k_max_name_len);

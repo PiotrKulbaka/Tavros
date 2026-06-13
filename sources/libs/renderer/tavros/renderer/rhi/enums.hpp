@@ -351,15 +351,6 @@ namespace tavros::renderer::rhi
     };
 
     /**
-     * Specifies the stage of a shader program, such as vertex or fragment.
-     */
-    enum class shader_stage : uint8
-    {
-        vertex,   /// Vertex shader
-        fragment, /// Fragment shader
-    };
-
-    /**
      * Specifies the render backend API (OpenGL, Vulkan, DirectX 12, Metal, etc.)
      */
     enum class render_backend_type : uint8

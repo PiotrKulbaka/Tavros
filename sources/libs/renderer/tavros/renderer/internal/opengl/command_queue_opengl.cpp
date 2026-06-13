@@ -251,8 +251,7 @@ namespace tavros::renderer::rhi
             GL_CALL(glDisable(GL_SAMPLE_SHADING));
         }
 
-        GL_CALL(glUseProgram(p->program_obj));
-
+        GL_CALL(glUseProgram(p->cached_prog_obj));
         GL_CALL(glBindVertexArray(p->vao_obj));
     }
 

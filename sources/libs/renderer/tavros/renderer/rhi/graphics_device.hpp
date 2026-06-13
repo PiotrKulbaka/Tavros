@@ -15,8 +15,7 @@
 #include <tavros/renderer/rhi/framebuffer_create_info.hpp>
 #include <tavros/renderer/rhi/buffer_create_info.hpp>
 #include <tavros/renderer/rhi/render_pass_create_info.hpp>
-#include <tavros/renderer/rhi/shader_create_info.hpp>
-#include <tavros/renderer/rhi/shader_program_reflect.hpp>
+#include <tavros/renderer/rhi/shader_reflect.hpp>
 
 #include <type_traits>
 
@@ -60,6 +59,12 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_frame_composer(frame_composer_handle composer) = 0;
 
+        /**
+         * @brief Returns creation parameters of a frame composer.
+         *
+         * @param composer Frame composer handle.
+         * @return Pointer to the creation info, or nullptr if the handle is invalid.
+         */
         virtual const frame_composer_create_info* get_frame_composer_create_info(frame_composer_handle composer) const noexcept = 0;
 
         /**
@@ -70,29 +75,28 @@ namespace tavros::renderer::rhi
          */
         virtual frame_composer* get_frame_composer_ptr(frame_composer_handle composer) = 0;
 
-
-        virtual shader_program_handle compile_shader_program(const shader_program_sources& sources) = 0;
-
-        virtual void destroy_shader_program(shader_program_handle prog) = 0;
-
-        virtual const shader_program_reflect* get_shader_program_reflection_ptr(shader_program_handle program) const noexcept = 0;
-
         /**
-         * @brief Create a shader from provided source or binary.
+         * @brief Compiles shader sources and creates a shader object.
          *
-         * @param info Shader creation parameters.
-         * @return Handle to the created shader.
+         * @param sources Shader source code for one or more stages.
+         * @return Handle to the compiled shader.
          */
-        virtual shader_handle create_shader(const shader_create_info& info) = 0;
+        virtual shader_handle compile_shader(const shader_program_sources& sources) = 0;
 
         /**
-         * @brief Destroy a previously created shader.
+         * @brief Destroys a shader.
          *
-         * @param shader Handle to the shader to destroy.
+         * @param prog Shader handle to destroy.
          */
         virtual void destroy_shader(shader_handle shader) = 0;
 
-        virtual const shader_create_info* get_shader_create_info(shader_handle shader) const noexcept = 0;
+        /**
+         * @brief Returns reflection information for a shader.
+         *
+         * @param program Shader handle.
+         * @return Pointer to shader reflection data, or nullptr if the handle is invalid.
+         */
+        virtual const shader_reflect* get_shader_reflect_ptr(shader_handle shader) const noexcept = 0;
 
         /**
          * @brief Create a sampler object used for texture sampling.
@@ -109,6 +113,12 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_sampler(sampler_handle sampler) = 0;
 
+        /**
+         * @brief Returns creation parameters of a sampler.
+         *
+         * @param sampler Sampler handle.
+         * @return Pointer to the creation info, or nullptr if the handle is invalid.
+         */
         virtual const sampler_create_info* get_sampler_create_info(sampler_handle sampler) const noexcept = 0;
 
         /**
@@ -126,6 +136,12 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_texture(texture_handle texture) = 0;
 
+        /**
+         * @brief Returns creation parameters of a texture.
+         *
+         * @param texture Texture handle.
+         * @return Pointer to the creation info, or nullptr if the handle is invalid.
+         */
         virtual const texture_create_info* get_texture_create_info(texture_handle texture) const noexcept = 0;
 
         /**
@@ -143,6 +159,12 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_pipeline(pipeline_handle pipeline) = 0;
 
+        /**
+         * @brief Returns creation parameters of a pipeline.
+         *
+         * @param pipeline Pipeline handle.
+         * @return Pointer to the creation info, or nullptr if the handle is invalid.
+         */
         virtual const pipeline_create_info* get_pipeline_create_info(pipeline_handle pipeline) const noexcept = 0;
 
         /**
@@ -160,6 +182,12 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_framebuffer(framebuffer_handle framebuffer) = 0;
 
+        /**
+         * @brief Returns creation parameters of a framebuffer.
+         *
+         * @param framebuffer Framebuffer handle.
+         * @return Pointer to the creation info, or nullptr if the handle is invalid.
+         */
         virtual const framebuffer_create_info* get_framebuffer_create_info(framebuffer_handle framebuffer) const noexcept = 0;
 
         /**
@@ -177,6 +205,12 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_buffer(buffer_handle buffer) = 0;
 
+        /**
+         * @brief Returns creation parameters of a buffer.
+         *
+         * @param buffer Buffer handle.
+         * @return Pointer to the creation info, or nullptr if the handle is invalid.
+         */
         virtual const buffer_create_info* get_buffer_create_info(buffer_handle buffer) const noexcept = 0;
 
         /**
@@ -194,6 +228,12 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_render_pass(render_pass_handle render_pass) = 0;
 
+        /**
+         * @brief Returns creation parameters of a render pass.
+         *
+         * @param render_pass Render pass handle.
+         * @return Pointer to the creation info, or nullptr if the handle is invalid.
+         */
         virtual const render_pass_create_info* get_render_pass_create_info(render_pass_handle render_pass) const noexcept = 0;
 
         /**
@@ -252,12 +292,13 @@ namespace tavros::renderer::rhi
         virtual void unmap_buffer(buffer_handle buffer) = 0;
 
         /**
-         * @brief Safely destroys a GPU resource handle.
+         * @brief Destroys a resource and resets the handle.
          *
-         * Invokes the appropriate destroy function for the given handle type and resets the handle
-         * to an invalid state.
+         * If the handle is valid, the corresponding destroy function is invoked
+         * and the handle is reset to an invalid state.
          *
-         * @param h Reference to the handle to destroy.
+         * @tparam T Resource handle type.
+         * @param h Handle to destroy.
          */
         template<class T>
         void safe_destroy(T& h) noexcept
@@ -272,6 +313,8 @@ namespace tavros::renderer::rhi
                 destroy_sampler(h);
             } else if constexpr (std::is_same_v<T, texture_handle>) {
                 destroy_texture(h);
+            } else if constexpr (std::is_same_v<T, shader_handle>) {
+                destroy_shader(h);
             } else if constexpr (std::is_same_v<T, pipeline_handle>) {
                 destroy_pipeline(h);
             } else if constexpr (std::is_same_v<T, framebuffer_handle>) {
@@ -280,8 +323,6 @@ namespace tavros::renderer::rhi
                 destroy_buffer(h);
             } else if constexpr (std::is_same_v<T, render_pass_handle>) {
                 destroy_render_pass(h);
-            } else if constexpr (std::is_same_v<T, shader_handle>) {
-                destroy_shader(h);
             } else if constexpr (std::is_same_v<T, fence_handle>) {
                 destroy_fence(h);
             } else {

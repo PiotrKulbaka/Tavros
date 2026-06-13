@@ -18,16 +18,11 @@ namespace tavros::renderer::rhi
         frame_composer_handle             create_frame_composer(const frame_composer_create_info& info) override;
         void                              destroy_frame_composer(frame_composer_handle composer) override;
         const frame_composer_create_info* get_frame_composer_create_info(frame_composer_handle composer) const noexcept override;
+        frame_composer*                   get_frame_composer_ptr(frame_composer_handle composer) override;
 
-        frame_composer* get_frame_composer_ptr(frame_composer_handle composer) override;
-
-        shader_program_handle         compile_shader_program(const shader_program_sources& sources) override;
-        void                          destroy_shader_program(shader_program_handle prog) override;
-        const shader_program_reflect* get_shader_program_reflection_ptr(shader_program_handle program) const noexcept override;
-
-        shader_handle             create_shader(const shader_create_info& info) override;
-        void                      destroy_shader(shader_handle shader) override;
-        const shader_create_info* get_shader_create_info(shader_handle shader) const noexcept override;
+        shader_handle         compile_shader(const shader_program_sources& sources) override;
+        void                  destroy_shader(shader_handle shader) override;
+        const shader_reflect* get_shader_reflect_ptr(shader_handle shader) const noexcept override;
 
         sampler_handle             create_sampler(const sampler_create_info& info) override;
         void                       destroy_sampler(sampler_handle handle) override;
@@ -59,17 +54,15 @@ namespace tavros::renderer::rhi
         bool is_fence_signaled(fence_handle fence) override;
         bool wait_for_fence(fence_handle fence, uint64 timeout_ns = 0xffffffffffffffffui64) override;
 
-        core::buffer_span<uint8> map_buffer(
-            buffer_handle buffer,
-            size_t        offset = 0,
-            size_t        size = 0
-        ) override;
-        void unmap_buffer(buffer_handle buffer) override;
+        core::buffer_span<uint8> map_buffer(buffer_handle buffer, size_t offset = 0, size_t size = 0) override;
+        void                     unmap_buffer(buffer_handle buffer) override;
 
         device_resources_opengl* get_resources();
 
     private:
         void init_limits();
+
+        void release_program(gl_program_handle handle) noexcept;
 
         struct gl_limits
         {
@@ -93,8 +86,7 @@ namespace tavros::renderer::rhi
             uint32 max_framebuffer_height = 0;
         };
 
-        // mutable - for lazy initialization in some cases
-        mutable device_resources_opengl m_resources; 
+        device_resources_opengl m_resources;
         gl_limits               m_limits;
     };
 

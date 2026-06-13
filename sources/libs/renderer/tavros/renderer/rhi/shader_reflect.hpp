@@ -142,13 +142,13 @@ namespace tavros::renderer::rhi
      * Provides read-only access to all reflection data extracted from a shader program,
      * including inputs, outputs, resource bindings and buffer layouts.
      */
-    class shader_program_reflect
+    class shader_reflect
     {
     public:
         /**
          * Default destructor.
          */
-        virtual ~shader_program_reflect() noexcept = default;
+        virtual ~shader_reflect() noexcept = default;
 
         /**
          * @brief Returns all vertex input attributes used by the shader.

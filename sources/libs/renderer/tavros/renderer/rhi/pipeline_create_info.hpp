@@ -204,8 +204,8 @@ namespace tavros::renderer::rhi
 
     struct pipeline_create_info
     {
-        /// List with descriptions of shaders to be used in the pipeline
-        core::fixed_vector<shader_handle, k_max_pipeline_shaders> shaders;
+        /// Shader program to be used in the pipeline
+        shader_handle shader_program;
 
         /// Array of attribute bindings describing how vertex attributes are read from buffers
         core::fixed_vector<vertex_attribute, k_max_vertex_attributes> bindings;

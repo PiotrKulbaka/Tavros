@@ -69,12 +69,6 @@ namespace tavros::renderer::rhi
 
     frame_composer_opengl::~frame_composer_opengl()
     {
-        m_device->destroy_fence(m_fences[0]);
-        m_device->destroy_fence(m_fences[1]);
-        if (m_buffer_count == 3) {
-            m_device->destroy_fence(m_fences[2]);
-        }
-
         // Don't destroy if has no framebuffers (because now destructor of graphics_device is called)
         auto& pool = m_device->get_resources()->get_pool<gl_framebuffer>();
         if (pool.size() != 0) {
