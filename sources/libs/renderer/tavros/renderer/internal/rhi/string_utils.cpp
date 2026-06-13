@@ -1,6 +1,7 @@
 #include <tavros/renderer/rhi/string_utils.hpp>
 
 #include <tavros/core/debug/unreachable.hpp>
+#include <tavros/core/debug/assert.hpp>
 #include <tavros/renderer/rhi/enums.hpp>
 
 namespace tavros::renderer::rhi
@@ -9,8 +10,8 @@ namespace tavros::renderer::rhi
     enum class buffer_usage : uint8;
     enum class buffer_access : uint8;
     enum class index_buffer_format : uint8;
-    enum class attribute_format : uint8;
-    enum class attribute_type : uint8;
+    enum class scalar_type : uint8;
+    enum class composite_format : uint8;
     enum class primitive_topology : uint8;
     enum class compare_op : uint8;
     enum class stencil_op : uint8;
@@ -72,60 +73,60 @@ namespace tavros::renderer::rhi
         TAV_UNREACHABLE();
     }
 
-    core::string_view to_string(attribute_format format) noexcept
+    core::string_view to_string(scalar_type format) noexcept
     {
         switch (format) {
-        case attribute_format::u8:
+        case scalar_type::u8:
             return "u8";
-        case attribute_format::i8:
+        case scalar_type::i8:
             return "i8";
-        case attribute_format::u16:
+        case scalar_type::u16:
             return "u16";
-        case attribute_format::i16:
+        case scalar_type::i16:
             return "i16";
-        case attribute_format::u32:
+        case scalar_type::u32:
             return "u32";
-        case attribute_format::i32:
+        case scalar_type::i32:
             return "i32";
-        case attribute_format::f16:
+        case scalar_type::f16:
             return "f16";
-        case attribute_format::f32:
+        case scalar_type::f32:
             return "f32";
-        case attribute_format::f64:
+        case scalar_type::f64:
             return "f64";
         default:
             TAV_UNREACHABLE();
         }
     }
 
-    core::string_view to_string(attribute_type type) noexcept
+    core::string_view to_string(composite_format type) noexcept
     {
         switch (type) {
-        case attribute_type::scalar:
+        case composite_format::scalar:
             return "scalar";
-        case attribute_type::vec2:
+        case composite_format::vec2:
             return "vec2";
-        case attribute_type::vec3:
+        case composite_format::vec3:
             return "vec3";
-        case attribute_type::vec4:
+        case composite_format::vec4:
             return "vec4";
-        case attribute_type::mat2:
+        case composite_format::mat2:
             return "mat2";
-        case attribute_type::mat2x3:
+        case composite_format::mat2x3:
             return "mat2x3";
-        case attribute_type::mat2x4:
+        case composite_format::mat2x4:
             return "mat2x4";
-        case attribute_type::mat3x2:
+        case composite_format::mat3x2:
             return "mat3x2";
-        case attribute_type::mat3:
+        case composite_format::mat3:
             return "mat3";
-        case attribute_type::mat3x4:
+        case composite_format::mat3x4:
             return "mat3x4";
-        case attribute_type::mat4x2:
+        case composite_format::mat4x2:
             return "mat4x2";
-        case attribute_type::mat4x3:
+        case composite_format::mat4x3:
             return "mat4x3";
-        case attribute_type::mat4:
+        case composite_format::mat4:
             return "mat4";
         default:
             TAV_UNREACHABLE();
@@ -547,6 +548,34 @@ namespace tavros::renderer::rhi
             return "dont_care";
         }
         TAV_UNREACHABLE();
+    }
+
+    pixel_format combine_depth_stencil_formats(pixel_format df, pixel_format sf) noexcept
+    {
+        TAV_ASSERT(df == pixel_format::depth24 || df == pixel_format::depth32f || df == pixel_format::none);
+        TAV_ASSERT(sf == pixel_format::stencil8 || sf == pixel_format::none);
+
+        if (df == pixel_format::depth24) {
+            if (sf == pixel_format::stencil8) {
+                return pixel_format::depth24_stencil8;
+            } else if (sf == pixel_format::none) {
+                return pixel_format::depth24;
+            }
+        } else if (df == pixel_format::depth32f) {
+            if (sf == pixel_format::stencil8) {
+                return pixel_format::depth32f_stencil8;
+            } else if (sf == pixel_format::none) {
+                return pixel_format::depth32f;
+            }
+        } else if (df == pixel_format::none) {
+            if (sf == pixel_format::stencil8) {
+                return pixel_format::stencil8;
+            } else if (sf == pixel_format::none) {
+                return pixel_format::none;
+            }
+        }
+        TAV_ASSERT(false);
+        return pixel_format::none;
     }
 
 } // namespace tavros::renderer::rhi

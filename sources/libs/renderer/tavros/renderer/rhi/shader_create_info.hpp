@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/renderer/rhi/enums.hpp>
-#include <tavros/core/string_view.hpp>
+#include <tavros/core/fixed_string.hpp>
 
 namespace tavros::renderer::rhi
 {
@@ -18,7 +18,7 @@ namespace tavros::renderer::rhi
         shader_stage stage = shader_stage::vertex;
 
         // The entry point function name in the shader code
-        core::string_view entry_point = "main";
+        core::fixed_string<63> entry_point = "main";
     };
 
 } // namespace tavros::renderer::rhi

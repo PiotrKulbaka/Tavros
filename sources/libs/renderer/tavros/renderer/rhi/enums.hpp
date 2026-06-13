@@ -36,12 +36,11 @@ namespace tavros::renderer::rhi
         u32, /// 32-bit unsigned integer
     };
 
-
     /**
-     * Describes the data format of a single vertex attribute component
-     * Defines how the GPU interprets raw vertex data in memory
+     * Describes the scalar type of a variable
+     * Defines how the GPU interprets raw data in memory
      */
-    enum class attribute_format : uint8
+    enum class scalar_type : uint8
     {
         u8,  /// Unsigned 8-bit integer
         i8,  /// Signed 8-bit integer
@@ -54,12 +53,11 @@ namespace tavros::renderer::rhi
         f64, /// 64-bit double-precision float
     };
 
-
     /**
-     * Describes the semantic type of a vertex attribute
-     * Defines how many components form the attribute and whether it represents a vector or a matrix
+     * Describes the semantic type of a variable
+     * Defines how many components represents a vector or a matrix
      */
-    enum class attribute_type : uint8
+    enum class composite_format : uint8
     {
         scalar, /// Single component (float, int, uint, etc.)
         vec2,   /// 2-component vector
@@ -390,6 +388,73 @@ namespace tavros::renderer::rhi
         store,     /// Store the rendered result to the attachment (make it available after the render pass)
         resolve,   /// Resolve the MSAA result to a single-sampled texture (only valid for multisample color attachments)
         dont_care, /// Final contents are undefined; rendering result may be discarded
+    };
+
+    /**
+     * @brief Type of shader resource used in reflection system
+     */
+    enum class shader_resource_type : uint8
+    {
+        // ---------------------------------------------------------------------
+        // Samplers (read-only texture sampling)
+        // ---------------------------------------------------------------------
+
+        sampler_2d = 1,            /// 2D floating-point texture sampler (sampler2D)
+        sampler_2d_shadow,         /// 2D shadow sampler with depth comparison
+        sampler_2d_array,          /// 2D texture array sampler
+        sampler_2d_array_shadow,   /// 2D texture array shadow sampler
+        usampler_2d,               /// 2D unsigned integer texture sampler (uSampler2D)
+        usampler_2d_array,         /// 2D unsigned integer texture array sampler
+        isampler_2d,               /// 2D signed integer texture sampler (iSampler2D)
+        isampler_2d_array,         /// 2D signed integer texture array sampler
+
+        sampler_3d,                /// 3D texture sampler (sampler3D)
+        usampler_3d,               /// 3D unsigned integer texture sampler
+        isampler_3d,               /// 3D signed integer texture sampler
+
+        sampler_cube,              /// Cube map texture sampler
+        sampler_cube_shadow,       /// Cube map shadow sampler (depth comparison)
+        sampler_cube_array,        /// Cube map array sampler
+        sampler_cube_array_shadow, /// Cube map array shadow sampler
+
+        usampler_cube,             /// Unsigned integer cube map sampler
+        usampler_cube_array,       /// Unsigned integer cube map array sampler
+        isampler_cube,             /// Signed integer cube map sampler
+        isampler_cube_array,       /// Signed integer cube map array sampler
+
+        sampler_buffer,            /// Buffer texture sampler (texel buffer)
+        usampler_buffer,           /// Unsigned integer buffer texture sampler
+        isampler_buffer,           /// Signed integer buffer texture sampler
+
+        // ---------------------------------------------------------------------
+        // Images (read-write storage textures)
+        // ---------------------------------------------------------------------
+
+        image_2d,          /// 2D image (float)
+        image_2d_array,    /// 2D image array (float)
+
+        uimage_2d,         /// 2D unsigned integer image
+        uimage_2d_array,   /// 2D unsigned integer image array
+
+        iimage_2d,         /// 2D signed integer image
+        iimage_2d_array,   /// 2D signed integer image array
+
+        image_3d,          /// 3D image (float)
+        uimage_3d,         /// 3D unsigned integer image
+        iimage_3d,         /// 3D signed integer image
+
+        image_cube,        /// Cube map image (float)
+        image_cube_array,  /// Cube map array image (float)
+
+        uimage_cube,       /// Unsigned integer cube map image
+        uimage_cube_array, /// Unsigned integer cube map array image
+
+        iimage_cube,       /// Signed integer cube map image
+        iimage_cube_array, /// Signed integer cube map array image
+
+        image_buffer,      /// Buffer image (float)
+        uimage_buffer,     /// Unsigned integer buffer image
+        iimage_buffer,     /// Signed integer buffer image
     };
 
 } // namespace tavros::renderer::rhi

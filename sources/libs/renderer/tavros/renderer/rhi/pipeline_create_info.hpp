@@ -177,11 +177,11 @@ namespace tavros::renderer::rhi
      */
     struct vertex_attribute
     {
-        /// Type of attribute
-        attribute_type type = attribute_type::scalar;
+        /// Format of attribute
+        composite_format format = composite_format::scalar;
 
-        /// Format of each component
-        attribute_format format = attribute_format::f32;
+        /// Type of each component
+        scalar_type type = scalar_type::f32;
 
         /// Whether integer data should be normalized to [0,1] or [-1,1] (only applicable for integer types)
         bool normalize = false;

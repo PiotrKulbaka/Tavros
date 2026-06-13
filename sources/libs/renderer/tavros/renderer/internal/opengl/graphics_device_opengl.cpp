@@ -271,6 +271,14 @@ namespace tavros::renderer::rhi
         }
     }
 
+    const frame_composer_create_info* graphics_device_opengl::get_frame_composer_create_info(frame_composer_handle composer) const noexcept
+    {
+        if (const auto* fc = m_resources.find(composer)) {
+            return &fc->info;
+        }
+        return nullptr;
+    }
+
     frame_composer* graphics_device_opengl::get_frame_composer_ptr(frame_composer_handle composer)
     {
         if (auto* fc = m_resources.find(composer)) {
@@ -278,6 +286,53 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to get frame composer {}: not found", composer);
             return nullptr;
+        }
+    }
+
+    shader_program_handle graphics_device_opengl::compile_shader_program(const shader_program_sources& sources)
+    {
+        auto deleter = [](GLuint o) { if (o != 0) {GL_CALL(glDeleteShader(o));} };
+        auto vso_owner = core::make_scoped_owner(compile_shader(sources.vertex_shader_source, GL_VERTEX_SHADER), deleter);
+        auto fso_owner = core::make_scoped_owner(compile_shader(sources.fragment_shader_source, GL_FRAGMENT_SHADER), deleter);
+
+        if (vso_owner.get() == 0 || fso_owner.get() == 0) {
+            ::logger.error("Failed to create shader program: compilation failed");
+            return {};
+        }
+
+        auto gl_prog = link_program(vso_owner.get(), fso_owner.get());
+
+        if (gl_prog == 0) {
+            ::logger.error("Failed to create shader program: failed to link program");
+            return {};
+        }
+
+        bool is_compute = false;
+        auto h = m_resources.create(gl_program{gl_prog, is_compute, nullptr});
+        ::logger.debug("Shader program {} created", h);
+        return h;
+    }
+
+    void graphics_device_opengl::destroy_shader_program(shader_program_handle program)
+    {
+        if (auto* p = m_resources.find(program)) {
+            GL_CALL(glDeleteProgram(p->prog));
+            p->prog = 0;
+            ::logger.debug("Shader program {} destroyed", program);
+        } else {
+            ::logger.error("Failed to destroy shader program {}: not found", program);
+        }
+    }
+
+    const shader_program_reflect* graphics_device_opengl::get_shader_program_reflection_ptr(shader_program_handle program) const noexcept
+    {
+        if (auto* p = m_resources.find(program)) {
+            if (!p->reflect) {
+                p->reflect = core::make_unique<gl_shader_program_reflect>(p->prog, p->is_compute);
+            }
+            return p->reflect.get();
+        } else {
+            ::logger.error("Failed to get shader program reflection {}: not found", program);
         }
     }
 
@@ -297,6 +352,8 @@ namespace tavros::renderer::rhi
             return shader_handle();
         }
 
+        auto inf = info;
+        inf.source_code = "";
         auto h = m_resources.create(gl_shader{info, shader_obj});
         ::logger.debug("Shader ({}) {} created", info.stage, h);
         return h;
@@ -312,6 +369,14 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy shader {}: not found", shader);
         }
+    }
+
+    const shader_create_info* graphics_device_opengl::get_shader_create_info(shader_handle shader) const noexcept
+    {
+        if (auto* s = m_resources.find(shader)) {
+            return &s->info;
+        }
+        return nullptr;
     }
 
     sampler_handle graphics_device_opengl::create_sampler(const sampler_create_info& info)
@@ -357,6 +422,14 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy sampler {}: not found", sampler);
         }
+    }
+
+    const sampler_create_info* graphics_device_opengl::get_sampler_create_info(sampler_handle sampler) const noexcept
+    {
+        if (auto* s = m_resources.find(sampler)) {
+            return &s->info;
+        }
+        return nullptr;
     }
 
     texture_handle graphics_device_opengl::create_texture(const texture_create_info& info)
@@ -794,6 +867,14 @@ namespace tavros::renderer::rhi
         }
     }
 
+    const texture_create_info* graphics_device_opengl::get_texture_create_info(texture_handle texture) const noexcept
+    {
+        if (auto* tex = m_resources.find(texture)) {
+            return &tex->info;
+        }
+        return nullptr;
+    }
+
     pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_create_info& info)
     {
         if (info.shaders.size() != 2) {
@@ -837,15 +918,15 @@ namespace tavros::renderer::rhi
             return {};
         }
 
-        GLuint gl_program = link_program(vs->shader_obj, fs->shader_obj);
+        GLuint gl_prog = link_program(vs->shader_obj, fs->shader_obj);
 
         // Validate program
-        if (gl_program == 0) {
+        if (gl_prog == 0) {
             ::logger.error("Failed to create pipeline: failed to link program");
             return {};
         }
 
-        auto program_owner = core::make_scoped_owner(gl_program, [](GLuint id) {
+        auto program_owner = core::make_scoped_owner(gl_prog, [](GLuint id) {
             GL_CALL(glDeleteProgram(id));
         });
 
@@ -865,7 +946,7 @@ namespace tavros::renderer::rhi
 
         // Get number of attributes in compiled shader
         GLint gl_prog_attrib_count;
-        GL_CALL(glGetProgramiv(gl_program, GL_ACTIVE_ATTRIBUTES, &gl_prog_attrib_count));
+        GL_CALL(glGetProgramiv(gl_prog, GL_ACTIVE_ATTRIBUTES, &gl_prog_attrib_count));
 
         // And validate each attribute
         size_t total_gl_attributes = 0;
@@ -873,9 +954,9 @@ namespace tavros::renderer::rhi
             GLchar attrib_name[256] = {0};
             GLint  size;
             GLenum type;
-            GL_CALL(glGetActiveAttrib(gl_program, i, sizeof(attrib_name), nullptr, &size, &type, attrib_name));
+            GL_CALL(glGetActiveAttrib(gl_prog, i, sizeof(attrib_name), nullptr, &size, &type, attrib_name));
 
-            GLint gl_attrib_location = glGetAttribLocation(gl_program, attrib_name);
+            GLint gl_attrib_location = glGetAttribLocation(gl_prog, attrib_name);
             if (gl_attrib_location < 0) {
                 // builtin attribute, just ignore it
                 continue;
@@ -942,8 +1023,8 @@ namespace tavros::renderer::rhi
         for (auto attrib_i = 0; attrib_i < info.bindings.size(); ++attrib_i) {
             auto& binding = info.bindings[attrib_i];
 
-            bool is_flt = attribute_format::f32 == binding.format || attribute_format::f16 == binding.format || attribute_format::f64 == binding.format;
-            auto gl_attrib_info = to_gl_attribute_info(binding.type, binding.format);
+            bool is_flt = scalar_type::f32 == binding.type || scalar_type::f16 == binding.type || scalar_type::f64 == binding.type;
+            auto gl_attrib_info = to_gl_attribute_info(binding.format, binding.type);
             for (int32 col = 0; col < gl_attrib_info.cols; ++col) {
                 GLuint location = binding.location + col;
                 GLuint offset = binding.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
@@ -978,6 +1059,14 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy pipeline {}: not found", handle);
         }
+    }
+
+    const pipeline_create_info* graphics_device_opengl::get_pipeline_create_info(pipeline_handle pipeline) const noexcept
+    {
+        if (auto* p = m_resources.find(pipeline)) {
+            return &p->info;
+        }
+        return nullptr;
     }
 
     framebuffer_handle graphics_device_opengl::create_framebuffer(const framebuffer_create_info& info)
@@ -1241,6 +1330,14 @@ namespace tavros::renderer::rhi
         }
     }
 
+    const framebuffer_create_info* graphics_device_opengl::get_framebuffer_create_info(framebuffer_handle framebuffer) const noexcept
+    {
+        if (auto* fb = m_resources.find(framebuffer)) {
+            return &fb->info;
+        }
+        return nullptr;
+    }
+
     buffer_handle graphics_device_opengl::create_buffer(const buffer_create_info& info)
     {
         if (info.size == 0) {
@@ -1417,6 +1514,14 @@ namespace tavros::renderer::rhi
         }
     }
 
+    const buffer_create_info* graphics_device_opengl::get_buffer_create_info(buffer_handle buffer) const noexcept
+    {
+        if (auto* b = m_resources.find(buffer)) {
+            return &b->info;
+        }
+        return nullptr;
+    }
+
     render_pass_handle graphics_device_opengl::create_render_pass(const render_pass_create_info& info)
     {
         // Validate attachments
@@ -1562,6 +1667,14 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy render pass {}: not found", render_pass);
         }
+    }
+
+    const render_pass_create_info* graphics_device_opengl::get_render_pass_create_info(render_pass_handle render_pass) const noexcept
+    {
+        if (auto* rp = m_resources.find(render_pass)) {
+            return &rp->info;
+        }
+        return nullptr;
     }
 
     fence_handle graphics_device_opengl::create_fence()

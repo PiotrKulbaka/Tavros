@@ -15,31 +15,43 @@ namespace tavros::renderer::rhi
 
         void destroy();
 
-        frame_composer_handle create_frame_composer(const frame_composer_create_info& info) override;
-        void                  destroy_frame_composer(frame_composer_handle composer) override;
+        frame_composer_handle             create_frame_composer(const frame_composer_create_info& info) override;
+        void                              destroy_frame_composer(frame_composer_handle composer) override;
+        const frame_composer_create_info* get_frame_composer_create_info(frame_composer_handle composer) const noexcept override;
 
         frame_composer* get_frame_composer_ptr(frame_composer_handle composer) override;
 
-        shader_handle create_shader(const shader_create_info& info) override;
-        void          destroy_shader(shader_handle shader) override;
+        shader_program_handle         compile_shader_program(const shader_program_sources& sources) override;
+        void                          destroy_shader_program(shader_program_handle prog) override;
+        const shader_program_reflect* get_shader_program_reflection_ptr(shader_program_handle program) const noexcept override;
 
-        sampler_handle create_sampler(const sampler_create_info& info) override;
-        void           destroy_sampler(sampler_handle handle) override;
+        shader_handle             create_shader(const shader_create_info& info) override;
+        void                      destroy_shader(shader_handle shader) override;
+        const shader_create_info* get_shader_create_info(shader_handle shader) const noexcept override;
 
-        texture_handle create_texture(const texture_create_info& info) override;
-        void           destroy_texture(texture_handle handle) override;
+        sampler_handle             create_sampler(const sampler_create_info& info) override;
+        void                       destroy_sampler(sampler_handle handle) override;
+        const sampler_create_info* get_sampler_create_info(sampler_handle sampler) const noexcept override;
 
-        pipeline_handle create_pipeline(const pipeline_create_info& info) override;
-        void            destroy_pipeline(pipeline_handle pipeline) override;
+        texture_handle             create_texture(const texture_create_info& info) override;
+        void                       destroy_texture(texture_handle handle) override;
+        const texture_create_info* get_texture_create_info(texture_handle texture) const noexcept override;
 
-        framebuffer_handle create_framebuffer(const framebuffer_create_info& info) override;
-        void               destroy_framebuffer(framebuffer_handle framebuffer) override;
+        pipeline_handle             create_pipeline(const pipeline_create_info& info) override;
+        void                        destroy_pipeline(pipeline_handle pipeline) override;
+        const pipeline_create_info* get_pipeline_create_info(pipeline_handle pipeline) const noexcept override;
 
-        buffer_handle create_buffer(const buffer_create_info& info) override;
-        void          destroy_buffer(buffer_handle buffer) override;
+        framebuffer_handle             create_framebuffer(const framebuffer_create_info& info) override;
+        void                           destroy_framebuffer(framebuffer_handle framebuffer) override;
+        const framebuffer_create_info* get_framebuffer_create_info(framebuffer_handle framebuffer) const noexcept override;
 
-        render_pass_handle create_render_pass(const render_pass_create_info& info) override;
-        void               destroy_render_pass(render_pass_handle render_pass) override;
+        buffer_handle             create_buffer(const buffer_create_info& info) override;
+        void                      destroy_buffer(buffer_handle buffer) override;
+        const buffer_create_info* get_buffer_create_info(buffer_handle buffer) const noexcept override;
+
+        render_pass_handle             create_render_pass(const render_pass_create_info& info) override;
+        void                           destroy_render_pass(render_pass_handle render_pass) override;
+        const render_pass_create_info* get_render_pass_create_info(render_pass_handle render_pass) const noexcept override;
 
         fence_handle create_fence() override;
         void         destroy_fence(fence_handle fence) override;
@@ -81,7 +93,8 @@ namespace tavros::renderer::rhi
             uint32 max_framebuffer_height = 0;
         };
 
-        device_resources_opengl m_resources;
+        // mutable - for lazy initialization in some cases
+        mutable device_resources_opengl m_resources; 
         gl_limits               m_limits;
     };
 

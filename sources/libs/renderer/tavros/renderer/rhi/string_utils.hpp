@@ -10,8 +10,8 @@ namespace tavros::renderer::rhi
     enum class buffer_usage : uint8;
     enum class buffer_access : uint8;
     enum class index_buffer_format : uint8;
-    enum class attribute_format : uint8;
-    enum class attribute_type : uint8;
+    enum class scalar_type : uint8;
+    enum class composite_format : uint8;
     enum class primitive_topology : uint8;
     enum class compare_op : uint8;
     enum class stencil_op : uint8;
@@ -35,8 +35,8 @@ namespace tavros::renderer::rhi
     core::string_view to_string(buffer_usage val) noexcept;
     core::string_view to_string(buffer_access val) noexcept;
     core::string_view to_string(index_buffer_format val) noexcept;
-    core::string_view to_string(attribute_format val) noexcept;
-    core::string_view to_string(attribute_type val) noexcept;
+    core::string_view to_string(scalar_type val) noexcept;
+    core::string_view to_string(composite_format val) noexcept;
     core::string_view to_string(primitive_topology val) noexcept;
     core::string_view to_string(compare_op val) noexcept;
     core::string_view to_string(stencil_op val) noexcept;
@@ -56,6 +56,8 @@ namespace tavros::renderer::rhi
     core::string_view to_string(render_backend_type val) noexcept;
     core::string_view to_string(load_op val) noexcept;
     core::string_view to_string(store_op val) noexcept;
+
+    pixel_format combine_depth_stencil_formats(pixel_format df, pixel_format sf) noexcept;
 
 } // namespace tavros::renderer::rhi
 

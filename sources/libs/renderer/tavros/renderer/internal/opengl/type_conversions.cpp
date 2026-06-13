@@ -410,26 +410,26 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_vertex_format to_gl_vertex_format(attribute_format format)
+    gl_vertex_format to_gl_vertex_format(scalar_type type)
     {
-        switch (format) {
-        case attribute_format::u8:
+        switch (type) {
+        case scalar_type::u8:
             return {GL_UNSIGNED_BYTE, 1};
-        case attribute_format::i8:
+        case scalar_type::i8:
             return {GL_BYTE, 1};
-        case attribute_format::u16:
+        case scalar_type::u16:
             return {GL_UNSIGNED_SHORT, 2};
-        case attribute_format::i16:
+        case scalar_type::i16:
             return {GL_SHORT, 2};
-        case attribute_format::u32:
+        case scalar_type::u32:
             return {GL_UNSIGNED_INT, 4};
-        case attribute_format::i32:
+        case scalar_type::i32:
             return {GL_INT, 4};
-        case attribute_format::f16:
+        case scalar_type::f16:
             return {GL_HALF_FLOAT, 2};
-        case attribute_format::f32:
+        case scalar_type::f32:
             return {GL_FLOAT, 4};
-        case attribute_format::f64:
+        case scalar_type::f64:
             return {GL_DOUBLE, 8};
         default:
             TAV_UNREACHABLE();
@@ -466,45 +466,45 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_attribute_info to_gl_attribute_info(attribute_type type, attribute_format format)
+    gl_attribute_info to_gl_attribute_info(composite_format format, scalar_type type)
     {
         gl_attribute_info info;
 
         // Map format -> GL type + component size
-        switch (format) {
-        case attribute_format::u8:
+        switch (type) {
+        case scalar_type::u8:
             info.type = GL_UNSIGNED_BYTE;
             info.size = 1;
             break;
-        case attribute_format::i8:
+        case scalar_type::i8:
             info.type = GL_BYTE;
             info.size = 1;
             break;
-        case attribute_format::u16:
+        case scalar_type::u16:
             info.type = GL_UNSIGNED_SHORT;
             info.size = 2;
             break;
-        case attribute_format::i16:
+        case scalar_type::i16:
             info.type = GL_SHORT;
             info.size = 2;
             break;
-        case attribute_format::u32:
+        case scalar_type::u32:
             info.type = GL_UNSIGNED_INT;
             info.size = 4;
             break;
-        case attribute_format::i32:
+        case scalar_type::i32:
             info.type = GL_INT;
             info.size = 4;
             break;
-        case attribute_format::f16:
+        case scalar_type::f16:
             info.type = GL_HALF_FLOAT;
             info.size = 2;
             break;
-        case attribute_format::f32:
+        case scalar_type::f32:
             info.type = GL_FLOAT;
             info.size = 4;
             break;
-        case attribute_format::f64:
+        case scalar_type::f64:
             info.type = GL_DOUBLE;
             info.size = 8;
             break;
@@ -513,57 +513,57 @@ namespace tavros::renderer::rhi
         }
 
         // Map type -> rows/cols
-        switch (type) {
-        case attribute_type::scalar:
+        switch (format) {
+        case composite_format::scalar:
             info.rows = 1;
             info.cols = 1;
             break;
-        case attribute_type::vec2:
+        case composite_format::vec2:
             info.rows = 2;
             info.cols = 1;
             break;
-        case attribute_type::vec3:
+        case composite_format::vec3:
             info.rows = 3;
             info.cols = 1;
             break;
-        case attribute_type::vec4:
+        case composite_format::vec4:
             info.rows = 4;
             info.cols = 1;
             break;
 
-        case attribute_type::mat2:
+        case composite_format::mat2:
             info.rows = 2;
             info.cols = 2;
             break; // 2x2
-        case attribute_type::mat2x3:
+        case composite_format::mat2x3:
             info.rows = 3;
             info.cols = 2;
             break; // 3 rows, 2 cols
-        case attribute_type::mat2x4:
+        case composite_format::mat2x4:
             info.rows = 4;
             info.cols = 2;
             break; // 4 rows, 2 cols
-        case attribute_type::mat3x2:
+        case composite_format::mat3x2:
             info.rows = 2;
             info.cols = 3;
             break; // 2 rows, 3 cols
-        case attribute_type::mat3:
+        case composite_format::mat3:
             info.rows = 3;
             info.cols = 3;
             break; // 3x3
-        case attribute_type::mat3x4:
+        case composite_format::mat3x4:
             info.rows = 4;
             info.cols = 3;
             break; // 4 rows, 3 cols
-        case attribute_type::mat4x2:
+        case composite_format::mat4x2:
             info.rows = 2;
             info.cols = 4;
             break; // 2 rows, 4 cols
-        case attribute_type::mat4x3:
+        case composite_format::mat4x3:
             info.rows = 3;
             info.cols = 4;
             break; // 3 rows, 4 cols
-        case attribute_type::mat4:
+        case composite_format::mat4:
             info.rows = 4;
             info.cols = 4;
             break; // 4x4
@@ -580,82 +580,82 @@ namespace tavros::renderer::rhi
         switch (type) {
             // float
         case GL_FLOAT:
-            return {true, "float", attribute_type::scalar, attribute_format::f32};
+            return {true, "float", composite_format::scalar, scalar_type::f32};
         case GL_FLOAT_VEC2:
-            return {true, "vec2", attribute_type::vec2, attribute_format::f32};
+            return {true, "vec2", composite_format::vec2, scalar_type::f32};
         case GL_FLOAT_VEC3:
-            return {true, "vec3", attribute_type::vec3, attribute_format::f32};
+            return {true, "vec3", composite_format::vec3, scalar_type::f32};
         case GL_FLOAT_VEC4:
-            return {true, "vec4", attribute_type::vec4, attribute_format::f32};
+            return {true, "vec4", composite_format::vec4, scalar_type::f32};
         case GL_FLOAT_MAT2:
-            return {true, "mat2", attribute_type::mat2, attribute_format::f32};
+            return {true, "mat2", composite_format::mat2, scalar_type::f32};
         case GL_FLOAT_MAT3:
-            return {true, "mat3", attribute_type::mat3, attribute_format::f32};
+            return {true, "mat3", composite_format::mat3, scalar_type::f32};
         case GL_FLOAT_MAT4:
-            return {true, "mat4", attribute_type::mat4, attribute_format::f32};
+            return {true, "mat4", composite_format::mat4, scalar_type::f32};
         case GL_FLOAT_MAT2x3:
-            return {true, "mat2x3", attribute_type::mat2x3, attribute_format::f32};
+            return {true, "mat2x3", composite_format::mat2x3, scalar_type::f32};
         case GL_FLOAT_MAT2x4:
-            return {true, "mat2x4", attribute_type::mat2x4, attribute_format::f32};
+            return {true, "mat2x4", composite_format::mat2x4, scalar_type::f32};
         case GL_FLOAT_MAT3x2:
-            return {true, "mat3x2", attribute_type::mat3x2, attribute_format::f32};
+            return {true, "mat3x2", composite_format::mat3x2, scalar_type::f32};
         case GL_FLOAT_MAT3x4:
-            return {true, "mat3x4", attribute_type::mat3x4, attribute_format::f32};
+            return {true, "mat3x4", composite_format::mat3x4, scalar_type::f32};
         case GL_FLOAT_MAT4x2:
-            return {true, "mat4x2", attribute_type::mat4x2, attribute_format::f32};
+            return {true, "mat4x2", composite_format::mat4x2, scalar_type::f32};
         case GL_FLOAT_MAT4x3:
-            return {true, "mat4x3", attribute_type::mat4x3, attribute_format::f32};
+            return {true, "mat4x3", composite_format::mat4x3, scalar_type::f32};
 
             // double
         case GL_DOUBLE:
-            return {true, "double", attribute_type::scalar, attribute_format::f64};
+            return {true, "double", composite_format::scalar, scalar_type::f64};
         case GL_DOUBLE_VEC2:
-            return {true, "dvec2", attribute_type::vec2, attribute_format::f64};
+            return {true, "dvec2", composite_format::vec2, scalar_type::f64};
         case GL_DOUBLE_VEC3:
-            return {true, "dvec3", attribute_type::vec3, attribute_format::f64};
+            return {true, "dvec3", composite_format::vec3, scalar_type::f64};
         case GL_DOUBLE_VEC4:
-            return {true, "dvec4", attribute_type::vec4, attribute_format::f64};
+            return {true, "dvec4", composite_format::vec4, scalar_type::f64};
         case GL_DOUBLE_MAT2:
-            return {true, "dmat2", attribute_type::mat2, attribute_format::f64};
+            return {true, "dmat2", composite_format::mat2, scalar_type::f64};
         case GL_DOUBLE_MAT3:
-            return {true, "dmat3", attribute_type::mat3, attribute_format::f64};
+            return {true, "dmat3", composite_format::mat3, scalar_type::f64};
         case GL_DOUBLE_MAT4:
-            return {true, "dmat4", attribute_type::mat4, attribute_format::f64};
+            return {true, "dmat4", composite_format::mat4, scalar_type::f64};
         case GL_DOUBLE_MAT2x3:
-            return {true, "dmat2x3", attribute_type::mat2x3, attribute_format::f64};
+            return {true, "dmat2x3", composite_format::mat2x3, scalar_type::f64};
         case GL_DOUBLE_MAT2x4:
-            return {true, "dmat2x4", attribute_type::mat2x4, attribute_format::f64};
+            return {true, "dmat2x4", composite_format::mat2x4, scalar_type::f64};
         case GL_DOUBLE_MAT3x2:
-            return {true, "dmat3x2", attribute_type::mat3x2, attribute_format::f64};
+            return {true, "dmat3x2", composite_format::mat3x2, scalar_type::f64};
         case GL_DOUBLE_MAT3x4:
-            return {true, "dmat3x4", attribute_type::mat3x4, attribute_format::f64};
+            return {true, "dmat3x4", composite_format::mat3x4, scalar_type::f64};
         case GL_DOUBLE_MAT4x2:
-            return {true, "dmat4x2", attribute_type::mat4x2, attribute_format::f64};
+            return {true, "dmat4x2", composite_format::mat4x2, scalar_type::f64};
         case GL_DOUBLE_MAT4x3:
-            return {true, "dmat4x3", attribute_type::mat4x3, attribute_format::f64};
+            return {true, "dmat4x3", composite_format::mat4x3, scalar_type::f64};
 
             // int
         case GL_INT:
-            return {true, "int", attribute_type::scalar, attribute_format::i32};
+            return {true, "int", composite_format::scalar, scalar_type::i32};
         case GL_INT_VEC2:
-            return {true, "ivec2", attribute_type::vec2, attribute_format::i32};
+            return {true, "ivec2", composite_format::vec2, scalar_type::i32};
         case GL_INT_VEC3:
-            return {true, "ivec3", attribute_type::vec3, attribute_format::i32};
+            return {true, "ivec3", composite_format::vec3, scalar_type::i32};
         case GL_INT_VEC4:
-            return {true, "ivec4", attribute_type::vec4, attribute_format::i32};
+            return {true, "ivec4", composite_format::vec4, scalar_type::i32};
 
             // unsigned int
         case GL_UNSIGNED_INT:
-            return {true, "uint", attribute_type::scalar, attribute_format::u32};
+            return {true, "uint", composite_format::scalar, scalar_type::u32};
         case GL_UNSIGNED_INT_VEC2:
-            return {true, "uvec2", attribute_type::vec2, attribute_format::u32};
+            return {true, "uvec2", composite_format::vec2, scalar_type::u32};
         case GL_UNSIGNED_INT_VEC3:
-            return {true, "uvec3", attribute_type::vec3, attribute_format::u32};
+            return {true, "uvec3", composite_format::vec3, scalar_type::u32};
         case GL_UNSIGNED_INT_VEC4:
-            return {true, "uvec4", attribute_type::vec4, attribute_format::u32};
+            return {true, "uvec4", composite_format::vec4, scalar_type::u32};
 
         default:
-            return {false, "unknown", attribute_type::scalar, attribute_format::f32};
+            return {false, "unknown", composite_format::scalar, scalar_type::f32};
         }
     }
 

@@ -16,6 +16,7 @@
 #include <tavros/renderer/rhi/buffer_create_info.hpp>
 #include <tavros/renderer/rhi/render_pass_create_info.hpp>
 #include <tavros/renderer/rhi/shader_create_info.hpp>
+#include <tavros/renderer/rhi/shader_program_reflect.hpp>
 
 #include <type_traits>
 
@@ -59,6 +60,8 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_frame_composer(frame_composer_handle composer) = 0;
 
+        virtual const frame_composer_create_info* get_frame_composer_create_info(frame_composer_handle composer) const noexcept = 0;
+
         /**
          * @brief Retrieve a pointer to a frame composer by its handle.
          *
@@ -66,6 +69,13 @@ namespace tavros::renderer::rhi
          * @return Pointer to the frame composer instance, or nullptr if invalid.
          */
         virtual frame_composer* get_frame_composer_ptr(frame_composer_handle composer) = 0;
+
+
+        virtual shader_program_handle compile_shader_program(const shader_program_sources& sources) = 0;
+
+        virtual void destroy_shader_program(shader_program_handle prog) = 0;
+
+        virtual const shader_program_reflect* get_shader_program_reflection_ptr(shader_program_handle program) const noexcept = 0;
 
         /**
          * @brief Create a shader from provided source or binary.
@@ -82,6 +92,8 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_shader(shader_handle shader) = 0;
 
+        virtual const shader_create_info* get_shader_create_info(shader_handle shader) const noexcept = 0;
+
         /**
          * @brief Create a sampler object used for texture sampling.
          *
@@ -96,6 +108,8 @@ namespace tavros::renderer::rhi
          * @param sampler Handle to the sampler to destroy.
          */
         virtual void destroy_sampler(sampler_handle sampler) = 0;
+
+        virtual const sampler_create_info* get_sampler_create_info(sampler_handle sampler) const noexcept = 0;
 
         /**
          * @brief Create a texture resource.
@@ -112,6 +126,8 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_texture(texture_handle texture) = 0;
 
+        virtual const texture_create_info* get_texture_create_info(texture_handle texture) const noexcept = 0;
+
         /**
          * @brief Create a graphics pipeline.
          *
@@ -126,6 +142,8 @@ namespace tavros::renderer::rhi
          * @param pipeline Handle to the pipeline to destroy.
          */
         virtual void destroy_pipeline(pipeline_handle pipeline) = 0;
+
+        virtual const pipeline_create_info* get_pipeline_create_info(pipeline_handle pipeline) const noexcept = 0;
 
         /**
          * @brief Create a framebuffer for rendering output.
@@ -142,6 +160,8 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_framebuffer(framebuffer_handle framebuffer) = 0;
 
+        virtual const framebuffer_create_info* get_framebuffer_create_info(framebuffer_handle framebuffer) const noexcept = 0;
+
         /**
          * @brief Create a GPU buffer resource.
          *
@@ -157,6 +177,8 @@ namespace tavros::renderer::rhi
          */
         virtual void destroy_buffer(buffer_handle buffer) = 0;
 
+        virtual const buffer_create_info* get_buffer_create_info(buffer_handle buffer) const noexcept = 0;
+
         /**
          * @brief Create a render pass.
          *
@@ -171,6 +193,8 @@ namespace tavros::renderer::rhi
          * @param render_pass Handle to the render pass to destroy.
          */
         virtual void destroy_render_pass(render_pass_handle render_pass) = 0;
+
+        virtual const render_pass_create_info* get_render_pass_create_info(render_pass_handle render_pass) const noexcept = 0;
 
         /**
          * @brief Create a GPU fence object used for synchronization.

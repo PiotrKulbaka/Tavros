@@ -62,8 +62,8 @@ namespace tavros::renderer::rhi
     {
         bool                      valid = false;
         tavros::core::string_view gl_typename;
-        attribute_type            type;
-        attribute_format          format;
+        composite_format          format;
+        scalar_type               type;
     };
 
 
@@ -85,13 +85,13 @@ namespace tavros::renderer::rhi
 
     GLenum to_gl_stencil_op(stencil_op op);
 
-    gl_vertex_format to_gl_vertex_format(attribute_format format);
+    gl_vertex_format to_gl_vertex_format(scalar_type type);
 
     gl_index_format to_gl_index_format(index_buffer_format format);
 
     GLenum to_gl_topology(primitive_topology topology);
 
-    gl_attribute_info to_gl_attribute_info(attribute_type type, attribute_format format);
+    gl_attribute_info to_gl_attribute_info(composite_format format, scalar_type type);
 
     gl_rhi_type_info gl_type_to_rhi_type(GLenum type);
 

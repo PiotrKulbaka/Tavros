@@ -1,10 +1,14 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
+#include <tavros/core/string_view.hpp>
+#include <tavros/renderer/rhi/handle.hpp>
 
 namespace tavros::renderer::rhi
 {
 
+    /**
+     * @brief Provides information for buffer base binding.
+     */
     struct bind_buffer_info
     {
         /// Vertex buffer handle
@@ -15,7 +19,7 @@ namespace tavros::renderer::rhi
     };
 
     /**
-     * Describes a texture + sampler binding to a shader stage
+     * @brief Describes a texture + sampler binding to a shader stage.
      */
     struct texture_binding
     {
@@ -30,7 +34,7 @@ namespace tavros::renderer::rhi
     };
 
     /**
-     * Describes a binding of a buffer or subrange of a buffer to a shader stage
+     * @brief Describes a binding of a buffer or subrange of a buffer to a shader stage.
      */
     struct buffer_binding
     {
@@ -122,6 +126,18 @@ namespace tavros::renderer::rhi
         /// Depth of the region to copy, in texels.
         /// For 2D textures or cube faces, should be 1. For 3D textures, specifies number of slices.
         uint32 depth = 1;
+    };
+
+    /**
+     * @brief Provides a complete set of shader program sources.
+     */
+    struct shader_program_sources
+    {
+        /// Vertex shader source.
+        core::string_view vertex_shader_source;
+
+        /// Fragment shader source.
+        core::string_view fragment_shader_source;
     };
 
 } // namespace tavros::renderer::rhi
