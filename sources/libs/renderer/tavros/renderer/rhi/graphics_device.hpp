@@ -4,18 +4,9 @@
 #include <tavros/core/memory/buffer_span.hpp>
 #include <tavros/core/memory/memory.hpp>
 
-#include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/frame_composer.hpp>
-#include <tavros/renderer/rhi/enums.hpp>
-
-#include <tavros/renderer/rhi/frame_composer_create_info.hpp>
-#include <tavros/renderer/rhi/sampler_create_info.hpp>
-#include <tavros/renderer/rhi/texture_create_info.hpp>
-#include <tavros/renderer/rhi/pipeline_create_info.hpp>
-#include <tavros/renderer/rhi/framebuffer_create_info.hpp>
-#include <tavros/renderer/rhi/buffer_create_info.hpp>
-#include <tavros/renderer/rhi/render_pass_create_info.hpp>
 #include <tavros/renderer/rhi/shader_reflect.hpp>
+#include <tavros/renderer/rhi/structs.hpp>
 
 #include <type_traits>
 
@@ -81,19 +72,19 @@ namespace tavros::renderer::rhi
          * @param sources Shader source code for one or more stages.
          * @return Handle to the compiled shader.
          */
-        virtual shader_handle compile_shader(const shader_program_sources& sources) = 0;
+        virtual shader_handle create_shader(const shader_create_info& info) = 0;
 
         /**
          * @brief Destroys a shader.
          *
-         * @param prog Shader handle to destroy.
+         * @param shader Shader handle to destroy.
          */
         virtual void destroy_shader(shader_handle shader) = 0;
 
         /**
          * @brief Returns reflection information for a shader.
          *
-         * @param program Shader handle.
+         * @param shader Shader handle.
          * @return Pointer to shader reflection data, or nullptr if the handle is invalid.
          */
         virtual const shader_reflect* get_shader_reflect_ptr(shader_handle shader) const noexcept = 0;
@@ -259,13 +250,19 @@ namespace tavros::renderer::rhi
         virtual bool is_fence_signaled(fence_handle fence) = 0;
 
         /**
-         * @brief Wait for the fence to be signaled by the GPU.
+         * @brief Waits until the fence is signaled by the GPU.
+         *
+         * Blocks the calling thread until the fence becomes signaled or the specified
+         * timeout expires.
          *
          * @param fence Handle to the fence to wait on.
-         * @param timeout_ns Maximum time to wait in nanoseconds. Defaults to maximum value (infinite wait).
-         * @return True if the fence was signaled within the timeout, false if the timeout expired.
+         * @param timeout_ns Maximum wait time in nanoseconds.
+         *                   Use @c std::numeric_limits<uint64>::max() for an unlimited wait.
+         *
+         * @return @c true if the fence was signaled before the timeout expired,
+         *         otherwise @c false.
          */
-        virtual bool wait_for_fence(fence_handle fence, uint64 timeout_ns = 0xffffffffffffffffui64) = 0;
+        virtual bool client_wait_for_fence(fence_handle fence, uint64 timeout_ns = std::numeric_limits<uint64>::max()) = 0;
 
         /**
          * @brief Map a CPU-visible buffer for read or write access.
@@ -326,7 +323,7 @@ namespace tavros::renderer::rhi
             } else if constexpr (std::is_same_v<T, fence_handle>) {
                 destroy_fence(h);
             } else {
-                static_assert(false, "safe_destroy not implemented for this handle type");
+                static_assert(sizeof(T) == 0, "safe_destroy not implemented for this handle type");
             }
 
             h = {};

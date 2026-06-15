@@ -164,7 +164,7 @@ namespace tavros::renderer::rhi
     void frame_composer_opengl::wait_for_frame_complete()
     {
         auto id = m_frame_number % m_buffer_count;
-        m_device->wait_for_fence(m_fences[id]);
+        m_device->client_wait_for_fence(m_fences[id]);
     }
 
 } // namespace tavros::renderer::rhi

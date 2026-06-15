@@ -306,11 +306,11 @@ namespace tavros::renderer::rhi
         }
     }
 
-    shader_handle graphics_device_opengl::compile_shader(const shader_program_sources& sources)
+    shader_handle graphics_device_opengl::create_shader(const shader_create_info& info)
     {
         auto deleter = [](GLuint o) { if (o != 0) {GL_CALL(glDeleteShader(o));} };
-        auto vso_owner = core::make_scoped_owner(compile_shader_module(sources.vertex_shader_source, GL_VERTEX_SHADER), deleter);
-        auto fso_owner = core::make_scoped_owner(compile_shader_module(sources.fragment_shader_source, GL_FRAGMENT_SHADER), deleter);
+        auto vso_owner = core::make_scoped_owner(compile_shader_module(info.vertex_shader_source, GL_VERTEX_SHADER), deleter);
+        auto fso_owner = core::make_scoped_owner(compile_shader_module(info.fragment_shader_source, GL_FRAGMENT_SHADER), deleter);
 
         if (vso_owner.get() == 0 || fso_owner.get() == 0) {
             ::logger.error("Failed to create shader: compilation failed");
@@ -1653,7 +1653,7 @@ namespace tavros::renderer::rhi
         return status == GL_SIGNALED;
     }
 
-    bool graphics_device_opengl::wait_for_fence(fence_handle fence, uint64 timeout_ns)
+    bool graphics_device_opengl::client_wait_for_fence(fence_handle fence, uint64 timeout_ns)
     {
         auto* f = m_resources.find(fence);
         if (!f) {

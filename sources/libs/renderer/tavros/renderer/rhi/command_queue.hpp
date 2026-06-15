@@ -243,7 +243,7 @@ namespace tavros::renderer::rhi
         virtual void push_constant(const void* constants, size_t size) = 0;
 
         template<class T>
-            requires(sizeof(T) <= 256)
+            requires(sizeof(T) <= k_max_push_constant_buffer_size_bytes)
         void push_constant(const T& constant)
         {
             push_constant(std::addressof(constant), sizeof(T));

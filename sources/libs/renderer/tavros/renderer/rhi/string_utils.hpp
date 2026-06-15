@@ -1,37 +1,11 @@
 #pragma once
 
-#include <tavros/core/types.hpp>
 #include <tavros/core/string_view.hpp>
+#include <tavros/renderer/rhi/enums.hpp>
 #include <fmt/fmt.hpp>
 
 namespace tavros::renderer::rhi
 {
-
-    enum class buffer_usage : uint8;
-    enum class buffer_access : uint8;
-    enum class index_buffer_format : uint8;
-    enum class scalar_type : uint8;
-    enum class composite_format : uint8;
-    enum class primitive_topology : uint8;
-    enum class compare_op : uint8;
-    enum class stencil_op : uint8;
-    enum class blend_factor : uint8;
-    enum class blend_op : uint8;
-    enum class color_mask : uint8;
-    enum class cull_face : uint8;
-    enum class front_face : uint8;
-    enum class polygon_mode : uint8;
-    enum class pixel_format : uint8;
-    enum class texture_type : uint8;
-    enum class texture_usage : uint8;
-    enum class filter_mode : uint8;
-    enum class mipmap_filter_mode : uint8;
-    enum class wrap_mode : uint8;
-    enum class shader_stage : uint8;
-    enum class render_backend_type : uint8;
-    enum class load_op : uint8;
-    enum class store_op : uint8;
-    enum class shader_resource_type : uint8;
 
     core::string_view to_string(buffer_usage val) noexcept;
     core::string_view to_string(buffer_access val) noexcept;

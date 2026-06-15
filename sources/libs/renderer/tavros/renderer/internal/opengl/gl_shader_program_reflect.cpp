@@ -448,10 +448,11 @@ namespace
                     GL_OFFSET,
                     GL_ARRAY_SIZE,
                     GL_ARRAY_STRIDE,
-                    GL_MATRIX_STRIDE
+                    GL_MATRIX_STRIDE,
+                    GL_IS_ROW_MAJOR
                 };
-                GLint m_vals[5] = {};
-                GL_CALL(glGetProgramResourceiv(prog, GL_UNIFORM, mi, 5, m_props, 5, nullptr, m_vals));
+                GLint m_vals[6] = {};
+                GL_CALL(glGetProgramResourceiv(prog, GL_UNIFORM, mi, 6, m_props, 6, nullptr, m_vals));
 
                 GLsizei member_name_len = 0;
                 GL_CALL(glGetProgramResourceName(prog, GL_UNIFORM, mi, member_name_buf.capacity(), &member_name_len, member_name_buf.data()));
@@ -470,11 +471,14 @@ namespace
                 auto offset = static_cast<uint32>(m_vals[1]);
                 auto array_size = static_cast<uint32>(m_vals[2]);
                 auto array_stride = static_cast<uint32>(m_vals[3]);
+                auto matrix_stride = static_cast<uint32>(m_vals[4]);
+                auto is_row_major = static_cast<bool>(m_vals[5] != 0);
 
                 // array_size == 1 and array_stride == 0 -> not an array
                 // Normalize: store 0 for array_size when it's a plain scalar/vector/matrix
-                if (array_stride == 0) {
+                if (array_stride <= 1) {
                     array_size = 0;
+                    array_stride = 0;
                 }
 
                 rhi::member_reflect m;
@@ -484,6 +488,8 @@ namespace
                 m.offset = offset;
                 m.array_size = array_size;
                 m.array_stride = array_stride;
+                m.matrix_stride = matrix_stride;
+                m.is_row_major = is_row_major;
 
                 raw_members.push_back({m, offset});
             }

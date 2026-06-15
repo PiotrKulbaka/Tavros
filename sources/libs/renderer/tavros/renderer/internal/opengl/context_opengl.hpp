@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/memory/memory.hpp>
-#include <tavros/renderer/rhi/frame_composer_create_info.hpp>
+#include <tavros/renderer/rhi/structs.hpp>
 
 namespace tavros::renderer::rhi
 {
