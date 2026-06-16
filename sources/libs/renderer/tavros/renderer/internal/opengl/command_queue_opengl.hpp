@@ -23,9 +23,9 @@ namespace tavros::renderer::rhi
 
         void bind_shader_textures(core::buffer_view<texture_binding> textures) override;
 
-        void begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer) override;
+        void begin_rendering(framebuffer_handle framebuffer) override;
 
-        void end_render_pass() override;
+        void end_rendering() override;
 
         void set_viewport(const viewport_info& viewport) override;
 
@@ -55,7 +55,6 @@ namespace tavros::renderer::rhi
     private:
         graphics_device_opengl* m_device = nullptr;
         pipeline_handle         m_current_pipeline;
-        render_pass_handle      m_current_render_pass;
         framebuffer_handle      m_current_framebuffer;
         buffer_handle           m_current_index_buffer;
         index_buffer_format     m_current_index_buffer_format = index_buffer_format::u16;

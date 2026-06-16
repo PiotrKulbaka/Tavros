@@ -313,7 +313,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_depth_stencil_format to_depth_stencil_fromat(pixel_format format)
+    gl_depth_stencil_format to_depth_stencil_format(pixel_format format)
     {
         switch (format) {
         case pixel_format::depth16:

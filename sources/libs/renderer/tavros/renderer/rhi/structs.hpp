@@ -387,75 +387,6 @@ namespace tavros::renderer::rhi
 
 
     // ------------------------------------------------------------------------
-    // Render pass create info
-    // ------------------------------------------------------------------------
-
-    /**
-     * Describes a single color attachment used in a framebuffer
-     */
-    struct color_attachment_info
-    {
-        /// Format of the attachment. Must be a color format
-        pixel_format format = pixel_format::none;
-
-        /// Load operation performed at the beginning of the render pass
-        load_op load = load_op::dont_care;
-
-        /// Store operation performed at the end of the render pass
-        store_op store = store_op::dont_care;
-
-        // Resolve texture target attachment, used when store_op is set to `resolve`
-        texture_handle resolve_target;
-
-        /// Clear color value used when load_op is set to `clear`
-        float clear_value[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    };
-
-    /**
-     * Describes a depth/stencil attachment used in a framebuffer
-     * Note: depth and stencil operations can be controlled independently if needed
-     */
-    struct depth_stencil_attachment_info
-    {
-        /// Format of the attachment. Must be a depth, stencil, or depth-stencil format or none
-        pixel_format format = pixel_format::none;
-
-        /// Load operation for the depth component
-        load_op depth_load = load_op::dont_care;
-
-        /// Store operation for the depth component
-        store_op depth_store = store_op::dont_care;
-
-        /// Clear value for the depth component (used only if depth_load == clear)
-        float depth_clear_value = 1.0f;
-
-        /// Load operation for the stencil component
-        load_op stencil_load = load_op::dont_care;
-
-        /// Store operation for the stencil component
-        store_op stencil_store = store_op::dont_care;
-
-        /// Clear value for the stencil component (used only if stencil_load == clear)
-        int32 stencil_clear_value = 0;
-
-        // Resolve depth/stencil target attachment, used when depth_store or/and stencil_store is set to `resolve`
-        texture_handle resolve_target;
-    };
-
-    /**
-     * Describes a complete render pass configuration
-     */
-    struct render_pass_create_info
-    {
-        /// List of color attachments. The order matches the layout in the framebuffer
-        core::fixed_vector<color_attachment_info, k_max_color_attachments> color_attachments;
-
-        /// Optional depth/stencil attachment
-        depth_stencil_attachment_info depth_stencil_attachment;
-    };
-
-
-    // ------------------------------------------------------------------------
     // Shader create info
     // ------------------------------------------------------------------------
 
@@ -497,27 +428,77 @@ namespace tavros::renderer::rhi
     // ------------------------------------------------------------------------
 
     /**
-     * Describes a complete framebuffer configuration
+     * Describes a single color attachment used in a framebuffer
+     */
+    struct color_attachment_info
+    {
+        /// Handle to the color attachment texture.
+        texture_handle target = {};
+
+        /// Resolve target texture used when @ref store is set to @c store_op::resolve.
+        texture_handle resolve_target = {};
+
+        /// Load operation performed at the beginning of the render pass
+        load_op load = load_op::dont_care;
+
+        /// Store operation performed at the end of the render pass
+        store_op store = store_op::dont_care;
+
+        /// Clear color value used when @ref load is set to @c load_op::clear.
+        float clear_value[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    };
+
+    /**
+     * Describes a depth/stencil attachment used in a framebuffer
+     * Note: depth and stencil operations can be controlled independently if needed
+     */
+    struct depth_stencil_attachment_info
+    {
+        /// Handle to the depth-stencil attachment texture
+        texture_handle target = {};
+
+        /// Resolve target texture used when @ref depth_store or @ref stencil_store is set to @c store_op::resolve.
+        texture_handle resolve_target = {};
+
+        /// Load operation for the depth component
+        load_op depth_load = load_op::dont_care;
+
+        /// Store operation for the depth component
+        store_op depth_store = store_op::dont_care;
+
+        /// Clear value for the depth component (used only if depth_load == clear)
+        float depth_clear_value = 1.0f;
+
+        /// Load operation for the stencil component
+        load_op stencil_load = load_op::dont_care;
+
+        /// Store operation for the stencil component.
+        store_op stencil_store = store_op::dont_care;
+
+        /// Clear depth value used when @ref depth_load is set to @c load_op::clear.
+        int32 stencil_clear_value = 0;
+    };
+
+    /**
+     * Describes a complete framebuffer configuration.
      */
     struct framebuffer_create_info
     {
-        /// Framebuffer width in pixels. Must match the width of all attachments
+        /// Framebuffer width in pixels. Must match the width of all attachments.
         uint32 width = 0;
 
-        /// Framebuffer height in pixels. Must match the height of all attachments
+        /// Framebuffer height in pixels. Must match the height of all attachments.
         uint32 height = 0;
 
-        /// List of color attachments. Each attachment's format must match the pipeline layout
-        core::fixed_vector<texture_handle, k_max_color_attachments> color_attachments;
+        /// List of color attachments. Each attachment's format must match the pipeline layout.
+        core::fixed_vector<color_attachment_info, k_max_color_attachments> color_attachments;
 
-        /// Whether the framebuffer has a depth-stencil attachment
-        bool has_depth_stencil_attachment = false;
+        /// Depth/stencil attachment description.
+        /// Disabled when attachment handle is invalid.
+        depth_stencil_attachment_info depth_stencil_attachment;
 
-        /// Handle to the depth-stencil attachment texture
-        texture_handle depth_stencil_attachment;
-
-        /// Number of samples per pixel (MSAA). Must be 1, 2, 4, 8, 16 ... etc
-        /// All attachments must use the same sample count
+        /// Number of samples per pixel. Typical values are 1, 2, 4, 8 or 16.
+        /// All attachments must use the same sample count.
         uint32 sample_count = 1;
     };
 
@@ -599,21 +580,6 @@ namespace tavros::renderer::rhi
     };
 
     /**
-     * Describes the configuration for a color attachment in a render pass.
-     */
-    struct color_attachment_state
-    {
-        /// Format of the attachment
-        pixel_format format = pixel_format::none;
-
-        /// Mask specifying which color channels are written
-        core::flags<color_mask> mask = k_rgba_color_mask;
-
-        /// Blending configuration
-        blend_state blend;
-    };
-
-    /**
      * Represents the configuration and operations for stencil testing during rendering
      */
     struct stencil_state
@@ -638,6 +604,79 @@ namespace tavros::renderer::rhi
 
         /// Stencil operation to perform if the stencil test passes
         stencil_op pass_op = stencil_op::keep;
+    };
+
+    /**
+     * Defines a single vertex attribute within a vertex buffer layout
+     * Specifies how one attribute (e.g., position, color, normal) is stored and interpreted
+     */
+    struct vertex_attribute
+    {
+        /// Format of attribute
+        composite_format format = composite_format::scalar;
+
+        /// Type of each component
+        scalar_type type = scalar_type::f32;
+
+        /// Whether integer data should be normalized to [0,1] or [-1,1] (only applicable for integer types)
+        bool normalize = false;
+
+        /// Attribute location in the shader
+        uint32 location = 0;
+
+        /// Stride in bytes between consecutive vertices in the buffer
+        uint32 stride = 0;
+
+        /// Offset in bytes from the start of the vertex to this attribute (0 for densely packed)
+        uint32 offset = 0;
+
+        /// Specifies how often this attribute advances per instance when rendering with instancing
+        /// - 0: attribute is a per-vertex value (changes every vertex)
+        /// - 1: attribute is a per-instance value (changes once per instance)
+        /// - N (>1): attribute is reused for N consecutive instances before advancing
+        uint32 instance_divisor = 0;
+    };
+
+    /**
+     * Describes the configuration for a color attachment in a render pass.
+     */
+    struct color_attachment_state
+    {
+        /// Format of the attachment
+        pixel_format format = pixel_format::none;
+
+        /// Mask specifying which color channels are written
+        core::flags<color_mask> mask = k_rgba_color_mask;
+
+        /// Blending configuration
+        blend_state blend;
+    };
+
+    /**
+     * Represents the configuration for depth and stencil testing during rendering
+     */
+    struct depth_stencil_state
+    {
+        /// Depth stencil attachment format
+        pixel_format format = pixel_format::none;
+
+        /// Enables or disables depth testing
+        bool depth_test_enable = false;
+
+        /// Enables or disables writing to the depth buffer
+        bool depth_write_enable = false;
+
+        /// Comparison function used for depth testing
+        compare_op depth_compare = compare_op::off;
+
+        /// Enables or disables stencil testing
+        bool stencil_test_enable = false;
+
+        /// Stencil state for front-facing geometry
+        stencil_state stencil_front;
+
+        /// Stencil state for back-facing geometry
+        stencil_state stencil_back;
     };
 
     /**
@@ -694,64 +733,6 @@ namespace tavros::renderer::rhi
 
         /// Minimum sample shading value for running sample shading. Should be between [0.0..1.0]
         float min_sample_shading = 1.0f;
-    };
-
-    /**
-     * Represents the configuration for depth and stencil testing during rendering
-     */
-    struct depth_stencil_state
-    {
-        /// Depth stencil attachment format
-        pixel_format format = pixel_format::none;
-
-        /// Enables or disables depth testing
-        bool depth_test_enable = false;
-
-        /// Enables or disables writing to the depth buffer
-        bool depth_write_enable = false;
-
-        /// Comparison function used for depth testing
-        compare_op depth_compare = compare_op::off;
-
-        /// Enables or disables stencil testing
-        bool stencil_test_enable = false;
-
-        /// Stencil state for front-facing geometry
-        stencil_state stencil_front;
-
-        /// Stencil state for back-facing geometry
-        stencil_state stencil_back;
-    };
-
-    /**
-     * Defines a single vertex attribute within a vertex buffer layout
-     * Specifies how one attribute (e.g., position, color, normal) is stored and interpreted
-     */
-    struct vertex_attribute
-    {
-        /// Format of attribute
-        composite_format format = composite_format::scalar;
-
-        /// Type of each component
-        scalar_type type = scalar_type::f32;
-
-        /// Whether integer data should be normalized to [0,1] or [-1,1] (only applicable for integer types)
-        bool normalize = false;
-
-        /// Attribute location in the shader
-        uint32 location = 0;
-
-        /// Stride in bytes between consecutive vertices in the buffer
-        uint32 stride = 0;
-
-        /// Offset in bytes from the start of the vertex to this attribute (0 for densely packed)
-        uint32 offset = 0;
-
-        /// Specifies how often this attribute advances per instance when rendering with instancing
-        /// - 0: attribute is a per-vertex value (changes every vertex)
-        /// - 1: attribute is a per-instance value (changes once per instance)
-        /// - N (>1): attribute is reused for N consecutive instances before advancing
-        uint32 instance_divisor = 0;
     };
 
     /**

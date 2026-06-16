@@ -174,7 +174,7 @@ namespace tavros::renderer::rhi
 
         // Framebuffer / Renderbuffer
         glGetIntegerv(GL_MAX_COLOR_ATTACHMENTS, &value);
-        m_limits.max_color_attachmants = static_cast<uint32>(value);
+        m_limits.max_color_attachments = static_cast<uint32>(value);
 
         glGetIntegerv(GL_MAX_DRAW_BUFFERS, &value);
         m_limits.max_draw_buffers = static_cast<uint32>(value);
@@ -227,8 +227,6 @@ namespace tavros::renderer::rhi
         });
 
         destroy_for<buffer_handle>(m_resources, [this](auto h) { destroy_buffer(h); });
-
-        destroy_for<render_pass_handle>(m_resources, [this](auto h) { destroy_render_pass(h); });
 
         destroy_for<fence_handle>(m_resources, [this](auto h) { destroy_fence(h); });
 
@@ -286,14 +284,6 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy frame composer {}: not found", composer);
         }
-    }
-
-    const frame_composer_create_info* graphics_device_opengl::get_frame_composer_create_info(frame_composer_handle composer) const noexcept
-    {
-        if (const auto* fc = m_resources.find(composer)) {
-            return &fc->info;
-        }
-        return nullptr;
     }
 
     frame_composer* graphics_device_opengl::get_frame_composer_ptr(frame_composer_handle composer)
@@ -400,14 +390,6 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy sampler {}: not found", sampler);
         }
-    }
-
-    const sampler_create_info* graphics_device_opengl::get_sampler_create_info(sampler_handle sampler) const noexcept
-    {
-        if (auto* s = m_resources.find(sampler)) {
-            return &s->info;
-        }
-        return nullptr;
     }
 
     texture_handle graphics_device_opengl::create_texture(const texture_create_info& info)
@@ -845,14 +827,6 @@ namespace tavros::renderer::rhi
         }
     }
 
-    const texture_create_info* graphics_device_opengl::get_texture_create_info(texture_handle texture) const noexcept
-    {
-        if (auto* tex = m_resources.find(texture)) {
-            return &tex->info;
-        }
-        return nullptr;
-    }
-
     pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_create_info& info)
     {
         auto* sh = m_resources.find(info.shader_program);
@@ -1000,19 +974,14 @@ namespace tavros::renderer::rhi
         }
     }
 
-    const pipeline_create_info* graphics_device_opengl::get_pipeline_create_info(pipeline_handle pipeline) const noexcept
-    {
-        if (auto* p = m_resources.find(pipeline)) {
-            return &p->info;
-        }
-        return nullptr;
-    }
-
     framebuffer_handle graphics_device_opengl::create_framebuffer(const framebuffer_create_info& info)
     {
+        // ----------------------------------------------------------------
+        // Framebuffer-level limits
+        // ----------------------------------------------------------------
         if (info.width > m_limits.max_framebuffer_width || info.height > m_limits.max_framebuffer_height) {
             ::logger.warning(
-                "Framebuffer creation: framebuffer size {}x{} exceeds device limit {}x{}",
+                "Framebuffer creation: size {}x{} exceeds device limit {}x{}",
                 fmt::styled_param(info.width),
                 fmt::styled_param(info.height),
                 fmt::styled_param(m_limits.max_framebuffer_width),
@@ -1020,59 +989,129 @@ namespace tavros::renderer::rhi
             );
         }
 
-        if (static_cast<uint32>(info.color_attachments.size()) > m_limits.max_color_attachmants) {
+        if (static_cast<uint32>(info.color_attachments.size()) > m_limits.max_color_attachments) {
             ::logger.warning(
-                "Framebuffer creation: color attachment size {} exceeds device limit {}",
+                "Framebuffer creation: color attachment count {} exceeds device limit {}",
                 fmt::styled_param(info.color_attachments.size()),
-                fmt::styled_param(m_limits.max_color_attachmants)
+                fmt::styled_param(m_limits.max_color_attachments)
             );
         }
 
-        if (!info.has_depth_stencil_attachment && info.depth_stencil_attachment.valid()) {
-            ::logger.warning("Framebuffer creation: Depth/stencil attachment {} is provided but not enabled", info.depth_stencil_attachment);
-        }
-
-        // Framebuffer will be incomplete if the depth/stencil texture is not attached and
-        // there are no color attachments
-        if (info.color_attachments.size() == 0 && !info.has_depth_stencil_attachment) {
+        if (info.color_attachments.size() == 0 && !info.depth_stencil_attachment.target.valid()) {
             ::logger.error("Failed to create framebuffer: no color or depth/stencil attachments provided");
             return {};
         }
 
-        // Get and validate color attachments
-        core::fixed_vector<gl_texture*, k_max_color_attachments> color_attachments;
-        for (size_t i = 0; i < info.color_attachments.size(); ++i) {
-            auto tex_h = info.color_attachments[i];
+        // ----------------------------------------------------------------
+        // Validate color attachments
+        // ----------------------------------------------------------------
+        core::fixed_vector<gl_texture*, k_max_color_attachments>  color_textures;
+        core::fixed_vector<pixel_format, k_max_color_attachments> color_formats;
 
-            auto* tex = m_resources.find(tex_h);
-            if (!tex) {
+        for (size_t i = 0; i < info.color_attachments.size(); ++i) {
+            const auto& ca = info.color_attachments[i];
+
+            auto  src_tex_h = ca.target;
+            auto* src_tex = m_resources.find(src_tex_h);
+            if (!src_tex) {
+                ::logger.error("Failed to create framebuffer: color attachment {} at index {} not found", src_tex_h, fmt::styled_param(i));
+                return {};
+            }
+
+            // A resolve target is only meaningful when store op is `resolve`.
+            // Cover every combination of (resolve target specified) x (store op == resolve) explicitly.
+            auto  resolve_tex_h = ca.resolve_target;
+            auto* resolve_tex = m_resources.find(resolve_tex_h);
+            bool  check_resolve = false;
+            bool  need_resolve = info.sample_count > 1 && ca.store == store_op::resolve;
+
+            if (resolve_tex_h.valid()) {
+                if (resolve_tex) {
+                    if (ca.store == store_op::resolve) {
+                        check_resolve = true;
+                    } else {
+                        ::logger.warning(
+                            "Framebuffer creation: resolve attachment {} at index {} specified but store op is not resolve, ignored",
+                            resolve_tex_h,
+                            fmt::styled_param(i)
+                        );
+                    }
+                } else {
+                    if (ca.store == store_op::resolve) {
+                        ::logger.error("Failed to create framebuffer: resolve attachment {} at index {} not found", resolve_tex_h, fmt::styled_param(i));
+                        return {};
+                    } else {
+                        ::logger.warning(
+                            "Framebuffer creation: resolve attachment {} at index {} not found, ignored (store op is not resolve)",
+                            resolve_tex_h,
+                            fmt::styled_param(i)
+                        );
+                    }
+                }
+            } else if (ca.store == store_op::resolve) {
                 ::logger.error(
-                    "Failed to create framebuffer: color attachment {} at index {} not found",
-                    tex_h,
+                    "Failed to create framebuffer: color attachment {} at index {} store op is resolve but no resolve attachment specified",
+                    src_tex_h,
                     fmt::styled_param(i)
                 );
                 return {};
             }
 
             // Validate formats
-            if (!is_color_format(tex->info.format)) {
+            if (!is_color_format(src_tex->info.format)) {
                 ::logger.error(
                     "Failed to create framebuffer: color attachment {} at index {} has unsupported format {}",
-                    tex_h,
+                    src_tex_h,
                     fmt::styled_param(i),
-                    tex->info.format
+                    src_tex->info.format
                 );
                 return {};
             }
 
+            if (check_resolve && !is_color_format(resolve_tex->info.format)) {
+                ::logger.error(
+                    "Failed to create framebuffer: resolve attachment {} at index {} has unsupported format {}",
+                    resolve_tex_h,
+                    fmt::styled_param(i),
+                    resolve_tex->info.format
+                );
+                return {};
+            }
+
+            if (check_resolve && src_tex->info.format != resolve_tex->info.format) {
+                ::logger.error(
+                    "Failed to create framebuffer: resolve attachment {} at index {} format {} does not match color attachment format {}",
+                    resolve_tex_h,
+                    fmt::styled_param(i),
+                    resolve_tex->info.format,
+                    src_tex->info.format
+                );
+                return {};
+            }
+
+            color_formats.push_back(src_tex->info.format);
+
             // Validate size
-            if (tex->info.width != info.width || tex->info.height != info.height) {
+            if (src_tex->info.width != info.width || src_tex->info.height != info.height) {
                 ::logger.error(
                     "Failed to create framebuffer: color attachment {} at index {} size {}x{} does not match framebuffer size {}x{}",
-                    tex_h,
+                    src_tex_h,
                     fmt::styled_param(i),
-                    fmt::styled_param(tex->info.width),
-                    fmt::styled_param(tex->info.height),
+                    fmt::styled_param(src_tex->info.width),
+                    fmt::styled_param(src_tex->info.height),
+                    fmt::styled_param(info.width),
+                    fmt::styled_param(info.height)
+                );
+                return {};
+            }
+
+            if (check_resolve && (resolve_tex->info.width != info.width || resolve_tex->info.height != info.height)) {
+                ::logger.error(
+                    "Failed to create framebuffer: resolve attachment {} at index {} size {}x{} does not match framebuffer size {}x{}",
+                    resolve_tex_h,
+                    fmt::styled_param(i),
+                    fmt::styled_param(resolve_tex->info.width),
+                    fmt::styled_param(resolve_tex->info.height),
                     fmt::styled_param(info.width),
                     fmt::styled_param(info.height)
                 );
@@ -1080,57 +1119,171 @@ namespace tavros::renderer::rhi
             }
 
             // Validate MSAA
-            if (info.sample_count != tex->info.sample_count) {
+            if (info.sample_count != src_tex->info.sample_count) {
                 ::logger.error(
                     "Failed to create framebuffer: color attachment {} at index {} sample count {} mismatch with framebuffer sample count {}",
-                    tex_h,
+                    src_tex_h,
                     fmt::styled_param(i),
-                    fmt::styled_param(tex->info.sample_count),
+                    fmt::styled_param(src_tex->info.sample_count),
                     fmt::styled_param(info.sample_count)
                 );
                 return {};
             }
 
-            // All the attachments must be used as color attachments
-            if (!tex->info.usage.has_flag(texture_usage::render_target)) {
+            if (info.sample_count == 1 && ca.store == store_op::resolve) {
                 ::logger.error(
-                    "Failed to create framebuffer: color attachment {} at index {} is not marked as a render target",
-                    tex_h,
+                    "Failed to create framebuffer: color attachment at index {} store op is resolve but msaa is single-sampled",
                     fmt::styled_param(i)
                 );
                 return {};
             }
 
-            color_attachments.push_back(tex);
+            if (check_resolve && resolve_tex->info.sample_count != 1) {
+                ::logger.error(
+                    "Failed to create framebuffer: resolve attachment {} at index {} must be single-sampled",
+                    resolve_tex_h,
+                    fmt::styled_param(i)
+                );
+                return {};
+            }
+
+            // Validate usage
+            if (!src_tex->info.usage.has_flag(texture_usage::render_target)) {
+                ::logger.error(
+                    "Failed to create framebuffer: color attachment {} at index {} is not marked as a render target",
+                    src_tex_h,
+                    fmt::styled_param(i)
+                );
+                return {};
+            }
+
+            if (need_resolve && check_resolve) {
+                if (!src_tex->info.usage.has_flag(texture_usage::resolve_source)) {
+                    ::logger.error(
+                        "Failed to create framebuffer: color attachment {} at index {} is not marked as a resolve source",
+                        src_tex_h,
+                        fmt::styled_param(i)
+                    );
+                    return {};
+                }
+
+                if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
+                    ::logger.error(
+                        "Failed to create framebuffer: resolve attachment {} at index {} is not marked as a resolve destination",
+                        resolve_tex_h,
+                        fmt::styled_param(i)
+                    );
+                    return {};
+                }
+            }
+
+            color_textures.push_back(src_tex);
         }
 
 
-        // Get depth/stencil attachment texture if provided
-        gl_texture*             ds_attachment = nullptr;
-        gl_depth_stencil_format ds_attachment_format_info;
-        if (info.has_depth_stencil_attachment) {
-            auto ds_h = info.depth_stencil_attachment;
+        // ----------------------------------------------------------------
+        // Validate depth/stencil attachment
+        // ----------------------------------------------------------------
+        gl_texture*             ds_tex = nullptr;
+        gl_depth_stencil_format ds_format_info{};
+        pixel_format            ds_format = pixel_format::none;
 
-            auto* tex = m_resources.find(ds_h);
-            if (!tex) {
-                ::logger.error("Failed to create framebuffer: depth/stencil attachment {} not found", ds_h);
+        const auto& dsa = info.depth_stencil_attachment;
+        auto        ds_tex_h = dsa.target;
+        bool        resolve_requested = dsa.depth_store == store_op::resolve || dsa.stencil_store == store_op::resolve;
+
+        if (ds_tex_h.valid()) {
+            ds_tex = m_resources.find(ds_tex_h);
+            if (!ds_tex) {
+                ::logger.error("Failed to create framebuffer: depth/stencil attachment {} not found", ds_tex_h);
+                return {};
+            }
+
+            auto  ds_resolve_tex_h = dsa.resolve_target;
+            auto* ds_resolve_tex = m_resources.find(ds_resolve_tex_h);
+            bool  check_resolve = false;
+            bool  need_resolve = info.sample_count > 1 && resolve_requested;
+
+            if (ds_resolve_tex_h.valid()) {
+                if (ds_resolve_tex) {
+                    if (resolve_requested) {
+                        check_resolve = true;
+                    } else {
+                        ::logger.warning(
+                            "Framebuffer creation: depth/stencil resolve attachment {} specified but no store op is resolve, ignored",
+                            ds_resolve_tex_h
+                        );
+                    }
+                } else {
+                    if (resolve_requested) {
+                        ::logger.error(
+                            "Failed to create framebuffer: depth/stencil resolve attachment {} not found",
+                            ds_resolve_tex_h
+                        );
+                        return {};
+                    } else {
+                        ::logger.warning(
+                            "Framebuffer creation: depth/stencil resolve attachment {} not found, ignored (no store op is resolve)",
+                            ds_resolve_tex_h
+                        );
+                    }
+                }
+            } else if (resolve_requested) {
+                ::logger.error("Failed to create framebuffer: depth/stencil store op is resolve but no resolve attachment specified");
                 return {};
             }
 
             // Validate formats
-            ds_attachment_format_info = to_depth_stencil_fromat(tex->info.format);
-            if (!ds_attachment_format_info.is_depth_stencil_format) {
-                ::logger.error("Failed to create framebuffer: depth/stencil attachment {} has unsupported format {}", ds_h, tex->info.format);
+            ds_format_info = to_depth_stencil_format(ds_tex->info.format);
+            if (!ds_format_info.is_depth_stencil_format) {
+                ::logger.error(
+                    "Failed to create framebuffer: depth/stencil attachment {} has unsupported format {}",
+                    ds_tex_h,
+                    ds_tex->info.format
+                );
                 return {};
             }
 
+            if (check_resolve && !to_depth_stencil_format(ds_resolve_tex->info.format).is_depth_stencil_format) {
+                ::logger.error(
+                    "Failed to create framebuffer: depth/stencil resolve attachment {} has unsupported format {}",
+                    ds_resolve_tex_h,
+                    ds_resolve_tex->info.format
+                );
+                return {};
+            }
+
+            if (check_resolve && ds_tex->info.format != ds_resolve_tex->info.format) {
+                ::logger.error(
+                    "Failed to create framebuffer: depth/stencil resolve attachment {} format {} does not match attachment format {}",
+                    ds_resolve_tex_h,
+                    ds_resolve_tex->info.format,
+                    ds_tex->info.format
+                );
+                return {};
+            }
+
+            ds_format = ds_tex->info.format;
+
             // Validate size
-            if (tex->info.width != info.width || tex->info.height != info.height) {
+            if (ds_tex->info.width != info.width || ds_tex->info.height != info.height) {
                 ::logger.error(
                     "Failed to create framebuffer: depth/stencil attachment {} size {}x{} does not match framebuffer size {}x{}",
-                    ds_h,
-                    fmt::styled_param(tex->info.width),
-                    fmt::styled_param(tex->info.height),
+                    ds_tex_h,
+                    fmt::styled_param(ds_tex->info.width),
+                    fmt::styled_param(ds_tex->info.height),
+                    fmt::styled_param(info.width),
+                    fmt::styled_param(info.height)
+                );
+                return {};
+            }
+
+            if (check_resolve && (ds_resolve_tex->info.width != info.width || ds_resolve_tex->info.height != info.height)) {
+                ::logger.error(
+                    "Failed to create framebuffer: depth/stencil resolve attachment {} size {}x{} does not match framebuffer size {}x{}",
+                    ds_resolve_tex_h,
+                    fmt::styled_param(ds_resolve_tex->info.width),
+                    fmt::styled_param(ds_resolve_tex->info.height),
                     fmt::styled_param(info.width),
                     fmt::styled_param(info.height)
                 );
@@ -1138,26 +1291,65 @@ namespace tavros::renderer::rhi
             }
 
             // Validate MSAA
-            if (info.sample_count != tex->info.sample_count) {
+            if (info.sample_count != ds_tex->info.sample_count) {
                 ::logger.error(
                     "Failed to create framebuffer: depth/stencil attachment {} sample count {} mismatch with framebuffer sample count {}",
-                    ds_h,
-                    fmt::styled_param(tex->info.sample_count),
+                    ds_tex_h,
+                    fmt::styled_param(ds_tex->info.sample_count),
                     fmt::styled_param(info.sample_count)
                 );
                 return {};
             }
 
-            // All the attachments must be used as color attachments
-            if (!tex->info.usage.has_flag(texture_usage::render_target)) {
-                ::logger.error("Failed to create framebuffer: depth/stencil attachment {} is not marked as a render target", ds_h);
+            if (info.sample_count == 1 && (dsa.depth_store == store_op::resolve || dsa.stencil_store == store_op::resolve)) {
+                ::logger.error(
+                    "Failed to create framebuffer: depth/stencil attachment store op is resolve but msaa is single-sampled"
+                );
                 return {};
             }
 
-            ds_attachment = tex;
+            if (check_resolve && ds_resolve_tex->info.sample_count != 1) {
+                ::logger.error(
+                    "Failed to create framebuffer: depth/stencil resolve attachment {} must be single-sampled",
+                    ds_resolve_tex_h
+                );
+                return {};
+            }
+
+            // Validate usage
+            if (!ds_tex->info.usage.has_flag(texture_usage::render_target)) {
+                ::logger.error(
+                    "Failed to create framebuffer: depth/stencil attachment {} is not marked as a render target",
+                    ds_tex_h
+                );
+                return {};
+            }
+
+            if (need_resolve && check_resolve) {
+                if (!ds_tex->info.usage.has_flag(texture_usage::resolve_source)) {
+                    ::logger.error(
+                        "Failed to create framebuffer: depth/stencil attachment {} is not marked as a resolve source",
+                        ds_tex_h
+                    );
+                    return {};
+                }
+
+                if (!ds_resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
+                    ::logger.error(
+                        "Failed to create framebuffer: depth/stencil resolve attachment {} is not marked as a resolve destination",
+                        ds_resolve_tex_h
+                    );
+                    return {};
+                }
+            }
+        } else if (dsa.resolve_target.valid() || resolve_requested) {
+            ::logger.warning("Framebuffer creation: depth/stencil resolve settings specified but attachment is disabled, ignored");
         }
 
 
+        // ----------------------------------------------------------------
+        // Create the GL framebuffer object and attach textures
+        // ----------------------------------------------------------------
         GLuint fbo;
         GL_CALL(glGenFramebuffers(1, &fbo));
 
@@ -1167,20 +1359,17 @@ namespace tavros::renderer::rhi
             GL_CALL(glDeleteFramebuffers(1, &id));
         });
 
-        // Bind framebuffer and attach textures
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fbo));
 
-        // Attach color textures to the framebuffer
+        // Attach color textures
         core::fixed_vector<GLenum, k_max_color_attachments> draw_buffers;
-        for (uint32 i = 0; i < color_attachments.size(); ++i) {
-            auto*  tex = color_attachments[i];
+        for (uint32 i = 0; i < color_textures.size(); ++i) {
+            auto*  tex = color_textures[i];
             GLenum attachment_type = GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i);
             draw_buffers.push_back(attachment_type);
 
             if (tex->target == GL_RENDERBUFFER) {
-                // Attach renderbuffer
                 TAV_ASSERT(tex->renderbuffer_obj != 0);
-
                 GL_CALL(glFramebufferRenderbuffer(
                     GL_FRAMEBUFFER,
                     attachment_type,
@@ -1188,9 +1377,7 @@ namespace tavros::renderer::rhi
                     tex->renderbuffer_obj
                 ));
             } else {
-                // Attach regular texture
                 TAV_ASSERT(tex->texture_obj != 0);
-
                 GL_CALL(glFramebufferTexture2D(
                     GL_FRAMEBUFFER,
                     attachment_type,
@@ -1201,59 +1388,58 @@ namespace tavros::renderer::rhi
             }
         }
 
-        // Enable color attachments
         if (draw_buffers.empty()) {
-            // Drawing only onto depth/stencil buffer
-            // Framebuffer will be incomplete if the depth/stencil texture is not attached
+            // Drawing only onto depth/stencil buffer.
+            // Framebuffer will be incomplete if the depth/stencil texture is not attached.
             GL_CALL(glDrawBuffer(GL_NONE));
             GL_CALL(glReadBuffer(GL_NONE));
         } else {
             if (static_cast<uint32>(draw_buffers.size()) > m_limits.max_draw_buffers) {
                 ::logger.warning(
-                    "Framebuffer creation: number of draw buffers {} exceeds device limit {}",
+                    "Framebuffer creation: draw buffer count {} exceeds device limit {}",
                     fmt::styled_param(draw_buffers.size()),
                     fmt::styled_param(m_limits.max_draw_buffers)
                 );
             }
-            // Drawing onto color attachments
             GL_CALL(glDrawBuffers(static_cast<GLsizei>(draw_buffers.size()), draw_buffers.data()));
         }
 
-        // Enable depth/stencil attachment
-        if (ds_attachment) {
-            if (ds_attachment->target == GL_RENDERBUFFER) {
-                // Attach renderbuffer
-                TAV_ASSERT(ds_attachment->renderbuffer_obj != 0);
-
+        // Attach depth/stencil texture
+        if (ds_tex) {
+            if (ds_tex->target == GL_RENDERBUFFER) {
+                TAV_ASSERT(ds_tex->renderbuffer_obj != 0);
                 GL_CALL(glFramebufferRenderbuffer(
                     GL_FRAMEBUFFER,
-                    ds_attachment_format_info.depth_stencil_attachment_type,
+                    ds_format_info.depth_stencil_attachment_type,
                     GL_RENDERBUFFER,
-                    ds_attachment->renderbuffer_obj
+                    ds_tex->renderbuffer_obj
                 ));
             } else {
-                // Attach regular texture
-                TAV_ASSERT(ds_attachment->texture_obj != 0);
-
+                TAV_ASSERT(ds_tex->texture_obj != 0);
                 GL_CALL(glFramebufferTexture2D(
                     GL_FRAMEBUFFER,
-                    ds_attachment_format_info.depth_stencil_attachment_type,
-                    ds_attachment->target,
-                    ds_attachment->texture_obj,
+                    ds_format_info.depth_stencil_attachment_type,
+                    ds_tex->target,
+                    ds_tex->texture_obj,
                     0
                 ));
             }
         }
 
-        // Validate framebuffer
-        if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            ::logger.error("Failed to create framebuffer: framebuffer is not complete");
+        GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
+        if (status != GL_FRAMEBUFFER_COMPLETE) {
+            ::logger.error("Failed to create framebuffer: incomplete (glCheckFramebufferStatus = {})", fmt::styled_param(static_cast<uint32>(status)));
             return {};
         }
 
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
-        auto h = m_resources.create(gl_framebuffer{info, fbo_owner.release(), false, pixel_format::none, pixel_format::none});
+
+        // ----------------------------------------------------------------
+        // Register the framebuffer resource
+        // ----------------------------------------------------------------
+        auto gl_fb = gl_framebuffer{info, fbo_owner.release(), false, color_formats, ds_format};
+        auto h = m_resources.create(gl_framebuffer(gl_fb));
         ::logger.debug("Framebuffer {} created", h);
         return h;
     }
@@ -1267,14 +1453,6 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy framebuffer {}: not found", framebuffer);
         }
-    }
-
-    const framebuffer_create_info* graphics_device_opengl::get_framebuffer_create_info(framebuffer_handle framebuffer) const noexcept
-    {
-        if (auto* fb = m_resources.find(framebuffer)) {
-            return &fb->info;
-        }
-        return nullptr;
     }
 
     buffer_handle graphics_device_opengl::create_buffer(const buffer_create_info& info)
@@ -1451,169 +1629,6 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy buffer {}: not found", buffer);
         }
-    }
-
-    const buffer_create_info* graphics_device_opengl::get_buffer_create_info(buffer_handle buffer) const noexcept
-    {
-        if (auto* b = m_resources.find(buffer)) {
-            return &b->info;
-        }
-        return nullptr;
-    }
-
-    render_pass_handle graphics_device_opengl::create_render_pass(const render_pass_create_info& info)
-    {
-        // Validate attachments
-        for (const auto& attachment : info.color_attachments) {
-            if (!is_color_format(attachment.format)) {
-                ::logger.error("Failed to create render pass: invalid color attachment format");
-                return {};
-            }
-        }
-
-        // Validate depth/stencil attachment
-        auto depth_stencil_is_none = info.depth_stencil_attachment.format == pixel_format::none;
-        if (!depth_stencil_is_none) {
-            auto f = to_depth_stencil_fromat(info.depth_stencil_attachment.format);
-            if (!f.is_depth_stencil_format) {
-                ::logger.error("Failed to create render pass: invalid depth/stencil attachment format");
-                return {};
-            }
-        }
-
-        if (info.color_attachments.size() == 0 && depth_stencil_is_none) {
-            ::logger.error("Failed to create render pass: no attachments specified");
-            return {};
-        }
-
-        // Validate resolve attachments
-        for (auto i = 0; i < info.color_attachments.size(); ++i) {
-            auto& attachment = info.color_attachments[i];
-            if (store_op::resolve == attachment.store) {
-                auto* resolve_tex = m_resources.find(attachment.resolve_target);
-                if (!resolve_tex) {
-                    ::logger.error(
-                        "Failed to create render pass: resolve attachment {} texture {} not found",
-                        fmt::styled_param(i),
-                        attachment.resolve_target
-                    );
-                    return {};
-                }
-
-                if (resolve_tex->info.format != attachment.format) {
-                    ::logger.error(
-                        "Failed to create render pass: mismatched resolve attachment {} texture format {} with color attachment format {}",
-                        fmt::styled_param(i),
-                        fmt::styled_param(resolve_tex->info.format),
-                        fmt::styled_param(attachment.format)
-                    );
-                    return {};
-                }
-                if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
-                    ::logger.error(
-                        "Failed to create render pass: resolve attachment {} texture {} must have resolve_destination usage flag",
-                        fmt::styled_param(i),
-                        attachment.resolve_target
-                    );
-                    return {};
-                }
-                if (resolve_tex->info.sample_count != 1) {
-                    ::logger.error(
-                        "Failed to create render pass: resolve attachment {} texture {} must be single-sampled",
-                        fmt::styled_param(i),
-                        attachment.resolve_target
-                    );
-                    return {};
-                }
-            } else if (attachment.resolve_target.valid()) {
-                ::logger.warning(
-                    "Render pass creation: resolve attachment {} is provided but its store operation is not set to `resolve`",
-                    fmt::styled_param(i)
-                );
-            }
-        }
-
-        auto& ds_attachment = info.depth_stencil_attachment;
-        bool  need_depth_resolve = store_op::resolve == ds_attachment.depth_store;
-        bool  need_stencil_resolve = store_op::resolve == ds_attachment.stencil_store;
-        if (need_depth_resolve || need_stencil_resolve) {
-            auto* resolve_tex = m_resources.find(ds_attachment.resolve_target);
-            if (!resolve_tex) {
-                ::logger.error(
-                    "Failed to create render pass: resolve depth/stencil attachment texture {} not found",
-                    ds_attachment.resolve_target
-                );
-                return {};
-            }
-
-            if (resolve_tex->info.format != ds_attachment.format) {
-                ::logger.error(
-                    "Failed to create render pass: mismatched resolve depth/stencil attachment texture format {} with color attachment format {}",
-                    fmt::styled_param(resolve_tex->info.format),
-                    fmt::styled_param(ds_attachment.format)
-                );
-                return {};
-            }
-
-            if (!resolve_tex->info.usage.has_flag(texture_usage::resolve_destination)) {
-                ::logger.error(
-                    "Failed to create render pass: resolve depth/stencil attachment texture {} must have resolve_destination usage flag",
-                    ds_attachment.resolve_target
-                );
-                return {};
-            }
-
-            if (resolve_tex->info.sample_count != 1) {
-                ::logger.error(
-                    "Failed to create render pass: resolve depth/stencil attachment texture {} must be single-sampled",
-                    ds_attachment.resolve_target
-                );
-                return {};
-            }
-
-            auto ds_info = to_gl_wnd_fb_info(resolve_tex->info.format);
-            if (ds_info.depth_bits == 0 && need_depth_resolve) {
-                // No depth component, but required depth resolve
-                ::logger.error(
-                    "Failed to create render pass: no depth component {} but `resolve` required",
-                    ds_attachment.format
-                );
-                return {};
-            }
-
-            if (ds_info.stencil_bits == 0 && need_stencil_resolve) {
-                // No stencil component, but required stencil resolve
-                ::logger.error(
-                    "Failed to create render pass: no stencil component {} but `resolve` required",
-                    ds_attachment.format
-                );
-                return {};
-            }
-        } else if (ds_attachment.resolve_target.valid()) {
-            ::logger.warning("Render pass creation: resolve depth/stencil attachment is provided but its store operation is not set to `resolve`");
-        }
-
-        auto h = m_resources.create(gl_render_pass{info});
-        ::logger.debug("Render pass {} created", h);
-        return h;
-    }
-
-    void graphics_device_opengl::destroy_render_pass(render_pass_handle render_pass)
-    {
-        if (auto* rp = m_resources.find(render_pass)) {
-            m_resources.remove(render_pass);
-            ::logger.debug("Render pass {} destroyed", render_pass);
-        } else {
-            ::logger.error("Failed to destroy render pass {}: not found", render_pass);
-        }
-    }
-
-    const render_pass_create_info* graphics_device_opengl::get_render_pass_create_info(render_pass_handle render_pass) const noexcept
-    {
-        if (auto* rp = m_resources.find(render_pass)) {
-            return &rp->info;
-        }
-        return nullptr;
     }
 
     fence_handle graphics_device_opengl::create_fence()

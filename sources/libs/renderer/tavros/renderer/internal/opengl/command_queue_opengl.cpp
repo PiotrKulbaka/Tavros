@@ -56,20 +56,21 @@ namespace tavros::renderer::rhi
 
         auto& info = p->info;
 
-        auto* pass = m_device->get_resources()->find(m_current_render_pass);
-        if (!pass) {
-            ::logger.error("Failed to bind pipeline {}: render pass {} not found", pipeline, m_current_render_pass);
+        const auto* fb = m_device->get_resources()->find(m_current_framebuffer);
+        if (!fb) {
+            ::logger.error("Failed to bind pipeline {}: framebuffer {} not found", pipeline, m_current_framebuffer);
             GL_CALL(glUseProgram(0));
             GL_CALL(glBindVertexArray(0));
             return;
         }
 
-        auto& pass_info = pass->info;
-        if (pass_info.color_attachments.size() != info.color_attachments.size()) {
+        TAV_ASSERT(fb->color_attachment_formats.size() == fb->info.color_attachments.size());
+        const auto& fb_info = fb->info;
+        if (fb->color_attachment_formats.size() != info.color_attachments.size()) {
             ::logger.error(
                 "Failed to bind pipeline {}: mismatch between color attachments in current render pass {} and color attachments in pipeline {}",
                 pipeline,
-                fmt::styled_param(pass_info.color_attachments.size()),
+                fmt::styled_param(fb_info.color_attachments.size()),
                 fmt::styled_param(info.color_attachments.size())
             );
             GL_CALL(glUseProgram(0));
@@ -93,13 +94,13 @@ namespace tavros::renderer::rhi
                 continue;
             }
 
-            if (cl.format != pass_info.color_attachments[i].format) {
+            if (cl.format != fb->color_attachment_formats[i]) {
                 ::logger.error(
                     "Failed to bind pipeline {}: mismatch between {}-th color attachment format {} in current render pass, and color attachment format {} in pipeline",
                     pipeline,
                     fmt::styled_param(i),
                     fmt::styled_param(to_string(cl.format)),
-                    fmt::styled_param(to_string(pass_info.color_attachments[i].format))
+                    fmt::styled_param(to_string(fb->color_attachment_formats[i]))
                 );
                 GL_CALL(glUseProgram(0));
                 GL_CALL(glBindVertexArray(0));
@@ -139,11 +140,11 @@ namespace tavros::renderer::rhi
             GL_CALL(glDisable(GL_DEPTH_TEST));
             GL_CALL(glDisable(GL_STENCIL_TEST));
         } else {
-            if (pass_info.depth_stencil_attachment.format != info.depth_stencil_attachment.format) {
+            if (fb->depth_stencil_attachment_format != info.depth_stencil_attachment.format) {
                 ::logger.error(
                     "Failed to bind pipeline {}: mismatch between depth stencil attachment format {} in current render pass, and depth stencil attachment format {} in pipeline",
                     pipeline,
-                    fmt::styled_param(to_string(pass_info.depth_stencil_attachment.format)),
+                    fmt::styled_param(to_string(fb->depth_stencil_attachment_format)),
                     fmt::styled_param(to_string(info.depth_stencil_attachment.format))
                 );
                 GL_CALL(glUseProgram(0));
@@ -402,76 +403,54 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_queue_opengl::begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer)
+    void command_queue_opengl::begin_rendering(framebuffer_handle framebuffer)
     {
-        if (m_current_render_pass || m_current_framebuffer) {
-            ::logger.error("Failed to begin render pass {}: previous render pass {} not ended", render_pass, m_current_render_pass);
+        if (m_current_framebuffer) {
+            ::logger.error("Failed to begin rendering {}: previous rendering {} not ended", framebuffer, m_current_framebuffer);
             return;
         }
 
-        gl_render_pass* rp = m_device->get_resources()->find(render_pass);
-        if (!rp) {
-            ::logger.error("Failed to begin render pass {}: render pass not found", render_pass);
-            return;
-        }
-
-        gl_framebuffer* fb = m_device->get_resources()->find(framebuffer);
+        auto* fb = m_device->get_resources()->find(framebuffer);
         if (!fb) {
-            ::logger.error("Failed to begin render pass {}: framebuffer {} not found", render_pass, framebuffer);
+            ::logger.error("Failed to begin rendering {}: framebuffer not found", framebuffer);
             return;
         }
 
         if (fb->is_default) {
             TAV_ASSERT(fb->framebuffer_obj == 0);
-            TAV_ASSERT(fb->info.color_attachments.size() == 0);
+            TAV_ASSERT(fb->info.color_attachments.size() == 1);
+            TAV_ASSERT(!fb->info.color_attachments[0].target.valid());
+            TAV_ASSERT(!fb->info.color_attachments[0].resolve_target.valid());
+            TAV_ASSERT(!fb->info.depth_stencil_attachment.target.valid());
+            TAV_ASSERT(!fb->info.depth_stencil_attachment.resolve_target.valid());
             TAV_ASSERT(fb->info.sample_count == 1);
-            TAV_ASSERT(rp->info.color_attachments.size() == 1);
-
-            if (rp->info.color_attachments.size() != 1) {
-                ::logger.error("Failed to begin render pass {}: number of color attachments for default framebuffer should be 1", render_pass);
-                return;
-            }
-
-            if (rp->info.color_attachments[0].format != fb->default_fb_color_format) {
-                ::logger.error(
-                    "Failed to begin render pass {}: color attachment format {} does not match default framebuffer format {}",
-                    render_pass,
-                    rp->info.color_attachments[0].format,
-                    fb->default_fb_color_format
-                );
-                return;
-            }
-
-            if (rp->info.depth_stencil_attachment.format != fb->default_fb_ds_format) {
-                ::logger.error("Failed to begin render pass {}: depth/stencil attachment format {} does not match default framebuffer format {}", render_pass, rp->info.depth_stencil_attachment.format, fb->default_fb_ds_format);
-                return;
-            }
 
             GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
             GLbitfield clear_mask = 0;
 
             // Clear for color buffer
-            if (rp->info.color_attachments[0].load == load_op::clear) {
+            const auto& ca = fb->info.color_attachments[0];
+            if (ca.load == load_op::clear) {
                 clear_mask |= GL_COLOR_BUFFER_BIT;
-                auto color = rp->info.color_attachments[0].clear_value;
                 GL_CALL(glColorMask(GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
-                GL_CALL(glClearColor(color[0], color[1], color[2], color[3]));
+                GL_CALL(glClearColor(ca.clear_value[0], ca.clear_value[1], ca.clear_value[2], ca.clear_value[3]));
             }
 
-            if (rp->info.depth_stencil_attachment.format != pixel_format::none) {
+            const auto& dsa = fb->info.depth_stencil_attachment;
+            if (dsa.target) {
                 // Clear for depth buffer
-                if (rp->info.depth_stencil_attachment.depth_load == load_op::clear) {
+                if (dsa.depth_load == load_op::clear) {
                     clear_mask |= GL_DEPTH_BUFFER_BIT;
                     GL_CALL(glDepthMask(GL_TRUE));
-                    GL_CALL(glClearDepth(rp->info.depth_stencil_attachment.depth_clear_value));
+                    GL_CALL(glClearDepth(dsa.depth_clear_value));
                 }
                 // Clear for stencil buffer
-                if (rp->info.depth_stencil_attachment.stencil_load == load_op::clear) {
+                if (dsa.stencil_load == load_op::clear) {
                     clear_mask |= GL_STENCIL_BUFFER_BIT;
-                    GL_CALL(glStencilMaskSeparate(GL_FRONT, 0xffffffff));
-                    GL_CALL(glStencilMaskSeparate(GL_BACK, 0xffffffff));
-                    GL_CALL(glClearStencil(rp->info.depth_stencil_attachment.stencil_clear_value));
+                    GL_CALL(glStencilMaskSeparate(GL_FRONT, static_cast<GLuint>(0xffffffff)));
+                    GL_CALL(glStencilMaskSeparate(GL_BACK, static_cast<GLuint>(0xffffffff)));
+                    GL_CALL(glClearStencil(dsa.stencil_clear_value));
                 }
             }
 
@@ -481,92 +460,15 @@ namespace tavros::renderer::rhi
             }
 
             m_current_framebuffer = framebuffer;
-            m_current_render_pass = render_pass;
 
             return;
         }
-
-
-        // Validate color attachments size
-        if (rp->info.color_attachments.size() != fb->info.color_attachments.size()) {
-            ::logger.error(
-                "Failed to begin render pass {}: number of color attachments {} does not match framebuffer {} {}",
-                render_pass,
-                fmt::styled_param(rp->info.color_attachments.size()),
-                framebuffer,
-                fmt::styled_param(fb->info.color_attachments.size())
-            );
-            return;
-        }
-
-
-        // Validate attachments
-        for (size_t i = 0; i < rp->info.color_attachments.size(); ++i) {
-            auto& attachment = rp->info.color_attachments[i];
-            if (attachment.store == store_op::resolve) {
-                // Validate that the resolve target attachment texture is single-sampled
-                auto resolve_h = attachment.resolve_target;
-                if (auto* dst_tex = m_device->get_resources()->find(resolve_h)) {
-                    if (dst_tex->info.sample_count != 1) {
-                        ::logger.error("Failed to begin render pass {}: resolve texture {} must be single-sampled", render_pass, resolve_h);
-                        return;
-                    }
-                } else {
-                    ::logger.error("Failed to begin render pass {}: resolve texture {} not found", render_pass, resolve_h);
-                    return;
-                }
-
-                auto source_texture_h = fb->info.color_attachments[i];
-                if (auto* tex = m_device->get_resources()->find(source_texture_h)) {
-                    if (attachment.format != tex->info.format) {
-                        ::logger.error("Failed to begin render pass {}: color attachment format mismatch with framebuffer {}", render_pass, framebuffer);
-                        return;
-                    }
-                } else {
-                    ::logger.error("Failed to begin render pass {}: color attachment texture {} not found", render_pass, source_texture_h);
-                    return;
-                }
-            }
-        }
-
-        // Validate depth/stencil attachment format
-        bool required_depth_stencil = rp->info.depth_stencil_attachment.format != pixel_format::none;
-        bool provided_depth_stencil = fb->info.has_depth_stencil_attachment;
-        if (required_depth_stencil != provided_depth_stencil) {
-            ::logger.error(
-                "Failed to begin render pass {}: depth/stencil is required but framebuffer {} doesnt has a depth/stencil",
-                render_pass,
-                framebuffer
-            );
-            return;
-        }
-
-
-        gl_texture* ds_attachment = nullptr;
-        if (provided_depth_stencil) {
-            ds_attachment = m_device->get_resources()->find(fb->info.depth_stencil_attachment);
-            if (!ds_attachment) {
-                ::logger.error("Failed to begin render pass {}: depth/stencil attachment {} not found", render_pass, fb->info.depth_stencil_attachment);
-                return;
-            }
-
-            if (ds_attachment->info.format != rp->info.depth_stencil_attachment.format) {
-                ::logger.error(
-                    "Failed to begin render pass {}: framebuffer depth/stencil attachment format {} mismatch with renderpass {}",
-                    render_pass,
-                    ds_attachment->info.format,
-                    rp->info.depth_stencil_attachment.format
-                );
-                return;
-            }
-        }
-
 
         // bind framebuffer
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, fb->framebuffer_obj));
 
         if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            ::logger.error("Failed to begin render pass {}: framebuffer {} is not complete", render_pass, framebuffer);
+            ::logger.error("Failed to begin rendering {}: framebuffer is not complete", framebuffer);
             return;
         }
 
@@ -579,67 +481,58 @@ namespace tavros::renderer::rhi
         }
 
         // Allpy load operations to the color attachments and depth/stencil attachment (only clear)
-        auto color_attachments_size = static_cast<uint32>(fb->info.color_attachments.size());
-        for (uint32 i = 0; i < color_attachments_size; ++i) {
-            auto& rp_color_attachment = rp->info.color_attachments[i];
+        const auto ca_size = static_cast<GLuint>(fb->info.color_attachments.size());
+        for (GLuint i = 0; i < ca_size; ++i) {
+            auto& ca = fb->info.color_attachments[i];
 
             // Apply load operation (only clear)
             // Any other load operation doesn't need to be applied
-            if (load_op::clear == rp_color_attachment.load) {
-                auto gl_attachment_index = static_cast<GLuint>(i);
-                GL_CALL(glColorMaski(gl_attachment_index, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
-                GL_CALL(glClearBufferfv(GL_COLOR, static_cast<GLint>(i), rp_color_attachment.clear_value));
+            if (load_op::clear == ca.load) {
+                GL_CALL(glColorMaski(i, GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE));
+                GL_CALL(glClearBufferfv(GL_COLOR, i, ca.clear_value));
             }
         }
 
         // Apply load operations to depth/stencil attachment
-        if (provided_depth_stencil) {
-            auto& rp_ds_attachment = rp->info.depth_stencil_attachment;
-
+        const auto& dsa = fb->info.depth_stencil_attachment;
+        if (dsa.target) {
             // Apply load operation to depth component
-            if (load_op::clear == rp_ds_attachment.depth_load) {
+            if (load_op::clear == dsa.depth_load) {
                 GL_CALL(glDepthMask(GL_TRUE));
-                GL_CALL(glClearBufferfv(GL_DEPTH, 0, &rp_ds_attachment.depth_clear_value));
+                GL_CALL(glClearBufferfv(GL_DEPTH, 0, &dsa.depth_clear_value));
             }
 
             // Apply load operation to stencil component
-            if (load_op::clear == rp_ds_attachment.stencil_load) {
+            if (load_op::clear == dsa.stencil_load) {
                 GL_CALL(glStencilMaskSeparate(GL_FRONT, 0xffffffff));
                 GL_CALL(glStencilMaskSeparate(GL_BACK, 0xffffffff));
-                GL_CALL(glClearBufferiv(GL_STENCIL, 0, &rp_ds_attachment.stencil_clear_value));
+                GL_CALL(glClearBufferiv(GL_STENCIL, 0, &dsa.stencil_clear_value));
             }
         }
 
         m_current_framebuffer = framebuffer;
-        m_current_render_pass = render_pass;
     }
 
-    void command_queue_opengl::end_render_pass()
+    void command_queue_opengl::end_rendering()
     {
-        if (!m_current_render_pass || !m_current_framebuffer) {
-            ::logger.error("Failed to end render pass: render pass not started");
-            return;
-        }
-
-        auto* rp = m_device->get_resources()->find(m_current_render_pass);
-        if (!rp) {
-            ::logger.error("Failed to end render pass {}: render pass not found", m_current_render_pass);
+        if (!m_current_framebuffer) {
+            ::logger.error("Failed to end rendering: not started");
             return;
         }
 
         auto* fb = m_device->get_resources()->find(m_current_framebuffer);
         if (fb == nullptr) {
-            ::logger.error("Failed to end render pass {}: framebuffer {} not found", m_current_render_pass, m_current_framebuffer);
+            ::logger.error("Failed to end rendering {}: framebuffer not found", m_current_framebuffer);
             return;
         }
 
         if (fb->is_default) {
-            TAV_ASSERT(rp->info.color_attachments[0].store != store_op::resolve);
+            TAV_ASSERT(fb->info.color_attachments.size() == 1);
+            TAV_ASSERT(fb->info.color_attachments[0].store != store_op::resolve);
 
             GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-            m_current_framebuffer = framebuffer_handle();
-            m_current_render_pass = render_pass_handle();
             GL_CALL(glBindVertexArray(0));
+            m_current_framebuffer = {};
 
             return;
         }
@@ -647,105 +540,128 @@ namespace tavros::renderer::rhi
         // Collect resolve attachments
         struct blit_info
         {
-            GLuint      attachment = 0;
+            GLuint      gl_attachment_index = 0;
             gl_texture* dst = nullptr;
         };
         core::fixed_vector<blit_info, k_max_color_attachments> blit_data;
-        for (uint32 i = 0; i < rp->info.color_attachments.size(); ++i) {
-            auto& rp_attachment = rp->info.color_attachments[i];
 
-            if (store_op::resolve == rp_attachment.store) {
-                // Find resolve resolve destination textures
-                auto* dst = m_device->get_resources()->find(rp->info.color_attachments[i].resolve_target);
-                TAV_ASSERT(dst);
+        const auto ca_size = fb->info.color_attachments.size();
+        for (uint32 i = 0; i < ca_size; ++i) {
+            auto& ca = fb->info.color_attachments[i];
 
-                blit_data.push_back({GL_COLOR_ATTACHMENT0 + static_cast<GLenum>(i), dst});
+            if (store_op::resolve == ca.store) {
+                // Find resolve destination textures
+                auto* dst = m_device->get_resources()->find(ca.resolve_target);
+                if (!dst) {
+                    logger.error(
+                        "Failed to end rendering {}: resolve color texture {} not found",
+                        m_current_framebuffer,
+                        ca.resolve_target
+                    );
+                    return;
+                }
+
+                blit_data.push_back({GL_COLOR_ATTACHMENT0 + static_cast<GLuint>(i), dst});
             }
         }
 
         // Blit mask for depth/stencil attachment
-        GLbitfield depth_stencil_blit_mask = 0;
-        if (store_op::resolve == rp->info.depth_stencil_attachment.depth_store) {
+        const auto& dsa = fb->info.depth_stencil_attachment;
+        GLbitfield  depth_stencil_blit_mask = 0;
+        if (store_op::resolve == dsa.depth_store) {
             depth_stencil_blit_mask |= GL_DEPTH_BUFFER_BIT;
         }
-        if (store_op::resolve == rp->info.depth_stencil_attachment.stencil_store) {
+        if (store_op::resolve == dsa.stencil_store) {
             depth_stencil_blit_mask |= GL_STENCIL_BUFFER_BIT;
         }
 
         // Get resolve texture
         gl_texture* depth_stencil_resolve_dst = nullptr;
         if (depth_stencil_blit_mask != 0) {
-            auto* dst = m_device->get_resources()->find(rp->info.depth_stencil_attachment.resolve_target);
-            TAV_ASSERT(dst);
+            auto* dst = m_device->get_resources()->find(dsa.resolve_target);
+            if (!dst) {
+                logger.error(
+                    "Failed to end rendering {}: resolve depth/stencil texture {} not found",
+                    m_current_framebuffer,
+                    dsa.resolve_target
+                );
+                return;
+            }
+
             depth_stencil_resolve_dst = dst;
         }
 
         auto need_resolve = depth_stencil_blit_mask != 0 || blit_data.size() > 0;
-        if (need_resolve) {
-            // Bind for resolve and attach textures
-            GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo));
-            GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj));
+        if (!need_resolve) {
+            GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
+            GL_CALL(glBindVertexArray(0));
+            m_current_framebuffer = {};
+            return;
+        }
 
-            // Check if need to resolve for any attachment
-            if (blit_data.size() > 0) {
-                // Always use COLOR_ATTACHMENT0 for drawing
-                GL_CALL(glDrawBuffer(GL_COLOR_ATTACHMENT0));
 
-                for (uint32 i = 0; i < blit_data.size(); ++i) {
-                    auto& blit_info = blit_data[i];
-                    TAV_ASSERT(blit_info.dst->target == GL_TEXTURE_2D);
+        // Bind for resolve and attach textures
+        GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, m_resolve_fbo));
+        GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, fb->framebuffer_obj));
 
-                    GL_CALL(glFramebufferTexture2D(
-                        GL_DRAW_FRAMEBUFFER,
-                        GL_COLOR_ATTACHMENT0,
-                        blit_info.dst->target,
-                        blit_info.dst->texture_obj,
-                        0
-                    ));
+        // Check if need to resolve for any attachment
+        if (blit_data.size() > 0) {
+            // Always use COLOR_ATTACHMENT0 for drawing
+            GL_CALL(glDrawBuffer(GL_COLOR_ATTACHMENT0));
 
-                    // Resolve color attachments
-                    GL_CALL(glReadBuffer(blit_info.attachment));
-                    GL_CALL(glBlitFramebuffer(
-                        0, 0, fb->info.width, fb->info.height,
-                        0, 0, fb->info.width, fb->info.height,
-                        GL_COLOR_BUFFER_BIT,
-                        GL_NEAREST
-                    ));
-                }
-            }
-
-            // Check if need to resolve depth/stencil attachment
-            if (depth_stencil_blit_mask) {
-                TAV_ASSERT(depth_stencil_resolve_dst->target == GL_TEXTURE_2D);
-
-                auto ds_info = to_depth_stencil_fromat(depth_stencil_resolve_dst->info.format);
-                TAV_ASSERT(ds_info.is_depth_stencil_format);
+            for (uint32 i = 0; i < blit_data.size(); ++i) {
+                auto& blit_info = blit_data[i];
+                TAV_ASSERT(blit_info.dst->target == GL_TEXTURE_2D);
 
                 GL_CALL(glFramebufferTexture2D(
-                    GL_FRAMEBUFFER,
-                    ds_info.depth_stencil_attachment_type,
-                    depth_stencil_resolve_dst->target,
-                    depth_stencil_resolve_dst->texture_obj,
+                    GL_DRAW_FRAMEBUFFER,
+                    GL_COLOR_ATTACHMENT0,
+                    blit_info.dst->target,
+                    blit_info.dst->texture_obj,
                     0
                 ));
 
-                // Resolve depth/stencil attachment
+                // Resolve color attachments
+                GL_CALL(glReadBuffer(blit_info.gl_attachment_index));
                 GL_CALL(glBlitFramebuffer(
                     0, 0, fb->info.width, fb->info.height,
                     0, 0, fb->info.width, fb->info.height,
-                    depth_stencil_blit_mask,
-                    GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
+                    GL_COLOR_BUFFER_BIT,
+                    GL_NEAREST
                 ));
             }
-
-            GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
-            GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));
         }
 
+        // Check if need to resolve depth/stencil attachment
+        if (depth_stencil_blit_mask) {
+            TAV_ASSERT(depth_stencil_resolve_dst->target == GL_TEXTURE_2D);
+
+            auto ds_info = to_depth_stencil_format(depth_stencil_resolve_dst->info.format);
+            TAV_ASSERT(ds_info.is_depth_stencil_format);
+
+            GL_CALL(glFramebufferTexture2D(
+                GL_FRAMEBUFFER,
+                ds_info.depth_stencil_attachment_type,
+                depth_stencil_resolve_dst->target,
+                depth_stencil_resolve_dst->texture_obj,
+                0
+            ));
+
+            // Resolve depth/stencil attachment
+            GL_CALL(glBlitFramebuffer(
+                0, 0, fb->info.width, fb->info.height,
+                0, 0, fb->info.width, fb->info.height,
+                depth_stencil_blit_mask,
+                GL_NEAREST // For depth/stencil, filter must be GL_NEAREST
+            ));
+        }
+
+        GL_CALL(glBindFramebuffer(GL_DRAW_FRAMEBUFFER, 0));
+        GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, 0));
+
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
-        m_current_framebuffer = framebuffer_handle();
-        m_current_render_pass = render_pass_handle();
         GL_CALL(glBindVertexArray(0));
+        m_current_framebuffer = {};
     }
 
     void command_queue_opengl::set_viewport(const viewport_info& viewport)
@@ -1268,7 +1184,7 @@ namespace tavros::renderer::rhi
                 GL_CALL(glBindFramebuffer(GL_READ_FRAMEBUFFER, m_resolve_fbo));
 
                 GLenum read_attachment = GL_COLOR_ATTACHMENT0;
-                auto   ds_fmt = to_depth_stencil_fromat(tex->info.format);
+                auto   ds_fmt = to_depth_stencil_format(tex->info.format);
                 if (ds_fmt.is_depth_stencil_format) {
                     read_attachment = ds_fmt.depth_stencil_attachment_type;
                 }

@@ -95,7 +95,7 @@ namespace tavros::renderer::rhi
          * @param render_pass Render pass handle defining attachments and load/store operations.
          * @param framebuffer Framebuffer handle specifying color/depth targets.
          */
-        virtual void begin_render_pass(render_pass_handle render_pass, framebuffer_handle framebuffer) = 0;
+        virtual void begin_rendering(framebuffer_handle framebuffer) = 0;
 
         /**
          * @brief End the current render pass.
@@ -103,7 +103,7 @@ namespace tavros::renderer::rhi
          * Finalizes all rendering commands for the current pass.
          * After this call, draw commands are no longer valid until a new render pass begins.
          */
-        virtual void end_render_pass() = 0;
+        virtual void end_rendering() = 0;
 
         /**
          * @brief Sets the active viewport for subsequent rendering commands.

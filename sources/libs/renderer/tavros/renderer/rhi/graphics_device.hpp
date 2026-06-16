@@ -51,14 +51,6 @@ namespace tavros::renderer::rhi
         virtual void destroy_frame_composer(frame_composer_handle composer) = 0;
 
         /**
-         * @brief Returns creation parameters of a frame composer.
-         *
-         * @param composer Frame composer handle.
-         * @return Pointer to the creation info, or nullptr if the handle is invalid.
-         */
-        virtual const frame_composer_create_info* get_frame_composer_create_info(frame_composer_handle composer) const noexcept = 0;
-
-        /**
          * @brief Retrieve a pointer to a frame composer by its handle.
          *
          * @param composer Handle to the frame composer.
@@ -105,14 +97,6 @@ namespace tavros::renderer::rhi
         virtual void destroy_sampler(sampler_handle sampler) = 0;
 
         /**
-         * @brief Returns creation parameters of a sampler.
-         *
-         * @param sampler Sampler handle.
-         * @return Pointer to the creation info, or nullptr if the handle is invalid.
-         */
-        virtual const sampler_create_info* get_sampler_create_info(sampler_handle sampler) const noexcept = 0;
-
-        /**
          * @brief Create a texture resource.
          *
          * @param info Texture creation parameters.
@@ -126,14 +110,6 @@ namespace tavros::renderer::rhi
          * @param texture Handle to the texture to destroy.
          */
         virtual void destroy_texture(texture_handle texture) = 0;
-
-        /**
-         * @brief Returns creation parameters of a texture.
-         *
-         * @param texture Texture handle.
-         * @return Pointer to the creation info, or nullptr if the handle is invalid.
-         */
-        virtual const texture_create_info* get_texture_create_info(texture_handle texture) const noexcept = 0;
 
         /**
          * @brief Create a graphics pipeline.
@@ -151,14 +127,6 @@ namespace tavros::renderer::rhi
         virtual void destroy_pipeline(pipeline_handle pipeline) = 0;
 
         /**
-         * @brief Returns creation parameters of a pipeline.
-         *
-         * @param pipeline Pipeline handle.
-         * @return Pointer to the creation info, or nullptr if the handle is invalid.
-         */
-        virtual const pipeline_create_info* get_pipeline_create_info(pipeline_handle pipeline) const noexcept = 0;
-
-        /**
          * @brief Create a framebuffer for rendering output.
          *
          * @param info Framebuffer creation parameters.
@@ -174,14 +142,6 @@ namespace tavros::renderer::rhi
         virtual void destroy_framebuffer(framebuffer_handle framebuffer) = 0;
 
         /**
-         * @brief Returns creation parameters of a framebuffer.
-         *
-         * @param framebuffer Framebuffer handle.
-         * @return Pointer to the creation info, or nullptr if the handle is invalid.
-         */
-        virtual const framebuffer_create_info* get_framebuffer_create_info(framebuffer_handle framebuffer) const noexcept = 0;
-
-        /**
          * @brief Create a GPU buffer resource.
          *
          * @param info Buffer creation parameters.
@@ -195,37 +155,6 @@ namespace tavros::renderer::rhi
          * @param buffer Handle to the buffer to destroy.
          */
         virtual void destroy_buffer(buffer_handle buffer) = 0;
-
-        /**
-         * @brief Returns creation parameters of a buffer.
-         *
-         * @param buffer Buffer handle.
-         * @return Pointer to the creation info, or nullptr if the handle is invalid.
-         */
-        virtual const buffer_create_info* get_buffer_create_info(buffer_handle buffer) const noexcept = 0;
-
-        /**
-         * @brief Create a render pass.
-         *
-         * @param info Render pass creation parameters.
-         * @return Handle to the created render pass.
-         */
-        virtual render_pass_handle create_render_pass(const render_pass_create_info& info) = 0;
-
-        /**
-         * @brief Destroy a previously created render pass.
-         *
-         * @param render_pass Handle to the render pass to destroy.
-         */
-        virtual void destroy_render_pass(render_pass_handle render_pass) = 0;
-
-        /**
-         * @brief Returns creation parameters of a render pass.
-         *
-         * @param render_pass Render pass handle.
-         * @return Pointer to the creation info, or nullptr if the handle is invalid.
-         */
-        virtual const render_pass_create_info* get_render_pass_create_info(render_pass_handle render_pass) const noexcept = 0;
 
         /**
          * @brief Create a GPU fence object used for synchronization.
@@ -318,8 +247,6 @@ namespace tavros::renderer::rhi
                 destroy_framebuffer(h);
             } else if constexpr (std::is_same_v<T, buffer_handle>) {
                 destroy_buffer(h);
-            } else if constexpr (std::is_same_v<T, render_pass_handle>) {
-                destroy_render_pass(h);
             } else if constexpr (std::is_same_v<T, fence_handle>) {
                 destroy_fence(h);
             } else {

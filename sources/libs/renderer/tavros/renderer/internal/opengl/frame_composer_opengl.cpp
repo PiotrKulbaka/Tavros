@@ -40,6 +40,7 @@ namespace tavros::renderer::rhi
         : m_device(device)
         , m_context(std::move(context))
         , m_info(info)
+        , m_frame_number(0)
     {
         TAV_ASSERT(m_context);
         TAV_ASSERT(m_device);
@@ -52,12 +53,26 @@ namespace tavros::renderer::rhi
         framebuffer_create_info backbuffer_info;
         backbuffer_info.width = info.width;
         backbuffer_info.height = info.height;
-        backbuffer_info.has_depth_stencil_attachment = info.depth_stencil_attachment_format != pixel_format::none;
+        backbuffer_info.color_attachments.push_back({texture_handle{}, texture_handle{}, load_op::clear, store_op::store, {0.0f, 0.0f, 0.0f, 0.0f}});
+        backbuffer_info.depth_stencil_attachment.depth_load = load_op::clear;
+        backbuffer_info.depth_stencil_attachment.depth_store = store_op::store;
+        backbuffer_info.depth_stencil_attachment.depth_clear_value = 1.0f;
+        backbuffer_info.depth_stencil_attachment.stencil_load = load_op::clear;
+        backbuffer_info.depth_stencil_attachment.stencil_store = store_op::store;
+        backbuffer_info.depth_stencil_attachment.stencil_clear_value = 0;
         backbuffer_info.sample_count = 1; // For backbuffer, sample count must be 1
 
         m_internal_command_queue = core::make_unique<command_queue_opengl>(device);
 
-        m_backbuffer = m_device->get_resources()->create(gl_framebuffer{backbuffer_info, 0, true, info.color_attachment_format, info.depth_stencil_attachment_format});
+        gl_framebuffer gl_fb;
+        gl_fb.info = backbuffer_info;
+        gl_fb.framebuffer_obj = 0;
+        gl_fb.is_default = true;
+        gl_fb.color_attachment_formats.push_back(info.color_attachment_format);
+        gl_fb.depth_stencil_attachment_format = info.depth_stencil_attachment_format;
+
+        pixel_format color_formats[] = {info.color_attachment_format};
+        m_backbuffer = m_device->get_resources()->create(gl_framebuffer(gl_fb));
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
 
         m_fences[0] = m_device->create_fence();

@@ -72,7 +72,7 @@ namespace tavros::renderer::rhi
 
     bool is_color_format(pixel_format format);
 
-    gl_depth_stencil_format to_depth_stencil_fromat(pixel_format format);
+    gl_depth_stencil_format to_depth_stencil_format(pixel_format format);
 
     GLenum to_gl_wrap_mode(wrap_mode mode);
 
