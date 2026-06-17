@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/containers/static_vector.hpp>
+#include <tavros/core/containers/fixed_vector.hpp>
 #include <tavros/core/noncopyable.hpp>
 #include <tavros/core/debug/assert.hpp>
 #include <queue>
@@ -106,8 +106,8 @@ namespace tavros::core
         }
 
     private:
-        core::static_vector<std::thread, MaxThreads> m_workers;
-        std::queue<std::function<void()>>            m_tasks;
+        core::fixed_vector<std::thread, MaxThreads> m_workers;
+        std::queue<std::function<void()>>           m_tasks;
 
         mutable std::mutex      m_queue_mt;
         std::condition_variable m_cv;

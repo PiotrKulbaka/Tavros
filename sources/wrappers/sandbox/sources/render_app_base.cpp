@@ -1,5 +1,6 @@
 #include "render_app_base.hpp"
 
+#include <tavros/core/debug/profiler.hpp>
 #include <tavros/core/timer.hpp>
 
 namespace app
@@ -136,13 +137,14 @@ namespace app
 
     void render_app_base::render_thread_main()
     {
+        TAV_PROFILE_THREAD_NAME("RenderThread");
         init();
 
         tavros::core::timer tm;
-        tm.start();
         do {
+            TAV_PROFILE_SCOPE("ThreadTick");
             auto elapsed = tm.elapsed_seconds();
-            tm.start();
+            tm.restart();
             m_event_queue.swap_queues();
             auto events = m_event_queue.front_queue();
             render(events, elapsed);

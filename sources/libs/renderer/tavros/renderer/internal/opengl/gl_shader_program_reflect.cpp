@@ -28,13 +28,6 @@ namespace
         rhi::shader_resource_type type = rhi::shader_resource_type::sampler_2d;
     };
 
-    struct rhi_output_type_t
-    {
-        bool                  valid = false;
-        rhi::scalar_type      type = rhi::scalar_type::f32;
-        rhi::composite_format format = rhi::composite_format::vec4;
-    };
-
     // -----------------------------------------------------------------------
     //  GL type -> RHI opaque type
     // -----------------------------------------------------------------------
@@ -130,45 +123,38 @@ namespace
     // -----------------------------------------------------------------------
     //  GL type -> RHI output type
     // -----------------------------------------------------------------------
-    rhi_output_type_t to_rhi_output_type(GLenum type) noexcept
+    rhi::pixel_format to_rhi_output_pixel_type(GLenum type) noexcept
     {
-        using t = rhi::scalar_type;
-        using f = rhi::composite_format;
+        using pf = rhi::pixel_format;
+
         switch (type) {
         case GL_FLOAT:
-            return {true, t::f32, f::scalar};
-        case GL_INT:
-            return {true, t::i32, f::scalar};
-        case GL_UNSIGNED_INT:
-            return {true, t::u32, f::scalar};
-        case GL_DOUBLE:
-            return {true, t::f64, f::scalar};
+            return pf::r32f;
         case GL_FLOAT_VEC2:
-            return {true, t::f32, f::vec2};
+            return pf::rg32f;
         case GL_FLOAT_VEC3:
-            return {true, t::f32, f::vec3};
+            return pf::rgb32f;
         case GL_FLOAT_VEC4:
-            return {true, t::f32, f::vec4};
+            return pf::rgba32f;
+        case GL_INT:
+            return pf::r32i;
         case GL_INT_VEC2:
-            return {true, t::i32, f::vec2};
+            return pf::rg32i;
         case GL_INT_VEC3:
-            return {true, t::i32, f::vec3};
+            return pf::rgb32i;
         case GL_INT_VEC4:
-            return {true, t::i32, f::vec4};
+            return pf::rgba32i;
+        case GL_UNSIGNED_INT:
+            return pf::r32u;
         case GL_UNSIGNED_INT_VEC2:
-            return {true, t::u32, f::vec2};
+            return pf::rg32u;
         case GL_UNSIGNED_INT_VEC3:
-            return {true, t::u32, f::vec3};
+            return pf::rgb32u;
         case GL_UNSIGNED_INT_VEC4:
-            return {true, t::u32, f::vec4};
+            return pf::rgba32u;
         case GL_DOUBLE_VEC2:
-            return {true, t::f64, f::vec2};
-        case GL_DOUBLE_VEC3:
-            return {true, t::f64, f::vec3};
-        case GL_DOUBLE_VEC4:
-            return {true, t::f64, f::vec4};
         default:
-            return {false};
+            return pf::none;
         }
     }
 
@@ -597,11 +583,11 @@ namespace
                 continue;
             }
 
-            auto t = to_rhi_output_type(static_cast<GLenum>(vals[0]));
-            if (!t.valid) {
+            const auto fmt = to_rhi_output_pixel_type(static_cast<GLenum>(vals[0]));
+            if (rhi::pixel_format::none == fmt) {
                 logger.error(
                     "[outputs] Output '{}' has unsupported type (GL enum = 0x{:X}). "
-                    "Only float/int/uint scalar and vector types are valid fragment outputs.",
+                    "Only r32f, rg32f, rgb32f, rgba32f, r32i, rg32i, rgb32i, rgba32i, r32u, rg32u, rgb32u and rgba32u types are valid fragment outputs.",
                     name, static_cast<uint32>(vals[0])
                 );
                 success = false;
@@ -609,7 +595,16 @@ namespace
             }
 
             auto location = static_cast<uint32>(vals[2]);
-            out.push_back({{name.data(), static_cast<size_t>(len)}, t.format, t.type, location});
+            if (location >= rhi::k_max_color_attachments) {
+                logger.error(
+                    "[outputs] Output '{}' uses location {}, which exceeds the maximum supported color attachment count ({}).",
+                    name, location, rhi::k_max_color_attachments
+                );
+                success = false;
+                continue;
+            }
+
+            out.push_back({{name.data(), static_cast<size_t>(len)}, fmt, location});
         }
 
         // Sort by location for deterministic order

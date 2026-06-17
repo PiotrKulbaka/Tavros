@@ -19,12 +19,13 @@ namespace app
 
         // Camera
         tavros::math::vec3 camera_position;
+        float              _pad0 = 0.0f;
         float              near_plane;
 
         float far_plane;
         float aspect_ratio;
         float fov_y;
-        float _pad0 = 0.0f;
+        float _pad1 = 0.0f;
 
         // Frame
         tavros::math::vec2 frame_size;
@@ -33,7 +34,7 @@ namespace app
         float    time = 0.0f;
         float    delta_time = 0.0f;
         uint32_t frame_index = 0;
-        float    _pad1 = 0.0f;
+        float    _pad2 = 0.0f;
     };
 
     static_assert(sizeof(scene_data) % 16 == 0, "scene_data must be 16-byte aligned");

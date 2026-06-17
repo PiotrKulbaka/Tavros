@@ -23,7 +23,7 @@ namespace app
 
         virtual void render(tavros::input::event_args_queue_view events, double delta_time) = 0;
 
-    private:
+    protected:
         virtual void on_close(tavros::system::close_event_args& e) override;
         virtual void on_activate() override;
         virtual void on_deactivate() override;

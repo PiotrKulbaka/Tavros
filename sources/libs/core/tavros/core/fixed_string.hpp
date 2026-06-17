@@ -1151,7 +1151,7 @@ namespace tavros::core
 
     public:
         template<class... Args>
-        [[nodiscard]] size_type fprint(fmt::format_string<Args...> fmt, Args&&... args) noexcept
+        size_type fprint(fmt::format_string<Args...> fmt, Args&&... args) noexcept
         {
             auto*      dst = m_data + m_size;
             const auto available = static_cast<std::ptrdiff_t>(Capacity - 1) - static_cast<std::ptrdiff_t>(m_size);
@@ -1164,7 +1164,7 @@ namespace tavros::core
         }
 
         template<class... Args>
-        [[nodiscard]] size_t fprintln(fmt::format_string<Args...> fmt_str, Args&&... args) noexcept
+        size_type fprintln(fmt::format_string<Args...> fmt_str, Args&&... args) noexcept
         {
             auto*      dst = m_data + m_size;
             const auto available = static_cast<std::ptrdiff_t>(Capacity - 1) - static_cast<std::ptrdiff_t>(m_size);
@@ -1285,8 +1285,9 @@ namespace tavros::core
     template<size_t Capacity>
     using fixed_u32string = basic_fixed_string<Capacity, char32_t>;
 
-    using string64 = fixed_string<64>;
-    using string256 = fixed_string<256>;
+    using short_string = fixed_string<63>;   // 64 B
+    using medium_string = fixed_string<255>; // 256 B
+    using long_string = fixed_string<256>;   // 1024 B
 
     inline constexpr size_t k_fixed_path_size = 256;
     using fixed_path = core::fixed_string<k_fixed_path_size>;

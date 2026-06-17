@@ -844,14 +844,32 @@ namespace tavros::renderer::rhi
         // Validate attributes
 
         // Map attributes to location index, for fast search
-        tavros::core::unordered_map<uint32, vertex_attribute> mapped_attributes; // TODO: remove std::unordered_map
+        struct va_map_t
+        {
+            bool has_attrib = false;
+            vertex_attribute attrib;
+        };
+        va_map_t mapped_attributes[k_max_vertex_attributes];
+
         for (const auto& attr : info.bindings) {
-            auto it = mapped_attributes.find(attr.location);
-            if (it != mapped_attributes.end()) {
-                ::logger.error("Failed to create pipeline: attribute location {} is used multiple times", fmt::styled_param(attr.location));
+            if (attr.location >= k_max_vertex_attributes) {
+                ::logger.error(
+                    "Failed to create pipeline: vertex attribute location {} exceeds maximum allowed ({})",
+                    fmt::styled_param(attr.location),
+                    fmt::styled_param(k_max_vertex_attributes)
+                );
                 return {};
             }
-            mapped_attributes[attr.location] = attr;
+            auto& it = mapped_attributes[attr.location];
+            if (it.has_attrib) {
+                ::logger.error(
+                    "Failed to create pipeline: vertex attribute location {} is used multiple times",
+                    fmt::styled_param(attr.location)
+                );
+                return {};
+            }
+            it.has_attrib = true;
+            it.attrib = attr;
         }
 
         auto prog = p->prog_obj;
@@ -884,8 +902,18 @@ namespace tavros::renderer::rhi
             }
 
             // Check attribute location
-            auto it = mapped_attributes.find(static_cast<uint32>(gl_attrib_location));
-            if (it == mapped_attributes.end()) {
+            auto location = static_cast<uint32>(gl_attrib_location);
+            if (location >= k_max_vertex_attributes) {
+                ::logger.error(
+                    "Failed to create pipeline: vertex attribute location {} exceeds maximum allowed ({})",
+                    fmt::styled_param(location),
+                    fmt::styled_param(k_max_vertex_attributes)
+                );
+                return {};
+            }
+
+            const auto& it = mapped_attributes[location];
+            if (!it.has_attrib) {
                 ::logger.error(
                     "Failed to create pipeline: attribute location {} not found in provided attributes",
                     fmt::styled_param(gl_attrib_location)
@@ -894,7 +922,7 @@ namespace tavros::renderer::rhi
             }
 
             // Check attribute type and format
-            if (it->second.type != shader_type.type || it->second.format != shader_type.format) {
+            if (it.attrib.type != shader_type.type || it.attrib.format != shader_type.format) {
                 ::logger.error(
                     "Failed to create pipeline: attribute {} at location {} has mismatched type/format. "
                     "Shader type/format = {}/{}, expected type/format = {}/{}",
@@ -902,8 +930,8 @@ namespace tavros::renderer::rhi
                     fmt::styled_param(gl_attrib_location),
                     shader_type.type,
                     shader_type.format,
-                    it->second.type,
-                    it->second.format
+                    it.attrib.type,
+                    it.attrib.format
                 );
                 return {};
             }
@@ -917,7 +945,6 @@ namespace tavros::renderer::rhi
                 fmt::styled_param(info.bindings.size()),
                 fmt::styled_param(total_gl_attributes)
             );
-            // return {};
         }
 
         // Create VAO

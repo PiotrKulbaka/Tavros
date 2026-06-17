@@ -901,12 +901,11 @@ namespace tavros::renderer
     {
         static const rhi::blend_state bs{true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
 
-        auto create_simple_geom_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
+        auto create_simple_geom_pipeline = [](rhi::graphics_device* d, rhi::shader_handle sh, bool z_test, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
             rhi::pipeline_create_info info;
-            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 0, sizeof(xyz_sz_cl_t), offsetof(xyz_sz_cl_t, xyz_sz_cl_t::pos), 0});
-            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 1, sizeof(xyz_sz_cl_t), offsetof(xyz_sz_cl_t, xyz_sz_cl_t::color), 0});
-            info.shaders.push_back(vs);
-            info.shaders.push_back(fs);
+            info.bindings.push_back({rhi::composite_format::vec4, rhi::scalar_type::f32, false, 0, sizeof(xyz_sz_cl_t), offsetof(xyz_sz_cl_t, xyz_sz_cl_t::pos), 0});
+            info.bindings.push_back({rhi::composite_format::vec4, rhi::scalar_type::f32, false, 1, sizeof(xyz_sz_cl_t), offsetof(xyz_sz_cl_t, xyz_sz_cl_t::color), 0});
+            info.shader_program = sh;
             info.depth_stencil_attachment.format = rhi::pixel_format::depth32f;
             info.depth_stencil_attachment.depth_test_enable = z_test;
             info.depth_stencil_attachment.depth_write_enable = z_test;
@@ -919,15 +918,14 @@ namespace tavros::renderer
             return d->create_pipeline(info);
         };
 
-        auto create_instanced_geom_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, bool z_write, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
+        auto create_instanced_geom_pipeline = [](rhi::graphics_device* d, rhi::shader_handle sh, bool z_test, bool z_write, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
             tavros::renderer::rhi::pipeline_create_info info;
-            info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 0, sizeof(xyz_norm_t), offsetof(xyz_norm_t, xyz_norm_t::pos), 0});
-            info.bindings.push_back({rhi::attribute_type::vec3, rhi::attribute_format::f32, false, 1, sizeof(xyz_norm_t), offsetof(xyz_norm_t, xyz_norm_t::norm), 0});
-            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::color), 1});
-            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::uv1_uv2), 1});
-            info.bindings.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
-            info.shaders.push_back(vs);
-            info.shaders.push_back(fs);
+            info.bindings.push_back({rhi::composite_format::vec3, rhi::scalar_type::f32, false, 0, sizeof(xyz_norm_t), offsetof(xyz_norm_t, xyz_norm_t::pos), 0});
+            info.bindings.push_back({rhi::composite_format::vec3, rhi::scalar_type::f32, false, 1, sizeof(xyz_norm_t), offsetof(xyz_norm_t, xyz_norm_t::norm), 0});
+            info.bindings.push_back({rhi::composite_format::vec4, rhi::scalar_type::f32, false, 2, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::color), 1});
+            info.bindings.push_back({rhi::composite_format::vec4, rhi::scalar_type::f32, false, 3, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::uv1_uv2), 1});
+            info.bindings.push_back({rhi::composite_format::mat4, rhi::scalar_type::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
+            info.shader_program = sh;
             info.depth_stencil_attachment.format = rhi::pixel_format::depth32f;
             info.depth_stencil_attachment.depth_test_enable = z_test;
             info.depth_stencil_attachment.depth_write_enable = z_write;
@@ -940,13 +938,12 @@ namespace tavros::renderer
             return d->create_pipeline(info);
         };
 
-        auto create_instanced_text_pipeline = [](rhi::graphics_device* d, rhi::shader_handle vs, rhi::shader_handle fs, bool z_test, bool z_write, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
+        auto create_instanced_text_pipeline = [](rhi::graphics_device* d, rhi::shader_handle sh, bool z_test, bool z_write, rhi::cull_face cull, rhi::polygon_mode r_mode, rhi::primitive_topology r_topo) {
             tavros::renderer::rhi::pipeline_create_info info;
-            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 2, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::color), 1});
-            info.bindings.push_back({rhi::attribute_type::vec4, rhi::attribute_format::f32, false, 3, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::uv1_uv2), 1});
-            info.bindings.push_back({rhi::attribute_type::mat4, rhi::attribute_format::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
-            info.shaders.push_back(vs);
-            info.shaders.push_back(fs);
+            info.bindings.push_back({rhi::composite_format::vec4, rhi::scalar_type::f32, false, 2, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::color), 1});
+            info.bindings.push_back({rhi::composite_format::vec4, rhi::scalar_type::f32, false, 3, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::uv1_uv2), 1});
+            info.bindings.push_back({rhi::composite_format::mat4, rhi::scalar_type::f32, false, 4, sizeof(instance_data_t), offsetof(instance_data_t, instance_data_t::model), 1});
+            info.shader_program = sh;
             info.depth_stencil_attachment.format = rhi::pixel_format::depth32f;
             info.depth_stencil_attachment.depth_test_enable = z_test;
             info.depth_stencil_attachment.depth_write_enable = z_write;
@@ -960,40 +957,39 @@ namespace tavros::renderer
         };
 
         {
-            auto vsh = core::make_scoped_owner(m_gdevice->create_shader({simple_geom_vert_shsrc, rhi::shader_stage::vertex, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
-            auto fsh = core::make_scoped_owner(m_gdevice->create_shader({simple_geom_frag_shsrc, rhi::shader_stage::fragment, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
+            auto sh = m_gdevice->create_shader({simple_geom_vert_shsrc, simple_geom_frag_shsrc});
 
-            m_points2d_pipeline = create_simple_geom_pipeline(m_gdevice, *vsh, *fsh, false, rhi::cull_face::off, rhi::polygon_mode::points, rhi::primitive_topology::points);
+            m_points2d_pipeline = create_simple_geom_pipeline(m_gdevice, sh, false, rhi::cull_face::off, rhi::polygon_mode::points, rhi::primitive_topology::points);
             if (!m_points2d_pipeline) {
                 ::logger.error("Failed to create pipeline for 2d points");
                 return false;
             }
 
-            m_lines2d_pipeline = create_simple_geom_pipeline(m_gdevice, *vsh, *fsh, false, rhi::cull_face::off, rhi::polygon_mode::lines, rhi::primitive_topology::lines);
+            m_lines2d_pipeline = create_simple_geom_pipeline(m_gdevice, sh, false, rhi::cull_face::off, rhi::polygon_mode::lines, rhi::primitive_topology::lines);
             if (!m_lines2d_pipeline) {
                 ::logger.error("Failed to create pipeline for 2d lines");
                 return false;
             }
 
-            m_tris2d_pipeline = create_simple_geom_pipeline(m_gdevice, *vsh, *fsh, false, rhi::cull_face::off, rhi::polygon_mode::fill, rhi::primitive_topology::triangles);
+            m_tris2d_pipeline = create_simple_geom_pipeline(m_gdevice, sh, false, rhi::cull_face::off, rhi::polygon_mode::fill, rhi::primitive_topology::triangles);
             if (!m_tris2d_pipeline) {
                 ::logger.error("Failed to create pipeline for 2d triangles");
                 return false;
             }
 
-            m_points3d_pipeline = create_simple_geom_pipeline(m_gdevice, *vsh, *fsh, true, rhi::cull_face::off, rhi::polygon_mode::points, rhi::primitive_topology::points);
+            m_points3d_pipeline = create_simple_geom_pipeline(m_gdevice, sh, true, rhi::cull_face::off, rhi::polygon_mode::points, rhi::primitive_topology::points);
             if (!m_points3d_pipeline) {
                 ::logger.error("Failed to create pipeline for 3d points");
                 return false;
             }
 
-            m_lines3d_pipeline = create_simple_geom_pipeline(m_gdevice, *vsh, *fsh, true, rhi::cull_face::off, rhi::polygon_mode::lines, rhi::primitive_topology::lines);
+            m_lines3d_pipeline = create_simple_geom_pipeline(m_gdevice, sh, true, rhi::cull_face::off, rhi::polygon_mode::lines, rhi::primitive_topology::lines);
             if (!m_lines3d_pipeline) {
                 ::logger.error("Failed to create pipeline for 3d lines");
                 return false;
             }
 
-            m_tris3d_pipeline = create_simple_geom_pipeline(m_gdevice, *vsh, *fsh, true, rhi::cull_face::back, rhi::polygon_mode::fill, rhi::primitive_topology::triangles);
+            m_tris3d_pipeline = create_simple_geom_pipeline(m_gdevice, sh, true, rhi::cull_face::back, rhi::polygon_mode::fill, rhi::primitive_topology::triangles);
             if (!m_tris3d_pipeline) {
                 ::logger.error("Failed to create pipeline for 3d triangles");
                 return false;
@@ -1001,16 +997,15 @@ namespace tavros::renderer
         }
 
         {
-            auto vsh = core::make_scoped_owner(m_gdevice->create_shader({inst_geom_vert_shsrc, rhi::shader_stage::vertex, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
-            auto fsh = core::make_scoped_owner(m_gdevice->create_shader({inst_geom_frag_shsrc, rhi::shader_stage::fragment, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
+            auto sh = m_gdevice->create_shader({inst_geom_vert_shsrc, inst_geom_frag_shsrc});
 
-            m_inst_mesh_pipeline = create_instanced_geom_pipeline(m_gdevice, *vsh, *fsh, true, true, rhi::cull_face::back, rhi::polygon_mode::fill, rhi::primitive_topology::triangles);
+            m_inst_mesh_pipeline = create_instanced_geom_pipeline(m_gdevice, sh, true, true, rhi::cull_face::back, rhi::polygon_mode::fill, rhi::primitive_topology::triangles);
             if (!m_inst_mesh_pipeline) {
                 ::logger.error("Failed to create instanced mesh pipeline");
                 return false;
             }
 
-            m_inst_wireframe_mesh_pipeline = create_instanced_geom_pipeline(m_gdevice, *vsh, *fsh, false, false, rhi::cull_face::off, rhi::polygon_mode::lines, rhi::primitive_topology::triangles);
+            m_inst_wireframe_mesh_pipeline = create_instanced_geom_pipeline(m_gdevice, sh, false, false, rhi::cull_face::off, rhi::polygon_mode::lines, rhi::primitive_topology::triangles);
             if (!m_inst_wireframe_mesh_pipeline) {
                 ::logger.error("Failed to create wireframe instanced mesh pipeline");
                 return false;
@@ -1018,10 +1013,9 @@ namespace tavros::renderer
         }
 
         {
-            auto vsh = core::make_scoped_owner(m_gdevice->create_shader({inst_text_vert_shsrc, rhi::shader_stage::vertex, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
-            auto fsh = core::make_scoped_owner(m_gdevice->create_shader({inst_text_frag_shsrc, rhi::shader_stage::fragment, "main"}), [&](auto sh) { m_gdevice->destroy_shader(sh); });
+            auto sh = m_gdevice->create_shader({inst_text_vert_shsrc, inst_text_frag_shsrc});
 
-            m_text2d_pipeline = create_instanced_text_pipeline(m_gdevice, *vsh, *fsh, false, false, rhi::cull_face::off, rhi::polygon_mode::fill, rhi::primitive_topology::triangle_strip);
+            m_text2d_pipeline = create_instanced_text_pipeline(m_gdevice, sh, false, false, rhi::cull_face::off, rhi::polygon_mode::fill, rhi::primitive_topology::triangle_strip);
             if (!m_text2d_pipeline) {
                 ::logger.error("Failed to create pipeline for 2d text");
                 return false;

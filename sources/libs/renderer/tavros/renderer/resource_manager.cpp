@@ -1,13 +1,35 @@
 #include <tavros/renderer/resource_manager.hpp>
 
+namespace
+{
+    class fs_shader_provider : public tavros::renderer::shader_source_provider
+    {
+    public:
+        explicit fs_shader_provider(tavros::core::shared_ptr<tavros::assets::asset_manager> am)
+            : m_am(std::move(am))
+        {
+        }
+
+        tavros::core::string load(tavros::core::string_view path) override
+        {
+            return m_am->read_text(path);
+        }
+
+    private:
+        tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
+    };
+} // namespace
+
 namespace tavros::renderer
 {
 
     resource_manager::resource_manager(rhi::graphics_device* gdevice, core::shared_ptr<assets::asset_manager> am) noexcept
         : m_gdevice(gdevice)
         , m_am(std::move(am))
+        , m_sl(tavros::core::make_unique<fs_shader_provider>(am))
         , m_tex_reg(this)
         , m_rt_reg(this)
+        , m_mt_reg(this)
     {
     }
 
@@ -19,6 +41,16 @@ namespace tavros::renderer
     const assets::asset_manager& resource_manager::asset_manager() const noexcept
     {
         return *m_am;
+    }
+
+    renderer::shader_loader& resource_manager::shader_loader() noexcept
+    {
+        return m_sl;
+    }
+
+    const renderer::shader_loader& resource_manager::shader_loader() const noexcept
+    {
+        return m_sl;
     }
 
     texture_handle resource_manager::load_texture(gpu_stage_buffer& stage, rhi::command_queue& cmd, core::string_view path, const texture_registry::load_params& params)
@@ -78,12 +110,12 @@ namespace tavros::renderer
 
     render_target* resource_manager::find(render_target_handle h) noexcept
     {
-        return m_rt_reg.find(h);
+        return &(m_rt_reg.find(h)->second);
     }
 
     const render_target* resource_manager::find(render_target_handle h) const noexcept
     {
-        return m_rt_reg.find(h);
+        return &(m_rt_reg.find(h)->second);
     }
 
     render_target_registry& resource_manager::render_targets() noexcept

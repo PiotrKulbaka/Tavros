@@ -14,9 +14,11 @@ namespace tavros::renderer
 
     class resource_manager;
 
+    using rt_resource = std::pair<render_target_desc, render_target>;
+
     /**
      */
-    class render_target_registry : public core::resource_registry<render_target, render_target_tag, render_target_registry>
+    class render_target_registry : public core::resource_registry<rt_resource, render_target_tag, render_target_registry>
     {
     public:
         /**
@@ -33,7 +35,7 @@ namespace tavros::renderer
         handle_type create(core::string_view rt_name, const render_target_desc& desc);
 
     public:
-        void release_resource(render_target& tex_view) noexcept
+        void release_resource(rt_resource& tex_view) noexcept
         {
         }
 

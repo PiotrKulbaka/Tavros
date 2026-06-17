@@ -14,6 +14,7 @@ namespace app::pipeline_builder
     inline rhi::depth_stencil_state depth_test_rw() noexcept
     {
         rhi::depth_stencil_state s;
+        s.format = rhi::pixel_format::depth32f;
         s.depth_test_enable = true;
         s.depth_write_enable = true;
         s.depth_compare = rhi::compare_op::less;
@@ -23,6 +24,7 @@ namespace app::pipeline_builder
     inline rhi::depth_stencil_state depth_test_ro() noexcept
     {
         rhi::depth_stencil_state s;
+        s.format = rhi::pixel_format::depth32f;
         s.depth_test_enable = true;
         s.depth_write_enable = false;
         s.depth_compare = rhi::compare_op::less;
@@ -32,7 +34,28 @@ namespace app::pipeline_builder
     inline rhi::depth_stencil_state depth_off() noexcept
     {
         rhi::depth_stencil_state s;
+        s.format = rhi::pixel_format::none;
         s.depth_test_enable = false;
+        s.depth_write_enable = false;
+        return s;
+    }
+
+    inline rhi::depth_stencil_state depth_on_write_off() noexcept
+    {
+        rhi::depth_stencil_state s;
+        s.format = rhi::pixel_format::depth32f;
+        s.depth_test_enable = true;
+        s.depth_write_enable = false;
+        s.depth_compare = rhi::compare_op::less;
+        return s;
+    }
+
+    inline rhi::depth_stencil_state depth_test_leq() noexcept
+    {
+        rhi::depth_stencil_state s;
+        s.format = rhi::pixel_format::depth32f;
+        s.depth_compare = rhi::compare_op::less_equal;
+        s.depth_test_enable = true;
         s.depth_write_enable = false;
         return s;
     }
@@ -44,19 +67,19 @@ namespace app::pipeline_builder
     /// Standard alpha blending.
     inline rhi::blend_state alpha_blend() noexcept
     {
-        return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask};
+        return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
     }
 
     /// Additive blending (fire/glow effects).
     inline rhi::blend_state additive_blend() noexcept
     {
-        return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one, rhi::blend_op::add, rhi::k_rgba_color_mask};
+        return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one, rhi::blend_op::add};
     }
 
     /// No blending.
     inline rhi::blend_state no_blend() noexcept
     {
-        return {false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::k_rgba_color_mask};
+        return {false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
     }
 
     // -------------------------------------------------------------------------

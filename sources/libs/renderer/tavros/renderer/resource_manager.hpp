@@ -2,11 +2,13 @@
 
 #include <tavros/renderer/texture/texture_registry.hpp>
 #include <tavros/renderer/render_target/render_target_registry.hpp>
+#include <tavros/renderer/material/material_registry.hpp>
+#include <tavros/renderer/shaders/shader_loader.hpp>
 
 namespace tavros::renderer
 {
 
-    class resource_manager : core::noncopyable
+    class resource_manager : core::noncopyable, core::nonmovable
     {
     public:
         explicit resource_manager(rhi::graphics_device* gdevice, core::shared_ptr<assets::asset_manager> am) noexcept;
@@ -53,14 +55,21 @@ namespace tavros::renderer
 
         const assets::asset_manager& asset_manager() const noexcept;
 
+        renderer::shader_loader& shader_loader() noexcept;
+
+        const renderer::shader_loader& shader_loader() const noexcept;
+
         rhi::graphics_device* graphics_device() noexcept;
 
     private:
         rhi::graphics_device*                   m_gdevice = nullptr;
         core::shared_ptr<assets::asset_manager> m_am;
 
+        renderer::shader_loader m_sl;
+
         texture_registry       m_tex_reg;
         render_target_registry m_rt_reg;
+        material_registry      m_mt_reg;
     };
 
 } // namespace tavros::renderer

@@ -8,14 +8,13 @@
 
 namespace
 {
-    tavros::core::logger logger("render_target_factory");
+    tavros::core::logger logger("render_target_desc");
 
     using diagnostics = tavros::core::diagnostics;
     using color_attachment_config = tavros::renderer::render_target_desc::color_attachment_config;
     using color_attachments_config = tavros::renderer::render_target_desc::color_attachments_config;
     using depth_attachment_config = tavros::renderer::render_target_desc::depth_attachment_config;
     using stencil_attachment_config = tavros::renderer::render_target_desc::stencil_attachment_config;
-    using multisample_config = tavros::renderer::render_target_desc::multisample_config;
     using render_target_desc = tavros::renderer::render_target_desc;
 
     std::optional<tavros::renderer::rhi::load_op> to_load_op(tavros::core::string_view sv) noexcept
@@ -148,24 +147,9 @@ namespace tavros::tef
         }
 
         uint32 components = 0;
-        if (auto fmt = read_required_enum(n, "format", to_color_format, "color format", ds)) {
-            result.format = *fmt;
-            components = color_format_components_number(*fmt);
-        } else {
-            valid = false;
-        }
-
-        if (auto op = read_enum(n, "load", renderer::rhi::load_op::clear, to_load_op, "load operation", ds)) {
-            result.load = *op;
-        } else {
-            valid = false;
-        }
-
-        if (auto op = read_enum(n, "store", renderer::rhi::store_op::store, to_store_op, "store operation", ds)) {
-            result.store = *op;
-        } else {
-            valid = false;
-        }
+        valid &= read_required_enum(n, "format", to_color_format, result.format, "color format", ds);
+        valid &= read_enum(n, "load", renderer::rhi::load_op::clear, to_load_op, result.load, "load operation", ds);
+        valid &= read_enum(n, "store", renderer::rhi::store_op::store, to_store_op, result.store, "store operation", ds);
 
         // clear - by default clear value is 0.0 0.0 0.0 0.0
         result.clear_value[0] = result.clear_value[1] = result.clear_value[2] = result.clear_value[3] = 0.0f;
@@ -206,32 +190,13 @@ namespace tavros::tef
         }
 
         depth_attachment_config result;
-        bool                    valid = true;
 
-        if (auto fmt = read_required_enum(n, "format", to_depth_format, "depth format", ds)) {
-            result.format = *fmt;
-        } else {
-            valid = false;
-        }
-
-        if (auto op = read_enum(n, "load", renderer::rhi::load_op::clear, to_load_op, "load operation", ds)) {
-            result.load = *op;
-        } else {
-            valid = false;
-        }
-
-        if (auto op = read_enum(n, "store", renderer::rhi::store_op::dont_care, to_store_op, "store operation", ds)) {
-            result.store = *op;
-        } else {
-            valid = false;
-        }
+        bool valid = read_required_enum(n, "format", to_depth_format, result.format, "depth format", ds);
+        valid &= read_enum(n, "load", renderer::rhi::load_op::clear, to_load_op, result.load, "load operation", ds);
+        valid &= read_enum(n, "store", renderer::rhi::store_op::dont_care, to_store_op, result.store, "store operation", ds);
 
         constexpr auto is_number = [](const node* n) noexcept { return n->is_number(); };
-        if (auto val = read_clamped<float>(n, "clear", 1.0f, 0.0f, 1.0f, is_number, "numeric value", ds)) {
-            result.clear_value = *val;
-        } else {
-            valid = false;
-        }
+        valid &= read_clamped<float>(n, "clear", 1.0f, 0.0f, 1.0f, result.clear_value, is_number, "numeric value", ds);
 
         return valid ? std::optional{result} : std::nullopt;
     }
@@ -251,74 +216,15 @@ namespace tavros::tef
         }
 
         stencil_attachment_config result;
-        bool                      valid = true;
 
-        if (auto fmt = read_required_enum(n, "format", to_stencil_format, "stencil format", ds)) {
-            result.format = *fmt;
-        } else {
-            valid = false;
-        }
-
-        if (auto op = read_enum(n, "load", renderer::rhi::load_op::clear, to_load_op, "load operation", ds)) {
-            result.load = *op;
-        } else {
-            valid = false;
-        }
-
-        if (auto op = read_enum(n, "store", renderer::rhi::store_op::dont_care, to_store_op, "store operation", ds)) {
-            result.store = *op;
-        } else {
-            valid = false;
-        }
+        bool valid = read_required_enum(n, "format", to_stencil_format, result.format, "stencil format", ds);
+        valid &= read_enum(n, "load", renderer::rhi::load_op::clear, to_load_op, result.load, "load operation", ds);
+        valid &= read_enum(n, "store", renderer::rhi::store_op::dont_care, to_store_op, result.store, "store operation", ds);
 
         constexpr auto is_integer = [](const node* n) noexcept { return n->is_integer(); };
-        if (auto val = read_clamped<uint64>(n, "clear", uint64{0}, uint64{0}, uint64{255}, is_integer, "integer value", ds)) {
-            result.clear_value = static_cast<uint32>(*val);
-        } else {
-            valid = false;
-        }
+        valid &= read_clamped<uint32>(n, "clear", uint32{0}, uint32{0}, uint32{255}, result.clear_value, is_integer, "integer value", ds);
 
         return valid ? std::optional{result} : std::nullopt;
-    }
-
-
-    std::optional<multisample_config> parse_multisample(const node* n, diagnostics& ds)
-    {
-        if (!n) {
-            return multisample_config{1};
-        }
-
-        TAV_ASSERT(n->key() == "multisample");
-
-        if (!n->is_container()) {
-            ds.error("Multisample settings at '{}' must be an object.", n->path());
-            return std::nullopt;
-        }
-
-        multisample_config result;
-        if (const auto* sc = n->resolve_path("sample_count")) {
-            if (!sc->is_integer()) {
-                ds.error("Invalid value at '{}'. Expected an integer sample count.", sc->path());
-                return std::nullopt;
-            }
-            auto            val = sc->value_or<int64>(1);
-            constexpr int64 valid_counts[] = {1, 2, 4, 8, 16, 32};
-            bool            found = false;
-            for (auto c : valid_counts) {
-                if (val == c) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                ds.error("Invalid value {} at '{}'. Expected one of: 1, 2, 4, 8, 16, 32.", val, sc->path());
-                return std::nullopt;
-            }
-            warn_if_extra_values(sc, 1, ds);
-            result.sample_count = static_cast<uint32>(val);
-        }
-
-        return result;
     }
 
     std::optional<render_target_desc> parse_render_target_config(const node* n, diagnostics& ds)
@@ -331,7 +237,6 @@ namespace tavros::tef
         color_attachments_config  ca;
         depth_attachment_config   da;
         stencil_attachment_config sa;
-        multisample_config        msaa;
         bool                      valid = true;
 
         // color attachments - optional, but if not specified, depth or/and stencil attachments must be provided
@@ -373,14 +278,6 @@ namespace tavros::tef
             valid = false;
         }
 
-
-        // multisample - optional, if not specified, sample count is 1 (no multisampling)
-        if (auto multisample = parse_multisample(n->resolve_path("multisample"), ds)) {
-            msaa = *multisample;
-        } else {
-            valid = false;
-        }
-
         // Final validation: if no color attachments, depth or stencil attachment must be provided
         if (ca.empty() && da.format == tavros::renderer::rhi::pixel_format::none && sa.format == tavros::renderer::rhi::pixel_format::none) {
             ds.error("Invalid render target configuration at '{}'. At least one color, depth, or stencil attachment must be defined.", n->path());
@@ -388,7 +285,7 @@ namespace tavros::tef
         }
 
         if (valid) {
-            return render_target_desc(n->path(), ca, da, sa, msaa);
+            return render_target_desc(n->path(), ca, da, sa);
         }
         return std::nullopt;
     }

@@ -46,10 +46,9 @@ namespace tavros::renderer::rhi
         /**
          * @brief Bind an index buffer to the current command context.
          *
-         * @param buffer Index buffer handle to bind.
-         * @param format Format of indices stored in the buffer (e.g. uint16, uint32).
+         * @param info Index buffer information to bind.
          */
-        virtual void bind_index_buffer(buffer_handle buffer, index_buffer_format format) = 0;
+        virtual void bind_index_buffer(const bind_index_buffer_info& info) = 0;
 
         /**
          * @brief Binds one or more shader buffer resources for use in subsequent draw calls.
@@ -92,8 +91,7 @@ namespace tavros::renderer::rhi
          * Starts rendering into the given framebuffer using the specified render pass.
          * Must be called before issuing any draw calls.
          *
-         * @param render_pass Render pass handle defining attachments and load/store operations.
-         * @param framebuffer Framebuffer handle specifying color/depth targets.
+         * @param framebuffer Framebuffer handle specifying color/depth targets and load/store operations.
          */
         virtual void begin_rendering(framebuffer_handle framebuffer) = 0;
 

@@ -17,7 +17,7 @@ namespace tavros::renderer::rhi
 
         void bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers) override;
 
-        void bind_index_buffer(buffer_handle buffer, index_buffer_format format) override;
+        void bind_index_buffer(const bind_index_buffer_info& info) override;
 
         void bind_shader_buffers(core::buffer_view<buffer_binding> buffers) override;
 

@@ -39,11 +39,6 @@ namespace tavros::renderer
             uint32            clear_value = 0;
         };
 
-        struct multisample_config
-        {
-            uint32 sample_count = 1;
-        };
-
     public:
         render_target_desc() noexcept
             : resource_desc_base("")
@@ -55,14 +50,12 @@ namespace tavros::renderer
             core::string_view                rt_name,
             const color_attachments_config&  ca,
             const depth_attachment_config&   da,
-            const stencil_attachment_config& sa,
-            const multisample_config&        msaa
+            const stencil_attachment_config& sa
         ) noexcept
             : resource_desc_base(rt_name)
             , m_color_configs(ca)
             , m_depth_config(da)
             , m_stencil_config(sa)
-            , m_multisample_config(msaa)
         {
             m_hash_cache = std::hash<core::string_view>{}(name());
         }
@@ -82,11 +75,6 @@ namespace tavros::renderer
         const stencil_attachment_config& stencil_attachment() const noexcept
         {
             return m_stencil_config;
-        }
-
-        const multisample_config& multisample() const noexcept
-        {
-            return m_multisample_config;
         }
 
     public:
@@ -109,11 +97,6 @@ namespace tavros::renderer
                 }
             }
 
-            const uint32 sc = m_multisample_config.sample_count;
-            if (!(sc == 1 || sc == 2 || sc == 4 || sc == 8 || sc == 16 || sc == 32)) {
-                return false;
-            }
-
             return true;
         }
 
@@ -131,7 +114,6 @@ namespace tavros::renderer
         color_attachments_config  m_color_configs;
         depth_attachment_config   m_depth_config;
         stencil_attachment_config m_stencil_config;
-        multisample_config        m_multisample_config;
         size_t                    m_hash_cache = 0;
     };
 

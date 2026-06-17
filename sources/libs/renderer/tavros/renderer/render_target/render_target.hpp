@@ -26,9 +26,9 @@ namespace tavros::renderer
      * rt.resize(1920, 1080, 4);
      *
      * // render loop
-     * cmd.begin_render_pass(rt.render_pass(), rt.framebuffer());
+     * cmd.begin_rendering(rt.framebuffer());
      * // ...
-     * cmd.end_render_pass();
+     * cmd.end_rendering();
      *
      * // use result
      * auto color = rt.color_attachment(0);
@@ -61,7 +61,7 @@ namespace tavros::renderer
          * @param height  Render target height in pixels. Must be > 0.
          * @param msaa    Sample count. Pass 1 to disable MSAA.
          */
-        void resize(uint32 width, uint32 height, uint32 max_msaa = 0);
+        void resize(uint32 width, uint32 height, uint32 msaa = 1);
 
         /**
          * @brief Returns the number of color attachments.
@@ -100,21 +100,11 @@ namespace tavros::renderer
          * @brief Returns the framebuffer handle.
          *
          * The framebuffer references the multisample source textures (when MSAA is enabled).
-         * Pass to begin_render_pass() together with render_pass().
+         * Pass to begin_rendering().
          *
          * @pre  m_is_created == true
          */
         rhi::framebuffer_handle framebuffer() const;
-
-        /**
-         * @brief Returns the render pass handle.
-         *
-         * Encodes load/store/resolve operations for all attachments.
-         * Compatible with the framebuffer returned by framebuffer().
-         *
-         * @pre  m_is_created == true
-         */
-        rhi::render_pass_handle render_pass() const;
 
     private:
         void destroy_all();
@@ -122,8 +112,6 @@ namespace tavros::renderer
         rhi::framebuffer_handle create_fb(uint32 width, uint32 height);
 
         rhi::texture_handle create_texture(uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa);
-
-        rhi::render_pass_handle create_rp();
 
     private:
         using color_attachment_config = render_target_desc::color_attachment_config;
@@ -133,7 +121,6 @@ namespace tavros::renderer
         template<class T>
         using vector_t = core::fixed_vector<T, rhi::k_max_color_attachments>;
 
-        uint32 m_required_msaa;
         uint32 m_current_msaa;
 
         rhi::graphics_device* m_gdevice;            // Non-owning pointer to the graphics
@@ -148,7 +135,6 @@ namespace tavros::renderer
         rhi::texture_handle           m_dst_ds;     // Destination depth stencil attachment
 
         rhi::framebuffer_handle m_framebuffer;      // Framebuffer referencing src attachments
-        rhi::render_pass_handle m_render_pass;      // Render pass with load/store/resolve ops
     };
 
 } // namespace tavros::renderer

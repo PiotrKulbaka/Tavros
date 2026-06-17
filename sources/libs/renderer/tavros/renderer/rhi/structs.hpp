@@ -23,6 +23,18 @@ namespace tavros::renderer::rhi
     };
 
     /**
+     * Provides information for index buffer binding.
+     */
+    struct bind_index_buffer_info
+    {
+        /// Index buffer handle
+        buffer_handle buffer;
+
+        /// Index buffer format
+        index_buffer_format format = index_buffer_format::u32;
+    };
+
+    /**
      * @brief Describes a texture + sampler binding to a shader stage.
      */
     struct texture_binding
@@ -248,11 +260,8 @@ namespace tavros::renderer::rhi
         /// Output variable name
         core::fixed_string<63> name;
 
-        /// Output shape (only: scalar, vec2, vec3, vec4)
-        composite_format format = composite_format::scalar;
-
-        /// Output scalar type
-        scalar_type type = scalar_type::f32;
+        /// Format of the attachment
+        pixel_format format = pixel_format::none;
 
         /// Output location index
         uint32 location = 0;

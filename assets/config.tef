@@ -1,0 +1,531 @@
+# Common settings
+
+editor_settings = {
+    grid = {
+        enabled = true
+        size = 10
+        step = 1
+    }
+
+    axes = {
+        x_color = 0.6549 0.2196 0.3255 1.0 # 0xA73A53FF
+        y_color = 0.4196 0.5569 0.1373 1.0 # 0x6BB023FF
+        z_color = 0.2314 0.5137 0.7412 1.0 # 0x3A83BEFF
+        thickness = 2.0
+    }
+
+    camera = {
+        position = 0 0 0
+        rotation = 0 0 0
+        fov_y = 70.0        # Deg
+        near = 0.1
+        far = 5000
+        orbit_dist = 12.5
+    }
+
+    gizmos = {
+        enabled = true
+        size = 1.0
+    }
+}
+
+# ----------------------------------------------------------------
+#   render targets
+# ----------------------------------------------------------------
+
+main_offscreen_rendertarget = {
+    color = {
+        base_color = {
+            format = "rgba8"
+            load = "clear"
+            store = "store"
+            clear = 0.0 0.0 0.0 0.0
+        }
+    }
+
+    depth = {
+        format = "depth32f"
+        load = "clear"
+        store = "store"
+        clear = 1.0
+    }
+}
+
+rt1 = {
+    color = {
+        base_color = {
+            format = "rgba8"
+            load = "clear"
+            store = "store"
+            clear = 0.0 0.0 0.0 0.0
+        }
+        normal = {
+            format = "rgba8"
+            load = "clear"
+            store = "store"
+            clear = 0.0 0.0 0.0 0.0
+        }
+    }
+
+    depth = {
+        format = "depth32f"
+        load = "clear"
+        store = "store"
+        clear = 1.0
+    }
+}
+
+rt2 = {
+    color = {
+        base_color = {
+            format = "rgba8"
+            load = "clear"
+            store = "store"
+            clear = 0.0 0.0 0.0 0.0
+        }
+        normal = {
+            format = "rgba8"
+            load = "clear"
+            store = "store"
+            clear = 0.0 0.0 0.0 0.0
+        }
+        spec = {
+            format = "rgba8"
+            load = "clear"
+            store = "store"
+            clear = 0.0 0.0 0.0 0.0
+        }
+    }
+
+    depth = {
+        format = "depth32f"
+        load = "clear"
+        store = "store"
+        clear = 1.0
+    }
+}
+
+
+# ----------------------------------------------------------------
+#   materials
+# ----------------------------------------------------------------
+
+first_material = {
+    shaders = {              # Currently, only two types of shaders are supported
+        vertex = "tavros/shaders/world_grid.vert"                 # Path to the vertex shader source
+        fragment = "tavros/shaders/world_grid.frag"               # Path to the fragment shader source
+    }
+
+    color = {   # up to 8 color attachment states
+        base_color = {                  # key - The name must match the name of the attachment in the render target. "off" or {mask = "" blend = STRING|OBJECT}
+            mask = "rgba"               # write mask "r" "g" "b" "a" "rg" "rb" "ra" "gb" "ga" "ba" "rgb" "rga" "rba" "gba" "rgba"
+            blend = {                               # "off" "alpha" "additive" "multiply" "min" "max" "premul_alpha" or {src_color = STRING dst_color = STRING color_op = STRING src_alpha = STRING dst_alpha = STRING alpha_op = STRING}
+                src_color = "src_alpha"             # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color" "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+                dst_color = "one_minus_src_alpha"   # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color" "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+                color_op = "add"                    # "add" "subtract" "reverse_subtract" "min" "max"
+                src_alpha = "one"                   # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color" "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+                dst_alpha = "one_minus_src_alpha"   # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color" "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+                alpha_op = "add"                    # "add" "subtract" "reverse_subtract" "min" "max"
+            }
+        }
+        # normal = {...} etc...                     # - The name must match the name of the attachment in the render target. 
+    }
+
+    depth = {                           # "off" or {test = BOOL write = BOOL compare_op = STRING}
+        test = true                     # true false
+        write = true                    # true false
+        compare_op = "less"             # "less" "equal" "less_equal" "greater" "greater_equal" "not_equal" "always"
+    }
+
+    stencil = {                         # "off" or {front = STRING|OBJECT back = STRING|OBJECT}
+        test = true                     # true false
+        front = {                       # "off" or {read_mask = NUMBER write_mask = NUMBER ref_value = NUMBER compare_op = STRING stencil_fail_op = STRING depth_fail_op = STRING pass_op = STRING}
+            read_mask = 0xFF            # Read mask [0..255]
+            write_mask = 0xFF           # Write mask [0..255]
+            ref_value = 0               # Reference value for stencil testing
+            compare_op = "always"       # "less" "equal" "less_equal" "greater" "greater_equal" "not_equal" "always"
+            stencil_fail_op = "keep"    # "keep" "zero" "replace" "increment_clamp" "decrement_clamp" "invert" "increment_wrap" "decrement_wrap"
+            depth_fail_op = "keep"      # "keep" "zero" "replace" "increment_clamp" "decrement_clamp" "invert" "increment_wrap" "decrement_wrap"
+            pass_op = "keep"            # "keep" "zero" "replace" "increment_clamp" "decrement_clamp" "invert" "increment_wrap" "decrement_wrap"
+        }
+        back = {                        # "off" or {read_mask = NUMBER write_mask = NUMBER ref_value = NUMBER compare_op = STRING stencil_fail_op = STRING depth_fail_op = STRING pass_op = STRING}
+            read_mask = 0xFF            # Read mask [0..255]
+            write_mask = 0xFF           # Write mask [0..255]
+            ref_value = 0               # Reference value for stencil testing
+            compare_op = "always"       # "less" "equal" "less_equal" "greater" "greater_equal" "not_equal" "always"
+            stencil_fail_op = "keep"    # "keep" "zero" "replace" "increment_clamp" "decrement_clamp" "invert" "increment_wrap" "decrement_wrap"
+            depth_fail_op = "keep"      # "keep" "zero" "replace" "increment_clamp" "decrement_clamp" "invert" "increment_wrap" "decrement_wrap"
+            pass_op = "keep"            # "keep" "zero" "replace" "increment_clamp" "decrement_clamp" "invert" "increment_wrap" "decrement_wrap"
+        }
+    }
+
+    topology = "triangles"              # "points" "lines" "line_strip" "triangles" "triangle_strip"
+
+    rasterizer = {                      # {cull = STRING face = STRING polygon = STRING depth_clamp = STRING|OBJECT depth_bias = STRING|OBJECT scissor = STRING}
+        cull = "off"                    # "off" "front" "back"
+        front_face = "ccw"              # "cw" "ccw"
+        fill_mode = "fill"              # "fill" "lines" "points"
+        depth_clamp = {                 # "off" or {min = NUMBER max = NUMBER}
+            min = 0.0
+            max = 1.0
+        }
+        depth_bias = {                  # "off" or {constant = NUMBER slope = NUMBER clamp = NUMBER}
+            constant = 0.0
+            slope = 0.0
+            clamp = 0.0
+        }
+    }
+}
+
+
+
+basic_render_target = {
+    color = { # color attachments - up to 8
+        base_color = {
+            format = "rgba8"        # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 0.0 0.0 0.0 0.0
+        }
+
+        normal = {
+            format = "rgb16f"       # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 0.0 0.0 0.0
+        }
+
+        normal2 = {
+            format = "rgb16f"       # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 0.0 0.0 0.0
+        }
+
+        normal3 = {
+            format = "rgb16f"       # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 0.0 0.0 0.0
+        }
+
+        normal4 = {
+            format = "rgb16f"       # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 0.0 0.0 0.0
+        }
+
+        normal5 = {
+            format = "rgb16f"       # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 2.0 0.0 0.0
+        }
+
+        normal6 = {
+            format = "rgb16f"       # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 0.0 0.0 0.0
+        }
+
+        base_color2 = {
+            format = "rgba8"        # "rgba8" "rgba16f" "rgba32f" "rgb8" "rgb16f" "rgb32f" "rg8" "rg16f" "rg32f" "r8" "r16f" "r32f"
+            load = "clear"          # "load" "clear" "dont_care"
+            store = "store"         # "store" "resolve" "dont_care"
+            clear = 0.0 0.0 0.0 0.0
+        }
+
+    }
+
+    depth = {
+        format = "depth24"          # "depth24" "depth32f"
+        load = "clear"              # "load" "clear" "dont_care"
+        store = "store"             # "store" "resolve" "dont_care"
+        clear = 1.0
+    }
+
+    stencil = {
+        format = "stencil8"         # "stencil8"
+        load = "clear"              # "load" "clear" "dont_care"
+        store = "store"             # "store" "resolve" "dont_care"
+        clear = 0
+    }
+}
+
+
+
+
+materials = {
+    basic_material = {
+        # List of shaders. Currently, only "vertex" and "fragment" are used
+        shader = {
+            vertex = ""                 # Path to the vertex shader source
+            fragment = ""               # Path to the fragment shader source
+            geometry = ""               # Path to the geometry shader source (not used yet)
+        }
+
+        # Default blending mode (must be for each texture attachment, currently used only for the first attachment)
+        blend = "off"                   # "off" "alpha" "additive" "multiply" "min" "max" "premul_alpha"
+
+        # Default depth scheme
+        depth = {
+            test_enabled = false
+            write_enabled = false
+            compare_op = "less"         # "less" "equal" "less_equal" "greater" "greater_equal" "not_equal" "always"
+        }
+
+        # Default stencil scheme (not used yet)
+        stencil = {
+            test_enabled = false
+        }
+
+        # rasterizer scheme
+        rasterizer = {
+            cull_face = "off"           # "off" "front" "back"
+            front_face = "ccw"          # "clockwise" or "cw" "counter_clockwise" or "ccw"
+            polygon_mode = "fill"       # "fill" "lines" "points"
+            scissor_enabled = false
+        }
+
+        # Describes the textures used in the shader.
+        texture_slots = {}              # no slots
+        # Scheme
+        # texture_slots = {
+        #     base_color = {              - I don't yet have a full understanding of how this can be used.
+        #                                   It's either a specific reserved name or just a label.
+        #         binding = 0             - binding index for a texture in a shader
+        #         sampler = "sampler2D"   - "sampler2D" "sampler3D" "samplerCube" "sampler2DArray" "samplerCubeArray" "sampler2DShadow" "samplerCubeShadow"
+        #     }
+        # }
+    }
+
+
+    # render world grid
+    world_grid : materials.basic_material = {
+        shader = {
+            vertex = "/shaders/world_grid.vert"
+            fragment = "/shaders/world_grid.frag"
+        }
+
+        blend = "alpha"
+
+        depth = {
+            test_enabled = true
+        }
+    }
+
+
+
+    # test material
+    test : materials.basic_material = {
+        shader = {
+            vertex = "shaders/test_mesh.vert"
+            fragment = "shaders/test_mesh.frag"
+        }
+
+        depth = {
+            test_enabled = true
+            write_enabled = true
+        }
+
+        rasterizer = {
+            cull_face = "back"
+        }
+
+        texture_slots = {
+            base_color = {
+                binding = 0
+                sampler = "texture2D"
+            }
+            normal_map = {
+                binding = 1
+                sampler = "texture2D"
+            }
+            roughness = {
+                binding = 2
+                sampler = "texture2D"
+            }
+            metallic = {
+                binding = 3
+                sampler = "texture2D"
+            }
+            ambient_occlusion = {
+                binding = 5
+                sampler = "texture2D"
+            }
+            displacement = {
+                binding = 6
+                sampler = "texture2D"
+            }
+        }
+    }
+}
+
+
+material_instances = {
+    world_grid_instance = {
+        material = "materials.world_grid"
+    }
+
+    test_instance = {
+        material = "materials.test"
+
+        textures = {
+            base_color = {
+                texture = "textures/test_mesh/base.png"
+                tint_factor = 1.0 1.0 1.0
+            }
+            normal_map = {
+                texture = "textures/test_mesh/normal.png"
+                tint_factor = 1.0 1.0 1.0
+            }
+            roughness = {
+                texture = "builtin://gen_roughness"
+                tint_factor = 1.0
+            }
+            metallic = {
+                texture = ""  # No texture
+                tint_factor = 0.0 # Non-metallic
+            }
+            ambient_occlusion = {
+                texture = "textures/test_mesh/ao.png"
+                tint_factor = 1.0
+            }
+            displacement = {
+                texture = "textures/test_mesh/disp.png"
+                tint_factor = 1.0
+            }
+        }
+    }
+
+    test_instance2 = {
+        material = "materials.test"
+
+        textures = {
+            base_color = {
+                texture = "textures/test2_mesh/color.png"
+                tint_factor = 1.0 1.0 1.0
+            }
+            normal_map = {
+                texture = "textures/test2_mesh/norm.png"
+                tint_factor = 1.0 0.0 0.0
+            }
+            roughness = {
+                texture = "textures/test2_mesh/rough.png"
+                tint_factor = 1.0
+            }
+            metallic = {
+                texture = "textures/test2_mesh/metallic.png"
+                tint_factor = 0.33
+            }
+            ambient_occlusion = {
+                texture = "textures/test2_mesh/ao.png"
+                tint_factor = 1.0
+            }
+            displacement = {
+                texture = ""        # No displacement
+                tint_factor = 0.0
+            }
+        }
+
+        params = {
+            base_shift = 1.5
+            base_factor = 0.12
+        }
+    }
+}
+
+
+
+basic_material_instance = {
+
+}
+
+pipeline_base = {
+    vertex_shader = ""
+    fragment_shader = ""
+
+    attrubutes = {
+        type = "scalar"                             # "scalar" "vec2" "vec3" "vec4" "mat2" "mat2x3" "mat2x4" "mat3x2" "mat3" "mat3x4" "mat4x2" "mat4x3" "mat4"
+        format = "f32"                              # "u8" "i8" "u16" "i16" "u32" "i32" "f16" "f32" "f64"
+        normalize = false
+        location = 0
+        stride = 0
+        offset = 0
+        instance_divisor = 0
+    }
+
+    blend_state = {
+        blend_enabled = false
+        src_color_factor = "src_alpha"              # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color"
+                                                    # "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+
+        dst_color_factor = "one_minus_src_alpha"    # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color"
+                                                    # "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+
+        color_blend_op = "add"                      # "add" "subtract" "reverse_subtract" "min" "max"
+
+        src_alpha_factor = "one"                    # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color"
+                                                    # "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+
+        dst_alpha_factor = "one_minus_src_alpha"    # "zero" "one" "src_color" "one_minus_src_color" "dst_color" "one_minus_dst_color"
+                                                    # "src_alpha" "one_minus_src_alpha" "dst_alpha" "one_minus_dst_alpha"
+
+        alpha_blend_op = "add"                      # "add" "subtract" "reverse_subtract" "min" "max"
+        mask = "red" "green" "blue" "alpha"         # "red" "green" "blue" "alpha"
+    }
+
+    depth_stencil_state = {
+        depth_test_enable = false
+        depth_write_enable = false
+        depth_compare = "off"               # "off" "less" "equal" "less_equal" "greater" "greater_equal" "not_equal" "always"
+        stencil_test_enable = false
+        stencil_front = {
+            read_mask = 0xFF
+            write_mask = 0xFF
+            reference_value = 0
+            compare = "always"
+            stencil_fail_op = "keep"
+            depth_fail_op = "keep"
+            pass_op = "keep"
+        }
+        stencil_back = {
+            read_mask = 0xFF
+            write_mask = 0xFF
+            reference_value = 0
+            compare = "always"
+            stencil_fail_op = "keep"
+            depth_fail_op = "keep"
+            pass_op = "keep"
+        }
+    }
+
+    topology = "points"                 # "points" "lines" "line_strip" "triangles" "triangle_strip" "triangle_fan"
+
+    rasterizer = {
+        cull = "off"                    # "off" "front" "back"
+        face = "counter_clockwise"      # "clockwise" "counter_clockwise"
+        polygon = "fill"                # "fill" "lines" "points"
+        depth_clamp_enable = false
+        depth_clamp_near = 0.0
+        depth_clamp_far = 1.0
+        depth_bias_enable = false
+        depth_bias = 0.0
+        depth_bias_factor = 0.0
+        depth_bias_clamp = 0.0
+        scissor_enable = false
+    }
+}
+
+
+build_world_pipeline = {
+    vertex_shader = "tavros/shaders/world_grid.vert"
+    fragment_shader = "tavros/shaders/world_grid.frag"
+
+    depth_stencil = {
+        
+    }
+
+}

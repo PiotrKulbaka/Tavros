@@ -10,20 +10,23 @@ void main()
 {
     float sdf = texture(u_sdf_atlas, v_uv).r;
 
-    // Thresholds and smoothing for SDF
-    float smooth_th = 0.05;
+    // Compute adaptive smoothing based on screen-space derivatives
+    float w = max(fwidth(sdf) * 0.5, 0.004);
+
+    // Core thresholds (can stay constants or become uniforms)
     float text_th = 0.5;
-    float outline_th = 0.35;
+    //float outline_th = 0.4;
 
-    // Alpha masks for text and outline
-    float text_alpha = smoothstep(text_th, text_th + smooth_th, sdf);
-    float outline_alpha = smoothstep(outline_th, outline_th + smooth_th, sdf);
+    // Anti-aliased alpha
+    float text_alpha = smoothstep(text_th - w, text_th + w, sdf);
+    // float outline_alpha = smoothstep(outline_th - w, outline_th + w, sdf);
 
-    // Color interpolation between outline and main text
-    vec4 color = mix(v_outline_color, v_color, text_alpha);
+    // Outline only where text is not fully opaque
+    // float final_outline = outline_alpha * (1.0 - text_alpha);
 
-    // Combine alpha channels properly
-    float final_alpha = max(outline_alpha * color.a, 0.0);
+    //vec4 color = mix(v_outline_color, v_color, text_alpha);
 
-    frag_color = vec4(color.rgb, final_alpha);
+    // float final_alpha = text_alpha * v_color.a + final_outline * v_outline_color.a;
+
+    frag_color = vec4(v_color.rgb, text_alpha);
 }

@@ -310,13 +310,13 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_queue_opengl::bind_index_buffer(buffer_handle buffer, index_buffer_format format)
+    void command_queue_opengl::bind_index_buffer(const bind_index_buffer_info& info)
     {
-        auto* b = m_device->get_resources()->find(buffer);
+        auto* b = m_device->get_resources()->find(info.buffer);
         if (!b) {
             ::logger.error(
                 "Failed to bind index buffer: buffer {} not found",
-                buffer
+                info.buffer
             );
             return;
         }
@@ -324,13 +324,13 @@ namespace tavros::renderer::rhi
         if (b->info.usage != buffer_usage::index) {
             ::logger.error(
                 "Failed to bind index buffer: buffer {} not an index buffer",
-                buffer
+                info.buffer
             );
             return;
         }
 
-        m_current_index_buffer = buffer;
-        m_current_index_buffer_format = format;
+        m_current_index_buffer = info.buffer;
+        m_current_index_buffer_format = info.format;
 
         GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj));
     }

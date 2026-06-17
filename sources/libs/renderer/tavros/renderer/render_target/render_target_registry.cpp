@@ -43,7 +43,7 @@ namespace tavros::renderer
 
         logger.flush(ds);
 
-        auto handle = insert(rt_path, render_target(m_rrm->graphics_device(), desc));
+        auto handle = insert(rt_path, std::make_pair(desc, render_target(m_rrm->graphics_device(), desc)));
         if (!handle.valid()) {
             logger.error("Failed to insert render target '{}'", rt_path);
             return {};
@@ -60,7 +60,7 @@ namespace tavros::renderer
             return h;
         }
 
-        auto handle = insert(rt_name, render_target(m_rrm->graphics_device(), desc));
+        auto handle = insert(rt_name, std::make_pair(desc, render_target(m_rrm->graphics_device(), desc)));
         if (!handle.valid()) {
             logger.error("Failed to insert render target '{}'", rt_name);
             return {};
