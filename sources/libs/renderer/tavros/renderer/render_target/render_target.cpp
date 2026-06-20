@@ -165,12 +165,6 @@ namespace tavros::renderer
         return m_ca_cfg.size();
     }
 
-    rhi::texture_handle render_target::color_attachment_at(uint32 index) const noexcept
-    {
-        TAV_ASSERT(index < attachment_count());
-        return m_dst_cl[index];
-    }
-
     rhi::texture_handle render_target::color_attachment_by_name(core::string_view name) const noexcept
     {
         uint32 index = 0;
@@ -181,6 +175,11 @@ namespace tavros::renderer
             ++index;
         }
         return {};
+    }
+
+    core::buffer_view<rhi::texture_handle> render_target::color_attachments() const noexcept
+    {
+        return m_dst_cl;
     }
 
     rhi::texture_handle render_target::depth_stencil_attachment() const

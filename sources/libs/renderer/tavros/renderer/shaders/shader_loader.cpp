@@ -196,9 +196,12 @@ namespace tavros::renderer
 
             result.append(n_hash_line_sp);
             result.append(ascii_number);
-            result.append(sp_dq);
-            result.append(p.path);
-            result.append(dq_n);
+            result.append(" ");
+            result.append("1");
+            result.append("\n");
+            // result.append(sp_dq);
+            // result.append(p.path);
+            // result.append(dq_n);
             result.append(p.text);
         }
 

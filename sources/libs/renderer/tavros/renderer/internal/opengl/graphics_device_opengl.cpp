@@ -344,6 +344,7 @@ namespace tavros::renderer::rhi
             return p->reflect.get();
         } else {
             ::logger.error("Failed to get shader reflection {}: not found", shader);
+            return nullptr;
         }
     }
 
@@ -846,7 +847,7 @@ namespace tavros::renderer::rhi
         // Map attributes to location index, for fast search
         struct va_map_t
         {
-            bool has_attrib = false;
+            bool             has_attrib = false;
             vertex_attribute attrib;
         };
         va_map_t mapped_attributes[k_max_vertex_attributes];

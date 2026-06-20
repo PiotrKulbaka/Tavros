@@ -99,7 +99,7 @@ namespace tavros::renderer
         info.rasterizer = desc.rasterizer();
 
         // Multisample
-        //info.multisample.sample_count = rt->first.multisample().sample_count;
+        // info.multisample.sample_count = rt->first.multisample().sample_count;
         info.multisample.sample_shading_enabled = false;
         info.multisample.min_sample_shading = 1.0f;
 

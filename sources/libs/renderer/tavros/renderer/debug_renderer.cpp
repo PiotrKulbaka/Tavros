@@ -810,7 +810,7 @@ namespace tavros::renderer
         cmds->bind_pipeline(m_inst_mesh_pipeline);
         rhi::bind_buffer_info draw_bufs_static[] = {{m_static_verts_buffer, 0}, {m_static_verts_buffer, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}, {m_inst_stream_data, 0}};
         cmds->bind_vertex_buffers(draw_bufs_static);
-        cmds->bind_index_buffer(m_static_inds_buffer, rhi::index_buffer_format::u32);
+        cmds->bind_index_buffer({m_static_inds_buffer, rhi::index_buffer_format::u32});
         draw(cmds, m_draw_cube_mesh_info);
         draw(cmds, m_draw_icosphere_mesh_info);
 
@@ -832,7 +832,7 @@ namespace tavros::renderer
         // Draw 3D wireframe geom (instanced)
         cmds->bind_pipeline(m_inst_wireframe_mesh_pipeline);
         cmds->bind_vertex_buffers(draw_bufs_static);
-        cmds->bind_index_buffer(m_static_inds_buffer, rhi::index_buffer_format::u32);
+        cmds->bind_index_buffer({m_static_inds_buffer, rhi::index_buffer_format::u32});
         draw(cmds, m_draw_icosphere_wireframe_info);
 
         // Draw 2D geom (batch)

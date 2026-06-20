@@ -8,7 +8,7 @@
 namespace tavros::renderer
 {
 
-    class material 
+    class material
     {
     public:
         struct texture
@@ -24,117 +24,72 @@ namespace tavros::renderer
         };
 
     public:
-        //core::string_view 
-
+        // core::string_view
 
 
         core::string_view name() const noexcept;
-        
-    private:
-        core::short_string m_name;
-    };
-
-
-
-
-    class basic_resource
-    {
-    public:
-        using hash_type = size_t;
-
-    public:
-        basic_resource(core::string_view name) noexcept
-            : m_name(name)
-        {
-            m_cached_hash = std::hash<std::string_view>{}(
-                std::string_view(m_name.c_str(), m_name.size())
-            );
-        }
-
-        hash_type hash() const noexcept
-        {
-            return m_cached_hash;
-        }
 
     private:
         core::short_string m_name;
-        hash_type          m_cached_hash;
     };
 
+    // class material_instance : public basic_resource
+    //{
+    // public:
+    //     material_instance(core::string_view name, rhi::pipeline_handle pipeline, core::buffer_view<rhi::buffer_binding> buffers, core::buffer_view<rhi::texture_binding> textures) noexcept
+    //         : basic_resource(name)
+    //         , m_pipeline(pipeline)
+    //         , m_buffers(buffers)
+    //         , m_textures(textures)
+    //     {
+    //     }
+
+    //    rhi::pipeline_handle pipeline() const noexcept
+    //    {
+    //        return m_pipeline;
+    //    }
+
+    //    core::buffer_view<rhi::buffer_binding> buffer_instances() const noexcept
+    //    {
+    //        return m_buffers;
+    //    }
+
+    //    core::buffer_view<rhi::texture_binding> texture_instances() const noexcept
+    //    {
+    //        return m_textures;
+    //    }
+
+    // private:
+    //     rhi::pipeline_handle                                                 m_pipeline;
+    //     core::fixed_vector<rhi::buffer_binding, rhi::k_max_shader_buffers>   m_buffers;
+    //     core::fixed_vector<rhi::texture_binding, rhi::k_max_shader_textures> m_textures;
+    // };
 
 
-    class material : public basic_resource
-    {
-    public:
-        material(core::string_view name) noexcept
-            : basic_resource(name)
+    // class mesh_instance : public basic_resource
+    //{
+    // public:
+    //     mesh_instance(core::string_view name, core::buffer_view<rhi::bind_buffer_info> vertex_buffers, rhi::bind_index_buffer_info& index_buffer) noexcept
+    //         : basic_resource(name)
+    //         , m_vertex_buffers(vertex_buffers)
+    //         , m_index_buffer(index_buffer)
+    //     {
+    //     }
 
+    //    core::buffer_view<rhi::bind_buffer_info> vertex_buffers() const noexcept
+    //    {
+    //        return m_vertex_buffers;
+    //    }
 
-    };
+    //    rhi::bind_index_buffer_info index_buffer() const noexcept
+    //    {
+    //        return m_index_buffer;
+    //    }
 
-
-
-
-    class material_instance : public basic_resource
-    {
-    public:
-        material_instance(core::string_view name, rhi::pipeline_handle pipeline, core::buffer_view<rhi::buffer_binding> buffers, core::buffer_view<rhi::texture_binding> textures) noexcept
-            : basic_resource(name)
-            , m_pipeline(pipeline)
-            , m_buffers(buffers)
-            , m_textures(textures)
-        {
-        }
-
-        rhi::pipeline_handle pipeline() const noexcept
-        {
-            return m_pipeline;
-        }
-
-        core::buffer_view<rhi::buffer_binding>  buffer_instances() const noexcept
-        {
-            return m_buffers;
-        }
-
-        core::buffer_view<rhi::texture_binding> texture_instances() const noexcept
-        {
-            return m_textures;
-        }
-
-    private:
-        rhi::pipeline_handle                                                 m_pipeline;
-        core::fixed_vector<rhi::buffer_binding, rhi::k_max_shader_buffers>   m_buffers;
-        core::fixed_vector<rhi::texture_binding, rhi::k_max_shader_textures> m_textures;
-    };
-
-    
-
-
-
-    class mesh_instance : public basic_resource
-    {
-    public:
-        mesh_instance(core::string_view name, core::buffer_view<rhi::bind_buffer_info> vertex_buffers, rhi::bind_index_buffer_info& index_buffer) noexcept
-            : basic_resource(name)
-            , m_vertex_buffers(vertex_buffers)
-            , m_index_buffer(index_buffer)
-        {}
-
-        core::buffer_view<rhi::bind_buffer_info> vertex_buffers() const noexcept
-        {
-            return m_vertex_buffers;
-        }
-
-        rhi::bind_index_buffer_info index_buffer() const noexcept
-        {
-            return m_index_buffer;
-        }
-
-    private:
-        core::fixed_vector<rhi::bind_buffer_info, rhi::k_max_vertex_attributes> m_vertex_buffers;
-        rhi::bind_index_buffer_info                                             m_index_buffer;
-    };
-
+    // private:
+    //     core::fixed_vector<rhi::bind_buffer_info, rhi::k_max_vertex_attributes> m_vertex_buffers;
+    //     rhi::bind_index_buffer_info                                             m_index_buffer;
+    // };
 
 
     class material_

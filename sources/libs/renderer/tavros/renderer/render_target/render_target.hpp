@@ -71,20 +71,19 @@ namespace tavros::renderer
         uint32 attachment_count() const;
 
         /**
-         * @brief Returns the resolved color attachment texture at the given index.
-         *
-         * When MSAA is enabled, returns the single-sample resolved texture,
-         * suitable for sampling. When MSAA is disabled, returns the render texture directly.
-         *
-         * @param index  Attachment index. Must be < attachment_count().
-         * @pre  m_is_created == true
-         */
-        rhi::texture_handle color_attachment_at(uint32 index) const noexcept;
-
-        /**
          * @brief Returns the resolved color attachment texture with the given name.
          */
         rhi::texture_handle color_attachment_by_name(core::string_view name) const noexcept;
+
+        /**
+         * @brief Returns the resolved color attachments.
+         *
+         * When MSAA is enabled, returns the single-sample resolved textures, suitable for
+         * sampling. When MSAA is disabled, returns the render texture directly.
+         *
+         * @pre  m_is_created == true
+         */
+        core::buffer_view<rhi::texture_handle> color_attachments() const noexcept;
 
         /**
          * @brief Returns the resolved depth/stencil attachment texture.

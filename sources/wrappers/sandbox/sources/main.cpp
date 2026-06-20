@@ -1602,7 +1602,7 @@ private:
         }
 
         if (m_current_buffer_output == 0) {
-            cbuf->bind_shader_textures(rhi::texture_binding{rt->second.color_attachment_at(0), m_sampler});
+            cbuf->bind_shader_textures(rhi::texture_binding{rt->second.color_attachments()[0], m_sampler});
         } else {
             cbuf->bind_shader_textures(rhi::texture_binding{rt->second.depth_stencil_attachment(), m_sampler});
         }
@@ -1623,7 +1623,7 @@ private:
         rhi::texture_copy_region rgn;
         rgn.width = w;
         rgn.height = h;
-        cbuf->copy_texture_to_buffer(rt->second.color_attachment_at(0), m_stage_upload_buffer, rgn);
+        cbuf->copy_texture_to_buffer(rt->second.color_attachments()[0], m_stage_upload_buffer, rgn);
 
         rgn.buffer_offset = static_cast<size_t>(w * h * 4);
         cbuf->copy_texture_to_buffer(rt->second.depth_stencil_attachment(), m_stage_upload_buffer, rgn);
@@ -1960,31 +1960,6 @@ private:
 // -------------------------------------------------------------------------
 // Entry point
 // -------------------------------------------------------------------------
-
-#include <tavros/tef/workspace.hpp>
-#include <iostream>
-
-struct settings
-{
-    int    version = 0;
-    bool   fullscreen = false;
-    uint32 width = 0;
-    uint32 height = 0;
-    float  scale = 1.0f;
-};
-
-#include <fstream>
-
-bool write_text_file(const std::string& path, tavros::core::string_view text)
-{
-    std::ofstream file(path, std::ios::binary);
-    if (!file) {
-        return false;
-    }
-
-    file.write(text.data(), static_cast<std::streamsize>(text.size()));
-    return file.good();
-}
 
 int main()
 {

@@ -43,7 +43,7 @@ namespace tavros::renderer
             const material_desc::color_attachment_state_config* desc = nullptr;
         };
         color_attachment_combined_info ca_combined[rhi::k_max_color_attachments];
-        size_t ca_combined_size = 0;
+        size_t                         ca_combined_size = 0;
 
         for (const auto& out : reflect->outputs()) {
             TAV_ASSERT(out.location < rhi::k_max_color_attachments);
@@ -83,7 +83,7 @@ namespace tavros::renderer
         for (size_t i = 0; i < ca_combined_size; ++i) {
             constexpr auto blend_off = rhi::blend_state{false};
             constexpr auto mask_off = tavros::core::flags<rhi::color_mask>();
-            
+
             const auto* cur = &ca_combined[i];
             if (cur->desc) {
                 TAV_ASSERT(cur->reflect);

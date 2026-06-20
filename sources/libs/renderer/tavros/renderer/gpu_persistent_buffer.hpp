@@ -49,6 +49,14 @@ namespace tavros::renderer
         }
 
         /**
+         * @brief Returns @c true if the buffer is created and initialized.
+         */
+        bool valid() const noexcept
+        {
+            return m_buffer.valid();
+        }
+
+        /**
          * @brief Move assignment.
          */
         basic_gpu_persistent_buffer& operator=(basic_gpu_persistent_buffer&& other) noexcept
