@@ -31,6 +31,99 @@ namespace tavros::tef
     }
 
     /**
+     * @brief Reads an optional string value from a configuration node.
+     *
+     * Resolves the specified key relative to the given parent node and attempts
+     * to read it as a string. If the key does not exist, the provided default
+     * string is assigned to the output value.
+     *
+     * @tparam StrT String type supporting clear() and append().
+     *
+     * @param parent Parent node used as the lookup root.
+     * @param key Relative path of the value to read.
+     * @param default_str Default value assigned when the key is not found.
+     * @param out Destination string.
+     * @param type_hint Human-readable type description used in diagnostics.
+     * @param ds Diagnostics collector.
+     *
+     * @return true if the value was successfully read or the default value was
+     *         applied; false if the value exists but is not a string.
+     */
+    template<class StrT>
+    [[nodiscard]] bool read_string(
+        const node*        parent,
+        core::string_view  key,
+        core::string_view  default_str,
+        StrT&              out,
+        core::string_view  type_hint,
+        core::diagnostics& ds
+    ) noexcept
+    {
+        const auto* n = parent->resolve_path(key);
+        if (!n) {
+            out.clear();
+            out.append(default_str);
+            return true;
+        }
+
+        if (n->is_string()) {
+            auto sv = n->value_or(core::string_view{});
+            warn_if_extra_values(n, 1, ds);
+            out.clear();
+            out.append(sv);
+            return true;
+        }
+
+        ds.error("Invalid value at '{}'. Expected a valid {}.", n->path(), type_hint);
+        return false;
+    }
+
+    /**
+     * @brief Reads a required string value from a configuration node.
+     *
+     * Resolves the specified key relative to the given parent node and attempts
+     * to read it as a string. If the key does not exist, an error is reported.
+     *
+     * @tparam StrT String type supporting clear() and append().
+     *
+     * @param parent Parent node used as the lookup root.
+     * @param key Relative path of the value to read.
+     * @param out Destination string.
+     * @param type_hint Human-readable type description used in diagnostics.
+     * @param ds Diagnostics collector.
+     *
+     * @return true if the value was successfully read; false if the key is
+     *         missing or the value is not a string.
+     */
+    template<class StrT>
+    [[nodiscard]] bool read_required_string(
+        const node*        parent,
+        core::string_view  key,
+        StrT&              out,
+        core::string_view  type_hint,
+        core::diagnostics& ds
+    ) noexcept
+    {
+        const auto* n = parent->resolve_path(key);
+        if (!n) {
+            out.clear();
+            ds.error("Missing required field '{}' at '{}'.", key, parent->path());
+            return false;
+        }
+
+        if (n->is_string()) {
+            auto sv = n->value_or(core::string_view{});
+            warn_if_extra_values(n, 1, ds);
+            out.clear();
+            out.append(sv);
+            return true;
+        }
+
+        ds.error("Invalid value at '{}'. Expected a valid {}.", n->path(), type_hint);
+        return false;
+    }
+
+    /**
      * @brief Reads an optional enum value from a child node.
      *
      * The node value is read as a string and converted using the supplied
