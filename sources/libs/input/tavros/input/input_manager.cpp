@@ -38,11 +38,13 @@ namespace tavros::input
 
         for (auto& s : m_keys) {
             s.accumulated_us = 0;
+            s.is_just_pressed = false;
             s.is_just_released = false;
         }
 
         for (auto& s : m_buttons) {
             s.accumulated_us = 0;
+            s.is_just_pressed = false;
             s.is_just_released = false;
         }
 
@@ -140,7 +142,7 @@ namespace tavros::input
     {
         const size_t idx = static_cast<size_t>(key);
         TAV_ASSERT(idx < k_keyboard_size);
-        return m_keys[idx].is_held && m_keys[idx].accumulated_us == 0;
+        return m_keys[idx].is_just_pressed;
     }
 
     bool input_manager::is_key_just_released(keyboard_key key) const noexcept
@@ -168,7 +170,7 @@ namespace tavros::input
     {
         const size_t idx = static_cast<size_t>(button);
         TAV_ASSERT(idx < k_mouse_button_count);
-        return m_buttons[idx].is_held && m_buttons[idx].accumulated_us == 0;
+        return m_buttons[idx].is_just_pressed;
     }
 
     bool input_manager::is_mouse_button_just_released(mouse_button button) const noexcept
@@ -250,6 +252,7 @@ namespace tavros::input
         auto& s = m_keys[idx];
         if (!s.is_held) {
             s.is_held = true;
+            s.is_just_pressed = true;
             s.press_time_us = time_us;
         }
     }
@@ -282,6 +285,7 @@ namespace tavros::input
         auto& s = m_buttons[idx];
         if (!s.is_held) {
             s.is_held = true;
+            s.is_just_pressed = true;
             s.press_time_us = time_us;
         }
     }

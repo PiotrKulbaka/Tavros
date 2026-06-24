@@ -8,7 +8,7 @@
 namespace tavros::core
 {
 
-    template <class T>
+    template<class T>
         requires std::is_base_of_v<basic_resource<T>, T>
     class basic_resource_manager
     {
@@ -21,11 +21,13 @@ namespace tavros::core
          */
         struct entry_type
         {
-            resource_type res; ///< Resource value.
-            single_thread_ref_count rc; ///< Reference counter.
+            resource_type           res; ///< Resource value.
+            single_thread_ref_count rc;  ///< Reference counter.
         };
 
-        using storage_type = unordered_map<basic_resource<T>::hash_type, entry_type>;
+        using hash_type = typename resource_type::hash_type;
+        using storage_type = unordered_map<hash_type, entry_type>;
+        using iterator = storage_type::iterator;
         using const_iterator = storage_type::const_iterator;
 
     public:
@@ -55,11 +57,7 @@ namespace tavros::core
                 return resource_ref_type(&it->second.res);
             }
 
-            auto [it, inserted] = m_resources.emplace(h,
-                entry_type{
-                    .res = std::move(res),
-                    .rc = {}
-                });
+            auto [it, inserted] = m_resources.emplace(h, entry_type{.res = std::move(res), .rc = {}});
 
             return resource_ref_type(inserted ? &it->second.res : nullptr);
         }
@@ -120,7 +118,7 @@ namespace tavros::core
         [[nodiscard]] resource_ref_type find(string_view name) noexcept
         {
             const auto h = basic_resource<resource_type>::make_hash(name);
-            auto it = m_resources.find(h);
+            auto       it = m_resources.find(h);
             return resource_ref_type(it != m_resources.end() ? &it->second.res : nullptr);
         }
 
@@ -173,21 +171,33 @@ namespace tavros::core
         }
 
         /** @brief Returns const iterator to the beginning. */
-        [[nodiscard]] const_iterator begin() const noexcept
+        [[nodiscard]] iterator begin() noexcept
         {
             return m_resources.begin();
         }
 
         /** @brief Returns const iterator to the beginning. */
-        [[nodiscard]] const_iterator cbegin() const noexcept
+        [[nodiscard]] const_iterator begin() const noexcept
         {
-            return m_resources.cbegin();
+            return m_resources.begin();
+        }
+
+        /** @brief Returns iterator to the end. */
+        [[nodiscard]] iterator end() noexcept
+        {
+            return m_resources.end();
         }
 
         /** @brief Returns const iterator to the end. */
         [[nodiscard]] const_iterator end() const noexcept
         {
             return m_resources.end();
+        }
+
+        /** @brief Returns const iterator to the beginning. */
+        [[nodiscard]] const_iterator cbegin() const noexcept
+        {
+            return m_resources.cbegin();
         }
 
         /** @brief Returns const iterator to the end. */
@@ -200,4 +210,4 @@ namespace tavros::core
         storage_type m_resources;
     };
 
-}
+} // namespace tavros::core

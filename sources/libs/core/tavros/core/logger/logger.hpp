@@ -2,7 +2,7 @@
 
 #include <tavros/core/logger/severity_level.hpp>
 #include <tavros/core/logger/diagnostics.hpp>
-#include <tavros/core/string.hpp>
+#include <tavros/core/fixed_string.hpp>
 #include <tavros/core/string_view.hpp>
 
 #include <functional>
@@ -238,7 +238,7 @@ namespace tavros::core
         static void print_message(severity_level level, string_view tag, string_view msg) noexcept;
 
     private:
-        string m_tag;
+        medium_string m_tag;
     };
 
 } // namespace tavros::core

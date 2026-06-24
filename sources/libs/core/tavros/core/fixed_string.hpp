@@ -1287,7 +1287,7 @@ namespace tavros::core
 
     using short_string = fixed_string<63>;   // 64 B
     using medium_string = fixed_string<255>; // 256 B
-    using long_string = fixed_string<256>;   // 1024 B
+    using long_string = fixed_string<1022>;  // 1024 B
 
     inline constexpr size_t k_fixed_path_size = 256;
     using fixed_path = core::fixed_string<k_fixed_path_size>;

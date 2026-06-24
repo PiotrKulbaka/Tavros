@@ -48,7 +48,7 @@ namespace tavros::core
     public:
         basic_resource_ref() noexcept = default;
 
-        basic_resource_ref(const T* res) noexcept
+        basic_resource_ref(T* res) noexcept
             : m_resource(res)
         {
         }
@@ -74,17 +74,27 @@ namespace tavros::core
             return m_resource;
         }
 
+        T* operator->() noexcept
+        {
+            TAV_ASSERT(m_resource);
+            return m_resource;
+        }
+
         const T& operator*() const noexcept
         {
             TAV_ASSERT(m_resource);
             return *m_resource;
         }
 
+        T& operator*() noexcept
+        {
+            TAV_ASSERT(m_resource);
+            return *m_resource;
+        }
+
     private:
-        const T* m_resource = nullptr;
+        T* m_resource = nullptr;
     };
-
-
 
 
     enum class resource_status : uint8
@@ -93,28 +103,6 @@ namespace tavros::core
         pending,
         ready,
         failed,
-    };
-
-    struct resource_base
-    {
-        resource_status status = resource_status::unloaded;
-
-        [[nodiscard]] bool is_unloaded() const noexcept
-        {
-            return status == resource_status::unloaded;
-        }
-        [[nodiscard]] bool is_ready() const noexcept
-        {
-            return status == resource_status::ready;
-        }
-        [[nodiscard]] bool is_pending() const noexcept
-        {
-            return status == resource_status::pending;
-        }
-        [[nodiscard]] bool is_failed() const noexcept
-        {
-            return status == resource_status::failed;
-        }
     };
 
 } // namespace tavros::core

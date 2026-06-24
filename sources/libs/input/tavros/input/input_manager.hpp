@@ -150,6 +150,7 @@ namespace tavros::input
             uint64 press_time_us = 0;        // Time when key was last pressed
             uint64 release_time_us = 0;      // Time when key was last released
             uint64 accumulated_us = 0;       // Time accumulated during the current frame
+            bool   is_just_pressed = false;  // Whether the key was pressed during the last frame
             bool   is_just_released = false; // Whether the key was released during the last frame
             bool   is_held = false;          // Whether the key is currently pressed
         };
