@@ -67,14 +67,14 @@ namespace tavros::ui
             cr.max += vec2(0.0f, 3.0f) * m_click_factor;
 
 
-            rctx.drenderer->box2d(cr, cl, renderer::debug_renderer::draw_mode::faces);
-            rctx.drenderer->draw_text2d(m_text, text_h / 2, cr, {1, 1, 1, 1}, renderer::text_align::center, renderer::debug_renderer::vertical_align::center);
+            // rctx.drenderer->box2d(cr, cl, renderer::debug_renderer::draw_mode::faces);
+            // rctx.drenderer->draw_text2d(m_text, text_h / 2, cr, {1, 1, 1, 1}, renderer::text_align::center, renderer::debug_renderer::vertical_align::center);
         } else {
             auto cl = math::lerp(disabled_color, disabled_hovered_color, m_hover_factor);
-            rctx.drenderer->box2d(cr, cl, renderer::debug_renderer::draw_mode::faces);
+            // rctx.drenderer->box2d(cr, cl, renderer::debug_renderer::draw_mode::faces);
 
             auto text_h = cr.size().height;
-            rctx.drenderer->draw_text2d(m_text, text_h / 2, cr, {1, 1, 1, 1}, renderer::text_align::center, renderer::debug_renderer::vertical_align::center);
+            // rctx.drenderer->draw_text2d(m_text, text_h / 2, cr, {1, 1, 1, 1}, renderer::text_align::center, renderer::debug_renderer::vertical_align::center);
         }
     }
 

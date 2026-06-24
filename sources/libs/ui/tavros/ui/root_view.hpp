@@ -47,13 +47,13 @@ namespace tavros::ui
         void on_key_press(const key_press_event_args&);
 
     private:
-        rhi::graphics_device*    m_graphics_device;
-        renderer::debug_renderer m_debug_renderer;
-        bool                     m_is_active;
-        view                     m_root; // Always created automatically
-        view*                    m_keyboard_focus;
-        view*                    m_hovered;
-        math::mat4               m_orto_proj;
+        rhi::graphics_device* m_graphics_device;
+        // renderer::debug_renderer m_debug_renderer;
+        bool       m_is_active;
+        view       m_root; // Always created automatically
+        view*      m_keyboard_focus;
+        view*      m_hovered;
+        math::mat4 m_orto_proj;
     };
 
 } // namespace tavros::ui

@@ -77,12 +77,12 @@ namespace tavros::ui
     {
         TAV_ASSERT(gdevice);
         m_graphics_device = gdevice;
-        m_debug_renderer.init(gdevice);
+        // m_debug_renderer.init(gdevice);
     }
 
     void root_view::shutdown()
     {
-        m_debug_renderer.shutdown();
+        // m_debug_renderer.shutdown();
     }
 
     void root_view::process_ui_events(input::event_args_queue_view events)
@@ -200,15 +200,15 @@ namespace tavros::ui
     void root_view::render(rhi::command_queue* cmds)
     {
         render_context rctx;
-        rctx.drenderer = &m_debug_renderer;
+        // rctx.drenderer = &m_debug_renderer;
         rctx.gdevice = m_graphics_device;
-        m_debug_renderer.begin_frame(m_orto_proj, math::mat4::identity());
+        // m_debug_renderer.begin_frame(m_orto_proj, math::mat4::identity());
 
         traverse_preorder(&m_root, [&](auto* n) { n->draw(rctx); });
 
-        m_debug_renderer.update();
-        m_debug_renderer.render(cmds);
-        m_debug_renderer.end_frame();
+        // m_debug_renderer.update();
+        // m_debug_renderer.render(cmds);
+        // m_debug_renderer.end_frame();
     }
 
     void root_view::on_mouse_down(const mouse_button_event_args& e)

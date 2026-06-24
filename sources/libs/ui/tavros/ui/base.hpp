@@ -6,7 +6,6 @@
 #include <tavros/core/string.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
-#include <tavros/renderer/debug_renderer.hpp>
 
 #include <tavros/input/event_args.hpp>
 
@@ -27,8 +26,8 @@ namespace tavros::ui
 
     struct render_context
     {
-        rhi::graphics_device*     gdevice = nullptr;
-        renderer::debug_renderer* drenderer = nullptr;
+        rhi::graphics_device* gdevice = nullptr;
+        // renderer::debug_renderer* drenderer = nullptr;
     };
 
     using mouse_button = input::mouse_button;
