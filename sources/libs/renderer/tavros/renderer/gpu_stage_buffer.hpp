@@ -40,6 +40,8 @@ namespace tavros::renderer
         /** @brief Default destructor. */
         ~gpu_stage_buffer() noexcept = default;
 
+        gpu_stage_buffer(gpu_stage_buffer&&) noexcept = default;
+
         /**
          * @brief Initializes a staging buffer and maps it persistently.
          *

@@ -1,9 +1,9 @@
 #pragma once
 
-#include <tavros/renderer/texture/texture_registry.hpp>
-#include <tavros/renderer/render_target/render_target_registry.hpp>
-#include <tavros/renderer/material/material_registry.hpp>
+#include <tavros/renderer/texture/texture_manager.hpp>
+#include <tavros/renderer/render_target/render_target_manager.hpp>
 #include <tavros/renderer/shaders/shader_loader.hpp>
+#include <tavros/renderer/upload_context.hpp>
 
 namespace tavros::renderer
 {
@@ -11,65 +11,69 @@ namespace tavros::renderer
     class resource_manager : core::noncopyable, core::nonmovable
     {
     public:
-        explicit resource_manager(rhi::graphics_device* gdevice, core::shared_ptr<assets::asset_manager> am) noexcept;
+        resource_manager(rhi::graphics_device* gdevice, core::shared_ptr<assets::asset_manager> am, core::shared_ptr<tef::workspace> ws) noexcept;
 
-        ~resource_manager() noexcept = default;
+        ~resource_manager() noexcept;
 
+        void init(upload_context* upctx) noexcept;
+        void shutdown() noexcept;
 
-        // ------------ textures ------------
-        texture_handle load_texture(gpu_stage_buffer& stage, rhi::command_queue& cmd, core::string_view path, const texture_registry::load_params& params = {});
+        void begin_frame() noexcept;
+        void end_frame() noexcept;
 
-        texture_handle load_texture(gpu_stage_buffer& stage, rhi::command_queue& cmd, assets::image_view im, core::string_view key, const texture_registry::load_params& params = {});
+        template<class Res>
+        core::basic_resource_ref<Res> load(core::string_view name)
+        {
+            TAV_ASSERT(m_upctx);
+            if constexpr (std::is_same_v<Res, texture_t>) {
+                return m_tex_mgr.load(*m_upctx, name, *m_ws);
+            } else if constexpr (std::is_same_v<Res, render_target>) {
+                return m_rt_mgr.load(name, *m_ws);
+            } else {
+                static_assert(sizeof(Res) == 0, "load not implemented for this resourece type");
+            }
+        }
 
-        bool release(texture_handle h) noexcept;
+        template<class Res>
+        void release(core::basic_resource_ref<Res> ref) noexcept
+        {
+            if constexpr (std::is_same_v<Res, texture_t>) {
+                return m_tex_mgr.release(ref);
+            } else if constexpr (std::is_same_v<Res, render_target>) {
+                return m_rt_mgr.release(ref);
+            } else {
+                static_assert(sizeof(Res) == 0, "release not implemented for this resourece type");
+            }
+        }
 
-        gpu_texture_view* find(texture_handle h) noexcept;
+        texture_manager& textures() noexcept
+        {
+            return m_tex_mgr;
+        }
 
-        const gpu_texture_view* find(texture_handle h) const noexcept;
+        const texture_manager& textures() const noexcept
+        {
+            return m_tex_mgr;
+        }
 
-        [[nodiscard]] rhi::texture_handle get_gpu_handle(texture_handle handle) const noexcept;
+        render_target_manager& render_targets() noexcept
+        {
+            return m_rt_mgr;
+        }
 
-        texture_registry& textures() noexcept;
-
-        const texture_registry& textures() const noexcept;
-
-
-        // ------------ render targets ------------
-        render_target_handle create_render_target(const tef::workspace& ws, core::string_view rt_path);
-
-        render_target_handle create_render_target(core::string_view rt_name, const render_target_desc& desc);
-
-        bool release(render_target_handle h) noexcept;
-
-        render_target* find(render_target_handle h) noexcept;
-
-        const render_target* find(render_target_handle h) const noexcept;
-
-        render_target_registry& render_targets() noexcept;
-
-        const render_target_registry& render_targets() const noexcept;
-
-
-        // ------------ any other ------------
-        assets::asset_manager& asset_manager() noexcept;
-
-        const assets::asset_manager& asset_manager() const noexcept;
-
-        renderer::shader_loader& shader_loader() noexcept;
-
-        const renderer::shader_loader& shader_loader() const noexcept;
-
-        rhi::graphics_device* graphics_device() noexcept;
+        const render_target_manager& render_targets() const noexcept
+        {
+            return m_rt_mgr;
+        }
 
     private:
         rhi::graphics_device*                   m_gdevice = nullptr;
         core::shared_ptr<assets::asset_manager> m_am;
+        core::shared_ptr<tef::workspace>        m_ws;
 
-        renderer::shader_loader m_sl;
-
-        texture_registry       m_tex_reg;
-        render_target_registry m_rt_reg;
-        material_registry      m_mt_reg;
+        upload_context*       m_upctx = nullptr;
+        texture_manager       m_tex_mgr;
+        render_target_manager m_rt_mgr;
     };
 
 } // namespace tavros::renderer

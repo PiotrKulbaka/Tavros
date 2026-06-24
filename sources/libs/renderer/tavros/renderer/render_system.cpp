@@ -10,24 +10,42 @@ namespace
 namespace tavros::renderer
 {
 
-    render_system::render_system() noexcept
+    render_system::render_system(core::shared_ptr<assets::asset_manager> am, core::shared_ptr<tef::workspace> ws) noexcept
+        : m_am(am)
+        , m_ws(ws)
     {
     }
 
     render_system::~render_system() noexcept
     {
+        if (m_is_init) {
+            logger.warning("shutdown() was not called before the render_system was destroyed");
+            shutdown();
+        }
     }
 
     void render_system::init(void* main_window_native_handle)
     {
-        if (m_initialized) {
+        if (m_is_init) {
             logger.warning("Render system is already initialized.");
             return;
         }
 
-        m_graphics_device = rhi::graphics_device::create(rhi::render_backend_type::opengl);
-        if (!m_graphics_device) {
+        m_gdevice = rhi::graphics_device::create(rhi::render_backend_type::opengl);
+        if (!m_gdevice) {
             logger.error("Failed to create graphics device.");
+            return;
+        }
+
+        m_upctx = core::make_unique<upload_context>(m_gdevice.get());
+        if (!m_upctx) {
+            logger.error("Failed to create upload context.");
+            return;
+        }
+
+        m_rm = core::make_unique<tavros::renderer::resource_manager>(m_gdevice.get(), m_am, m_ws);
+        if (!m_rm) {
+            logger.error("Failed to create resource manager.");
             return;
         }
 
@@ -40,34 +58,60 @@ namespace tavros::renderer
         fc_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
         fc_info.native_handle = main_window_native_handle;
 
-        auto fc_handle = m_graphics_device->create_frame_composer(fc_info);
+        auto fc_handle = m_gdevice->create_frame_composer(fc_info);
         if (!fc_handle) {
-            release();
             logger.error("Failed to create frame composer.");
             return;
         }
 
-        m_composer = m_graphics_device->get_frame_composer_ptr(fc_handle);
+        m_composer = m_gdevice->get_frame_composer_ptr(fc_handle);
         TAV_ASSERT(m_composer);
 
-        m_initialized = true;
+        auto* upload_cmd = m_composer->create_command_queue();
+        m_upctx->begin_frame(upload_cmd);
+
+        m_rm->init(m_upctx.get());
+
+        m_is_init = true;
     }
 
     void render_system::shutdown() noexcept
     {
-        if (!m_initialized) {
+        if (!m_is_init) {
             logger.warning("Render system is not initialized.");
+        }
+
+        m_am = nullptr;
+        m_ws = nullptr;
+        m_rm->shutdown();
+        m_upctx = nullptr;
+        m_rm = nullptr;
+        m_gdevice = nullptr;
+
+        m_is_init = false;
+    }
+
+    void render_system::begin_frame() noexcept
+    {
+        if (!m_is_init) {
+            logger.error("Render system is not initialized.");
             return;
         }
 
-        release();
+        if (m_frame_number == 0) {
+            m_upctx->end_frame(); // First frame started with init
+        }
 
-        m_initialized = false;
+        auto* upload_cmd = m_composer->create_command_queue();
+        m_upctx->begin_frame(upload_cmd);
+        m_rm->begin_frame();
     }
 
-    void render_system::release() noexcept
+    void render_system::end_frame() noexcept
     {
-        m_graphics_device = nullptr;
+        m_rm->end_frame();
+        m_upctx->end_frame();
+        ++m_frame_number;
     }
 
 } // namespace tavros::renderer

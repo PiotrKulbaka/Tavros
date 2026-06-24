@@ -4,8 +4,6 @@
 #
 
 set(TAV_RENDERER_CROSSPLATFORM_SOURCES
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/debug_renderer.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/debug_renderer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_buffer_view.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_persistent_buffer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_readback_buffer.hpp
@@ -15,7 +13,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_system.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resource_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resource_manager.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/tags.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/upload_context.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/upload_context.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/camera/camera_controller.cpp
@@ -26,9 +25,6 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/components/atlas_rect.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/components/rgba8_based.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/components/vec_based.hpp
-
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/geometry/geometry_generator.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/geometry/geometry_generator.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_queue_opengl.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/opengl/command_queue_opengl.hpp
@@ -48,28 +44,12 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/graphics_device.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/string_utils.cpp
 
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_desc.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_desc.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_registry.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_registry.hpp
-
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/mesh/mesh_data.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/mesh/mesh_manager.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/mesh/mesh_manager.hpp
-
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_desc.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_desc.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_registry.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_registry.hpp
-
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resources/consola_mono_ttf.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resources/consola_mono_ttf.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resources/resource.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resources/resource_desc.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_manager.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/command_queue.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/enums.hpp
@@ -109,10 +89,10 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/mipmap_generator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/mipmap_generator.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_desc.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_desc.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_manager.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_registry.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_registry.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_uploader.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_uploader.hpp
 )

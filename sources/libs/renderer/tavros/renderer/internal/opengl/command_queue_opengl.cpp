@@ -991,9 +991,9 @@ namespace tavros::renderer::rhi
         }
 
         auto   gl_pixel_format = to_gl_pixel_format(tinfo.format);
-        uint32 real_row_bytes = tinfo.width * gl_pixel_format.bytes;
+        uint32 real_row_bytes = region.width * gl_pixel_format.bytes;
         size_t stride_bytes = static_cast<size_t>(region.buffer_row_length > 0 ? region.buffer_row_length * gl_pixel_format.bytes : real_row_bytes);
-        size_t need_bytes = stride_bytes * tinfo.height * tinfo.depth - (stride_bytes - real_row_bytes);
+        size_t need_bytes = stride_bytes * region.height * region.depth - (stride_bytes - real_row_bytes);
 
         if (region.buffer_offset + need_bytes > b->info.size) {
             ::logger.error(

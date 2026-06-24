@@ -3,9 +3,9 @@
 namespace tavros::renderer
 {
 
-    void texture_uploader::upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, uint32 layer_index, gpu_stage_buffer& stage, rhi::command_queue& cmd)
+    void texture_uploader::upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, uint32 layer_index, upload_context& upctx)
     {
-        auto slice = stage.slice<uint8>(im.width() * im.height() * im.components());
+        auto slice = upctx.slice<uint8>(im.width() * im.height() * im.components());
 
         rhi::texture_copy_region region;
         region.mip_level = mip_level;
@@ -25,15 +25,15 @@ namespace tavros::renderer
             offset += row_sz;
         }
 
-        cmd.copy_buffer_to_texture(stage.gpu_buffer(), gpu_tex, region);
+        upctx.command_queue()->copy_buffer_to_texture(slice.gpu_buffer(), gpu_tex, region);
     }
 
-    void texture_uploader::upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, gpu_stage_buffer& stage, rhi::command_queue& cmd)
+    void texture_uploader::upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, upload_context& upctx)
     {
-        upload_2d_level(gpu_tex, base, 0, layer_index, stage, cmd);
+        upload_2d_level(gpu_tex, base, 0, layer_index, upctx);
         auto sz = static_cast<uint32>(levels.size());
         for (uint32 i = 0; i < sz; ++i) {
-            upload_2d_level(gpu_tex, levels[i], i + 1, layer_index, stage, cmd);
+            upload_2d_level(gpu_tex, levels[i], i + 1, layer_index, upctx);
         }
     }
 

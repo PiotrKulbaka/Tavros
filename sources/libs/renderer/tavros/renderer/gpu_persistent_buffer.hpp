@@ -91,7 +91,7 @@ namespace tavros::renderer
         template<class T>
         [[nodiscard]] gpu_buffer_view<T> slice(size_t count) noexcept
         {
-            const size_t offset = tavros::math::align_up(m_cursor, alignof(T));
+            const size_t offset = tavros::math::align_up(m_cursor, alignof(T)); // TODO: fixit. tavros::math::align_up(m_cursor + m_data.begin(), alignof(T))
             const size_t size_bytes = sizeof(T) * count;
 
             TAV_ASSERT(offset + size_bytes <= m_data.size());

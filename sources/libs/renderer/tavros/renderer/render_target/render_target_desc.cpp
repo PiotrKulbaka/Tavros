@@ -1,6 +1,5 @@
 #include <tavros/renderer/render_target/render_target_desc.hpp>
 
-#include <tavros/core/logger/logger.hpp>
 #include <tavros/core/logger/diagnostics.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 
@@ -8,8 +7,6 @@
 
 namespace
 {
-    tavros::core::logger logger("render_target_desc");
-
     using diagnostics = tavros::core::diagnostics;
     using color_attachment_config = tavros::renderer::render_target_desc::color_attachment_config;
     using color_attachments_config = tavros::renderer::render_target_desc::color_attachments_config;

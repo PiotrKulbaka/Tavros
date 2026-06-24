@@ -14,13 +14,12 @@ namespace tavros::renderer
 {
 
     render_target::render_target(rhi::graphics_device* gdevice, const render_target_desc& desc) noexcept
-        : m_current_msaa(0)
+        : basic_resource(desc.name())
+        , m_current_msaa(0)
         , m_gdevice(gdevice)
         , m_da_cfg(desc.depth_attachment())
         , m_sa_cfg(desc.stencil_attachment())
     {
-        logger.info("{} created", fmt::styled_name(desc.name()));
-
         TAV_ASSERT(m_gdevice);
 
         for (auto& c : desc.color_attachments()) {
@@ -30,7 +29,8 @@ namespace tavros::renderer
     }
 
     render_target::render_target(render_target&& other) noexcept
-        : m_current_msaa(other.m_current_msaa)
+        : basic_resource(std::move(other))
+        , m_current_msaa(other.m_current_msaa)
         , m_gdevice(other.m_gdevice)
         , m_ca_cfg(std::move(other.m_ca_cfg))
         , m_da_cfg(std::move(other.m_da_cfg))

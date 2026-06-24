@@ -4,12 +4,11 @@
 #include <tavros/tef/workspace.hpp>
 #include <tavros/tef/schema.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
-#include <tavros/renderer/resources/resource_desc.hpp>
 
 namespace tavros::renderer
 {
 
-    class render_target_desc : public resource_desc_base<render_target_desc>
+    class render_target_desc
     {
     public:
         struct color_attachment_config
@@ -40,11 +39,7 @@ namespace tavros::renderer
         };
 
     public:
-        render_target_desc() noexcept
-            : resource_desc_base("")
-            , m_hash_cache(0)
-        {
-        }
+        render_target_desc() noexcept = default;
 
         render_target_desc(
             core::string_view                rt_name,
@@ -52,15 +47,17 @@ namespace tavros::renderer
             const depth_attachment_config&   da,
             const stencil_attachment_config& sa
         ) noexcept
-            : resource_desc_base(rt_name)
+            : m_name(rt_name)
             , m_color_configs(ca)
             , m_depth_config(da)
             , m_stencil_config(sa)
         {
-            m_hash_cache = std::hash<core::string_view>{}(name());
         }
 
-        ~render_target_desc() noexcept = default;
+        core::string_view name() const noexcept
+        {
+            return m_name;
+        }
 
         const color_attachments_config& color_attachments() const noexcept
         {
@@ -77,44 +74,11 @@ namespace tavros::renderer
             return m_stencil_config;
         }
 
-    public:
-        bool is_valid_impl() const noexcept
-        {
-            if (name().empty()) {
-                return false;
-            }
-
-            const bool has_color = !m_color_configs.empty();
-            const bool has_depth = m_depth_config.format != rhi::pixel_format::none;
-            const bool has_stencil = m_stencil_config.format != rhi::pixel_format::none;
-            if (!has_color && !has_depth && !has_stencil) {
-                return false;
-            }
-
-            for (const auto& ca : m_color_configs) {
-                if (ca.name.empty() || ca.format == rhi::pixel_format::none) {
-                    return false;
-                }
-            }
-
-            return true;
-        }
-
-        size_t hash_impl() const noexcept
-        {
-            return m_hash_cache;
-        }
-
-        bool equals_impl(const render_target_desc& other) const noexcept
-        {
-            return name() == other.name();
-        }
-
     private:
+        core::short_string        m_name;
         color_attachments_config  m_color_configs;
         depth_attachment_config   m_depth_config;
         stencil_attachment_config m_stencil_config;
-        size_t                    m_hash_cache = 0;
     };
 
 } // namespace tavros::renderer
