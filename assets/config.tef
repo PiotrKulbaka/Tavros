@@ -30,6 +30,58 @@ editor_settings = {
 }
 
 # ----------------------------------------------------------------
+#   textures
+# ----------------------------------------------------------------
+
+# texture_name = {
+#     path = "path to texture"    # required field
+#     left = 0                    # optional, default 0
+#     top = 0                     # optional, default 0
+#     width = 0                   # optional, default 0
+#     height = 0                  # optional, default 0
+#     depth = 1                   # optional, default 1
+#     gen_mipmaps = true          # false or true
+#     type = "texture_2d"         # optional, "texture_2d", "texture_3d" or "texture_cube"; default "texture_2d"
+#     pixel_format = "none"       # optional, "none", "rgba8un" ... etc; default "none"
+#     array_layers = 1            # optional, default 1
+#     array_rows = 0              # optional, default 0
+#     array_cols = 0              # optional, default 0
+# }
+
+textures = {
+    cloudy_sky = {
+        path = "textures/cubemaps/cloudy.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    cloudy_sunset_sky = {
+        path = "textures/cubemaps/cloudy_sunset.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    dark_sky = {
+        path = "textures/cubemaps/dark.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    pure_sunset_sky = {
+        path = "textures/cubemaps/pure_sunset.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    pure_sky = {
+        path = "textures/cubemaps/puresky.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    sunset_sky = {
+        path = "textures/cubemaps/sunset.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+}
+
+# ----------------------------------------------------------------
 #   render targets
 # ----------------------------------------------------------------
 

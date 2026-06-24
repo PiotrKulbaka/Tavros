@@ -21,7 +21,7 @@ namespace app
 
         virtual void shutdown() = 0;
 
-        virtual void render(tavros::input::event_args_queue_view events, double delta_time) = 0;
+        virtual void render(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us) = 0;
 
     protected:
         virtual void on_close(tavros::system::close_event_args& e) override;

@@ -1,16 +1,6 @@
 ﻿#include "render_app_base.hpp"
-#include "built_in_meshes.hpp"
-#include "fps_meter.hpp"
 
 #include "scene_data.hpp"
-#include "text_rendering.hpp"
-#include "pipeline_presets.hpp"
-#include "particle_effectors.hpp"
-#include "particle_emitter.hpp"
-#include "particle_physics.hpp"
-#include "particle_render.hpp"
-#include "particle_shapes.hpp"
-#include "thread_pool.hpp"
 #include "free_camera.hpp"
 
 #include <tavros/renderer/shaders/shader_loader.hpp>
@@ -23,10 +13,9 @@
 #include <tavros/core/logger/logger.hpp>
 #include <tavros/core/debug/unreachable.hpp>
 #include <tavros/core/fixed_string.hpp>
-#include <tavros/core/resource/resource_registry.hpp>
+#include <tavros/renderer/render_target/render_target.hpp>
 #include <tavros/renderer/rhi/command_queue.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
-#include <tavros/renderer/debug_renderer.hpp>
 #include <tavros/renderer/resource_manager.hpp>
 #include <tavros/renderer/gpu_stream_buffer.hpp>
 #include <tavros/renderer/gpu_buffer_view.hpp>
@@ -45,193 +34,29 @@
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/resource/object_pool.hpp>
 #include <tavros/assets/providers/filesystem_provider.hpp>
-#include <tavros/renderer/mesh/mesh_data.hpp>
 #include <tavros/renderer/rhi/string_utils.hpp>
 #include <tavros/tef/saver.hpp>
 #include <tavros/tef/loader.hpp>
 #include <tavros/tef/schema.hpp>
-#include <tavros/renderer/material/material_desc.hpp>
 
-#include <tinyobjloader/tiny_obj_loader.h>
-
-#include <glad/glad.h>
 #include <tracy/Tracy.hpp>
 
-#include <cstdio>
-#include <cstdlib>
-#include <unordered_map>
+#include <tavros/renderer/render_system.hpp>
 
 
-namespace tavros::sandbox
-{
-    struct editor_settings
-    {
-        math::vec4 x_axis_color;
-        math::vec4 y_axis_color;
-        math::vec4 z_axis_color;
-
-        math::vec3 camera_position;
-        float      fow = 1.0f; // in radians
-        float      near_plane = 0.1f;
-        float      far_plane = 1000.0f;
-        float      orbit_dist = 0.0f;
-    };
-
-} // namespace tavros::sandbox
-
-namespace tavros::tef
-{
-    template<size_t N>
-    struct conv<core::fixed_string<N>>
-    {
-        std::optional<core::fixed_string<N>> read(const node* n) const noexcept
-        {
-            if (!n || !n->is_string()) {
-                return std::nullopt;
-            }
-            auto sv = n->value<core::string_view>();
-            if (!sv || sv->size() >= N) {
-                return std::nullopt;
-            }
-            return core::fixed_string<N>(*sv);
-        }
-
-        void write(node* parent, core::string_view key, const core::fixed_string<N>& val) const
-        {
-            if (parent) {
-                parent->append(key, val);
-            }
-        }
-
-        core::string_view description() const noexcept
-        {
-            return "fixed_string<N>";
-        }
-    };
-
-    template<>
-    struct conv<tavros::sandbox::editor_settings>
-    {
-        std::optional<tavros::sandbox::editor_settings> read(const node* n) const noexcept
-        {
-            if (!n) {
-                return std::nullopt;
-            }
-
-            auto* axes = n->resolve_path("axes");
-            auto* cam = n->resolve_path("camera");
-
-            if (!axes || !cam || !axes->is_container() || !cam->is_container()) {
-                return std::nullopt;
-            }
-
-            auto* x_color = axes->at_path("x_color");
-            auto* y_color = axes->at_path("y_color");
-            auto* z_color = axes->at_path("z_color");
-
-            if (!x_color || !y_color || !z_color) {
-                return std::nullopt;
-            }
-
-            auto* cam_pos = cam->resolve_path("position");
-            auto* cam_rot = cam->resolve_path("rotation");
-            auto* fov_y = cam->resolve_path("fov_y");
-            auto* near = cam->resolve_path("near");
-            auto* far = cam->resolve_path("far");
-            auto* orbit_dist = cam->resolve_path("orbit_dist");
-
-            if (!cam_pos || !cam_rot || !fov_y || !near || !far || !orbit_dist) {
-                return std::nullopt;
-            }
-
-            tavros::sandbox::editor_settings result;
-
-            result.x_axis_color = x_color->as_or<math::vec4>({});
-            result.y_axis_color = y_color->as_or<math::vec4>({});
-            result.z_axis_color = z_color->as_or<math::vec4>({});
-
-            result.camera_position = cam_pos->as_or<math::vec3>({});
-            result.fow = fov_y->value_or(1.0f);
-            result.near_plane = near->value_or(0.1f);
-            result.far_plane = far->value_or(1000.0f);
-            result.orbit_dist = orbit_dist->value_or(0.0f);
-
-            return result;
-        }
-
-        void write(node* parent, core::string_view key, const tavros::sandbox::editor_settings& val) const
-        {
-        }
-
-        core::string_view description() const noexcept
-        {
-            return "editor_settings";
-        }
-
-
-        std::optional<tavros::sandbox::editor_settings> operator()(const node* n) const noexcept
-        {
-            if (!n) {
-                return std::nullopt;
-            }
-
-            auto* axes = n->resolve_path("axes");
-            auto* cam = n->resolve_path("camera");
-
-            if (!axes || !cam || !axes->is_container() || !cam->is_container()) {
-                return std::nullopt;
-            }
-
-            auto* x_color = axes->at_path("x_color");
-            auto* y_color = axes->at_path("y_color");
-            auto* z_color = axes->at_path("z_color");
-
-            if (!x_color || !y_color || !z_color) {
-                return std::nullopt;
-            }
-
-            auto* cam_pos = cam->resolve_path("position");
-            auto* cam_rot = cam->resolve_path("rotation");
-            auto* fov_y = cam->resolve_path("fov_y");
-            auto* near = cam->resolve_path("near");
-            auto* far = cam->resolve_path("far");
-            auto* orbit_dist = cam->resolve_path("orbit_dist");
-
-            if (!cam_pos || !cam_rot || !fov_y || !near || !far || !orbit_dist) {
-                return std::nullopt;
-            }
-
-            tavros::sandbox::editor_settings result;
-
-            result.x_axis_color = x_color->as_or<math::vec4>({});
-            result.y_axis_color = y_color->as_or<math::vec4>({});
-            result.z_axis_color = z_color->as_or<math::vec4>({});
-
-            result.camera_position = cam_pos->as_or<math::vec3>({});
-            result.fow = fov_y->value_or(1.0f);
-            result.near_plane = near->value_or(0.1f);
-            result.far_plane = far->value_or(1000.0f);
-            result.orbit_dist = orbit_dist->value_or(0.0f);
-
-            return result;
-        }
-    };
-} // namespace tavros::tef
-
-
-constexpr uint32 k_msaa = 1;
+constexpr uint32 k_msaa = 16;
 
 namespace fs = tavros::filesystem;
 namespace rhi = tavros::renderer::rhi;
 
-static tavros::core::logger g_logger("main");
+static tavros::core::logger logger("main");
 
-#define TAV_FATAL_IF(expr, msg)        \
-    do {                               \
-        if ((expr)) {                  \
-            g_logger.fatal("{}", msg); \
-            ::std::abort();            \
-        }                              \
+#define TAV_FATAL_IF(expr, msg)      \
+    do {                             \
+        if ((expr)) {                \
+            logger.fatal("{}", msg); \
+            ::std::abort();          \
+        }                            \
     } while (0)
 
 constexpr size_t operator""_MiB(unsigned long long v) noexcept
@@ -241,294 +66,6 @@ constexpr size_t operator""_MiB(unsigned long long v) noexcept
 constexpr size_t operator""_KiB(unsigned long long v) noexcept
 {
     return v * 1024ull;
-}
-
-tavros::core::string dump_shader_reflect(const rhi::shader_reflect* reflect) noexcept
-{
-    tavros::core::fixed_string<1024 * 32> buf;
-
-    // ---------------------------------------------------------------------
-    // Vertex attributes
-    // ---------------------------------------------------------------------
-
-    const auto attrs = reflect->vertex_attributes();
-
-    buf.fprintln("--- Vertex Attributes ({}) ---", attrs.size());
-
-    for (const auto& a : attrs) {
-        buf.fprintln(
-            "  location={} name=\"{}\" type={} format={} array_size={}",
-            a.location,
-            a.name,
-            rhi::to_string(a.type),
-            rhi::to_string(a.format),
-            a.array_size
-        );
-    }
-
-    // ---------------------------------------------------------------------
-    // Resources
-    // ---------------------------------------------------------------------
-
-    const auto resources = reflect->shader_resources();
-
-    buf.fprintln("\n--- Shader Resources ({}) ---", resources.size());
-
-    for (const auto& r : resources) {
-        buf.fprintln(
-            "  binding={} name=\"{}\" type={}",
-            r.binding,
-            r.name,
-            rhi::to_string(r.type)
-        );
-    }
-
-    // ---------------------------------------------------------------------
-    // Constant blocks
-    // ---------------------------------------------------------------------
-
-    const auto cbuffers = reflect->constant_blocks();
-
-    buf.fprintln("\n--- Constant Blocks ({}) ---", cbuffers.size());
-
-    for (size_t i = 0; i < cbuffers.size(); ++i) {
-        const auto& block = cbuffers[i];
-
-        buf.fprintln(
-            "  [{}] binding={} size={}B name=\"{}\"",
-            i,
-            block.binding,
-            block.size,
-            block.name
-        );
-
-        const auto members = reflect->constant_block_members(i);
-
-        for (const auto& m : members) {
-            buf.fprint(
-                "      offset={} name=\"{}\" type={} format={} array_size={} array_stride={}",
-                m.offset,
-                m.name,
-                rhi::to_string(m.type),
-                rhi::to_string(m.format),
-                m.array_size,
-                m.array_stride
-            );
-
-            if (m.matrix_stride != 0) {
-                buf.fprint(
-                    " matrix_stride={} is_row_major={}",
-                    m.matrix_stride,
-                    (m.is_row_major ? "true" : "false")
-                );
-            }
-            buf.fprintln("");
-        }
-    }
-
-    // ---------------------------------------------------------------------
-    // Storage blocks
-    // ---------------------------------------------------------------------
-
-    const auto sbuffers = reflect->storage_blocks();
-
-    buf.fprintln("\n--- Storage Blocks ({}) ---", sbuffers.size());
-
-    for (size_t i = 0; i < sbuffers.size(); ++i) {
-        const auto& block = sbuffers[i];
-
-        buf.fprintln(
-            "  [{}] binding={} size={}B name=\"{}\"",
-            i,
-            block.binding,
-            block.size,
-            block.name
-        );
-    }
-
-    // ---------------------------------------------------------------------
-    // Outputs
-    // ---------------------------------------------------------------------
-
-    const auto outputs = reflect->outputs();
-
-    buf.fprintln("\n--- Outputs ({}) ---", outputs.size());
-
-    for (const auto& o : outputs) {
-        buf.fprintln(
-            "  location={} name=\"{}\" format={}",
-            o.location,
-            o.name,
-            rhi::to_string(o.format)
-        );
-    }
-
-    // ---------------------------------------------------------------------
-    // Compute
-    // ---------------------------------------------------------------------
-
-    const auto& compute = reflect->compute();
-
-    buf.fprintln("\n--- Compute ---");
-    buf.fprintln("  is_compute={}", compute.is_compute);
-
-    if (compute.is_compute) {
-        buf.fprintln(
-            "  local_size=({}, {}, {})",
-            compute.local_size_x,
-            compute.local_size_y,
-            compute.local_size_z
-        );
-    }
-
-    return {buf.data(), buf.size()};
-}
-
-// -------------------------------------------------------------------------
-// AoS vertex layout used on the GPU side
-// -------------------------------------------------------------------------
-
-struct mesh_vertex
-{
-    tavros::math::vec3 pos;
-    tavros::math::vec3 normal;
-    tavros::math::vec2 uv;
-};
-
-// -------------------------------------------------------------------------
-// Lightweight GPU mesh handle - offsets into shared vertex/index buffers
-// -------------------------------------------------------------------------
-
-struct gpu_mesh_slice
-{
-    uint32_t vertex_offset = 0; // first vertex in m_mesh_vertices_buffer (in vertices)
-    uint32_t index_offset = 0;  // first index  in m_mesh_indices_buffer  (in indices)
-    uint32_t index_count = 0;
-};
-
-// -------------------------------------------------------------------------
-// OBJ -> mesh_data
-// -------------------------------------------------------------------------
-
-tavros::renderer::mesh_data load_obj_cpu(
-    tavros::assets::asset_manager& am,
-    tavros::core::string_view      path
-)
-{
-    fs::fixed_path obj_path(path);
-    obj_path.append(".obj");
-    fs::fixed_path mtl_path(path);
-    mtl_path.append(".mtl");
-
-
-    const auto raw_obj = am.read_text(obj_path);
-    const auto raw_mtl = am.read_text(mtl_path);
-
-    tinyobj::ObjReaderConfig cfg;
-    cfg.triangulate = true;
-
-    tinyobj::ObjReader reader;
-    if (!reader.ParseFromString(raw_obj, raw_mtl)) {
-        g_logger.error("OBJ parse failed: {}", reader.Error());
-        return {};
-    }
-    if (!reader.Warning().empty()) {
-        g_logger.warning("OBJ warning: {}", reader.Warning());
-    }
-
-    const auto& attrib = reader.GetAttrib();
-    const auto& shapes = reader.GetShapes();
-
-    tavros::renderer::mesh_data mesh;
-
-    // Deduplicate vertices using a flat key
-    struct Key
-    {
-        int  vi, ni, ti;
-        bool operator==(const Key& o) const noexcept
-        {
-            return vi == o.vi && ni == o.ni && ti == o.ti;
-        }
-    };
-    struct KeyHash
-    {
-        size_t operator()(const Key& k) const noexcept
-        {
-            return static_cast<size_t>(k.vi) * 1000003u
-                 ^ static_cast<size_t>(k.ni) * 999983u
-                 ^ static_cast<size_t>(k.ti) * 999979u;
-        }
-    };
-    std::unordered_map<Key, uint32_t, KeyHash> cache;
-
-    for (const auto& shape : shapes) {
-        for (const auto& idx : shape.mesh.indices) {
-            Key key{idx.vertex_index, idx.normal_index, idx.texcoord_index};
-            auto [it, inserted] = cache.emplace(key, static_cast<uint32_t>(mesh.vertex_count()));
-
-            if (inserted) {
-                tavros::renderer::position_c pos;
-                pos.value = {
-                    attrib.vertices[3 * idx.vertex_index + 0],
-                    attrib.vertices[3 * idx.vertex_index + 2],
-                    attrib.vertices[3 * idx.vertex_index + 1] + 15.5f,
-                };
-
-                tavros::renderer::normal_c nrm;
-                if (idx.normal_index >= 0) {
-                    nrm.value = {
-                        attrib.normals[3 * idx.normal_index + 0],
-                        attrib.normals[3 * idx.normal_index + 1],
-                        attrib.normals[3 * idx.normal_index + 2],
-                    };
-                    nrm.value = tavros::math::normalize(nrm.value);
-                }
-
-                tavros::renderer::uv0_c uv;
-                if (idx.texcoord_index >= 0) {
-                    uv.value = {
-                        attrib.texcoords[2 * idx.texcoord_index + 0],
-                        1.0f - attrib.texcoords[2 * idx.texcoord_index + 1], // flip V
-                    };
-                }
-
-                mesh.vertices.typed_emplace_back(pos, nrm, uv);
-            }
-
-            mesh.indices.push_back(it->second);
-        }
-    }
-
-    for (size_t i = 0; i < mesh.indices.size(); i += 3) {
-        auto tmp = mesh.indices[i + 1];
-        mesh.indices[i + 1] = mesh.indices[i + 2];
-        mesh.indices[i + 2] = tmp;
-    }
-    mesh.recompute_bounds();
-    g_logger.info("OBJ loaded: {} verts, {} tris", mesh.vertex_count(), mesh.triangle_count());
-    return mesh;
-}
-
-// -------------------------------------------------------------------------
-// SoA mesh_data -> AoS interleaved vertex array
-// -------------------------------------------------------------------------
-
-tavros::core::vector<mesh_vertex> interleave_mesh(const tavros::renderer::mesh_data& mesh)
-{
-    const size_t                      n = mesh.vertex_count();
-    tavros::core::vector<mesh_vertex> out(n);
-
-    auto pos_view = mesh.vertices.get<tavros::renderer::position_c>();
-    auto nrm_view = mesh.vertices.get<tavros::renderer::normal_c>();
-    auto uv_view = mesh.vertices.get<tavros::renderer::uv0_c>();
-
-    for (size_t i = 0; i < n; ++i) {
-        out[i].pos = pos_view[i].value;
-        out[i].normal = nrm_view[i].value;
-        out[i].uv = uv_view[i].value;
-    }
-
-    return out;
 }
 
 // -------------------------------------------------------------------------
@@ -589,6 +126,123 @@ private:
 
 
 // -------------------------------------------------------------------------
+// Common depth-stencil presets
+// -------------------------------------------------------------------------
+
+inline rhi::depth_stencil_state depth_test_rw() noexcept
+{
+    rhi::depth_stencil_state s;
+    s.format = rhi::pixel_format::depth32f;
+    s.depth_test_enable = true;
+    s.depth_write_enable = true;
+    s.depth_compare = rhi::compare_op::less;
+    return s;
+}
+
+inline rhi::depth_stencil_state depth_test_ro() noexcept
+{
+    rhi::depth_stencil_state s;
+    s.format = rhi::pixel_format::depth32f;
+    s.depth_test_enable = true;
+    s.depth_write_enable = false;
+    s.depth_compare = rhi::compare_op::less;
+    return s;
+}
+
+inline rhi::depth_stencil_state depth_off() noexcept
+{
+    rhi::depth_stencil_state s;
+    s.format = rhi::pixel_format::none;
+    s.depth_test_enable = false;
+    s.depth_write_enable = false;
+    return s;
+}
+
+inline rhi::depth_stencil_state depth_on_write_off() noexcept
+{
+    rhi::depth_stencil_state s;
+    s.format = rhi::pixel_format::depth32f;
+    s.depth_test_enable = true;
+    s.depth_write_enable = false;
+    s.depth_compare = rhi::compare_op::less;
+    return s;
+}
+
+inline rhi::depth_stencil_state depth_test_leq() noexcept
+{
+    rhi::depth_stencil_state s;
+    s.format = rhi::pixel_format::depth32f;
+    s.depth_compare = rhi::compare_op::less_equal;
+    s.depth_test_enable = true;
+    s.depth_write_enable = false;
+    return s;
+}
+
+// -------------------------------------------------------------------------
+// Common blend presets
+// -------------------------------------------------------------------------
+
+/// Standard alpha blending.
+inline rhi::blend_state alpha_blend() noexcept
+{
+    return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
+}
+
+/// Additive blending (fire/glow effects).
+inline rhi::blend_state additive_blend() noexcept
+{
+    return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one, rhi::blend_op::add};
+}
+
+/// No blending.
+inline rhi::blend_state no_blend() noexcept
+{
+    return {false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
+}
+
+// -------------------------------------------------------------------------
+// Common rasterizer presets
+// -------------------------------------------------------------------------
+
+inline rhi::rasterizer_state cull_back_ccw() noexcept
+{
+    rhi::rasterizer_state s;
+    s.cull = rhi::cull_face::back;
+    s.face = rhi::front_face::counter_clockwise;
+    s.polygon = rhi::polygon_mode::fill;
+    return s;
+}
+
+inline rhi::rasterizer_state cull_off() noexcept
+{
+    rhi::rasterizer_state s;
+    s.cull = rhi::cull_face::off;
+    s.polygon = rhi::polygon_mode::fill;
+    return s;
+}
+
+inline rhi::rasterizer_state cull_off_scissor() noexcept
+{
+    auto s = cull_off();
+    s.scissor_enable = true;
+    return s;
+}
+
+// -------------------------------------------------------------------------
+// Default multisample (off)
+// -------------------------------------------------------------------------
+
+inline rhi::multisample_state no_msaa() noexcept
+{
+    rhi::multisample_state s;
+    s.sample_shading_enabled = false;
+    s.sample_count = 1;
+    s.min_sample_shading = 0.0f;
+    return s;
+}
+
+
+// -------------------------------------------------------------------------
 // main_window
 // -------------------------------------------------------------------------
 
@@ -599,25 +253,11 @@ public:
         : app::render_app_base(name)
         , m_am(am)
         , m_sl(tavros::core::make_unique<filesystem_shader_provider>(am))
-        , m_tef_loader(std::move(tavros::core::make_unique<tavros_engine_file_provider>(am)))
-        , m_font_lib(tavros::core::make_unique<filesystem_font_provider>(am))
-        , m_thread_pool(std::thread::hardware_concurrency())
     {
-        m_config = m_tef_loader.load("config.tef");
-        TAV_FATAL_IF(!m_config, "falied to load config.tef");
-        if (m_config) {
-            const auto* settings_node = m_config->resolve_path("editor_settings");
-            if (settings_node) {
-                auto settings = settings_node->as<tavros::sandbox::editor_settings>();
-                if (settings) {
-                    m_editor_settings = *settings;
-                } else {
-                    g_logger.warning("Failed to parse editor settings from TEFF config.");
-                }
-            } else {
-                g_logger.warning("No editor settings found in TEFF config.");
-            }
-        }
+        auto loader = tavros::tef::loader(std::move(tavros::core::make_unique<tavros_engine_file_provider>(am)));
+        auto config = loader.load("config.tef");
+        m_ws = std::move(config);
+        TAV_FATAL_IF(!m_ws, "falied to load config.tef");
     }
 
     ~main_window() override = default;
@@ -630,333 +270,64 @@ public:
     {
         ZoneScopedNC("AppInit", 0x607D8B);
         init_graphics();
-        init_offscreen();
-        init_pipelines();
-        init_scene_resources();
-        init_fonts();
-        init_ui();
-        init_particle_pipeline();
         show();
-        m_stage_buffer.reset();
     }
 
     void shutdown() override
     {
         ZoneScopedNC("AppShutdown", 0x607D8B);
-        m_stage_buffer.shutdown();
-        m_stream_draw.shutdown();
-        m_drenderer.shutdown();
-        m_rrm = nullptr;
-        m_graphics_device = nullptr;
-    }
-
-    // ------------------------------------------------------------------
-    // Particle helpers (unchanged)
-    // ------------------------------------------------------------------
-
-    template<typename Rng>
-    inline void add_explosion(
-        tavros::particles::emitter_archetype& emitters,
-        tavros::math::vec3 origin, float radius, Rng&& rng
-    ) noexcept
-    {
-        using namespace tavros::particles;
-        emitters.typed_emplace_back(emitter_c{
-            .shape = spawn_shape::sphere_shell,
-            .shape_params = {.center = origin, .radius = radius},
-            .params = {
-                .physics = k_spark_preset,
-                .colors = {.stops = {
-                               {0.0f, {255, 240, 50, 0}, {255, 255, 150, 0}},
-                               {0.05f, {255, 100, 0, 255}, {255, 160, 30, 255}},
-                               {0.6f, {180, 20, 0, 200}, {220, 50, 0, 220}},
-                               {1.0f, {30, 30, 30, 0}, {60, 60, 60, 0}},
-                           }},
-                .velocity = {.speed_min = 1.0f, .speed_max = 4.0f, .spread_angle = 3.14159f},
-                .lifetime_min = 12.8f,
-                .lifetime_max = 22.5f,
-                .size_start_min = 0.06f,
-                .size_start_max = 0.22f,
-                .size_end_min = 0.0f,
-                .size_end_max = 0.0f,
-                .avel_min = -6.0f,
-                .avel_max = 6.0f,
-            },
-            .mode = emitter_mode::burst,
-            .rate_min = 80.0f,
-            .rate_max = 120.0f,
-            .lifetime = 0.1f,
-            .immortal = true,
-        });
-    }
-
-    inline void add_portal(
-        tavros::particles::emitter_archetype& emitters,
-        tavros::math::vec3 center, float radius
-    ) noexcept
-    {
-        using namespace tavros::particles;
-        emitters.typed_emplace_back(emitter_c{
-            .shape = spawn_shape::sphere_shell,
-            .shape_params = {.center = center, .radius = radius},
-            .params = {
-                .physics = k_droplet_preset,
-                .colors = {.stops = {
-                               {0.0f, {100, 0, 255, 0}, {150, 50, 255, 0}},
-                               {0.1f, {200, 0, 255, 200}, {0, 100, 255, 220}},
-                               {0.8f, {50, 0, 180, 120}, {100, 0, 220, 150}},
-                               {1.0f, {0, 0, 80, 0}, {20, 0, 100, 0}},
-                           }},
-                .velocity = {.speed_min = 0.15f, .speed_max = 1.0f, .direction = {0.0f, 0.0f, 0.0f}, .spread_angle = 3.14159f},
-                .lifetime_min = 8.5f,
-                .lifetime_max = 32.5f,
-                .size_start_min = 0.03f,
-                .size_start_max = 0.09f,
-                .size_end_min = 0.0f,
-                .size_end_max = 0.01f,
-                .avel_min = -4.0f,
-                .avel_max = 4.0f,
-            },
-            .mode = emitter_mode::burst,
-            .rate_min = 3000.0f,
-            .rate_max = 5000.0f,
-            .immortal = false,
-        });
-    }
-
-    void parallel_for(size_t n, size_t chunk_size, auto fn)
-    {
-        const size_t num_chunks = (n + chunk_size - 1) / chunk_size;
-        TAV_ASSERT(num_chunks <= 64);
-        for (size_t c = 0; c < num_chunks; ++c) {
-            const size_t begin = c * chunk_size;
-            const size_t count = std::min(chunk_size, n - begin);
-            m_thread_pool.enqueue(fn, begin, count);
-        }
-        m_thread_pool.wait_all();
-    }
-
-    inline constexpr size_t calc_chunk_size(size_t n, size_t target_chunks, size_t min_chunk) noexcept
-    {
-        if (n == 0) {
-            return min_chunk;
-        }
-        const size_t ideal = (n + target_chunks - 1) / target_chunks;
-        const size_t pow2 = std::max(std::bit_floor(ideal), size_t{1});
-        const size_t min_p2 = std::bit_floor(min_chunk);
-        return std::max(pow2, min_p2);
+        m_uniform_buffer.shutdown();
+        m_renderer->shutdown();
     }
 
     // ------------------------------------------------------------------
     // Render loop
     // ------------------------------------------------------------------
 
-    void render(tavros::input::event_args_queue_view events, double delta_time) override
+    void render(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us) override
     {
         ZoneScopedNC("Frame", 0xFFFFFF);
 
-        if (m_frame_number % 3 == 0) {
-            m_stage_buffer.reset();
-            m_stream_draw.reset();
-        }
+        process_input(events, time_us);
 
-        m_delta_time = static_cast<float>(delta_time);
-        m_time = m_timer.elapsed_seconds();
-
-        {
-            ZoneScopedNC("ProcessInput", 0x9C27B0);
-            process_input(events, delta_time);
-            m_fps_meter.tick(delta_time);
-        }
-        {
-            ZoneScopedNC("UpdateFrameData", 0x9C27B0);
-            update_frame_data();
-        }
-
-        // ------------------------------------------------------------------
-        // Simulation
-        // ------------------------------------------------------------------
-        {
-            ZoneScopedNC("ParticlesClearDead", 0x2196F3);
-            if (m_frame_number % 10 == 0) {
-                clear_dead(m_particles);
-            }
-        }
-
-        auto rng = [&](float lo, float hi) { return rand_range(lo, hi); };
-
-        constexpr float spawn_area = 25;
-        constexpr float max_strength = 5.0f;
-        constexpr float min_strength = -2.0f;
-
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_E)) {
-            float x = rng(-spawn_area, spawn_area);
-            float y = rng(-spawn_area, spawn_area);
-            float z = rng(-spawn_area, spawn_area);
-            m_particle_effectors.typed_emplace_back(
-                tavros::particles::attractor_c{.origin = {x, y, z}, .strength = rng(min_strength, max_strength), .kill_radius = rng(0.1f, 1.0f)},
-                tavros::particles::wind_c{{0.0f, 0.0f, 0.0f}}
-            );
-        }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_Q)) {
-            const size_t sz = m_particle_effectors.size();
-            if (sz > 0) {
-                m_particle_effectors.swap_and_pop(rand() % sz);
-            }
-        }
-        if (m_input_manager.is_key_held(tavros::input::keyboard_key::k_1)) {
-            add_portal(m_particle_emitters, {10.0f, -10.0f, -10.0f}, 1.0f);
-        }
-        if (m_input_manager.is_key_held(tavros::input::keyboard_key::k_2)) {
-            add_explosion(m_particle_emitters, {10.0f, 10.0f, 10.0f}, 2.0f, rng);
-        }
-        if (m_input_manager.is_key_held(tavros::input::keyboard_key::k_3)) {
-            float x = rng(-spawn_area, spawn_area);
-            float y = rng(-spawn_area, spawn_area);
-            float z = rng(-spawn_area, spawn_area);
-            add_portal(m_particle_emitters, {x, y, z}, rng(1.0f, 10.0f));
-        }
-
-
-        {
-            ZoneScopedNC("EmittersUpdate", 0x2196F3);
-            tavros::particles::update_emitters(m_particle_emitters, m_particles, delta_time, rng);
-        }
-        {
-            ZoneScopedNC("ParticlesUpdate", 0x2196F3);
-            const size_t n = m_particles.size();
-            ZoneValue(static_cast<uint64_t>(n));
-            const size_t chunk_size = calc_chunk_size(n, m_thread_pool.worker_count(), 256);
-            {
-                ZoneScopedNC("ClearForces", 0x2196F3);
-                parallel_for(n, chunk_size, [&](size_t begin, size_t count) {
-                    tavros::particles::clear_forces(m_particles, begin, count);
-                });
-            }
-            {
-                ZoneScopedNC("ApplyEffectors", 0x2196F3);
-                parallel_for(n, chunk_size, [&](size_t begin, size_t count) {
-                    tavros::particles::apply_effectors(m_particle_effectors, m_particles, begin, count);
-                    tavros::particles::apply_drag(m_particles, begin, count);
-                });
-            }
-            {
-                ZoneScopedNC("Integrate", 0x2196F3);
-                parallel_for(n, chunk_size, [&](size_t begin, size_t count) {
-                    tavros::particles::integrate(m_particles, delta_time, begin, count);
-                    tavros::particles::integrate_rotation(m_particles, delta_time, begin, count);
-                    integrate_lt(m_particles, begin, count);
-                });
-            }
-        }
-
-        // ------------------------------------------------------------------
-        // Render - CPU side
-        // ------------------------------------------------------------------
-        {
-            ZoneScopedNC("DebugRendererBeginFrame", 0x4CAF50);
-            m_drenderer.begin_frame(m_scene_data.ortho_projection, m_scene_data.view_projection);
-            m_particle_effectors.view<tavros::particles::attractor_c>().each(
-                [&](tavros::particles::attractor_c& a) {
-                    float r = a.strength < 0.0f ? 0.0f : a.strength / max_strength;
-                    float b = a.strength < 0.0f ? a.strength / min_strength : 0.0f;
-                    m_drenderer.sphere3d({a.origin, a.kill_radius}, {r, 0.4f, b, 0.2f}, tavros::renderer::debug_renderer::draw_mode::faces);
-                }
-            );
-        }
+        m_renderer->begin_frame();
+        m_composer->begin_frame();
 
         auto* cbuf = m_composer->create_command_queue();
+        update_frame_data();
+
+        m_uniform_buffer.reset();
+        auto scene_data_slice = m_uniform_buffer.slice<app::scene_data>(1);
+        scene_data_slice.data().copy_from(&m_scene_data, 1);
+
+        cbuf->begin_rendering(m_offscreen_rt->framebuffer());
+        cbuf->bind_shader_buffers(rhi::buffer_binding{scene_data_slice.gpu_buffer(), static_cast<uint32>(scene_data_slice.offset_bytes()), static_cast<uint32>(scene_data_slice.size_bytes()), 0});
+
+        cbuf->bind_pipeline(m_skybox_pipeline);
+        auto tex = m_sky_textures[m_sky_index];
+        cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_texture, m_sampler, 0});
+        cbuf->draw(36);
+
+        draw_world_grid(*cbuf, 0);
+
+        cbuf->end_rendering();
 
 
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_4)) {
-            m_mesh_texture = m_rrm->load_texture(m_stage_buffer, *cbuf, "meshes/san_miguel/textures/piso_patio_exterior.png");
-        }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_5)) {
-            m_mesh_texture = m_rrm->load_texture(m_stage_buffer, *cbuf, "meshes/san_miguel/textures/silla_d_piel.png");
-        }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_6)) {
-            m_mesh_texture = m_rrm->load_texture(m_stage_buffer, *cbuf, "meshes/san_miguel/textures/Vigas_B.png");
-        }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_7)) {
-            m_mesh_texture = m_rrm->load_texture(m_stage_buffer, *cbuf, "meshes/san_miguel/textures/BWK_1024.png");
-        }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_U)) {
-            // m_mesh_texture = {};
-            // m_rrm->textures().clear();
-            m_rrm->release(m_mesh_texture);
-        }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_P)) {
-            for (auto [h, entry] : m_rrm->textures()) {
-                auto& res = entry->res;
-                g_logger.info("{}: w={}; h={}; ref_count: {} {}", h, res.width, res.height, entry->rc.load(), entry->key);
-            }
-        }
+        cbuf->begin_rendering(m_composer->backbuffer());
+        cbuf->bind_pipeline(m_fullscreen_quad_pipeline);
+        cbuf->bind_shader_textures(rhi::texture_binding{m_offscreen_rt->color_attachments()[0], m_sampler, 0});
+        cbuf->draw(4);
+        cbuf->end_rendering();
 
-        {
-            ZoneScopedNC("UploadFrameUniforms", 0xFF9800);
-            upload_frame_uniforms();
-        }
-        {
-            ZoneScopedNC("BuildFpsText", 0x00BCD4);
-            build_fps_text();
-        }
-
-        auto glyph_slice = m_stream_draw.slice<app::glyph_instance>(m_fps_text.size());
-        auto glyph_count = app::fill_glyph_instances(m_fps_text, glyph_slice.data(), {16.0f, 16.0f});
-
-
-        auto particle_slice = [&] {
-            ZoneScopedNC("PrepareParticleSlice", 0xFF9800);
-            return prepare_particle_slice();
-        }();
-
-        {
-            ZoneScopedNC("BeginFrame", 0x4CAF50);
-            m_composer->begin_frame();
-        }
-
-        {
-            ZoneScopedNC("RecordOffscreenPass", 0x4CAF50);
-            record_offscreen_pass(cbuf, glyph_slice, glyph_count, particle_slice);
-        }
-
-        if (m_capture_next_frame) {
-            ZoneScopedNC("CaptureFrame", 0x795548);
-            capture_frame(cbuf);
-        }
-
-        {
-            ZoneScopedNC("RecordBlitToBackbuffer", 0x4CAF50);
-            record_blit_to_backbuffer(cbuf);
-        }
-
-        {
-            ZoneScopedNC("SubmitCommandQueue", 0xFF9800);
-            m_composer->submit_command_queue(cbuf);
-            m_composer->end_frame();
-        }
-        {
-            ZoneScopedNC("WaitForFrameComplete", 0xF44336);
-            m_composer->wait_for_frame_complete();
-        }
-        {
-            ZoneScopedNC("Present", 0xF44336);
-            m_composer->present();
-        }
-
-        if (m_capture_next_frame) {
-            ZoneScopedNC("SaveFrameCapture", 0x795548);
-            save_frame_capture();
-            m_capture_next_frame = false;
-        }
-
-        TracyPlotConfig("Particles", tracy::PlotFormatType::Number, true, true, 0x2196F3);
-        TracyPlot("Particles", static_cast<int64_t>(m_particles.size()));
-        TracyPlotConfig("FPS", tracy::PlotFormatType::Number, false, true, 0x4CAF50);
-        TracyPlot("FPS", static_cast<double>(m_fps_meter.average_fps()));
+        m_renderer->end_frame();
+        m_composer->end_frame();
+        m_composer->wait_for_frame_complete();
+        m_composer->present();
 
         m_input_manager.end_frame();
+
         ++m_frame_number;
+
         FrameMark;
     }
 
@@ -969,203 +340,71 @@ private:
     {
         ZoneScopedNC("InitGraphics", 0x607D8B);
 
-        m_graphics_device = rhi::graphics_device::create(rhi::render_backend_type::opengl);
-        TAV_FATAL_IF(!m_graphics_device, "Failed to create graphics device.");
+        m_renderer = tavros::core::make_unique<tavros::renderer::render_system>(m_am, m_ws);
+        TAV_FATAL_IF(!m_renderer, "Failed to create render system.");
 
-        rhi::frame_composer_create_info info;
-        info.width = 1;
-        info.height = 1;
-        info.buffer_count = 2;
-        info.vsync = false;
-        info.color_attachment_format = rhi::pixel_format::rgba8un;
-        info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
-        info.native_handle = native_handle();
+        m_renderer->init(native_handle());
 
-        auto handle = m_graphics_device->create_frame_composer(info);
-        TAV_FATAL_IF(!handle, "Failed to create frame composer.");
-        m_composer = m_graphics_device->get_frame_composer_ptr(handle);
+
+        m_composer = m_renderer->get_frame_composer();
         TAV_FATAL_IF(!m_composer, "Failed to get frame composer pointer.");
 
-        m_fence = m_graphics_device->create_fence();
-        TAV_FATAL_IF(!m_fence, "Failed to create fence.");
-
-        m_stage_buffer.init(m_graphics_device.get(), 256_MiB);
-        m_stage_upload_buffer = create_buffer(64_MiB, rhi::buffer_usage::stage, rhi::buffer_access::gpu_to_cpu);
-        m_uniform_buffer = create_buffer(1_MiB, rhi::buffer_usage::constant, rhi::buffer_access::gpu_only);
-        m_stream_draw.init(m_graphics_device.get(), 256_MiB, rhi::buffer_usage::vertex);
-
         m_free_cam.set_orientation(tavros::math::quat::look_rotation(tavros::math::vec3(-1.0f, -1.0f, -0.5f), tavros::math::vec3(0.0f, 0.0f, 1.0f)));
-        m_free_cam.set_orbit_dist(m_editor_settings.orbit_dist);
+        m_free_cam.set_orbit_dist(30.0f);
 
-        m_rrm = tavros::core::make_unique<tavros::renderer::resource_manager>(m_graphics_device.get(), m_am);
-        TAV_FATAL_IF(!m_rrm, "Failed to create render resource manager.");
-    }
+        m_offscreen_rt = m_renderer->resource_manager()->load<tavros::renderer::render_target>("main_offscreen_rendertarget");
+        TAV_FATAL_IF(!m_offscreen_rt, "Failed to create offscreen render target.");
 
-    void init_offscreen()
-    {
-        ZoneScopedNC("InitOffscreen", 0x607D8B);
-        m_offscreen_rt = m_rrm->create_render_target(*m_config, "main_offscreen_rendertarget");
-        TAV_FATAL_IF(!m_offscreen_rt, "Failed to create offscreen render target");
 
-        tavros::renderer::material_desc mt;
-        tavros::core::diagnostics       ds;
-        tavros::tef::schema<tavros::renderer::material_desc>::deserialize(m_config->resolve_path("first_material"), mt, ds);
-        tavros::core::logger::print_info("main", "{}", ds.text());
-        TAV_FATAL_IF(ds.error_count() || ds.fatal_count(), "failed to load first_material");
-    }
-
-    void init_pipelines()
-    {
-        ZoneScopedNC("InitPipelines", 0x607D8B);
-        m_fullscreen_quad_pipeline = build_fullscreen_quad_pipeline();
-        m_mesh_rendering_pipeline = build_mesh_pipeline();
-        m_world_grid_pipeline = build_world_grid_pipeline();
-        m_sdf_font_pipeline = build_sdf_font_pipeline();
-        m_skybox_pipeline = build_skybox_pipeline();
-        m_line2d_pipeline = build_line2d_pipeline();
-        m_circle2d_pipeline = build_circle2d_pipeline();
-        m_sprite3d_pipeline = build_sprite3d_pipeline();
-    }
-
-    void init_scene_resources()
-    {
-        ZoneScopedNC("InitSceneResources", 0x607D8B);
-
-        auto* cmd = m_composer->create_command_queue();
-        m_mesh_texture = m_rrm->textures().load(m_stage_buffer, *cmd, "textures/cube_test.png");
-        tavros::renderer::texture_registry::load_params tex_params;
-        tex_params.array_layers = 13;
-        m_boom_texture = m_rrm->textures().load(m_stage_buffer, *cmd, "textures/boom.png", tex_params);
-        tavros::renderer::texture_registry::load_params cubemap_params;
-        cubemap_params.type = rhi::texture_type::texture_cube;
-        m_skybox_texture = m_rrm->textures().load(m_stage_buffer, *cmd, "textures/cubemaps/puresky.png", cubemap_params);
-        m_composer->submit_command_queue(cmd);
-
-        rhi::sampler_create_info ssi;
-        ssi.filter.mipmap_filter = rhi::mipmap_filter_mode::linear;
-        ssi.filter.min_filter = rhi::filter_mode::linear;
-        ssi.filter.mag_filter = rhi::filter_mode::linear;
-        ssi.wrap_mode.wrap_s = rhi::wrap_mode::clamp_to_edge;
-        ssi.wrap_mode.wrap_t = rhi::wrap_mode::clamp_to_edge;
-        ssi.wrap_mode.wrap_r = rhi::wrap_mode::clamp_to_edge;
-        m_skybox_sampler = m_graphics_device->create_sampler(ssi);
-        TAV_FATAL_IF(!m_skybox_sampler, "Failed to create sampler.");
-
-        // Sampler
         rhi::sampler_create_info si;
         si.filter.mipmap_filter = rhi::mipmap_filter_mode::linear;
         si.filter.min_filter = rhi::filter_mode::linear;
         si.filter.mag_filter = rhi::filter_mode::linear;
-        m_sampler = m_graphics_device->create_sampler(si);
+        si.wrap_mode.wrap_s = rhi::wrap_mode::clamp_to_edge;
+        si.wrap_mode.wrap_t = rhi::wrap_mode::clamp_to_edge;
+        si.wrap_mode.wrap_r = rhi::wrap_mode::clamp_to_edge;
+        m_sampler = m_renderer->get_graphics_device()->create_sampler(si);
         TAV_FATAL_IF(!m_sampler, "Failed to create sampler.");
 
-        // ------------------------------------------------------------------
-        // OBJ mesh - loaded into the shared vertex/index buffers
-        // ------------------------------------------------------------------
-        // Buffer sizes: 16 MiB vertices, 128 KiB indices - same as before.
-        // These are reused; one mesh occupies the whole buffer for now.
-        m_mesh_vertices_buffer = create_buffer(256_MiB, rhi::buffer_usage::vertex, rhi::buffer_access::cpu_to_gpu);
-        m_mesh_indices_buffer = create_buffer(128_MiB, rhi::buffer_usage::index, rhi::buffer_access::cpu_to_gpu);
 
-        load_and_upload_obj("meshes/sibenik/sibenik");
-    }
+        m_fullscreen_quad_pipeline = build_fullscreen_quad_pipeline();
+        m_world_grid_pipeline = build_world_grid_pipeline();
+        m_skybox_pipeline = build_skybox_pipeline();
 
-    // Load OBJ, convert to AoS, upload into the shared buffers.
-    // Fills m_obj_mesh with offsets / count.
-    void load_and_upload_obj(tavros::core::string_view path)
-    {
-        auto cpu_mesh = load_obj_cpu(*m_am.get(), path);
-        if (cpu_mesh.empty()) {
-            g_logger.error("OBJ mesh is empty, nothing to upload.");
-            return;
-        }
+        m_uniform_buffer.init(m_renderer->get_graphics_device(), 256_MiB, rhi::buffer_usage::constant);
 
-        // Convert SoA -> AoS
-        auto verts = interleave_mesh(cpu_mesh);
-
-        const size_t vb_bytes = verts.size() * sizeof(mesh_vertex);
-        const size_t ib_bytes = cpu_mesh.index_count() * sizeof(uint32_t);
-
-        TAV_FATAL_IF(vb_bytes > 256_MiB, "OBJ vertex data exceeds vertex buffer size.");
-        TAV_FATAL_IF(ib_bytes > 128_MiB, "OBJ index data exceeds index buffer size.");
-
-        upload_to_mapped(m_mesh_vertices_buffer, verts.data(), vb_bytes);
-        upload_to_mapped(m_mesh_indices_buffer, cpu_mesh.indices.data(), ib_bytes);
-
-        m_obj_mesh.vertex_offset = 0;
-        m_obj_mesh.index_offset = 0;
-        m_obj_mesh.index_count = static_cast<uint32_t>(cpu_mesh.index_count());
-    }
-
-    void init_fonts()
-    {
-        ZoneScopedNC("InitFonts", 0x607D8B);
-        m_font_lib.load("fonts/Consola-Mono.ttf", "Consola-Mono");
-        m_font_lib.load("fonts/DroidSans.ttf", "DroidSans");
-        m_font_lib.load("fonts/HomeVideo.ttf", "HomeVideo");
-        m_font_lib.load("fonts/NotoSans-Regular.ttf", "NotoSans-Regular");
-        m_font_lib.load("fonts/Roboto-Medium.ttf", "Roboto-Medium");
-        m_font_texture = bake_and_upload_font_atlas();
-    }
-
-    void init_ui()
-    {
-        ZoneScopedNC("InitUi", 0x607D8B);
-        m_drenderer.init(m_graphics_device.get());
-    }
-
-    void init_particle_pipeline()
-    {
-        ZoneScopedNC("InitParticlePipeline", 0x607D8B);
-        using namespace app::pipeline_builder;
-
-        rhi::pipeline_create_info info;
-        using tavros::particles::particle_instance;
-        info.bindings.push_back({rhi::composite_format::vec3, rhi::scalar_type::f32, false, 0, sizeof(particle_instance), offsetof(particle_instance, position), 1});
-        info.bindings.push_back({rhi::composite_format::scalar, rhi::scalar_type::f32, false, 1, sizeof(particle_instance), offsetof(particle_instance, size), 1});
-        info.bindings.push_back({rhi::composite_format::scalar, rhi::scalar_type::u32, false, 2, sizeof(particle_instance), offsetof(particle_instance, color), 1});
-        info.bindings.push_back({rhi::composite_format::scalar, rhi::scalar_type::f32, false, 3, sizeof(particle_instance), offsetof(particle_instance, rotation), 1});
-        info.shader_program = load_and_create_shader_program("tavros/shaders/particle.vert", "tavros/shaders/particle.frag");
-        info.depth_stencil_attachment = depth_off();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangle_strip;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, additive_blend()});
-        info.multisample = no_msaa();
-
-        m_particle_pipeline = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!m_particle_pipeline, "Failed to create particle pipeline.");
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.cloudy_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.cloudy_sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.dark_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.pure_sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.pure_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.sunset_sky"));
     }
 
     // ==================================================================
     // Per-frame helpers
     // ==================================================================
 
-    void process_input(tavros::input::event_args_queue_view events, double delta_time)
+    void process_input(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us)
     {
         ZoneScopedNC("InputProcessEvents", 0x9C27B0);
         m_input_manager.begin_frame(tavros::system::application::instance().highp_time_us());
         m_input_manager.process_events(events);
-        handle_key_shortcuts();
         handle_window_resize();
-        static bool fly_cam = false;
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_equal)) {
-            fly_cam = !fly_cam;
-            m_free_cam.set_fly(fly_cam);
-        }
-        m_free_cam.update(m_input_manager, delta_time);
-    }
+        m_free_cam.update(m_input_manager, time_us);
 
-    void handle_key_shortcuts()
-    {
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_F1)) {
-            m_current_buffer_output = 0;
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_equal)) {
+            m_sky_index += 1;
+            if (m_sky_index >= m_sky_textures.size()) {
+                m_sky_index = 0;
+            }
         }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_F2)) {
-            m_current_buffer_output = 1;
-        }
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_F10)) {
-            m_capture_next_frame = true;
+
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_minus)) {
+            m_sky_index -= 1;
+            if (m_sky_index < 0) {
+                m_sky_index = m_sky_textures.size() - 1;
+            }
         }
     }
 
@@ -1179,11 +418,13 @@ private:
             return;
         }
         TracyMessageL("WindowResize");
-        m_rrm->find(m_offscreen_rt)->resize(static_cast<uint32>(sz.width), static_cast<uint32>(sz.height), k_msaa);
+
+        m_offscreen_rt->resize(static_cast<uint32>(sz.width), static_cast<uint32>(sz.height), k_msaa);
+
         m_composer->resize(sz.width, sz.height);
-        const float fov_y = m_editor_settings.fow * 3.14159265358979f / 180.0f;
-        const float near = m_editor_settings.near_plane;
-        const float far = m_editor_settings.far_plane;
+        const float fov_y = 70.0f * 3.14159265358979f / 180.0f;
+        const float near = 0.1f;
+        const float far = 5000.0f;
         m_free_cam.set_perspective(fov_y, static_cast<float>(sz.width) / static_cast<float>(sz.height), near, far);
     }
 
@@ -1206,169 +447,25 @@ private:
         m_scene_data.fov_y = cam.perspective_params().fov_y;
         m_scene_data._pad0 = 0.0f;
         m_scene_data.frame_size = {w, h};
-        m_scene_data.time = m_time;
-        m_scene_data.delta_time = m_delta_time;
+        m_scene_data.time = 0.0f;
+        m_scene_data.delta_time = 0.0f;
         m_scene_data.frame_index = static_cast<uint32>(m_frame_number);
         m_scene_data._pad1 = 0.0f;
     }
 
-    void upload_frame_uniforms()
+    rhi::pipeline_handle build_fullscreen_quad_pipeline()
     {
-        m_stage_buffer.reset();
-        auto slice = m_stage_buffer.slice<app::scene_data>(1);
+        rhi::pipeline_create_info info;
+        info.shader_program = load_and_create_shader_program("tavros/shaders/fullscreen_quad.vert", "tavros/shaders/fullscreen_quad.frag");
+        info.depth_stencil_attachment = depth_off();
+        info.rasterizer = cull_off();
+        info.topology = rhi::primitive_topology::triangle_strip;
+        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
 
-        slice.data().copy_from(&m_scene_data, 1);
-        m_stage_to_scene_offset = slice.offset_bytes();
-    }
-
-    void build_fps_text()
-    {
-        const auto*     fnt = m_font_lib.fonts()[0].font.get();
-        constexpr float sz = 36.0f;
-
-        const tavros::math::vec4 col_label = {0.8f, 0.2f, 1.0f, 1.0f};
-        const tavros::math::vec4 col_value = {1.0f, 1.0f, 1.0f, 1.0f};
-        const tavros::math::vec4 col_none = {1.0f, 1.0f, 1.0f, 0.0f};
-
-        m_fps_text.clear();
-        auto label = [&](const char* text) {
-            app::append_colored_text(m_fps_text, text, fnt, sz, col_label, col_none);
-        };
-        auto value = [&](auto v) {
-            app::append_colored_text(m_fps_text, std::to_string(v), fnt, sz, col_value, col_none);
-        };
-
-        label("Frame:   ");
-        value(m_frame_number);
-        label("\nAvg FPS: ");
-        value(m_fps_meter.average_fps());
-        label("\nMed FPS: ");
-        value(m_fps_meter.median_fps());
-        label("\nDelta ms: ");
-        value(m_delta_time);
-        label("\nParticles: ");
-        value(m_particles.size());
-        label("\nMesh verts: ");
-        value(m_obj_mesh.index_count / 3 * 3); // triangles*3
-
-        tavros::renderer::text_layouter::layout(m_fps_text);
-    }
-
-    struct particle_draw_slice
-    {
-        tavros::renderer::gpu_buffer_view<tavros::particles::particle_instance> slice{};
-        size_t                                                                  count = 0;
-    };
-
-    particle_draw_slice prepare_particle_slice()
-    {
-        if (m_particles.size() == 0) {
-            return {};
-        }
-
-        particle_draw_slice result;
-        result.slice = m_stream_draw.slice<tavros::particles::particle_instance>(m_particles.size());
-        const size_t        n = m_particles.size();
-        const size_t        chunk_size = calc_chunk_size(n, m_thread_pool.worker_count(), 1024);
-        std::atomic<size_t> total_count{0};
-
-        parallel_for(n, chunk_size, [&](size_t begin, size_t count) {
-            tavros::particles::fill_instances(m_particles, result.slice.data(), begin, count);
-            total_count.fetch_add(count, std::memory_order_relaxed);
-        });
-
-        result.count = total_count.load();
-        return result;
-    }
-
-    uint32 m_plane_grid_vb = 0;
-
-    void record_offscreen_pass(
-        rhi::command_queue*                                           cbuf,
-        const tavros::renderer::gpu_buffer_view<app::glyph_instance>& glyph_slice,
-        size_t                                                        glyph_count,
-        const particle_draw_slice&                                    pslice
-    )
-    {
-        ZoneScopedNC("OffscreenPass", 0x4CAF50);
-
-        constexpr size_t scene_size = sizeof(app::scene_data);
-        cbuf->copy_buffer(m_stage_buffer.gpu_buffer(), m_uniform_buffer, scene_size, m_stage_to_scene_offset, m_stage_to_scene_offset);
-        m_scene_binding = rhi::buffer_binding{
-            m_uniform_buffer,
-            static_cast<uint32>(m_stage_to_scene_offset),
-            scene_size, 0
-        };
-
-        const auto* rt = m_rrm->render_targets().find(m_offscreen_rt);
-        if (rt) {
-            cbuf->begin_rendering(rt->second.framebuffer());
-        }
-        cbuf->bind_shader_buffers(m_scene_binding);
-
-        {
-            ZoneScopedNC("DrawMesh", 0x4CAF50);
-            draw_mesh(cbuf);
-        }
-
-        draw_skybox(cbuf);
-
-        if (m_input_manager.is_key_just_released(tavros::input::keyboard_key::k_minus)) {
-            m_plane_grid_vb++;
-            if (m_plane_grid_vb >= 4) {
-                m_plane_grid_vb = 0;
-            }
-        }
-
-        {
-            ZoneScopedNC("DrawWorldGrid", 0x4CAF50);
-            if (m_plane_grid_vb <= 2) {
-                draw_world_grid(*cbuf, m_plane_grid_vb);
-            }
-        }
-        {
-            ZoneScopedNC("DrawHudText", 0x00BCD4);
-            draw_hud_text(cbuf, glyph_slice, glyph_count);
-        }
-        {
-            ZoneScopedNC("DrawParticles", 0x2196F3);
-            draw_particles(cbuf, pslice);
-        }
-
-        // draw_boom(cbuf, {0.0f, 0.0f, 0.0f}, 2.0f, (m_frame_number / 3) % 16, static_cast<float>(m_frame_number) / 100.0f);
-
-        float w = m_composer->width();
-        draw_world_axis(*cbuf, {w - 120.0f, 120.0f}, 100.0f);
-
-        {
-            ZoneScopedNC("DebugRendererFlush", 0x4CAF50);
-            m_drenderer.update();
-            m_drenderer.render(cbuf);
-            m_drenderer.end_frame();
-        }
-
-        cbuf->end_rendering();
-    }
-
-    void draw_mesh(rhi::command_queue* cbuf)
-    {
-        if (m_obj_mesh.index_count == 0) {
-            return;
-        }
-
-        cbuf->bind_pipeline(m_mesh_rendering_pipeline);
-
-        // Single interleaved buffer bound to all three attribute slots
-        rhi::bind_buffer_info bufs[] = {
-            {m_mesh_vertices_buffer, m_obj_mesh.vertex_offset * sizeof(mesh_vertex)},
-            {m_mesh_vertices_buffer, m_obj_mesh.vertex_offset * sizeof(mesh_vertex)},
-            {m_mesh_vertices_buffer, m_obj_mesh.vertex_offset * sizeof(mesh_vertex)},
-        };
-        cbuf->bind_vertex_buffers(bufs);
-        cbuf->bind_index_buffer({m_mesh_indices_buffer, rhi::index_buffer_format::u32});
-        cbuf->bind_shader_buffers(m_scene_binding);
-        cbuf->bind_shader_textures(rhi::texture_binding{m_rrm->get_gpu_handle(m_mesh_texture), m_sampler});
-        cbuf->draw_indexed(m_obj_mesh.index_count, m_obj_mesh.index_offset, 0 /* base vertex */);
+        auto h = m_renderer->get_graphics_device()->create_pipeline(info);
+        m_renderer->get_graphics_device()->destroy_shader(info.shader_program);
+        TAV_FATAL_IF(!h, "Failed to create fullscreen quad pipeline.");
+        return h;
     }
 
     void draw_world_grid(rhi::command_queue& cbuf, uint32 plane = 0)
@@ -1392,16 +489,20 @@ private:
         uint32 u_color = 0;
         uint32 v_color = 0;
 
+        constexpr auto x_axis_color = math::vec4(0.6549f, 0.2196f, 0.3255f, 1.0f);
+        constexpr auto y_axis_color = math::vec4(0.4196f, 0.5569f, 0.1373f, 1.0f);
+        constexpr auto z_axis_color = math::vec4(0.2314f, 0.5137f, 0.7412f, 1.0f);
+
         auto plane_id = plane & 0x3;
         if (plane_id == 0) { // XY plane
-            u_color = math::rgba8(m_editor_settings.x_axis_color).color;
-            v_color = math::rgba8(m_editor_settings.y_axis_color).color;
+            u_color = math::rgba8(x_axis_color).color;
+            v_color = math::rgba8(y_axis_color).color;
         } else if (plane_id == 1) { // YZ plane
-            u_color = math::rgba8(m_editor_settings.y_axis_color).color;
-            v_color = math::rgba8(m_editor_settings.z_axis_color).color;
+            u_color = math::rgba8(y_axis_color).color;
+            v_color = math::rgba8(z_axis_color).color;
         } else if (plane_id == 2) { // ZX plane
-            u_color = math::rgba8(m_editor_settings.z_axis_color).color;
-            v_color = math::rgba8(m_editor_settings.x_axis_color).color;
+            u_color = math::rgba8(z_axis_color).color;
+            v_color = math::rgba8(x_axis_color).color;
         }
         // TODO
         shader_data sd;
@@ -1421,322 +522,8 @@ private:
         cbuf.draw(4);
     }
 
-    void draw_skybox(rhi::command_queue* cbuf)
-    {
-        cbuf->bind_pipeline(m_skybox_pipeline);
-        cbuf->bind_shader_textures(rhi::texture_binding{m_rrm->get_gpu_handle(m_skybox_texture), m_skybox_sampler, 0});
-        cbuf->draw(36);
-    }
-
-    void draw_boom(rhi::command_queue* cbuf, const tavros::math::vec3& pos, float size, uint32 layer, float rot)
-    {
-        struct push_data
-        {
-            tavros::math::vec3 pos;
-            float              _pad0 = 0.0f;
-            tavros::math::vec2 size;
-            tavros::math::vec2 _pad1;
-            tavros::math::vec4 color;
-            float              layer = 0.0f;
-            float              rotation = 0.0f;
-        };
-
-        push_data pc;
-        pc.pos = pos;
-        pc.size = tavros::math::vec2(size);
-        pc.color = {1.0f, 1.0f, 1.0f, 1.0f};
-        pc.layer = static_cast<float>(layer);
-        pc.rotation = rot;
-        cbuf->bind_pipeline(m_sprite3d_pipeline);
-        cbuf->push_constant(pc);
-        cbuf->bind_shader_textures(rhi::texture_binding{m_rrm->get_gpu_handle(m_boom_texture), m_sampler, 0});
-        cbuf->draw(6);
-    }
-
-    void draw_line_2d(rhi::command_queue& cmd, tavros::math::vec2 p0, tavros::math::vec2 p1, tavros::math::vec4 color, float dash_size = 0.0f, float gap_size = 0.0f, float thickness = 4.0f, float aa_width = 1.2f)
-    {
-        struct push_data
-        {
-            tavros::math::vec2 p0;
-            tavros::math::vec2 p1;
-            tavros::math::vec4 color;
-            float              thickness = 0.0f;
-            float              aa_width = 0.0f;
-            float              dash_size = 0.0f;
-            float              gap_size = 0.0f;
-        };
-
-        push_data pc;
-        pc.p0 = p0;
-        pc.p1 = p1;
-        pc.color = color;
-        pc.thickness = thickness;
-        pc.aa_width = aa_width;
-        pc.dash_size = dash_size;
-        pc.gap_size = gap_size;
-
-        cmd.push_constant(pc);
-        cmd.draw(6);
-    }
-
-    void draw_circle_2d(rhi::command_queue& cmd, tavros::math::vec2 p, float out_r, float in_r, tavros::math::vec4 color, float dash_size = 0.0f, float gap_size = 0.0f, float aa_width = 1.2f)
-    {
-        struct push_data
-        {
-            tavros::math::vec2 pos;
-            float              out_r = 0.0f;
-            float              in_r = 0.0f;
-            tavros::math::vec4 color;
-            float              aa_width = 0.0f;
-            float              dash_size = 0.0f;
-            float              gap_size = 0.0f;
-        };
-
-        push_data pc;
-        pc.pos = p;
-        pc.out_r = out_r;
-        pc.in_r = in_r;
-        pc.color = color;
-        pc.aa_width = aa_width;
-        pc.dash_size = dash_size;
-        pc.gap_size = gap_size;
-
-        cmd.push_constant(pc);
-        cmd.draw(6);
-    }
-
-    void draw_world_axis(rhi::command_queue& cbuf, const tavros::math::vec2& pos, float r)
-    {
-        using namespace tavros;
-
-        float line_width = 6.0f;
-        float dash_size = 10.0f;
-        float gap_size = 5.0f;
-        float p_side_circle = 14.0f;
-        float n_side_circle = 8.0f;
-
-        float axis_len = r - p_side_circle - line_width;
-
-        auto view3 = math::mat3(m_free_cam.camera().view_matrix());
-
-        auto project_axis = [&](math::vec3 world_dir) -> math::vec2 {
-            math::vec3 cam = view3 * world_dir;
-            return math::vec2(cam.x, -cam.y) * axis_len;
-        };
-
-        auto x_axis = project_axis({1.0f, 0.0f, 0.0f});
-        auto y_axis = project_axis({0.0f, 1.0f, 0.0f});
-        auto z_axis = project_axis({0.0f, 0.0f, 1.0f});
-
-        cbuf.bind_pipeline(m_circle2d_pipeline);
-        draw_circle_2d(cbuf, pos, r, 0.0f, {0.9f, 0.9f, 0.9f, 0.25f});
-        draw_circle_2d(cbuf, pos, r, r - line_width, {0.75f, 0.75f, 0.75f, 0.45f});
-
-        cbuf.bind_pipeline(m_line2d_pipeline);
-        draw_line_2d(cbuf, pos, pos + x_axis, m_editor_settings.x_axis_color, 0.0f, 0.0f, line_width);
-        draw_line_2d(cbuf, pos, pos - x_axis, m_editor_settings.x_axis_color, dash_size, gap_size, line_width);
-        draw_line_2d(cbuf, pos, pos + y_axis, m_editor_settings.y_axis_color, 0.0f, 0.0f, line_width);
-        draw_line_2d(cbuf, pos, pos - y_axis, m_editor_settings.y_axis_color, dash_size, gap_size, line_width);
-        draw_line_2d(cbuf, pos, pos + z_axis, m_editor_settings.z_axis_color, 0.0f, 0.0f, line_width);
-        draw_line_2d(cbuf, pos, pos - z_axis, m_editor_settings.z_axis_color, dash_size, gap_size, line_width);
-
-        cbuf.bind_pipeline(m_circle2d_pipeline);
-        draw_circle_2d(cbuf, pos + x_axis, p_side_circle, 0.0f, m_editor_settings.x_axis_color);
-        draw_circle_2d(cbuf, pos + y_axis, p_side_circle, 0.0f, m_editor_settings.y_axis_color);
-        draw_circle_2d(cbuf, pos + z_axis, p_side_circle, 0.0f, m_editor_settings.z_axis_color);
-        draw_circle_2d(cbuf, pos - x_axis, n_side_circle, 0.0f, m_editor_settings.x_axis_color);
-        draw_circle_2d(cbuf, pos - y_axis, n_side_circle, 0.0f, m_editor_settings.y_axis_color);
-        draw_circle_2d(cbuf, pos - z_axis, n_side_circle, 0.0f, m_editor_settings.z_axis_color);
-    }
-
-    void draw_hud_text(
-        rhi::command_queue*                                           cbuf,
-        const tavros::renderer::gpu_buffer_view<app::glyph_instance>& slice,
-        size_t                                                        count
-    )
-    {
-        cbuf->bind_pipeline(m_sdf_font_pipeline);
-        auto* tex = m_rrm->find(m_font_texture);
-        cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_handle, m_sampler, 0});
-        cbuf->bind_shader_buffers(m_scene_binding);
-
-        rhi::bind_buffer_info bufs[] = {
-            {slice.gpu_buffer(), slice.offset_bytes()},
-            {slice.gpu_buffer(), slice.offset_bytes()},
-            {slice.gpu_buffer(), slice.offset_bytes()},
-            {slice.gpu_buffer(), slice.offset_bytes()},
-        };
-        cbuf->bind_vertex_buffers(bufs);
-        cbuf->set_scissor({0, 0, static_cast<int32>(m_composer->width()), static_cast<int32>(m_composer->height())});
-        cbuf->draw(4, 0, static_cast<uint32>(count), 0);
-    }
-
-    void draw_particles(rhi::command_queue* cbuf, const particle_draw_slice& pslice)
-    {
-        if (pslice.count == 0) {
-            return;
-        }
-
-        cbuf->bind_pipeline(m_particle_pipeline);
-        cbuf->bind_shader_buffers(m_scene_binding);
-
-        rhi::bind_buffer_info bufs[] = {
-            {pslice.slice.gpu_buffer(), pslice.slice.offset_bytes()},
-            {pslice.slice.gpu_buffer(), pslice.slice.offset_bytes()},
-            {pslice.slice.gpu_buffer(), pslice.slice.offset_bytes()},
-            {pslice.slice.gpu_buffer(), pslice.slice.offset_bytes()},
-        };
-        cbuf->bind_vertex_buffers(bufs);
-        cbuf->draw(4, 0, static_cast<uint32>(pslice.count), 0);
-    }
-
-    void record_blit_to_backbuffer(rhi::command_queue* cbuf)
-    {
-        ZoneScopedNC("BlitToBackbuffer", 0x4CAF50);
-        cbuf->begin_rendering(m_composer->backbuffer());
-        cbuf->bind_pipeline(m_fullscreen_quad_pipeline);
-
-        const auto* rt = m_rrm->render_targets().find(m_offscreen_rt);
-        if (!rt) {
-            return;
-        }
-
-        if (m_current_buffer_output == 0) {
-            cbuf->bind_shader_textures(rhi::texture_binding{rt->second.color_attachments()[0], m_sampler});
-        } else {
-            cbuf->bind_shader_textures(rhi::texture_binding{rt->second.depth_stencil_attachment(), m_sampler});
-        }
-        cbuf->draw(4);
-        cbuf->end_rendering();
-    }
-
-    void capture_frame(rhi::command_queue* cbuf)
-    {
-        const int w = m_input_manager.window_size().width;
-        const int h = m_input_manager.window_size().height;
-
-        const auto* rt = m_rrm->render_targets().find(m_offscreen_rt);
-        if (!rt) {
-            return;
-        }
-
-        rhi::texture_copy_region rgn;
-        rgn.width = w;
-        rgn.height = h;
-        cbuf->copy_texture_to_buffer(rt->second.color_attachments()[0], m_stage_upload_buffer, rgn);
-
-        rgn.buffer_offset = static_cast<size_t>(w * h * 4);
-        cbuf->copy_texture_to_buffer(rt->second.depth_stencil_attachment(), m_stage_upload_buffer, rgn);
-    }
-
-    void save_frame_capture()
-    {
-        const int w = m_input_manager.window_size().width;
-        const int h = m_input_manager.window_size().height;
-
-        auto         map = m_graphics_device->map_buffer(m_stage_upload_buffer);
-        const size_t plane_size = static_cast<size_t>(w * h);
-
-        tavros::assets::image_view color_im(
-            {map.data(), plane_size * 4}, w, h, tavros::assets::image::pixel_format::rgba8
-        );
-        save_image(color_im, "output://color.png", true);
-
-        tavros::core::dynamic_buffer<uint8> depth_buf(plane_size);
-        const float*                        src = reinterpret_cast<const float*>(map.data() + plane_size * 4);
-        for (size_t i = 0; i < plane_size; ++i) {
-            depth_buf[i] = static_cast<uint8>(src[i] * 255.0f);
-        }
-
-        tavros::assets::image_view depth_im(depth_buf, w, h, tavros::assets::image::pixel_format::r8);
-        save_image(depth_im, "output://depth.png", true);
-
-        m_graphics_device->unmap_buffer(m_stage_upload_buffer);
-    }
-
-    // ==================================================================
-    // Pipeline builders
-    // ==================================================================
-
-    rhi::pipeline_handle build_fullscreen_quad_pipeline()
-    {
-        using namespace app::pipeline_builder;
-
-        rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/fullscreen_quad.vert", "tavros/shaders/fullscreen_quad.frag");
-        info.depth_stencil_attachment = depth_off();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangle_strip;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
-
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create fullscreen quad pipeline.");
-        return h;
-    }
-
-    rhi::pipeline_handle build_mesh_pipeline()
-    {
-        using namespace app::pipeline_builder;
-        rhi::pipeline_create_info info;
-        // AoS layout: all three attributes from the same buffer, different offsets/strides
-        info.bindings.push_back({rhi::composite_format::vec3, rhi::scalar_type::f32, false, 0, sizeof(mesh_vertex), offsetof(mesh_vertex, pos), 0});
-        info.bindings.push_back({rhi::composite_format::vec3, rhi::scalar_type::f32, false, 1, sizeof(mesh_vertex), offsetof(mesh_vertex, normal), 0});
-        info.bindings.push_back({rhi::composite_format::vec2, rhi::scalar_type::f32, false, 2, sizeof(mesh_vertex), offsetof(mesh_vertex, uv), 0});
-        info.shader_program = load_and_create_shader_program("tavros/shaders/cube.vert", "tavros/shaders/cube.frag");
-        info.depth_stencil_attachment = depth_test_rw();
-        info.rasterizer = cull_back_ccw();
-        info.topology = rhi::primitive_topology::triangles;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, no_blend()});
-        info.multisample = no_msaa();
-
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create mesh pipeline.");
-        return h;
-    }
-
-    rhi::pipeline_handle build_world_grid_pipeline()
-    {
-        using namespace app::pipeline_builder;
-        rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/world_grid.vert", "tavros/shaders/world_grid.frag");
-        info.depth_stencil_attachment = depth_test_ro();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangle_strip;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
-        info.multisample = no_msaa();
-
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create world grid pipeline.");
-        return h;
-    }
-
-    rhi::pipeline_handle build_sdf_font_pipeline()
-    {
-        using namespace app::pipeline_builder;
-        rhi::pipeline_create_info info;
-        info.bindings.push_back({rhi::composite_format::mat3x2, rhi::scalar_type::f32, false, 0, sizeof(app::glyph_instance), offsetof(app::glyph_instance, mat), 1});
-        info.bindings.push_back({rhi::composite_format::vec2, rhi::scalar_type::u32, false, 3, sizeof(app::glyph_instance), offsetof(app::glyph_instance, rect), 1});
-        info.bindings.push_back({rhi::composite_format::scalar, rhi::scalar_type::u32, false, 4, sizeof(app::glyph_instance), offsetof(app::glyph_instance, fill_color), 1});
-        info.bindings.push_back({rhi::composite_format::scalar, rhi::scalar_type::u32, false, 5, sizeof(app::glyph_instance), offsetof(app::glyph_instance, outline_color), 1});
-        info.shader_program = load_and_create_shader_program("tavros/shaders/sdf_font.vert", "tavros/shaders/sdf_font.frag");
-        info.depth_stencil_attachment = depth_off();
-        info.rasterizer = cull_off_scissor();
-        info.topology = rhi::primitive_topology::triangle_strip;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
-        info.multisample = no_msaa();
-
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create SDF font pipeline.");
-        return h;
-    }
-
     rhi::pipeline_handle build_skybox_pipeline()
     {
-        using namespace app::pipeline_builder;
         rhi::pipeline_create_info info;
         info.shader_program = load_and_create_shader_program("tavros/shaders/skybox.vert", "tavros/shaders/skybox.frag");
         info.depth_stencil_attachment = depth_test_leq();
@@ -1745,216 +532,72 @@ private:
         info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, no_blend()});
         info.multisample = no_msaa();
 
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
+        auto h = m_renderer->get_graphics_device()->create_pipeline(info);
+        m_renderer->get_graphics_device()->destroy_shader(info.shader_program);
         TAV_FATAL_IF(!h, "Failed to create Skybox pipeline.");
         return h;
     }
 
-    rhi::pipeline_handle build_line2d_pipeline()
+    rhi::pipeline_handle build_world_grid_pipeline()
     {
-        using namespace app::pipeline_builder;
-
         rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/line2d.vert", "tavros/shaders/line2d.frag");
-        info.depth_stencil_attachment = depth_off();
+        info.shader_program = load_and_create_shader_program("tavros/shaders/world_grid.vert", "tavros/shaders/world_grid.frag");
+        info.depth_stencil_attachment = depth_test_ro();
         info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangles;
+        info.topology = rhi::primitive_topology::triangle_strip;
         info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
         info.multisample = no_msaa();
 
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create line2d pipeline.");
+        auto h = m_renderer->get_graphics_device()->create_pipeline(info);
+        m_renderer->get_graphics_device()->destroy_shader(info.shader_program);
+        TAV_FATAL_IF(!h, "Failed to create world grid pipeline.");
         return h;
-    }
-
-
-    rhi::pipeline_handle build_circle2d_pipeline()
-    {
-        using namespace app::pipeline_builder;
-
-        rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/circle2d.vert", "tavros/shaders/circle2d.frag");
-        info.depth_stencil_attachment = depth_off();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangles;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
-        info.multisample = no_msaa();
-
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create circle2d pipeline.");
-        return h;
-    }
-
-    rhi::pipeline_handle build_sprite3d_pipeline()
-    {
-        using namespace app::pipeline_builder;
-
-        rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/sprite3d.vert", "tavros/shaders/sprite3d.frag");
-        info.depth_stencil_attachment = depth_on_write_off();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangles;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
-        info.multisample = no_msaa();
-
-        auto h = m_graphics_device->create_pipeline(info);
-        m_graphics_device->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create sprite3d pipeline.");
-        return h;
-    }
-
-    // ==================================================================
-    // Resource helpers
-    // ==================================================================
-
-    rhi::buffer_handle create_buffer(size_t size, rhi::buffer_usage usage, rhi::buffer_access access)
-    {
-        rhi::buffer_create_info info{size, usage, access};
-        auto                    h = m_graphics_device->create_buffer(info);
-        TAV_FATAL_IF(!h, "Failed to create buffer");
-        return h;
-    }
-
-    void upload_to_mapped(rhi::buffer_handle dst, const void* data, size_t size)
-    {
-        auto map = m_graphics_device->map_buffer(dst);
-        map.copy_from(data, size);
-        m_graphics_device->unmap_buffer(dst);
     }
 
     rhi::shader_handle load_and_create_shader_program(tavros::core::string_view vs_path, tavros::core::string_view fs_path)
     {
         const auto src_vs = m_sl.load(vs_path, {tavros::renderer::shader_language::glsl_460, ""});
         const auto src_fs = m_sl.load(fs_path, {tavros::renderer::shader_language::glsl_460, ""});
-        auto       sh = m_graphics_device->create_shader({src_vs, src_fs});
-        if (const auto* reflect = m_graphics_device->get_shader_reflect_ptr(sh)) {
-            auto dump = dump_shader_reflect(reflect);
-            g_logger.info("Shader reflect (vert_shader: '{}', frag_shader: '{}'):\n{}\n", vs_path, fs_path, dump);
-        }
-        return sh;
-    }
-
-    void save_image(tavros::assets::image_view im, tavros::core::string_view path, bool y_flip = false)
-    {
-        if (!im.valid()) {
-            g_logger.error("Failed to save invalid image {}", path);
-            return;
-        }
-        try {
-            auto data = tavros::assets::image::encode(im, y_flip);
-            m_am->open_writer(path)->write(data.data(), data.size_bytes());
-        } catch (const tavros::core::file_error& e) {
-            g_logger.error("Failed to save image '{}'", e.path());
-        }
-    }
-
-    tavros::renderer::texture_handle bake_and_upload_font_atlas()
-    {
-        ZoneScopedNC("BakeFontAtlas", 0x607D8B);
-        auto atlas = m_font_lib.invalidate_old_and_bake_new_atlas(96.0f, 8.0f);
-
-        auto* cmd = m_composer->create_command_queue();
-        auto  tex = m_rrm->load_texture(m_stage_buffer, *cmd, atlas, "k_sdf_font_texture", tavros::renderer::texture_registry::load_params{0, 0, 0, 0, 1, false});
-        m_composer->submit_command_queue(cmd);
-
-        TAV_FATAL_IF(!tex, "Failed to create font atlas texture.");
-        return tex;
-    }
-
-    float rand_range(float lo, float hi) noexcept
-    {
-        return lo + (static_cast<float>(std::rand()) / static_cast<float>(RAND_MAX)) * (hi - lo);
+        auto       sh = m_renderer->get_graphics_device()->create_shader({src_vs, src_fs});
+        return m_renderer->get_graphics_device()->create_shader({src_vs, src_fs});
     }
 
     // ==================================================================
     // Members
     // ==================================================================
 
-    tavros::core::unique_ptr<tavros::tef::workspace> m_config;
+    tavros::core::shared_ptr<tavros::tef::workspace>          m_ws;
+    tavros::core::shared_ptr<tavros::assets::asset_manager>   m_am;
+    tavros::core::unique_ptr<tavros::renderer::render_system> m_renderer;
 
     // -- Core --
-    tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
-    tavros::renderer::shader_loader                         m_sl;
-    tavros::core::thread_pool                               m_thread_pool;
-    tavros::tef::loader                                     m_tef_loader;
-
-    tavros::core::unique_ptr<tavros::renderer::resource_manager> m_rrm;
+    tavros::renderer::shader_loader m_sl;
 
     // -- Graphics device --
-    tavros::core::unique_ptr<rhi::graphics_device> m_graphics_device;
-    rhi::frame_composer*                           m_composer = nullptr;
-    rhi::fence_handle                              m_fence;
-
-    // -- Offscreen RT --
-    tavros::renderer::render_target_handle m_offscreen_rt;
-
-    // -- Pipelines --
-    rhi::pipeline_handle m_fullscreen_quad_pipeline;
-    rhi::pipeline_handle m_mesh_rendering_pipeline;
-    rhi::pipeline_handle m_world_grid_pipeline;
-    rhi::pipeline_handle m_sdf_font_pipeline;
-    rhi::pipeline_handle m_particle_pipeline;
-    rhi::pipeline_handle m_skybox_pipeline;
-    rhi::pipeline_handle m_line2d_pipeline;
-    rhi::pipeline_handle m_circle2d_pipeline;
-    rhi::pipeline_handle m_sprite3d_pipeline;
-
-    // -- GPU resources --
-    tavros::renderer::gpu_stage_buffer m_stage_buffer;
-
-    tavros::renderer::texture_handle m_font_texture;
-    rhi::sampler_handle              m_sampler;
-    rhi::sampler_handle              m_skybox_sampler;
-    rhi::buffer_handle               m_stage_upload_buffer;
-    rhi::buffer_handle               m_mesh_vertices_buffer;
-    rhi::buffer_handle               m_mesh_indices_buffer;
-    rhi::buffer_handle               m_uniform_buffer;
-
-
-    tavros::renderer::texture_handle m_mesh_texture;
-    tavros::renderer::texture_handle m_boom_texture;
-
-    tavros::renderer::texture_handle m_skybox_texture;
-
-    tavros::renderer::gpu_stream_buffer m_stream_draw;
-
-    // -- Mesh --
-    gpu_mesh_slice m_obj_mesh;
-
-    // -- Bindings --
-    rhi::buffer_binding m_scene_binding;
-    size_t              m_stage_to_scene_offset = 0;
+    rhi::frame_composer* m_composer = nullptr;
 
     // -- Scene --
-    tavros::sandbox::free_camera     m_free_cam;
-    app::scene_data                  m_scene_data;
-    tavros::renderer::debug_renderer m_drenderer;
+    tavros::sandbox::free_camera m_free_cam;
+    app::scene_data              m_scene_data;
 
-    // -- Text / fonts --
-    tavros::renderer::font_library m_font_lib;
-    app::text_archetype            m_fps_text;
+    tavros::renderer::gpu_stream_buffer m_uniform_buffer;
 
-    // -- Particles --
-    tavros::particles::particle_archetype m_particles;
-    tavros::particles::emitter_archetype  m_particle_emitters;
-    tavros::particles::effector_archetype m_particle_effectors;
+    tavros::renderer::render_target_ref                 m_offscreen_rt;
+    tavros::core::vector<tavros::renderer::texture_ref> m_sky_textures;
+    int32                                               m_sky_index = 0;
+
+    tavros::renderer::rhi::sampler_handle m_sampler;
+
+    tavros::renderer::rhi::pipeline_handle m_fullscreen_quad_pipeline;
+    tavros::renderer::rhi::pipeline_handle m_world_grid_pipeline;
+    tavros::renderer::rhi::pipeline_handle m_skybox_pipeline;
+
 
     // -- Input --
     tavros::input::input_manager m_input_manager;
 
-    // -- Frame state --
-    tavros::core::timer m_timer;
-    size_t              m_frame_number = 0;
-    fps_meter           m_fps_meter;
-    float               m_delta_time = 0.0f;
-    float               m_time = 0.0f;
-    uint32              m_current_buffer_output = 0;
-    bool                m_capture_next_frame = false;
-
-    tavros::sandbox::editor_settings m_editor_settings;
+    //
+    uint64 m_frame_number = 0;
 };
 
 // -------------------------------------------------------------------------

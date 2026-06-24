@@ -40,7 +40,7 @@ namespace tavros::sandbox
             m_camera.set_perspective({fov_y, aspect, z_near, z_far});
         }
 
-        void update(input::input_manager& input, float delta_time) noexcept
+        void update(input::input_manager& input, std::chrono::microseconds time_us) noexcept
         {
             const auto mouse_delta = input.smooth_mouse_delta();
             const auto factor = [&](input::keyboard_key key) {
@@ -65,7 +65,7 @@ namespace tavros::sandbox
 
                 const bool  shift = input.is_key_held(input::keyboard_key::k_lshift);
                 const bool  ctrl = input.is_key_held(input::keyboard_key::k_lcontrol);
-                const float speed = static_cast<float>(delta_time) * (shift ? (ctrl ? 100.0f : 10.0f) : 2.0f);
+                const float speed = static_cast<float>(time_us.count()) * (shift ? (ctrl ? 100.0f : 10.0f) : 2.0f) / 10000000.0f;
                 m_controller.move(move * speed);
             } else {
                 if (input.is_mouse_button_held(input::mouse_button::middle)) {

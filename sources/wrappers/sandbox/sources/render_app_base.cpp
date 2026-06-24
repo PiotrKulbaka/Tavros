@@ -143,7 +143,7 @@ namespace app
         tavros::core::timer tm;
         do {
             TAV_PROFILE_SCOPE("ThreadTick");
-            auto elapsed = tm.elapsed_seconds();
+            auto elapsed = tm.elapsed<std::chrono::microseconds>();
             tm.restart();
             m_event_queue.swap_queues();
             auto events = m_event_queue.front_queue();
