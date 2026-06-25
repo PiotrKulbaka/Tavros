@@ -5,7 +5,7 @@
 namespace tavros::renderer::rhi
 {
 
-    gl_pixel_format to_gl_pixel_format(pixel_format format)
+    gl_pixel_format to_gl_pixel_format(pixel_format format) noexcept
     {
         switch (format) {
         case pixel_format::r8un:
@@ -127,7 +127,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_wnd_fb_info to_gl_wnd_fb_info(pixel_format format)
+    gl_wnd_fb_info to_gl_wnd_fb_info(pixel_format format) noexcept
     {
         switch (format) {
         case pixel_format::rgb8un:
@@ -153,7 +153,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_filter to_gl_filter(sampler_filter filter)
+    gl_filter to_gl_filter(sampler_filter filter) noexcept
     {
         gl_filter result = {};
 
@@ -205,7 +205,7 @@ namespace tavros::renderer::rhi
         return result;
     }
 
-    bool is_color_format(pixel_format format)
+    bool is_color_format(pixel_format format) noexcept
     {
         switch (format) {
         case pixel_format::r8un:
@@ -313,7 +313,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_depth_stencil_format to_depth_stencil_format(pixel_format format)
+    gl_depth_stencil_format to_depth_stencil_format(pixel_format format) noexcept
     {
         switch (format) {
         case pixel_format::depth16:
@@ -334,7 +334,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_wrap_mode(wrap_mode mode)
+    GLenum to_gl_wrap_mode(wrap_mode mode) noexcept
     {
         switch (mode) {
         case wrap_mode::repeat:
@@ -350,7 +350,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_compare_func(compare_op func)
+    GLenum to_gl_compare_func(compare_op func) noexcept
     {
         switch (func) {
         case compare_op::off:
@@ -374,7 +374,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_stencil_op(stencil_op op)
+    GLenum to_gl_stencil_op(stencil_op op) noexcept
     {
         switch (op) {
         case stencil_op::keep:
@@ -398,7 +398,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_vertex_format to_gl_vertex_format(scalar_type type)
+    gl_vertex_format to_gl_vertex_format(scalar_type type) noexcept
     {
         switch (type) {
         case scalar_type::u8:
@@ -424,7 +424,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_index_format to_gl_index_format(index_buffer_format format)
+    gl_index_format to_gl_index_format(index_buffer_format format) noexcept
     {
         switch (format) {
         case index_buffer_format::u16:
@@ -436,7 +436,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_topology(primitive_topology topology)
+    GLenum to_gl_topology(primitive_topology topology) noexcept
     {
         switch (topology) {
         case tavros::renderer::rhi::primitive_topology::points:
@@ -454,7 +454,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    gl_attribute_info to_gl_attribute_info(composite_format format, scalar_type type)
+    gl_attribute_info to_gl_attribute_info(composite_format format, scalar_type type) noexcept
     {
         gl_attribute_info info;
 
@@ -563,7 +563,7 @@ namespace tavros::renderer::rhi
         return info;
     }
 
-    gl_rhi_type_info gl_type_to_rhi_type(GLenum type)
+    gl_rhi_type_info gl_type_to_rhi_type(GLenum type) noexcept
     {
         switch (type) {
             // float
@@ -647,7 +647,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_blend_factor(blend_factor factor)
+    GLenum to_gl_blend_factor(blend_factor factor) noexcept
     {
         switch (factor) {
         case blend_factor::zero:
@@ -675,7 +675,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_blend_op(blend_op op)
+    GLenum to_gl_blend_op(blend_op op) noexcept
     {
         switch (op) {
         case blend_op::add:
@@ -693,7 +693,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_cull_face(cull_face cull)
+    GLenum to_gl_cull_face(cull_face cull) noexcept
     {
         switch (cull) {
         case cull_face::front:
@@ -705,7 +705,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_face(front_face face)
+    GLenum to_gl_face(front_face face) noexcept
     {
         switch (face) {
         case front_face::clockwise:
@@ -717,7 +717,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_polygon_mode(polygon_mode mode)
+    GLenum to_gl_polygon_mode(polygon_mode mode) noexcept
     {
         switch (mode) {
         case polygon_mode::fill:
@@ -731,7 +731,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    GLenum to_gl_polygon_offset(polygon_mode mode)
+    GLenum to_gl_polygon_offset(polygon_mode mode) noexcept
     {
         switch (mode) {
         case polygon_mode::fill:
@@ -742,6 +742,133 @@ namespace tavros::renderer::rhi
             return GL_POLYGON_OFFSET_POINT;
         default:
             TAV_UNREACHABLE();
+        }
+    }
+
+    pixel_format_info to_pixel_format_info(pixel_format fmt) noexcept
+    {
+        using pf = pixel_format;
+        switch (fmt) {
+        case pf::r8un:
+            return {1, pixel_format_class::normalized};
+        case pf::r8in:
+            return {1, pixel_format_class::normalized};
+        case pf::r16un:
+            return {1, pixel_format_class::normalized};
+        case pf::r16in:
+            return {1, pixel_format_class::normalized};
+
+        case pf::rg8un:
+            return {2, pixel_format_class::normalized};
+        case pf::rg8in:
+            return {2, pixel_format_class::normalized};
+        case pf::rg16un:
+            return {2, pixel_format_class::normalized};
+        case pf::rg16in:
+            return {2, pixel_format_class::normalized};
+
+        case pf::rgb8un:
+            return {3, pixel_format_class::normalized};
+        case pf::rgb8in:
+            return {3, pixel_format_class::normalized};
+        case pf::rgb16un:
+            return {3, pixel_format_class::normalized};
+        case pf::rgb16in:
+            return {3, pixel_format_class::normalized};
+
+        case pf::rgba8un:
+            return {4, pixel_format_class::normalized};
+        case pf::rgba8in:
+            return {4, pixel_format_class::normalized};
+        case pf::rgba16un:
+            return {4, pixel_format_class::normalized};
+        case pf::rgba16in:
+            return {4, pixel_format_class::normalized};
+
+        case pf::r8u:
+            return {1, pixel_format_class::integer};
+        case pf::r8i:
+            return {1, pixel_format_class::integer};
+        case pf::r16u:
+            return {1, pixel_format_class::integer};
+        case pf::r16i:
+            return {1, pixel_format_class::integer};
+        case pf::r32u:
+            return {1, pixel_format_class::integer};
+        case pf::r32i:
+            return {1, pixel_format_class::integer};
+
+        case pf::rg8u:
+            return {2, pixel_format_class::integer};
+        case pf::rg8i:
+            return {2, pixel_format_class::integer};
+        case pf::rg16u:
+            return {2, pixel_format_class::integer};
+        case pf::rg16i:
+            return {2, pixel_format_class::integer};
+        case pf::rg32u:
+            return {2, pixel_format_class::integer};
+        case pf::rg32i:
+            return {2, pixel_format_class::integer};
+
+        case pf::rgb8u:
+            return {3, pixel_format_class::integer};
+        case pf::rgb8i:
+            return {3, pixel_format_class::integer};
+        case pf::rgb16u:
+            return {3, pixel_format_class::integer};
+        case pf::rgb16i:
+            return {3, pixel_format_class::integer};
+        case pf::rgb32u:
+            return {3, pixel_format_class::integer};
+        case pf::rgb32i:
+            return {3, pixel_format_class::integer};
+
+        case pf::rgba8u:
+            return {4, pixel_format_class::integer};
+        case pf::rgba8i:
+            return {4, pixel_format_class::integer};
+        case pf::rgba16u:
+            return {4, pixel_format_class::integer};
+        case pf::rgba16i:
+            return {4, pixel_format_class::integer};
+        case pf::rgba32u:
+            return {4, pixel_format_class::integer};
+        case pf::rgba32i:
+            return {4, pixel_format_class::integer};
+
+        case pf::r16f:
+            return {1, pixel_format_class::floating_point};
+        case pf::r32f:
+            return {1, pixel_format_class::floating_point};
+        case pf::rg16f:
+            return {2, pixel_format_class::floating_point};
+        case pf::rg32f:
+            return {2, pixel_format_class::floating_point};
+        case pf::rgb16f:
+            return {3, pixel_format_class::floating_point};
+        case pf::rgb32f:
+            return {3, pixel_format_class::floating_point};
+        case pf::rgba16f:
+            return {4, pixel_format_class::floating_point};
+        case pf::rgba32f:
+            return {4, pixel_format_class::floating_point};
+
+        case pf::depth16:
+            return {1, pixel_format_class::depth};
+        case pf::depth24:
+            return {1, pixel_format_class::depth};
+        case pf::depth32f:
+            return {1, pixel_format_class::depth};
+        case pf::stencil8:
+            return {1, pixel_format_class::stencil};
+        case pf::depth24_stencil8:
+            return {2, pixel_format_class::depth_stencil};
+        case pf::depth32f_stencil8:
+            return {2, pixel_format_class::depth_stencil};
+
+        default:
+            return {0, pixel_format_class::unknown};
         }
     }
 

@@ -60,6 +60,7 @@ namespace tavros::renderer::rhi
         index_buffer_format     m_current_index_buffer_format = index_buffer_format::u16;
 
         GLuint m_resolve_fbo = 0;
+        GLuint m_empty_vao = 0;
 
         struct push_constant_ring
         {

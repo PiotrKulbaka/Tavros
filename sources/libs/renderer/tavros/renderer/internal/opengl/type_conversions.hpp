@@ -63,43 +63,62 @@ namespace tavros::renderer::rhi
         scalar_type               type;
     };
 
+    enum class pixel_format_class : uint8
+    {
+        unknown,
+        normalized,
+        integer,
+        floating_point,
+        depth,
+        stencil,
+        depth_stencil,
+    };
 
-    gl_pixel_format to_gl_pixel_format(pixel_format format);
+    struct pixel_format_info
+    {
+        uint8              channels = 0;
+        pixel_format_class format_class = pixel_format_class::unknown;
+    };
 
-    gl_wnd_fb_info to_gl_wnd_fb_info(pixel_format format);
 
-    gl_filter to_gl_filter(sampler_filter filter);
+    gl_pixel_format to_gl_pixel_format(pixel_format format) noexcept;
 
-    bool is_color_format(pixel_format format);
+    gl_wnd_fb_info to_gl_wnd_fb_info(pixel_format format) noexcept;
 
-    gl_depth_stencil_format to_depth_stencil_format(pixel_format format);
+    gl_filter to_gl_filter(sampler_filter filter) noexcept;
 
-    GLenum to_gl_wrap_mode(wrap_mode mode);
+    bool is_color_format(pixel_format format) noexcept;
 
-    GLenum to_gl_compare_func(compare_op func);
+    gl_depth_stencil_format to_depth_stencil_format(pixel_format format) noexcept;
 
-    GLenum to_gl_stencil_op(stencil_op op);
+    GLenum to_gl_wrap_mode(wrap_mode mode) noexcept;
 
-    gl_vertex_format to_gl_vertex_format(scalar_type type);
+    GLenum to_gl_compare_func(compare_op func) noexcept;
 
-    gl_index_format to_gl_index_format(index_buffer_format format);
+    GLenum to_gl_stencil_op(stencil_op op) noexcept;
 
-    GLenum to_gl_topology(primitive_topology topology);
+    gl_vertex_format to_gl_vertex_format(scalar_type type) noexcept;
 
-    gl_attribute_info to_gl_attribute_info(composite_format format, scalar_type type);
+    gl_index_format to_gl_index_format(index_buffer_format format) noexcept;
 
-    gl_rhi_type_info gl_type_to_rhi_type(GLenum type);
+    GLenum to_gl_topology(primitive_topology topology) noexcept;
 
-    GLenum to_gl_blend_factor(blend_factor factor);
+    gl_attribute_info to_gl_attribute_info(composite_format format, scalar_type type) noexcept;
 
-    GLenum to_gl_blend_op(blend_op op);
+    gl_rhi_type_info gl_type_to_rhi_type(GLenum type) noexcept;
 
-    GLenum to_gl_cull_face(cull_face cull);
+    GLenum to_gl_blend_factor(blend_factor factor) noexcept;
 
-    GLenum to_gl_face(front_face face);
+    GLenum to_gl_blend_op(blend_op op) noexcept;
 
-    GLenum to_gl_polygon_mode(polygon_mode mode);
+    GLenum to_gl_cull_face(cull_face cull) noexcept;
 
-    GLenum to_gl_polygon_offset(polygon_mode mode);
+    GLenum to_gl_face(front_face face) noexcept;
+
+    GLenum to_gl_polygon_mode(polygon_mode mode) noexcept;
+
+    GLenum to_gl_polygon_offset(polygon_mode mode) noexcept;
+
+    pixel_format_info to_pixel_format_info(pixel_format fmt) noexcept;
 
 } // namespace tavros::renderer::rhi

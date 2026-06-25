@@ -109,5 +109,5 @@ namespace tavros::core
         fixed_string<MaxSize> m_buffer;
     };
 
-    using diagnostics = basic_diagnostics<16_kib>;
+    using diagnostics = basic_diagnostics<8_kib>;
 } // namespace tavros::core

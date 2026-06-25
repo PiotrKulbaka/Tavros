@@ -949,39 +949,41 @@ namespace tavros::renderer::rhi
         }
 
         // Create VAO
-        GLuint vao;
-        GL_CALL(glGenVertexArrays(1, &vao));
+        GLuint vao = 0;
+        if (0 != info.bindings.size()) {
+            GL_CALL(glGenVertexArrays(1, &vao));
 
-        if (vao == 0) {
-            ::logger.error("Failed to create pipeline: failed to create VAO");
-            return {};
-        }
-
-        GL_CALL(glBindVertexArray(vao));
-
-        // Setup attribute bindings
-        for (auto attrib_i = 0; attrib_i < info.bindings.size(); ++attrib_i) {
-            auto& binding = info.bindings[attrib_i];
-
-            bool is_flt = scalar_type::f32 == binding.type || scalar_type::f16 == binding.type || scalar_type::f64 == binding.type;
-            auto gl_attrib_info = to_gl_attribute_info(binding.format, binding.type);
-            for (int32 col = 0; col < gl_attrib_info.cols; ++col) {
-                GLuint location = binding.location + col;
-                GLuint offset = binding.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
-
-                // Enable attribute and set pointer
-                GL_CALL(glEnableVertexAttribArray(location));
-                if (is_flt) {
-                    GL_CALL(glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, binding.normalize, offset));
-                } else {
-                    GL_CALL(glVertexAttribIFormat(location, gl_attrib_info.rows, gl_attrib_info.type, offset));
-                }
-                GL_CALL(glVertexAttribBinding(location, attrib_i));
+            if (vao == 0) {
+                ::logger.error("Failed to create pipeline: failed to create VAO");
+                return {};
             }
-            GL_CALL(glVertexBindingDivisor(attrib_i, binding.instance_divisor));
-        }
 
-        GL_CALL(glBindVertexArray(0));
+            GL_CALL(glBindVertexArray(vao));
+
+            // Setup attribute bindings
+            for (auto attrib_i = 0; attrib_i < info.bindings.size(); ++attrib_i) {
+                auto& binding = info.bindings[attrib_i];
+
+                bool is_flt = scalar_type::f32 == binding.type || scalar_type::f16 == binding.type || scalar_type::f64 == binding.type;
+                auto gl_attrib_info = to_gl_attribute_info(binding.format, binding.type);
+                for (int32 col = 0; col < gl_attrib_info.cols; ++col) {
+                    GLuint location = binding.location + col;
+                    GLuint offset = binding.offset + col * gl_attrib_info.rows * gl_attrib_info.size;
+
+                    // Enable attribute and set pointer
+                    GL_CALL(glEnableVertexAttribArray(location));
+                    if (is_flt) {
+                        GL_CALL(glVertexAttribFormat(location, gl_attrib_info.rows, gl_attrib_info.type, binding.normalize, offset));
+                    } else {
+                        GL_CALL(glVertexAttribIFormat(location, gl_attrib_info.rows, gl_attrib_info.type, offset));
+                    }
+                    GL_CALL(glVertexAttribBinding(location, attrib_i));
+                }
+                GL_CALL(glVertexBindingDivisor(attrib_i, binding.instance_divisor));
+            }
+
+            GL_CALL(glBindVertexArray(0));
+        }
 
         p->rc.increment();
         // create pipeline
@@ -994,7 +996,9 @@ namespace tavros::renderer::rhi
     {
         if (auto* sh = m_resources.find(handle)) {
             release_program(sh->program_h);
-            GL_CALL(glDeleteVertexArrays(1, &sh->vao_obj));
+            if (0 != sh->vao_obj) {
+                GL_CALL(glDeleteVertexArrays(1, &sh->vao_obj));
+            }
             m_resources.remove(handle);
             ::logger.debug("Pipeline {} destroyed", handle);
         } else {
@@ -1619,15 +1623,7 @@ namespace tavros::renderer::rhi
             break;
         }
 
-        if (info.usage == buffer_usage::constant) {
-            if (info.size > m_limits.max_ubo_size) {
-                ::logger.warning(
-                    "Buffer creation: constant (UBO) buffer size {}bytes exceeds device limit {}bytes",
-                    fmt::styled_param(info.size),
-                    fmt::styled_param(m_limits.max_ubo_size)
-                );
-            }
-        } else if (info.usage == buffer_usage::storage) {
+        if (info.usage == buffer_usage::storage) {
             if (info.size > m_limits.max_ssbo_size) {
                 ::logger.warning(
                     "Buffer creation: storage (SSBO) buffer size {}bytes exceeds device limit {}bytes",

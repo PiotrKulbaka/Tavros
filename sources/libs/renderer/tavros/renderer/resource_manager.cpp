@@ -22,6 +22,7 @@ namespace
     private:
         tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
     };
+
 } // namespace
 
 namespace tavros::renderer
@@ -33,6 +34,7 @@ namespace tavros::renderer
         , m_ws(ws)
         , m_tex_mgr(gdevice, am.get())
         , m_rt_mgr(gdevice)
+        , m_mt_mgr(gdevice, am.get())
         , m_upctx(nullptr)
     {
     }

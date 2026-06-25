@@ -31,12 +31,7 @@ namespace tavros::core
         using const_iterator = storage_type::const_iterator;
 
     public:
-        virtual ~basic_resource_manager() noexcept = default;
-
-        /**
-         * @brief Called before a resource is destroyed.
-         */
-        virtual void release_resource(resource_type& res) noexcept = 0;
+        ~basic_resource_manager() noexcept = default;
 
         /**
          * @brief Inserts a resource or acquires an existing one.
@@ -52,7 +47,9 @@ namespace tavros::core
         [[nodiscard]] resource_ref_type insert(resource_type res)
         {
             const auto h = res.hash();
+            TAV_ASSERT(h != 0);
             if (auto it = m_resources.find(h); it != m_resources.end()) {
+                TAV_ASSERT(it->second.res.name() == res.name());
                 it->second.rc.increment();
                 return resource_ref_type(&it->second.res);
             }
@@ -86,7 +83,6 @@ namespace tavros::core
             const auto h = ref->hash();
             if (auto it = m_resources.find(h); it != m_resources.end()) {
                 if (it->second.rc.decrement()) {
-                    release_resource(it->second.res);
                     m_resources.erase(it);
                     return true;
                 }
@@ -105,7 +101,6 @@ namespace tavros::core
         {
             const auto h = ref->hash();
             if (auto it = m_resources.find(h); it != m_resources.end()) {
-                release_resource(it->second.res);
                 m_resources.erase(it);
             }
         }
@@ -162,11 +157,6 @@ namespace tavros::core
          */
         void clear() noexcept
         {
-            for (auto& [hash, entry] : m_resources) {
-                TAV_UNUSED(hash);
-                release_resource(entry.res);
-            }
-
             m_resources.clear();
         }
 

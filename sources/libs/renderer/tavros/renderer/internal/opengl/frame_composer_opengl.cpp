@@ -71,7 +71,6 @@ namespace tavros::renderer::rhi
         gl_fb.color_attachment_formats.push_back(info.color_attachment_format);
         gl_fb.depth_stencil_attachment_format = info.depth_stencil_attachment_format;
 
-        pixel_format color_formats[] = {info.color_attachment_format};
         m_backbuffer = m_device->get_resources()->create(gl_framebuffer(gl_fb));
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
 

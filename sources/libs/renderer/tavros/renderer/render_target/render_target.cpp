@@ -26,6 +26,7 @@ namespace tavros::renderer
             TAV_ASSERT(c.format != rhi::pixel_format::none);
             m_ca_cfg.push_back(c);
         }
+        set_valid();
     }
 
     render_target::render_target(render_target&& other) noexcept
@@ -56,38 +57,6 @@ namespace tavros::renderer
     render_target::~render_target() noexcept
     {
         destroy_all();
-    }
-
-    render_target& render_target::operator=(render_target&& other) noexcept
-    {
-        if (this == &other) {
-            return *this;
-        }
-        destroy_all();
-
-        m_current_msaa = other.m_current_msaa;
-        m_gdevice = other.m_gdevice;
-        m_ca_cfg = std::move(other.m_ca_cfg);
-        m_da_cfg = std::move(other.m_da_cfg);
-        m_sa_cfg = std::move(other.m_sa_cfg);
-        m_src_cl = std::move(other.m_src_cl);
-        m_dst_cl = std::move(other.m_dst_cl);
-        m_src_ds = other.m_src_ds;
-        m_dst_ds = other.m_dst_ds;
-        m_framebuffer = other.m_framebuffer;
-
-        other.m_current_msaa = 0;
-        other.m_gdevice = nullptr;
-        other.m_ca_cfg.clear();
-        other.m_da_cfg = {};
-        other.m_sa_cfg = {};
-        other.m_src_cl.clear();
-        other.m_dst_cl.clear();
-        other.m_src_ds = {};
-        other.m_dst_ds = {};
-        other.m_framebuffer = {};
-
-        return *this;
     }
 
     void render_target::resize(uint32 width, uint32 height, uint32 msaa)
@@ -187,7 +156,7 @@ namespace tavros::renderer
         return m_dst_ds;
     }
 
-    rhi::framebuffer_handle render_target::framebuffer() const
+    rhi::framebuffer_handle render_target::gpu_framebuffer() const
     {
         return m_framebuffer;
     }

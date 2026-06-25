@@ -20,13 +20,14 @@ namespace tavros::renderer
         clear();
     }
 
-
-    void render_target_manager::release_resource(render_target& res) noexcept
-    {
-    }
-
     render_target_manager::resource_ref_type render_target_manager::load(core::string_view name, tef::workspace& ws)
     {
+        if (auto res = find(name); res) {
+            // Already loaded
+            acquire(res);
+            return res;
+        }
+
         render_target_desc desc;
         core::diagnostics  ds;
 
@@ -41,19 +42,38 @@ namespace tavros::renderer
             logger.flush(ds);
         }
 
-        return create(desc);
+        auto rt = render_target(m_gdevice, desc);
+        if (rt.is_valid()) {
+            auto ref = insert(std::move(rt));
+            if (!ref) {
+                logger.error("Failed to insert render target '{}'", desc.name());
+            }
+            return ref;
+        }
+
+        logger.error("Failed to create render target '{}'", desc.name());
+        return {};
     }
 
     render_target_manager::resource_ref_type render_target_manager::create(const render_target_desc& desc)
     {
-        auto ref = insert(render_target(m_gdevice, desc));
-        if (!ref) {
-            logger.error("Failed to create render target '{}'", desc.name());
-            return {};
+        if (auto res = find(desc.name()); res) {
+            // Already loaded
+            acquire(res);
+            return res;
         }
 
-        logger.debug("Render taget {}: created.", desc.name());
-        return ref;
+        auto rt = render_target(m_gdevice, desc);
+        if (rt.is_valid()) {
+            auto ref = insert(std::move(rt));
+            if (!ref) {
+                logger.error("Failed to insert render target '{}'", desc.name());
+            }
+            return ref;
+        }
+
+        logger.error("Failed to create render target '{}'", desc.name());
+        return {};
     }
 
 } // namespace tavros::renderer

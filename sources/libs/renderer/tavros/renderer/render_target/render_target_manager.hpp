@@ -13,9 +13,7 @@ namespace tavros::renderer
     public:
         render_target_manager(rhi::graphics_device* gdevice) noexcept;
 
-        ~render_target_manager() noexcept override;
-
-        void release_resource(render_target& res) noexcept override;
+        ~render_target_manager() noexcept;
 
         resource_ref_type load(core::string_view name, tef::workspace& ws);
 

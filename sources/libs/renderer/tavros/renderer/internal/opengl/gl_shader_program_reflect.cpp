@@ -152,7 +152,6 @@ namespace
             return pf::rgb32u;
         case GL_UNSIGNED_INT_VEC4:
             return pf::rgba32u;
-        case GL_DOUBLE_VEC2:
         default:
             return pf::none;
         }

@@ -49,9 +49,6 @@ namespace tavros::renderer
         /** @brief Destroys the render target, releasing all GPU resources. */
         ~render_target() noexcept;
 
-        /** @brief Move assignment. */
-        render_target& operator=(render_target&& other) noexcept;
-
         /**
          * @brief Allocates or reallocates GPU resources at the given resolution and sample count.
          *
@@ -104,7 +101,7 @@ namespace tavros::renderer
          *
          * @pre  m_is_created == true
          */
-        rhi::framebuffer_handle framebuffer() const;
+        rhi::framebuffer_handle gpu_framebuffer() const;
 
     private:
         void destroy_all();

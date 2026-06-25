@@ -44,6 +44,13 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/graphics_device.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/internal/rhi/string_utils.cpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_desc.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_desc.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_manager.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_manager.hpp
+
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_desc.cpp
@@ -88,6 +95,7 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/mipmap_generator.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/mipmap_generator.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_desc.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/texture/texture_desc.hpp

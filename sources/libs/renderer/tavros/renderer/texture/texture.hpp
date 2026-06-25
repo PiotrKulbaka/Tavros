@@ -1,36 +1,70 @@
 #pragma once
 
 #include <tavros/core/resource/resource.hpp>
-#include <tavros/renderer/rhi/handle.hpp>
-#include <tavros/renderer/rhi/enums.hpp>
+#include <tavros/renderer/texture/texture_desc.hpp>
+#include <tavros/renderer/upload_context.hpp>
+#include <tavros/assets/image/image_view.hpp>
 
 namespace tavros::renderer
 {
 
-    struct texture_t : public core::basic_resource<texture_t>
+    class texture
+        : public core::basic_resource<texture>,
+          core::noncopyable
     {
-        /// Texture dimensionality type
-        rhi::texture_type type = rhi::texture_type::texture_2d;
+    public:
+        texture(rhi::graphics_device* gdevice, upload_context& upctx, assets::image_view im, const texture_desc& desc, bool y_flip);
+        texture(texture&&) noexcept;
+        ~texture() noexcept;
 
-        /// Pixel format on the GPU
-        rhi::pixel_format format = rhi::pixel_format::none;
+        rhi::texture_type type() const noexcept
+        {
+            return m_type;
+        }
 
-        /// Width of a single tile/face in pixels
-        uint32 width = 0;
+        rhi::pixel_format format() const noexcept
+        {
+            return m_format;
+        }
 
-        /// Height of a single tile/face in pixels
-        uint32 height = 0;
+        uint32 width() const noexcept
+        {
+            return m_width;
+        }
 
-        /// Depth in pixels (texture_3d only)
-        uint32 depth = 1;
+        uint32 height() const noexcept
+        {
+            return m_height;
+        }
 
-        /// Number of array layers (texture_2d only)
-        uint32 array_layers = 1;
+        uint32 depth() const noexcept
+        {
+            return m_depth;
+        }
 
-        /// Native GPU texture handle
-        rhi::texture_handle gpu_texture;
+        uint32 array_layers() const noexcept
+        {
+            return m_array_layers;
+        }
+
+        rhi::texture_handle gpu_texture() const noexcept
+        {
+            return m_texture;
+        }
+
+    private:
+        rhi::graphics_device* m_gdevice;
+
+        rhi::texture_handle m_texture;
+        rhi::texture_type   m_type;
+        rhi::pixel_format   m_format;
+
+        uint32 m_width;
+        uint32 m_height;
+        uint32 m_depth;
+        uint32 m_array_layers;
     };
 
-    using texture_ref = core::basic_resource_ref<texture_t>;
+    using texture_ref = core::basic_resource_ref<texture>;
 
 } // namespace tavros::renderer

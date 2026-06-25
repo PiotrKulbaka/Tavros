@@ -3,45 +3,16 @@
 #include "scene_data.hpp"
 #include "free_camera.hpp"
 
-#include <tavros/renderer/shaders/shader_loader.hpp>
-#include <tavros/renderer/shaders/shader_source_provider.hpp>
-#include <tavros/core/memory/mallocator.hpp>
-#include <tavros/core/memory/buffer.hpp>
-#include <tavros/core/exception.hpp>
-#include <tavros/core/filesystem.hpp>
-#include <tavros/core/timer.hpp>
-#include <tavros/core/logger/logger.hpp>
-#include <tavros/core/debug/unreachable.hpp>
-#include <tavros/core/fixed_string.hpp>
-#include <tavros/renderer/render_target/render_target.hpp>
-#include <tavros/renderer/rhi/command_queue.hpp>
-#include <tavros/renderer/rhi/graphics_device.hpp>
-#include <tavros/renderer/resource_manager.hpp>
-#include <tavros/renderer/gpu_stream_buffer.hpp>
-#include <tavros/renderer/gpu_buffer_view.hpp>
-#include <tavros/renderer/gpu_stage_buffer.hpp>
-#include <tavros/input/input_manager.hpp>
 #include <tavros/assets/asset_manager.hpp>
-#include <tavros/assets/image/image_view.hpp>
-#include <tavros/ui/view.hpp>
-#include <tavros/ui/button/button.hpp>
-#include <tavros/ui/root_view.hpp>
-#include <tavros/renderer/text/font/font_library.hpp>
-#include <tavros/renderer/text/text_layouter.hpp>
-#include <tavros/renderer/text/font/font_data_provider.hpp>
-#include <tavros/system/application.hpp>
-#include <tavros/core/noncopyable.hpp>
-#include <tavros/core/memory/memory.hpp>
-#include <tavros/core/resource/object_pool.hpp>
 #include <tavros/assets/providers/filesystem_provider.hpp>
-#include <tavros/renderer/rhi/string_utils.hpp>
-#include <tavros/tef/saver.hpp>
+#include <tavros/core/logger/logger.hpp>
+#include <tavros/renderer/render_system.hpp>
+#include <tavros/renderer/gpu_stream_buffer.hpp>
+#include <tavros/system/application.hpp>
 #include <tavros/tef/loader.hpp>
-#include <tavros/tef/schema.hpp>
+#include <tavros/input/input_manager.hpp>
 
 #include <tracy/Tracy.hpp>
-
-#include <tavros/renderer/render_system.hpp>
 
 
 constexpr uint32 k_msaa = 16;
@@ -59,53 +30,9 @@ static tavros::core::logger logger("main");
         }                            \
     } while (0)
 
-constexpr size_t operator""_MiB(unsigned long long v) noexcept
-{
-    return v * 1024ull * 1024ull;
-}
-constexpr size_t operator""_KiB(unsigned long long v) noexcept
-{
-    return v * 1024ull;
-}
-
 // -------------------------------------------------------------------------
 // Asset providers
 // -------------------------------------------------------------------------
-
-class filesystem_shader_provider : public tavros::renderer::shader_source_provider
-{
-public:
-    explicit filesystem_shader_provider(tavros::core::shared_ptr<tavros::assets::asset_manager> am)
-        : m_am(std::move(am))
-    {
-    }
-
-    tavros::core::string load(tavros::core::string_view path) override
-    {
-        return m_am->read_text(path);
-    }
-
-private:
-    tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
-};
-
-class filesystem_font_provider : public tavros::renderer::font_data_provider
-{
-public:
-    explicit filesystem_font_provider(tavros::core::shared_ptr<tavros::assets::asset_manager> am)
-        : m_am(std::move(am))
-    {
-    }
-
-    tavros::core::dynamic_buffer<uint8> load(tavros::core::string_view path) override
-    {
-        return m_am->read_binary(path);
-    }
-
-private:
-    tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
-};
-
 
 class tavros_engine_file_provider : public tavros::tef::source_provider
 {
@@ -126,123 +53,6 @@ private:
 
 
 // -------------------------------------------------------------------------
-// Common depth-stencil presets
-// -------------------------------------------------------------------------
-
-inline rhi::depth_stencil_state depth_test_rw() noexcept
-{
-    rhi::depth_stencil_state s;
-    s.format = rhi::pixel_format::depth32f;
-    s.depth_test_enable = true;
-    s.depth_write_enable = true;
-    s.depth_compare = rhi::compare_op::less;
-    return s;
-}
-
-inline rhi::depth_stencil_state depth_test_ro() noexcept
-{
-    rhi::depth_stencil_state s;
-    s.format = rhi::pixel_format::depth32f;
-    s.depth_test_enable = true;
-    s.depth_write_enable = false;
-    s.depth_compare = rhi::compare_op::less;
-    return s;
-}
-
-inline rhi::depth_stencil_state depth_off() noexcept
-{
-    rhi::depth_stencil_state s;
-    s.format = rhi::pixel_format::none;
-    s.depth_test_enable = false;
-    s.depth_write_enable = false;
-    return s;
-}
-
-inline rhi::depth_stencil_state depth_on_write_off() noexcept
-{
-    rhi::depth_stencil_state s;
-    s.format = rhi::pixel_format::depth32f;
-    s.depth_test_enable = true;
-    s.depth_write_enable = false;
-    s.depth_compare = rhi::compare_op::less;
-    return s;
-}
-
-inline rhi::depth_stencil_state depth_test_leq() noexcept
-{
-    rhi::depth_stencil_state s;
-    s.format = rhi::pixel_format::depth32f;
-    s.depth_compare = rhi::compare_op::less_equal;
-    s.depth_test_enable = true;
-    s.depth_write_enable = false;
-    return s;
-}
-
-// -------------------------------------------------------------------------
-// Common blend presets
-// -------------------------------------------------------------------------
-
-/// Standard alpha blending.
-inline rhi::blend_state alpha_blend() noexcept
-{
-    return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
-}
-
-/// Additive blending (fire/glow effects).
-inline rhi::blend_state additive_blend() noexcept
-{
-    return {true, rhi::blend_factor::src_alpha, rhi::blend_factor::one, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one, rhi::blend_op::add};
-}
-
-/// No blending.
-inline rhi::blend_state no_blend() noexcept
-{
-    return {false, rhi::blend_factor::src_alpha, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add, rhi::blend_factor::one, rhi::blend_factor::one_minus_src_alpha, rhi::blend_op::add};
-}
-
-// -------------------------------------------------------------------------
-// Common rasterizer presets
-// -------------------------------------------------------------------------
-
-inline rhi::rasterizer_state cull_back_ccw() noexcept
-{
-    rhi::rasterizer_state s;
-    s.cull = rhi::cull_face::back;
-    s.face = rhi::front_face::counter_clockwise;
-    s.polygon = rhi::polygon_mode::fill;
-    return s;
-}
-
-inline rhi::rasterizer_state cull_off() noexcept
-{
-    rhi::rasterizer_state s;
-    s.cull = rhi::cull_face::off;
-    s.polygon = rhi::polygon_mode::fill;
-    return s;
-}
-
-inline rhi::rasterizer_state cull_off_scissor() noexcept
-{
-    auto s = cull_off();
-    s.scissor_enable = true;
-    return s;
-}
-
-// -------------------------------------------------------------------------
-// Default multisample (off)
-// -------------------------------------------------------------------------
-
-inline rhi::multisample_state no_msaa() noexcept
-{
-    rhi::multisample_state s;
-    s.sample_shading_enabled = false;
-    s.sample_count = 1;
-    s.min_sample_shading = 0.0f;
-    return s;
-}
-
-
-// -------------------------------------------------------------------------
 // main_window
 // -------------------------------------------------------------------------
 
@@ -252,7 +62,6 @@ public:
     main_window(tavros::core::string_view name, tavros::core::shared_ptr<tavros::assets::asset_manager> am)
         : app::render_app_base(name)
         , m_am(am)
-        , m_sl(tavros::core::make_unique<filesystem_shader_provider>(am))
     {
         auto loader = tavros::tef::loader(std::move(tavros::core::make_unique<tavros_engine_file_provider>(am)));
         auto config = loader.load("config.tef");
@@ -300,12 +109,12 @@ public:
         auto scene_data_slice = m_uniform_buffer.slice<app::scene_data>(1);
         scene_data_slice.data().copy_from(&m_scene_data, 1);
 
-        cbuf->begin_rendering(m_offscreen_rt->framebuffer());
+        cbuf->begin_rendering(m_offscreen_rt->gpu_framebuffer());
         cbuf->bind_shader_buffers(rhi::buffer_binding{scene_data_slice.gpu_buffer(), static_cast<uint32>(scene_data_slice.offset_bytes()), static_cast<uint32>(scene_data_slice.size_bytes()), 0});
 
-        cbuf->bind_pipeline(m_skybox_pipeline);
+        cbuf->bind_pipeline(m_skybox_pipeline->gpu_pipeline());
         auto tex = m_sky_textures[m_sky_index];
-        cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_texture, m_sampler, 0});
+        cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), m_sampler, 0});
         cbuf->draw(36);
 
         draw_world_grid(*cbuf, 0);
@@ -314,7 +123,7 @@ public:
 
 
         cbuf->begin_rendering(m_composer->backbuffer());
-        cbuf->bind_pipeline(m_fullscreen_quad_pipeline);
+        cbuf->bind_pipeline(m_fullscreen_quad_pipeline->gpu_pipeline());
         cbuf->bind_shader_textures(rhi::texture_binding{m_offscreen_rt->color_attachments()[0], m_sampler, 0});
         cbuf->draw(4);
         cbuf->end_rendering();
@@ -366,19 +175,18 @@ private:
         m_sampler = m_renderer->get_graphics_device()->create_sampler(si);
         TAV_FATAL_IF(!m_sampler, "Failed to create sampler.");
 
+        m_uniform_buffer.init(m_renderer->get_graphics_device(), 256 * 1024 * 1024, rhi::buffer_usage::constant);
 
-        m_fullscreen_quad_pipeline = build_fullscreen_quad_pipeline();
-        m_world_grid_pipeline = build_world_grid_pipeline();
-        m_skybox_pipeline = build_skybox_pipeline();
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.cloudy_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.cloudy_sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.dark_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.pure_sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.pure_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.sunset_sky"));
 
-        m_uniform_buffer.init(m_renderer->get_graphics_device(), 256_MiB, rhi::buffer_usage::constant);
-
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.cloudy_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.cloudy_sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.dark_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.pure_sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.pure_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture_t>("textures.sunset_sky"));
+        m_skybox_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("materials.skybox");
+        m_world_grid_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("materials.world_grid");
+        m_fullscreen_quad_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("materials.fullscreen_quad", "depth24_stencil8");
     }
 
     // ==================================================================
@@ -453,21 +261,6 @@ private:
         m_scene_data._pad1 = 0.0f;
     }
 
-    rhi::pipeline_handle build_fullscreen_quad_pipeline()
-    {
-        rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/fullscreen_quad.vert", "tavros/shaders/fullscreen_quad.frag");
-        info.depth_stencil_attachment = depth_off();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangle_strip;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
-
-        auto h = m_renderer->get_graphics_device()->create_pipeline(info);
-        m_renderer->get_graphics_device()->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create fullscreen quad pipeline.");
-        return h;
-    }
-
     void draw_world_grid(rhi::command_queue& cbuf, uint32 plane = 0)
     {
         using namespace tavros;
@@ -483,7 +276,7 @@ private:
             float  axis_line_width = 0.0f;
             float  minor_grid_step = 0.0f;
             float  major_grid_step = 0.0f;
-            uint32 flags = 0; // Флаги. flags & 0x3 == (0 - плоскость XY; 1 - плоскость YZ; 2 - плоскость ZX)
+            uint32 flags = 0; // flags & 0x3 == (0 - plane XY; 1 - plane YZ; 2 - plane ZX)
         };
 
         uint32 u_color = 0;
@@ -517,50 +310,11 @@ private:
         sd.major_grid_step = 100.0f;
         sd.flags = plane_id;
 
-        cbuf.bind_pipeline(m_world_grid_pipeline);
+        cbuf.bind_pipeline(m_world_grid_pipeline->gpu_pipeline());
         cbuf.push_constant(sd);
         cbuf.draw(4);
     }
 
-    rhi::pipeline_handle build_skybox_pipeline()
-    {
-        rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/skybox.vert", "tavros/shaders/skybox.frag");
-        info.depth_stencil_attachment = depth_test_leq();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangles;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, no_blend()});
-        info.multisample = no_msaa();
-
-        auto h = m_renderer->get_graphics_device()->create_pipeline(info);
-        m_renderer->get_graphics_device()->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create Skybox pipeline.");
-        return h;
-    }
-
-    rhi::pipeline_handle build_world_grid_pipeline()
-    {
-        rhi::pipeline_create_info info;
-        info.shader_program = load_and_create_shader_program("tavros/shaders/world_grid.vert", "tavros/shaders/world_grid.frag");
-        info.depth_stencil_attachment = depth_test_ro();
-        info.rasterizer = cull_off();
-        info.topology = rhi::primitive_topology::triangle_strip;
-        info.color_attachments.push_back({rhi::pixel_format::rgba8un, rhi::k_rgba_color_mask, alpha_blend()});
-        info.multisample = no_msaa();
-
-        auto h = m_renderer->get_graphics_device()->create_pipeline(info);
-        m_renderer->get_graphics_device()->destroy_shader(info.shader_program);
-        TAV_FATAL_IF(!h, "Failed to create world grid pipeline.");
-        return h;
-    }
-
-    rhi::shader_handle load_and_create_shader_program(tavros::core::string_view vs_path, tavros::core::string_view fs_path)
-    {
-        const auto src_vs = m_sl.load(vs_path, {tavros::renderer::shader_language::glsl_460, ""});
-        const auto src_fs = m_sl.load(fs_path, {tavros::renderer::shader_language::glsl_460, ""});
-        auto       sh = m_renderer->get_graphics_device()->create_shader({src_vs, src_fs});
-        return m_renderer->get_graphics_device()->create_shader({src_vs, src_fs});
-    }
 
     // ==================================================================
     // Members
@@ -569,9 +323,6 @@ private:
     tavros::core::shared_ptr<tavros::tef::workspace>          m_ws;
     tavros::core::shared_ptr<tavros::assets::asset_manager>   m_am;
     tavros::core::unique_ptr<tavros::renderer::render_system> m_renderer;
-
-    // -- Core --
-    tavros::renderer::shader_loader m_sl;
 
     // -- Graphics device --
     rhi::frame_composer* m_composer = nullptr;
@@ -588,9 +339,9 @@ private:
 
     tavros::renderer::rhi::sampler_handle m_sampler;
 
-    tavros::renderer::rhi::pipeline_handle m_fullscreen_quad_pipeline;
-    tavros::renderer::rhi::pipeline_handle m_world_grid_pipeline;
-    tavros::renderer::rhi::pipeline_handle m_skybox_pipeline;
+    tavros::renderer::material_ref m_fullscreen_quad_pipeline;
+    tavros::renderer::material_ref m_world_grid_pipeline;
+    tavros::renderer::material_ref m_skybox_pipeline;
 
 
     // -- Input --

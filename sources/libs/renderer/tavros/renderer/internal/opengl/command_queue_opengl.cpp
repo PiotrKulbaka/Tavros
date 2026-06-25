@@ -20,6 +20,30 @@ namespace
     {
         return value ? GL_TRUE : GL_FALSE;
     }
+
+    bool is_pixel_format_compatible(pixel_format lhs, pixel_format rhs) noexcept
+    {
+        const auto lhs_info = to_pixel_format_info(lhs);
+        const auto rhs_info = to_pixel_format_info(rhs);
+        using cl = pixel_format_class;
+
+        const auto lhs_cl = lhs_info.format_class;
+        const auto rhs_cl = rhs_info.format_class;
+        if (lhs_cl == cl::unknown || rhs_cl == cl::unknown) {
+            return false;
+        }
+
+        if (lhs_info.channels == rhs_info.channels) {
+            if (lhs_cl == cl::normalized || lhs_cl == cl::integer || lhs_cl == cl::floating_point) {
+                if (rhs_cl == cl::normalized || rhs_cl == cl::integer || rhs_cl == cl::floating_point) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
 } // namespace
 
 namespace tavros::renderer::rhi
@@ -31,12 +55,14 @@ namespace tavros::renderer::rhi
         ::logger.debug("command_queue_opengl created");
 
         GL_CALL(glGenFramebuffers(1, &m_resolve_fbo));
+        GL_CALL(glGenVertexArrays(1, &m_empty_vao));
         init_push_constant_buffer();
     }
 
     command_queue_opengl::~command_queue_opengl()
     {
         destroy_push_constant_buffer();
+        GL_CALL(glDeleteVertexArrays(1, &m_empty_vao));
         GL_CALL(glDeleteFramebuffers(1, &m_resolve_fbo));
 
         ::logger.debug("command_queue_opengl destroyed");
@@ -94,13 +120,14 @@ namespace tavros::renderer::rhi
                 continue;
             }
 
-            if (cl.format != fb->color_attachment_formats[i]) {
+            const auto ca_fmt = fb->color_attachment_formats[i];
+            if (!is_pixel_format_compatible(cl.format, ca_fmt)) {
                 ::logger.error(
                     "Failed to bind pipeline {}: mismatch between {}-th color attachment format {} in current render pass, and color attachment format {} in pipeline",
                     pipeline,
                     fmt::styled_param(i),
                     fmt::styled_param(to_string(cl.format)),
-                    fmt::styled_param(to_string(fb->color_attachment_formats[i]))
+                    fmt::styled_param(to_string(ca_fmt))
                 );
                 GL_CALL(glUseProgram(0));
                 GL_CALL(glBindVertexArray(0));
@@ -253,7 +280,8 @@ namespace tavros::renderer::rhi
         }
 
         GL_CALL(glUseProgram(p->cached_prog_obj));
-        GL_CALL(glBindVertexArray(p->vao_obj));
+        auto vao = p->vao_obj != 0 ? p->vao_obj : m_empty_vao;
+        GL_CALL(glBindVertexArray(vao));
     }
 
     void command_queue_opengl::bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers)
