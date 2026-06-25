@@ -161,7 +161,7 @@ private:
         m_free_cam.set_orientation(tavros::math::quat::look_rotation(tavros::math::vec3(-1.0f, -1.0f, -0.5f), tavros::math::vec3(0.0f, 0.0f, 1.0f)));
         m_free_cam.set_orbit_dist(30.0f);
 
-        m_offscreen_rt = m_renderer->resource_manager()->load<tavros::renderer::render_target>("main_offscreen_rendertarget");
+        m_offscreen_rt = m_renderer->resource_manager()->load<tavros::renderer::render_target>("rt.main_offscreen");
         TAV_FATAL_IF(!m_offscreen_rt, "Failed to create offscreen render target.");
 
 
@@ -177,16 +177,16 @@ private:
 
         m_uniform_buffer.init(m_renderer->get_graphics_device(), 256 * 1024 * 1024, rhi::buffer_usage::constant);
 
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.cloudy_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.cloudy_sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.dark_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.pure_sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.pure_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("textures.sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.dark_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.sunset_sky"));
 
-        m_skybox_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("materials.skybox");
-        m_world_grid_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("materials.world_grid");
-        m_fullscreen_quad_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("materials.fullscreen_quad", "depth24_stencil8");
+        m_skybox_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.skybox");
+        m_world_grid_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.world_grid");
+        m_fullscreen_quad_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.fullscreen_quad", "depth24_stencil8");
     }
 
     // ==================================================================

@@ -1,0 +1,39 @@
+# ================================================================
+#                             Textures
+# ================================================================
+
+tex = {
+    # ================================================================
+    # Sky box textures
+    # ================================================================
+    cloudy_sky = {
+        path = "textures/cubemaps/cloudy.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    cloudy_sunset_sky = {
+        path = "textures/cubemaps/cloudy_sunset.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    dark_sky = {
+        path = "textures/cubemaps/dark.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    pure_sunset_sky = {
+        path = "textures/cubemaps/pure_sunset.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    pure_sky = {
+        path = "textures/cubemaps/puresky.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    sunset_sky = {
+        path = "textures/cubemaps/sunset.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+}

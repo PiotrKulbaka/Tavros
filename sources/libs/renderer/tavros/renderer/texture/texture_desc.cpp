@@ -19,7 +19,7 @@ namespace
         if (sv == "texture_2d") {
             return tt::texture_2d;
         } else if (sv == "texture_3d") {
-            return tt::texture_2d;
+            return tt::texture_3d;
         } else if (sv == "texture_cube") {
             return tt::texture_cube;
         }
@@ -202,11 +202,10 @@ namespace tavros::tef
         valid &= read_clamped<uint32>(n, "top", uint32{0}, uint32{0}, uint32{0xffffffff}, out.top, is_integer, "integer value", ds);
         valid &= read_clamped<uint32>(n, "width", uint32{0}, uint32{0}, uint32{0xffffffff}, out.width, is_integer, "integer value", ds);
         valid &= read_clamped<uint32>(n, "height", uint32{0}, uint32{0}, uint32{0xffffffff}, out.height, is_integer, "integer value", ds);
-        valid &= read_clamped<uint32>(n, "height", uint32{1}, uint32{1}, uint32{0xffffffff}, out.height, is_integer, "integer value", ds);
+        valid &= read_clamped<uint32>(n, "depth", uint32{1}, uint32{1}, uint32{0xffffffff}, out.depth, is_integer, "integer value", ds);
         valid &= read_scalar<bool>(n, "gen_mipmaps", false, out.gen_mipmaps, is_bool, "boolean value", ds);
         valid &= read_enum(n, "type", renderer::rhi::texture_type::texture_2d, to_texture_type, out.type, "texture type", ds);
         valid &= read_enum(n, "pixel_format", renderer::rhi::pixel_format::none, to_pixel_format, out.pixel_format, "pixel format", ds);
-        valid &= read_scalar<bool>(n, "gen_mipmaps", false, out.gen_mipmaps, is_bool, "boolean value", ds);
         valid &= read_clamped<uint32>(n, "array_layers", uint32{1}, uint32{1}, uint32{0xffffffff}, out.array_layers, is_integer, "integer value", ds);
         valid &= read_clamped<uint32>(n, "array_rows", uint32{1}, uint32{1}, uint32{0xffffffff}, out.array_rows, is_integer, "integer value", ds);
         valid &= read_clamped<uint32>(n, "array_cols", uint32{1}, uint32{1}, uint32{0xffffffff}, out.array_cols, is_integer, "integer value", ds);

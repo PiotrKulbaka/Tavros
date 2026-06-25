@@ -31,7 +31,7 @@ in vec3  v_plane_normal;
 in vec3  v_world_pos;
 in float v_view_space_depth;
 
-layout(location = 0) out vec4 out_color;
+layout(location = 0) out vec4 base_color;
 
 // ----------------------------------------------------------------
 // Grid helpers
@@ -112,5 +112,5 @@ void main()
     float a_fade = angle_fade(v_cam_pos, v_world_pos, v_plane_normal); //clamp(abs(view_dir.z) * 2.2, 0.0, 1.0);
     float d_fade = distance_fade(v_cam_pos, v_world_pos, v_plane_normal, v_view_space_depth);
     color.a *= a_fade * d_fade;
-    out_color = color;
+    base_color = color;
 }

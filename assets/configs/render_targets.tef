@@ -1,0 +1,23 @@
+# ================================================================
+#                         Render targets
+# ================================================================
+
+rt = {
+    main_offscreen = {
+        color = {
+            base_color = {
+                format = "rgba8"
+                load = "clear"
+                store = "store"
+                clear = 0.0 0.0 0.0 0.0
+            }
+        }
+
+        depth = {
+            format = "depth32f"
+            load = "clear"
+            store = "store"
+            clear = 1.0
+        }
+    }
+}

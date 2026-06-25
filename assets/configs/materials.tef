@@ -1,0 +1,84 @@
+# ================================================================
+#                            Materials
+# ================================================================
+
+mt = {
+    fullscreen_quad = {
+        shaders = {
+            vertex = "tavros/shaders/fullscreen_quad.vert"
+            fragment = "tavros/shaders/fullscreen_quad.frag"
+        }
+
+        color = {
+            base_color = { 
+                mask = "rgba"
+                blend = "off"
+            }
+        }
+
+        depth = "off"
+        topology = "triangle_strip"
+
+        rasterizer = {
+            cull = "off"
+            front_face = "ccw" 
+            fill_mode = "fill"
+        }
+    }
+
+    skybox = {
+        shaders = {
+            vertex = "tavros/shaders/skybox.vert"
+            fragment = "tavros/shaders/skybox.frag"
+        }
+
+        color = {
+            base_color = { 
+                mask = "rgba"
+                blend = "off"
+            }
+        }
+
+        depth = {
+            test = true
+            write = false
+            compare_op = "less_equal"
+        }
+
+        topology = "triangles"
+
+        rasterizer = {
+            cull = "off"
+            front_face = "ccw" 
+            fill_mode = "fill"
+        }
+    }
+
+    world_grid = {
+        shaders = {
+            vertex = "tavros/shaders/world_grid.vert"
+            fragment = "tavros/shaders/world_grid.frag"
+        }
+
+        color = {
+            base_color = { 
+                mask = "rgba"
+                blend = "alpha"
+            }
+        }
+
+        depth = {
+            test = true
+            write = false
+            compare_op = "less"
+        }
+
+        topology = "triangle_strip"
+
+        rasterizer = {
+            cull = "off"
+            front_face = "ccw" 
+            fill_mode = "fill"
+        }
+    }
+}
