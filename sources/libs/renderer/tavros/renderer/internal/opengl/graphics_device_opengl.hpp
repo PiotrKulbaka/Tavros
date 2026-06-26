@@ -19,6 +19,9 @@ namespace tavros::renderer::rhi
         void                  destroy_frame_composer(frame_composer_handle composer) override;
         frame_composer*       get_frame_composer_ptr(frame_composer_handle composer) override;
 
+        command_queue* create_command_queue() override;
+        void           submit_command_queue(command_queue* queue) override;
+
         shader_handle         create_shader(const shader_create_info& info) override;
         void                  destroy_shader(shader_handle shader) override;
         const shader_reflect* get_shader_reflect_ptr(shader_handle shader) const noexcept override;
@@ -73,10 +76,15 @@ namespace tavros::renderer::rhi
             uint32 max_renderbuffer_size = 0;
             uint32 max_framebuffer_width = 0;
             uint32 max_framebuffer_height = 0;
+
+            // Samplers
+            float max_texture_anisotropy = 1.0f;
         };
 
         device_resources_opengl m_resources;
         gl_limits               m_limits;
+
+        core::unique_ptr<command_queue> m_temp_queue;
     };
 
 } // namespace tavros::renderer::rhi

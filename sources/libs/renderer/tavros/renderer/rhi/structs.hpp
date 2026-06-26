@@ -390,6 +390,10 @@ namespace tavros::renderer::rhi
         /// Maximum LOD that can be selected by the sampler
         float max_lod = 1000.0f;
 
+        /// Anisotropic filtering level. 1.0 is disabled
+        /// Typically the level is set as a power of two, and the maximum reaches 16.0
+        float anisotropy = 1.0f;
+
         /// Comparison function used when sampling depth textures
         compare_op depth_compare = compare_op::off;
     };

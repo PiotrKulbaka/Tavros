@@ -37,25 +37,13 @@ namespace tavros::renderer
             return;
         }
 
-        m_upctx = core::make_unique<upload_context>(m_gdevice.get());
-        if (!m_upctx) {
-            logger.error("Failed to create upload context.");
-            return;
-        }
-
-        m_rm = core::make_unique<tavros::renderer::resource_manager>(m_gdevice.get(), m_am, m_ws);
-        if (!m_rm) {
-            logger.error("Failed to create resource manager.");
-            return;
-        }
-
         rhi::frame_composer_create_info fc_info;
         fc_info.width = 1;
         fc_info.height = 1;
         fc_info.buffer_count = 2;
         fc_info.vsync = false;
         fc_info.color_attachment_format = rhi::pixel_format::rgba8un;
-        fc_info.depth_stencil_attachment_format = rhi::pixel_format::depth24_stencil8;
+        fc_info.depth_stencil_attachment_format = rhi::pixel_format::none;
         fc_info.native_handle = main_window_native_handle;
 
         auto fc_handle = m_gdevice->create_frame_composer(fc_info);
@@ -67,10 +55,11 @@ namespace tavros::renderer
         m_composer = m_gdevice->get_frame_composer_ptr(fc_handle);
         TAV_ASSERT(m_composer);
 
-        auto* upload_cmd = m_composer->create_command_queue();
-        m_upctx->begin_frame(upload_cmd);
-
-        m_rm->init(m_upctx.get());
+        m_rm = core::make_unique<tavros::renderer::resource_manager>(m_gdevice.get(), m_am, m_ws);
+        if (!m_rm) {
+            logger.error("Failed to create resource manager.");
+            return;
+        }
 
         m_is_init = true;
     }
@@ -83,8 +72,6 @@ namespace tavros::renderer
 
         m_am = nullptr;
         m_ws = nullptr;
-        m_rm->shutdown();
-        m_upctx = nullptr;
         m_rm = nullptr;
         m_gdevice = nullptr;
 
@@ -98,20 +85,24 @@ namespace tavros::renderer
             return;
         }
 
-        if (m_frame_number == 0) {
-            m_upctx->end_frame(); // First frame started with init
-        }
-
-        auto* upload_cmd = m_composer->create_command_queue();
-        m_upctx->begin_frame(upload_cmd);
         m_rm->begin_frame();
     }
 
     void render_system::end_frame() noexcept
     {
         m_rm->end_frame();
-        m_upctx->end_frame();
         ++m_frame_number;
+        m_composer->present();
+    }
+
+    void render_system::resize_backbuffer(uint32 width, uint32 height)
+    {
+        m_composer->resize(width, height);
+    }
+
+    rhi::framebuffer_handle render_system::gpu_backbuffer() noexcept
+    {
+        return m_composer->backbuffer();
     }
 
 } // namespace tavros::renderer

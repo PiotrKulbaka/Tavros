@@ -1,5 +1,4 @@
 #include <tavros/renderer/upload_context.hpp>
-
 #include <tavros/core/logger/logger.hpp>
 
 namespace
@@ -9,7 +8,6 @@ namespace
 
 namespace tavros::renderer
 {
-
     upload_context::upload_context(rhi::graphics_device* gdevice) noexcept
         : m_gdevice(gdevice)
     {
@@ -17,94 +15,58 @@ namespace tavros::renderer
 
     upload_context::~upload_context() noexcept
     {
-        for (auto& stage : m_stage_buffers) {
-            stage.shutdown();
-        }
-        m_stage_buffers.clear();
+        // Ensure GPU is done before releasing staging buffers
+        flush();
+        m_gdevice->safe_destroy(m_fence);
     }
 
-    void upload_context::begin_frame(rhi::command_queue* upload_command_queue) noexcept
+    void upload_context::flush() noexcept
     {
-        if (m_upload_cmd_queue) {
-            logger.warning("previous frame is not ended");
-        }
-        m_upload_cmd_queue = upload_command_queue;
-
-        // Consolidate multiple stage buffers.
-        if (m_stage_buffers.size() > 1) {
-            uint64 required_size = 0;
-
-            for (auto& stage : m_stage_buffers) {
-                required_size += stage.size();
+        if (m_current_upload_queue) {
+            if (!m_fence) {
+                m_fence = m_gdevice->create_fence();
             }
-
-            required_size = math::ceil_power_of_two(required_size);
-
-            gpu_stage_buffer new_stage;
-            new_stage.init(m_gdevice, required_size);
-
-            for (auto& stage : m_stage_buffers) {
-                stage.shutdown();
+            m_current_upload_queue->signal_fence(m_fence);
+            m_gdevice->submit_command_queue(m_current_upload_queue);
+            m_gdevice->client_wait_for_fence(m_fence);
+            m_stage_buffer.reset();
+            if (m_large_stage_buffer.capacity()) {
+                m_large_stage_buffer.shutdown();
             }
-
-            m_stage_buffers.clear();
-            m_stage_buffers.push_back(std::move(new_stage));
-
-            m_peak_usage = 0;
-            m_frames_since_resize = 0;
-        }
-
-        // Reset usage for current frame.
-        for (auto& stage : m_stage_buffers) {
-            stage.reset();
+            m_current_upload_queue = nullptr;
         }
     }
 
-    void upload_context::end_frame() noexcept
+    upload_context::upload_batch upload_context::slice(size_t size) noexcept
     {
-        uint64 total_used = 0;
-        uint64 total_capacity = 0;
-
-        for (auto& stage : m_stage_buffers) {
-            total_used += stage.size();
-            total_capacity += stage.capacity();
+        if (!m_stage_buffer.capacity()) {
+            m_stage_buffer.init(m_gdevice, k_stage_buffer_size);
+            TAV_ASSERT(m_stage_buffer.capacity() == k_stage_buffer_size);
         }
 
-        m_peak_usage = std::max(m_peak_usage, total_used);
-
-        ++m_frames_since_resize;
-
-        // Shrink oversized staging buffer.
-        if (m_stage_buffers.size() == 1 && m_frames_since_resize >= 100 && total_capacity > 0) {
-            const double usage_ratio = static_cast<double>(m_peak_usage) / static_cast<double>(total_capacity);
-
-            if (usage_ratio == 0.0) {
-                TAV_ASSERT(m_stage_buffers.size() == 1);
-                m_stage_buffers.back().shutdown();
-                m_stage_buffers.clear();
-            } else if (usage_ratio <= 0.45) {
-                uint64 new_size = math::ceil_power_of_two(m_peak_usage);
-                new_size = std::max<uint64>(new_size, 1_mib);
-                if (new_size < total_capacity) {
-                    gpu_stage_buffer new_stage;
-                    new_stage.init(m_gdevice, new_size);
-
-                    m_stage_buffers.back().shutdown();
-                    m_stage_buffers.clear();
-                    m_stage_buffers.push_back(std::move(new_stage));
-                }
+        if (m_stage_buffer.remaining() >= size) {
+            if (!m_current_upload_queue) {
+                m_current_upload_queue = m_gdevice->create_command_queue();
+                TAV_ASSERT(m_current_upload_queue);
             }
-
-            m_peak_usage = 0;
-            m_frames_since_resize = 0;
+            return upload_batch{m_stage_buffer.slice<uint8>(size), m_current_upload_queue};
         }
 
-        m_upload_cmd_queue = nullptr;
-    }
+        flush();
 
-    rhi::command_queue* upload_context::command_queue() noexcept
-    {
-        return m_upload_cmd_queue;
+        if (!m_current_upload_queue) {
+            m_current_upload_queue = m_gdevice->create_command_queue();
+            TAV_ASSERT(m_current_upload_queue);
+        }
+
+        // Try one more time
+        if (m_stage_buffer.remaining() >= size) {
+            return upload_batch{m_stage_buffer.slice<uint8>(size), m_current_upload_queue};
+        }
+
+        // Last attempt, allocate a separate buffer for this
+        m_large_stage_buffer.init(m_gdevice, size);
+        return upload_batch{m_large_stage_buffer.slice<uint8>(size), m_current_upload_queue};
     }
 
 } // namespace tavros::renderer

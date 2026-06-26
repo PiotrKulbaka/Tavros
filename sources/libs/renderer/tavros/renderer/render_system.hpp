@@ -6,7 +6,6 @@
 #include <tavros/core/string_view.hpp>
 
 #include <tavros/renderer/rhi/graphics_device.hpp>
-#include <tavros/renderer/upload_context.hpp>
 #include <tavros/renderer/resource_manager.hpp>
 
 namespace tavros::renderer
@@ -25,18 +24,16 @@ namespace tavros::renderer
 
         void end_frame() noexcept;
 
+        void resize_backbuffer(uint32 width, uint32 height);
+
+        rhi::framebuffer_handle gpu_backbuffer() noexcept;
+
         // TODO: This is a temporary accessor. Remove it.
         // The render system should eventually provide higher-level APIs for resource
         // creation and management, and the graphics device should be encapsulated.
         rhi::graphics_device* get_graphics_device() noexcept
         {
             return m_gdevice.get();
-        }
-
-        // TODO: This is a temporary accessor. Remove it.
-        rhi::frame_composer* get_frame_composer() noexcept
-        {
-            return m_composer;
         }
 
         resource_manager* resource_manager() noexcept
@@ -50,7 +47,6 @@ namespace tavros::renderer
         core::shared_ptr<assets::asset_manager> m_am;
         core::shared_ptr<tef::workspace>        m_ws;
         core::unique_ptr<rhi::graphics_device>  m_gdevice;
-        core::unique_ptr<upload_context>        m_upctx;
 
         core::unique_ptr<tavros::renderer::resource_manager> m_rm;
 

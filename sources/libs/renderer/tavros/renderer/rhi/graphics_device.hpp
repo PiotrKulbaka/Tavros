@@ -59,6 +59,26 @@ namespace tavros::renderer::rhi
         virtual frame_composer* get_frame_composer_ptr(frame_composer_handle composer) = 0;
 
         /**
+         * @brief Create a new command queue for the current frame.
+         *
+         * Command queues created by this method are used to record rendering or compute commands.
+         * The lifetime of the command queue is tied to the current frame.
+         *
+         * @return command_queue* Pointer to a new command queue object, or nullptr if no resources are available.
+         */
+        virtual command_queue* create_command_queue() = 0;
+
+        /**
+         * @brief Submit a completed command queue for execution.
+         *
+         * This method indicates that the command queue has finished recording
+         * and is ready to be executed by the GPU.
+         *
+         * @param queue Pointer to the command queue to submit.
+         */
+        virtual void submit_command_queue(command_queue* queue) = 0;
+
+        /**
          * @brief Compiles shader sources and creates a shader object.
          *
          * @param sources Shader source code for one or more stages.

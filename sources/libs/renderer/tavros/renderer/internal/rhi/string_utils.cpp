@@ -492,8 +492,6 @@ namespace tavros::renderer::rhi
             return "mirrored_repeat";
         case wrap_mode::clamp_to_edge:
             return "clamp_to_edge";
-        case wrap_mode::clamp_to_border:
-            return "clamp_to_border";
         }
         TAV_UNREACHABLE();
     }

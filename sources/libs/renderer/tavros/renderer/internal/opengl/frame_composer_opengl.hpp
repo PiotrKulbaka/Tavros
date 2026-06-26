@@ -31,30 +31,11 @@ namespace tavros::renderer::rhi
 
         virtual void present() override;
 
-        virtual void begin_frame() override;
-
-        virtual void end_frame() override;
-
-        virtual command_queue* create_command_queue() override;
-
-        virtual void submit_command_queue(command_queue* queue) override;
-
-        virtual bool is_frame_complete() override;
-
-        virtual void wait_for_frame_complete() override;
-
     private:
         graphics_device_opengl*          m_device;
         core::unique_ptr<context_opengl> m_context;
         frame_composer_create_info       m_info;
         framebuffer_handle               m_backbuffer;
-        fence_handle                     m_fences[3];
-
-        uint64 m_frame_number;
-        uint64 m_buffer_count;
-        bool   m_frame_started = false;
-
-        core::unique_ptr<command_queue_opengl> m_internal_command_queue; // Temporary object, will be deleted soon
     };
 
 } // namespace tavros::renderer::rhi

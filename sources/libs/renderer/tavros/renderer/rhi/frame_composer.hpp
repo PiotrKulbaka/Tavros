@@ -3,7 +3,6 @@
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/rhi/command_queue.hpp>
 
-
 namespace tavros::renderer::rhi
 {
 
@@ -18,14 +17,6 @@ namespace tavros::renderer::rhi
      * It supports recording commands in parallel command queues which are then submitted
      * for execution together.
      *
-     * The workflow usually follows this pattern:
-     *  - call begin_frame() to start a new frame
-     *  - create one or more command queues via create_command_queue()
-     *  - submit each command queue with submit_command_queue()
-     *  - call end_frame() to signal command recording completion
-     *  - call present() to present the rendered backbuffer
-     *  - query frame completion via is_frame_complete() or wait_for_frame_complete()
-     *
      * This design allows flexible multi-threaded command recording and efficient frame presentation,
      * while managing synchronization and resource lifecycle internally.
      */
@@ -37,7 +28,6 @@ namespace tavros::renderer::rhi
         /**
          * @brief Resize the backbuffer to the specified width and height.
          *
-         * This method must NOT be called between begin_frame() and end_frame().
          * Typically called when the window or rendering surface size changes.
          *
          * @param width  New width of the backbuffer in pixels.
@@ -76,63 +66,9 @@ namespace tavros::renderer::rhi
         /**
          * @brief Present the current backbuffer on the screen.
          *
-         * Must be called between begin_frame() and end_frame().
          * This call typically triggers buffer swap and advances the internal backbuffer index.
          */
         virtual void present() = 0;
-
-        /**
-         * @brief Begin recording a new frame.
-         *
-         * Prepares the frame composer to start accepting new command queues.
-         * Must be called before any command queues are created or submitted for the frame.
-         */
-        virtual void begin_frame() = 0;
-
-        /**
-         * @brief End recording of the current frame.
-         *
-         * Signals that no more command queues will be submitted for this frame.
-         * Must be called after all command queues have been submitted.
-         */
-        virtual void end_frame() = 0;
-
-        /**
-         * @brief Create a new command queue for the current frame.
-         *
-         * Command queues created by this method are used to record rendering or compute commands.
-         * The lifetime of the command queue is tied to the current frame.
-         *
-         * @return command_queue* Pointer to a new command queue object, or nullptr if no resources are available.
-         */
-        virtual command_queue* create_command_queue() = 0;
-
-        /**
-         * @brief Submit a completed command queue for execution.
-         *
-         * This method indicates that the command queue has finished recording
-         * and is ready to be executed by the GPU.
-         *
-         * @param queue Pointer to the command queue to submit.
-         */
-        virtual void submit_command_queue(command_queue* queue) = 0;
-
-        /**
-         * @brief Check asynchronously if the last submitted frame has finished rendering.
-         *
-         * Can be called at any time. Returns true if the GPU has completed rendering the last frame.
-         *
-         * @return true if the last frame is complete.
-         * @return false if the last frame is still in progress.
-         */
-        virtual bool is_frame_complete() = 0;
-
-        /**
-         * @brief Block the calling thread until the last frame finishes rendering.
-         *
-         * This is a blocking call and should be used sparingly to avoid stalls.
-         */
-        virtual void wait_for_frame_complete() = 0;
     };
 
 } // namespace tavros::renderer::rhi

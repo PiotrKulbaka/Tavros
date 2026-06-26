@@ -40,14 +40,11 @@ namespace tavros::renderer::rhi
         : m_device(device)
         , m_context(std::move(context))
         , m_info(info)
-        , m_frame_number(0)
     {
         TAV_ASSERT(m_context);
         TAV_ASSERT(m_device);
         TAV_ASSERT(info.width > 0 && info.height > 0);
         TAV_ASSERT(info.buffer_count == 2 || info.buffer_count == 3);
-
-        m_buffer_count = static_cast<uint64>(info.buffer_count);
 
         // Create default backbuffer
         framebuffer_create_info backbuffer_info;
@@ -62,8 +59,6 @@ namespace tavros::renderer::rhi
         backbuffer_info.depth_stencil_attachment.stencil_clear_value = 0;
         backbuffer_info.sample_count = 1; // For backbuffer, sample count must be 1
 
-        m_internal_command_queue = core::make_unique<command_queue_opengl>(device);
-
         gl_framebuffer gl_fb;
         gl_fb.info = backbuffer_info;
         gl_fb.framebuffer_obj = 0;
@@ -73,12 +68,6 @@ namespace tavros::renderer::rhi
 
         m_backbuffer = m_device->get_resources()->create(gl_framebuffer(gl_fb));
         ::logger.debug("Frame composer framebuffer {} created", m_backbuffer);
-
-        m_fences[0] = m_device->create_fence();
-        m_fences[1] = m_device->create_fence();
-        if (m_buffer_count == 3) {
-            m_fences[2] = m_device->create_fence();
-        }
     }
 
     frame_composer_opengl::~frame_composer_opengl()
@@ -93,8 +82,6 @@ namespace tavros::renderer::rhi
                 ::logger.error("Cannot destroy frame composer framebuffer {} because it does not exist", m_backbuffer);
             }
         }
-
-        m_internal_command_queue = nullptr;
 
         m_context.reset();
     }
@@ -134,51 +121,7 @@ namespace tavros::renderer::rhi
 
     void frame_composer_opengl::present()
     {
-        if (m_frame_started) {
-            ::logger.warning("Frame is not completed yet, but trying to present it");
-        }
         m_context->swap_buffers();
-    }
-
-    void frame_composer_opengl::begin_frame()
-    {
-        if (m_frame_started) {
-            ::logger.error("Frame already started");
-        }
-        m_frame_started = true;
-    }
-
-    void frame_composer_opengl::end_frame()
-    {
-        if (!m_frame_started) {
-            ::logger.error("Frame not started");
-        }
-        m_frame_started = false;
-        ++m_frame_number;
-    }
-
-    command_queue* frame_composer_opengl::create_command_queue()
-    {
-        return m_internal_command_queue.get();
-    }
-
-    void frame_composer_opengl::submit_command_queue(command_queue* queue)
-    {
-        TAV_UNUSED(queue);
-        auto id = m_frame_number % m_buffer_count;
-        queue->signal_fence(m_fences[id]);
-    }
-
-    bool frame_composer_opengl::is_frame_complete()
-    {
-        auto id = m_frame_number % m_buffer_count;
-        return !m_frame_started && m_device->is_fence_signaled(m_fences[id]);
-    }
-
-    void frame_composer_opengl::wait_for_frame_complete()
-    {
-        auto id = m_frame_number % m_buffer_count;
-        m_device->client_wait_for_fence(m_fences[id]);
     }
 
 } // namespace tavros::renderer::rhi

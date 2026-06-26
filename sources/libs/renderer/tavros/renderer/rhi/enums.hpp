@@ -347,7 +347,6 @@ namespace tavros::renderer::rhi
         repeat,          /// Coordinates outside [0, 1] are wrapped (modulo)
         mirrored_repeat, /// Coordinates mirror every integer boundary
         clamp_to_edge,   /// Coordinates outside [0, 1] are clamped to the edge texels
-        clamp_to_border, /// Coordinates outside [0, 1] return the border color
     };
 
     /**

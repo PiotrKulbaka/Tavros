@@ -343,8 +343,6 @@ namespace tavros::renderer::rhi
             return GL_MIRRORED_REPEAT;
         case wrap_mode::clamp_to_edge:
             return GL_CLAMP_TO_EDGE;
-        case wrap_mode::clamp_to_border:
-            return GL_CLAMP_TO_BORDER;
         default:
             TAV_UNREACHABLE();
         }

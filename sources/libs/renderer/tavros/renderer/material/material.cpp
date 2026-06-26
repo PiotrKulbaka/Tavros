@@ -18,83 +18,137 @@ namespace tavros::renderer
         : basic_resource(desc.name())
         , m_gdevice(gdevice)
     {
-        auto vs = sl.load(desc.shaders().vertex_shader_path, {tavros::renderer::shader_language::glsl_460, ""});
-        auto fs = sl.load(desc.shaders().fragment_shader_path, {tavros::renderer::shader_language::glsl_460, ""});
+        ::logger.debug("Creating material '{}'", desc.name());
 
-        auto sh = m_gdevice->create_shader({vs, fs});
+        // 1. Load & compile shaders
+        auto vs_src = sl.load(desc.shaders().vertex_shader_path, {tavros::renderer::shader_language::glsl_460, ""});
+        auto fs_src = sl.load(desc.shaders().fragment_shader_path, {tavros::renderer::shader_language::glsl_460, ""});
+
+        auto sh = m_gdevice->create_shader({vs_src, fs_src});
         if (!sh) {
             ::logger.error(
-                "Failed to create material: shader is not compiled (\"{}\", \"{}\")",
+                "Failed to create material '{}': shader compilation failed (VS='{}', FS='{}')",
+                desc.name(),
                 desc.shaders().vertex_shader_path,
                 desc.shaders().fragment_shader_path
             );
             return;
         }
 
+        // 2. Reflect
         const auto* reflect = m_gdevice->get_shader_reflect_ptr(sh);
         TAV_ASSERT(reflect);
 
-        // Prepare color attachments combined info
-        struct color_attachment_combined_info
-        {
-            const rhi::output_reflect*                          reflect = nullptr;
-            const material_desc::color_attachment_state_config* desc = nullptr;
-        };
-        color_attachment_combined_info ca_combined[rhi::k_max_color_attachments];
-        size_t                         ca_combined_size = 0;
-
-        for (const auto& out : reflect->outputs()) {
-            TAV_ASSERT(out.location < rhi::k_max_color_attachments);
-            ca_combined[out.location].reflect = &out;
-            for (const auto& cas : desc.color_attachment_states()) {
-                if (cas.name == out.name) {
-                    ca_combined[out.location].desc = &cas;
+        // 3. Validate: every name in desc must exist in reflect outputs
+        // desc names absent in reflect = error (referencing non-existent output)
+        // reflect outputs absent in desc = ok (material simply does not configure that attachment)
+        bool valid = true;
+        for (const auto& cas : desc.color_attachment_states()) {
+            bool found = false;
+            for (const auto& out : reflect->outputs()) {
+                if (out.name == cas.name) {
+                    found = true;
                     break;
                 }
             }
-            if (ca_combined_size <= out.location) {
-                ca_combined_size = out.location + 1;
+            if (!found) {
+                ::logger.error(
+                    "Failed to create material '{}': color_attachment_state '{}' "
+                    "has no corresponding output in shader (VS='{}', FS='{}')",
+                    desc.name(), cas.name,
+                    desc.shaders().vertex_shader_path,
+                    desc.shaders().fragment_shader_path
+                );
+                valid = false;
             }
         }
 
-        // Validate color attachments combined info
-        for (size_t i = 0; i < ca_combined_size; ++i) {
-            const auto* cur = &ca_combined[i];
-            if (cur->desc) {
-                if (!cur->reflect) {
-                    ::logger.error(
-                        "Failed to create material: shader has no attachment '{}'", cur->desc->name
-                    );
-                    m_gdevice->safe_destroy(sh);
-                    return;
-                }
+        if (!valid) {
+            m_gdevice->safe_destroy(sh);
+            return;
+        }
+
+        // 4. Sort reflect outputs by location
+        // Locations may be sparse and non-sequential (e.g. 0, 5, 12345).
+        // We sort so we can iterate from lowest to highest location.
+        std::vector<const rhi::output_reflect*> sorted_outputs;
+        sorted_outputs.reserve(reflect->outputs().size());
+        for (const auto& out : reflect->outputs()) {
+            sorted_outputs.push_back(&out);
+        }
+        std::sort(sorted_outputs.begin(), sorted_outputs.end(), [](const rhi::output_reflect* a, const rhi::output_reflect* b) {
+            return a->location < b->location;
+        });
+
+        // 5. Check for duplicate locations
+        for (size_t i = 1; i < sorted_outputs.size(); ++i) {
+            if (sorted_outputs[i]->location == sorted_outputs[i - 1]->location) {
+                ::logger.error(
+                    "Failed to create material '{}': shader has two outputs at the same location {} ('{}' and '{}')",
+                    desc.name(),
+                    sorted_outputs[i]->location,
+                    sorted_outputs[i - 1]->name,
+                    sorted_outputs[i]->name
+                );
+                valid = false;
             }
         }
 
+        if (!valid) {
+            m_gdevice->safe_destroy(sh);
+            return;
+        }
+
+        // 6. Build pipeline_create_info
+        // We iterate sorted outputs and emit one color_attachment_state per output,
+        // in location order. Gaps between locations get dummy (off) slots so that
+        // the index in color_attachments[] matches the shader location.
         rhi::pipeline_create_info info;
-
-        // Shader program
         info.shader_program = sh;
 
-        // Color attachments
-        for (size_t i = 0; i < ca_combined_size; ++i) {
-            constexpr auto blend_off = rhi::blend_state{false};
-            constexpr auto mask_off = tavros::core::flags<rhi::color_mask>();
+        constexpr auto blend_off = rhi::blend_state{false};
+        constexpr auto mask_off = tavros::core::flags<rhi::color_mask>();
 
-            const auto* cur = &ca_combined[i];
-            if (cur->desc) {
-                TAV_ASSERT(cur->reflect);
+        uint32 next_location = 0;
+        for (const auto* out : sorted_outputs) {
+            // Fill gap slots between next_location and this output's location
+            while (next_location < out->location) {
+                ::logger.warning(
+                    "material '{}': no shader output at location {} (gap) -- inserting dummy slot",
+                    desc.name(), next_location
+                );
+                info.color_attachments.push_back(rhi::color_attachment_state{rhi::pixel_format::none, mask_off, blend_off});
+                ++next_location;
+            }
+
+            // Find matching desc config for this output (optional)
+            const material_desc::color_attachment_state_config* matched_desc = nullptr;
+            for (const auto& cas : desc.color_attachment_states()) {
+                if (cas.name == out->name) {
+                    matched_desc = &cas;
+                    break;
+                }
+            }
+
+            if (matched_desc) {
                 rhi::color_attachment_state cas;
-                cas.format = cur->reflect->format;
-                cas.mask = cur->desc->mask;
-                cas.blend = cur->desc->blend;
+                cas.format = out->format;
+                cas.mask = matched_desc->mask;
+                cas.blend = matched_desc->blend;
                 info.color_attachments.push_back(cas);
             } else {
-                info.color_attachments.push_back(rhi::color_attachment_state{cur->reflect->format, mask_off, blend_off});
+                // Output exists in shader but has no desc config -- write disabled
+                ::logger.debug(
+                    "material '{}': shader output '{}' at location {} has no config in desc -- write disabled",
+                    desc.name(), out->name, out->location
+                );
+                info.color_attachments.push_back(rhi::color_attachment_state{out->format, mask_off, blend_off});
             }
+
+            ++next_location;
         }
 
-        // Depth stencil
+        // 7. Depth/stencil
         info.depth_stencil_attachment.format = ds_format;
         info.depth_stencil_attachment.depth_test_enable = desc.depth_attachment_state().test_enabled;
         info.depth_stencil_attachment.depth_write_enable = desc.depth_attachment_state().write_enabled;
@@ -103,27 +157,26 @@ namespace tavros::renderer
         info.depth_stencil_attachment.stencil_front = desc.stencil_attachment_state().front;
         info.depth_stencil_attachment.stencil_back = desc.stencil_attachment_state().back;
 
-        // Topology
+        // 8. Topology / rasterizer / multisample
         info.topology = desc.topology().topology;
-
-        // Rasterizer
         info.rasterizer = desc.rasterizer();
 
-        // Multisample
         info.multisample.sample_count = msaa;
         info.multisample.sample_shading_enabled = false;
         info.multisample.min_sample_shading = 1.0f;
 
+        // 9. Create pipeline
         auto pipeline = m_gdevice->create_pipeline(info);
         if (!pipeline) {
-            logger.error("Failed to create material: pipeline not created");
+            ::logger.error(
+                "Failed to create material '{}': pipeline creation failed",
+                desc.name()
+            );
             m_gdevice->safe_destroy(sh);
             return;
         }
 
-        logger.debug(
-            "Loaded {}", desc.name()
-        );
+        ::logger.info("Material '{}' created successfully", desc.name());
 
         m_pipeline = pipeline;
         m_shader = sh;

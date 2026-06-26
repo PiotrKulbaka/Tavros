@@ -5,7 +5,7 @@ namespace tavros::renderer
 
     void texture_uploader::upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, uint32 layer_index, upload_context& upctx)
     {
-        auto slice = upctx.slice<uint8>(im.width() * im.height() * im.components());
+        auto batch = upctx.slice(im.width() * im.height() * im.components());
 
         rhi::texture_copy_region region;
         region.mip_level = mip_level;
@@ -13,19 +13,19 @@ namespace tavros::renderer
         region.width = im.width();
         region.height = im.height();
         region.depth = 1;
-        region.buffer_offset = slice.offset_bytes();
+        region.buffer_offset = batch.view.offset_bytes();
         region.buffer_row_length = 0; // tightly packed
 
         auto   h = im.height();
         auto   row_sz = im.row_size_bytes();
         size_t offset = 0;
-        auto   dst = slice.data();
+        auto   dst = batch.view.data();
         for (uint32 y = 0; y < h; ++y) {
             dst.copy_from(im.row(y), row_sz, offset);
             offset += row_sz;
         }
 
-        upctx.command_queue()->copy_buffer_to_texture(slice.gpu_buffer(), gpu_tex, region);
+        batch.queue->copy_buffer_to_texture(batch.view.gpu_buffer(), gpu_tex, region);
     }
 
     void texture_uploader::upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, upload_context& upctx)

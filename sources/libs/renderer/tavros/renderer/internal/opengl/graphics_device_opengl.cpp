@@ -187,6 +187,8 @@ namespace tavros::renderer::rhi
 
         glGetIntegerv(GL_MAX_FRAMEBUFFER_HEIGHT, &value);
         m_limits.max_framebuffer_height = static_cast<uint32>(value);
+
+        glGetFloatv(GL_MAX_TEXTURE_MAX_ANISOTROPY, &m_limits.max_texture_anisotropy);
     }
 
     void graphics_device_opengl::release_program(gl_program_handle handle) noexcept
@@ -230,6 +232,8 @@ namespace tavros::renderer::rhi
 
         destroy_for<fence_handle>(m_resources, [this](auto h) { destroy_fence(h); });
 
+        m_temp_queue = nullptr;
+
         // Should be removed in last turn because swapchain owns the OpenGL context
         destroy_for<frame_composer_handle>(m_resources, [this](auto h) { destroy_frame_composer(h); });
     }
@@ -269,6 +273,10 @@ namespace tavros::renderer::rhi
 
         init_limits();
 
+        if (!m_temp_queue) {
+            m_temp_queue = core::make_unique<command_queue_opengl>(this);
+        }
+
         GL_CALL(glEnable(GL_PROGRAM_POINT_SIZE));
 
         auto h = m_resources.create(gl_composer{info, std::move(composer)});
@@ -294,6 +302,16 @@ namespace tavros::renderer::rhi
             ::logger.error("Failed to get frame composer {}: not found", composer);
             return nullptr;
         }
+    }
+
+    command_queue* graphics_device_opengl::create_command_queue()
+    {
+        return m_temp_queue.get();
+    }
+
+    void graphics_device_opengl::submit_command_queue(command_queue* queue)
+    {
+        TAV_UNUSED(queue);
     }
 
     shader_handle graphics_device_opengl::create_shader(const shader_create_info& info)
@@ -368,6 +386,22 @@ namespace tavros::renderer::rhi
         GL_CALL(glSamplerParameterf(sampler, GL_TEXTURE_LOD_BIAS, info.mip_lod_bias));
         GL_CALL(glSamplerParameterf(sampler, GL_TEXTURE_MIN_LOD, info.min_lod));
         GL_CALL(glSamplerParameterf(sampler, GL_TEXTURE_MAX_LOD, info.max_lod));
+
+        // Anisotropy
+        float anisotropy = info.anisotropy;
+        if (anisotropy < 1.0f || anisotropy > m_limits.max_texture_anisotropy) {
+            logger.warning(
+                "Sampler creation: anisotropy level {} is out of valid range [1.0, {}], clamping",
+                info.anisotropy,
+                m_limits.max_texture_anisotropy
+            );
+            if (anisotropy < 1.0f) {
+                anisotropy = 1.0f;
+            } else {
+                anisotropy = m_limits.max_texture_anisotropy;
+            }
+        }
+        GL_CALL(glSamplerParameterf(sampler, GL_TEXTURE_MAX_ANISOTROPY, anisotropy));
 
         // Depth compare
         if (info.depth_compare != compare_op::off) {

@@ -45,7 +45,7 @@ namespace tavros::core
          * @param init Initializer list of elements to insert.
          * @note The number of elements must not exceed `N`.
          */
-        constexpr explicit fixed_vector(std::initializer_list<T> init) noexcept
+        constexpr fixed_vector(std::initializer_list<T> init) noexcept
         {
             TAV_ASSERT(init.size() <= N);
             for (const auto& value : init) {

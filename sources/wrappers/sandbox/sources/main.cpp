@@ -1,11 +1,11 @@
 ﻿#include "render_app_base.hpp"
 
-#include "scene_data.hpp"
 #include "free_camera.hpp"
 
 #include <tavros/assets/asset_manager.hpp>
 #include <tavros/assets/providers/filesystem_provider.hpp>
 #include <tavros/core/logger/logger.hpp>
+#include <tavros/core/math.hpp>
 #include <tavros/renderer/render_system.hpp>
 #include <tavros/renderer/gpu_stream_buffer.hpp>
 #include <tavros/system/application.hpp>
@@ -52,6 +52,38 @@ private:
 };
 
 
+struct alignas(16) scene_data
+{
+    // Matrices
+    tavros::math::mat4 view;
+    tavros::math::mat4 projection;
+    tavros::math::mat4 view_projection;
+    tavros::math::mat4 inverse_view;
+    tavros::math::mat4 inverse_projection;
+    tavros::math::mat4 ortho_projection;
+
+    // Camera
+    tavros::math::vec3 camera_position;
+    float              _pad0 = 0.0f;
+    float              near_plane;
+
+    float far_plane;
+    float aspect_ratio;
+    float fov_y;
+    float _pad1 = 0.0f;
+
+    // Frame
+    tavros::math::vec2 frame_size;
+    tavros::math::vec2 frame_size_inv;
+
+    float    time = 0.0f;
+    float    delta_time = 0.0f;
+    uint32_t frame_index = 0;
+    float    _pad2 = 0.0f;
+};
+
+static_assert(sizeof(scene_data) % 16 == 0, "scene_data must be 16-byte aligned");
+
 // -------------------------------------------------------------------------
 // main_window
 // -------------------------------------------------------------------------
@@ -89,6 +121,33 @@ public:
         m_renderer->shutdown();
     }
 
+    tavros::core::string_view smp_to_str(tavros::renderer::sampler_preset smp) noexcept
+    {
+        using sp = tavros::renderer::sampler_preset;
+        switch (smp) {
+        case sp::automatic:
+            return "automatic";
+        case sp::nearest_clamp:
+            return "nearest_clamp";
+        case sp::nearest_repeat:
+            return "nearest_repeat";
+        case sp::linear_clamp:
+            return "linear_clamp";
+        case sp::linear_repeat:
+            return "linear_repeat";
+        case sp::trilinear_clamp:
+            return "trilinear_clamp";
+        case sp::trilinear_repeat:
+            return "trilinear_repeat";
+        case sp::shadow:
+            return "shadow";
+        case sp::shadow_pcf:
+            return "shadow_pcf";
+        default:
+            return "<unknown>";
+        }
+    }
+
     // ------------------------------------------------------------------
     // Render loop
     // ------------------------------------------------------------------
@@ -100,39 +159,35 @@ public:
         process_input(events, time_us);
 
         m_renderer->begin_frame();
-        m_composer->begin_frame();
 
-        auto* cbuf = m_composer->create_command_queue();
+        auto* cbuf = m_renderer->get_graphics_device()->create_command_queue();
         update_frame_data();
 
         m_uniform_buffer.reset();
-        auto scene_data_slice = m_uniform_buffer.slice<app::scene_data>(1);
+        auto scene_data_slice = m_uniform_buffer.slice<scene_data>(1);
         scene_data_slice.data().copy_from(&m_scene_data, 1);
 
         cbuf->begin_rendering(m_offscreen_rt->gpu_framebuffer());
         cbuf->bind_shader_buffers(rhi::buffer_binding{scene_data_slice.gpu_buffer(), static_cast<uint32>(scene_data_slice.offset_bytes()), static_cast<uint32>(scene_data_slice.size_bytes()), 0});
 
+        auto smp = m_renderer->resource_manager()->samplers().get_sampler(static_cast<tavros::renderer::sampler_preset>(m_smp_index));
         cbuf->bind_pipeline(m_skybox_pipeline->gpu_pipeline());
         auto tex = m_sky_textures[m_sky_index];
-        cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), m_sampler, 0});
+        cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), smp, 0});
         cbuf->draw(36);
 
         draw_world_grid(*cbuf, 0);
 
         cbuf->end_rendering();
 
-
-        cbuf->begin_rendering(m_composer->backbuffer());
+        cbuf->begin_rendering(m_renderer->gpu_backbuffer());
         cbuf->bind_pipeline(m_fullscreen_quad_pipeline->gpu_pipeline());
-        cbuf->bind_shader_textures(rhi::texture_binding{m_offscreen_rt->color_attachments()[0], m_sampler, 0});
+        cbuf->bind_shader_textures(rhi::texture_binding{m_offscreen_rt->color_attachments()[0], smp, 0});
         cbuf->draw(4);
         cbuf->end_rendering();
 
+        m_renderer->get_graphics_device()->submit_command_queue(cbuf);
         m_renderer->end_frame();
-        m_composer->end_frame();
-        m_composer->wait_for_frame_complete();
-        m_composer->present();
-
         m_input_manager.end_frame();
 
         ++m_frame_number;
@@ -154,39 +209,27 @@ private:
 
         m_renderer->init(native_handle());
 
-
-        m_composer = m_renderer->get_frame_composer();
-        TAV_FATAL_IF(!m_composer, "Failed to get frame composer pointer.");
-
         m_free_cam.set_orientation(tavros::math::quat::look_rotation(tavros::math::vec3(-1.0f, -1.0f, -0.5f), tavros::math::vec3(0.0f, 0.0f, 1.0f)));
         m_free_cam.set_orbit_dist(30.0f);
 
         m_offscreen_rt = m_renderer->resource_manager()->load<tavros::renderer::render_target>("rt.main_offscreen");
         TAV_FATAL_IF(!m_offscreen_rt, "Failed to create offscreen render target.");
 
-
-        rhi::sampler_create_info si;
-        si.filter.mipmap_filter = rhi::mipmap_filter_mode::linear;
-        si.filter.min_filter = rhi::filter_mode::linear;
-        si.filter.mag_filter = rhi::filter_mode::linear;
-        si.wrap_mode.wrap_s = rhi::wrap_mode::clamp_to_edge;
-        si.wrap_mode.wrap_t = rhi::wrap_mode::clamp_to_edge;
-        si.wrap_mode.wrap_r = rhi::wrap_mode::clamp_to_edge;
-        m_sampler = m_renderer->get_graphics_device()->create_sampler(si);
-        TAV_FATAL_IF(!m_sampler, "Failed to create sampler.");
-
         m_uniform_buffer.init(m_renderer->get_graphics_device(), 256 * 1024 * 1024, rhi::buffer_usage::constant);
 
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.misty_morning"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sunset_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.dark_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sunset_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.sunset_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.rock_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.rock_sky_small"));
 
         m_skybox_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.skybox");
         m_world_grid_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.world_grid");
-        m_fullscreen_quad_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.fullscreen_quad", "depth24_stencil8");
+        m_fullscreen_quad_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.fullscreen_quad", "");
     }
 
     // ==================================================================
@@ -214,6 +257,14 @@ private:
                 m_sky_index = m_sky_textures.size() - 1;
             }
         }
+
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_pagedown)) {
+            m_smp_index += 1;
+            if (m_smp_index >= static_cast<int32>(tavros::renderer::sampler_preset::count)) {
+                m_smp_index = 0;
+            }
+            logger.info("Sampler selected: {}", smp_to_str(static_cast<tavros::renderer::sampler_preset>(m_smp_index)));
+        }
     }
 
     void handle_window_resize()
@@ -229,7 +280,7 @@ private:
 
         m_offscreen_rt->resize(static_cast<uint32>(sz.width), static_cast<uint32>(sz.height), k_msaa);
 
-        m_composer->resize(sz.width, sz.height);
+        m_renderer->resize_backbuffer(sz.width, sz.height);
         const float fov_y = 70.0f * 3.14159265358979f / 180.0f;
         const float near = 0.1f;
         const float far = 5000.0f;
@@ -324,25 +375,20 @@ private:
     tavros::core::shared_ptr<tavros::assets::asset_manager>   m_am;
     tavros::core::unique_ptr<tavros::renderer::render_system> m_renderer;
 
-    // -- Graphics device --
-    rhi::frame_composer* m_composer = nullptr;
-
     // -- Scene --
     tavros::sandbox::free_camera m_free_cam;
-    app::scene_data              m_scene_data;
+    scene_data                   m_scene_data;
 
     tavros::renderer::gpu_stream_buffer m_uniform_buffer;
 
     tavros::renderer::render_target_ref                 m_offscreen_rt;
     tavros::core::vector<tavros::renderer::texture_ref> m_sky_textures;
     int32                                               m_sky_index = 0;
-
-    tavros::renderer::rhi::sampler_handle m_sampler;
+    int32                                               m_smp_index = 0;
 
     tavros::renderer::material_ref m_fullscreen_quad_pipeline;
     tavros::renderer::material_ref m_world_grid_pipeline;
     tavros::renderer::material_ref m_skybox_pipeline;
-
 
     // -- Input --
     tavros::input::input_manager m_input_manager;
