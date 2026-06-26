@@ -36,4 +36,19 @@ tex = {
         gen_mipmaps = true
         type = "texture_cube"
     }
+    rock_sky = {
+        path = "textures/cubemaps/rock_sky256.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    rock_sky_small = {
+        path = "textures/cubemaps/rock_sky64.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
+    misty_morning = {
+        path = "textures/cubemaps/misty_morning.png"
+        gen_mipmaps = true
+        type = "texture_cube"
+    }
 }
