@@ -7,6 +7,7 @@
 
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/resource_manager.hpp>
+#include <tavros/renderer/renderer2d.hpp>
 
 namespace tavros::renderer
 {
@@ -41,6 +42,11 @@ namespace tavros::renderer
             return m_rm.get();
         }
 
+        renderer2d* renderer2d() noexcept
+        {
+            return m_renderer2d.get();
+        }
+
     private:
         uint64                                  m_frame_number = 0;
         bool                                    m_is_init = false;
@@ -48,7 +54,8 @@ namespace tavros::renderer
         core::shared_ptr<tef::workspace>        m_ws;
         core::unique_ptr<rhi::graphics_device>  m_gdevice;
 
-        core::unique_ptr<tavros::renderer::resource_manager> m_rm;
+        core::unique_ptr<renderer::resource_manager> m_rm;
+        core::unique_ptr<renderer::renderer2d>       m_renderer2d;
 
         rhi::frame_composer* m_composer = nullptr;
     };

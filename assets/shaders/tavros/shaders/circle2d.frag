@@ -1,40 +1,41 @@
-#include <tavros/shaders/scene.glsl>
+#include <tavros/scene/scene.glsl>
 
 layout(PUSH_CONSTANT) uniform PushConstants
 {
-    vec2  pos;
-    float out_r; // outsize radius
-    float in_r; // inside radius
-    vec4  color;
-    float aa_width;
+    vec2  center;
+    vec2  inner_center;
+    float outer_r;
+    float inner_r;
     float dash_size;
     float gap_size;
+    float aa_width;
 } pc;
 
 in  vec2 v_coord;
-out vec4 frag_color;
-
-float sdf_ring(vec2 p, vec2 center, float r_outer, float r_inner)
-{
-    float d = length(p - center);
-    return max(r_inner - d, d - r_outer);
-}
+out vec4 base_color;
 
 void main()
 {
-    float dist = sdf_ring(v_coord, pc.pos, pc.out_r, pc.in_r);
     float aa = pc.aa_width;
-    float alpha = 1.0 - smoothstep(-aa, aa, dist);
 
-    float angle = atan(v_coord.y - pc.pos.y, v_coord.x - pc.pos.x);
-    float t = mod(angle * pc.out_r, pc.dash_size + pc.gap_size);
+    // Outer
+    float outer_dist = length(v_coord - pc.center) - pc.outer_r;
+    float outer_alpha = 1.0 - smoothstep(-aa, aa, outer_dist);
 
-    if (t > pc.dash_size)
-        discard;
+    // Inner
+    float inner_dist = length(v_coord - pc.inner_center) - pc.inner_r;
+    float inner_alpha = smoothstep(-aa, aa, inner_dist);
 
-    if (alpha <= 0.0) {
-        discard;
+    float alpha = outer_alpha * inner_alpha;
+
+    // Dash
+    if (pc.dash_size > 0.0) {
+        float angle = atan(v_coord.y - pc.center.y, v_coord.x - pc.center.x);
+        float t = mod(angle * pc.outer_r, pc.dash_size + pc.gap_size);
+        float dash_alpha = 1.0 - smoothstep(pc.dash_size - aa, pc.dash_size + aa, t);
+        alpha *= dash_alpha;
     }
 
-    frag_color = vec4(pc.color.rgb, pc.color.a * alpha);
+    vec4 color = sample_brush(v_coord);
+    base_color = vec4(color.rgb, color.a * alpha);
 }

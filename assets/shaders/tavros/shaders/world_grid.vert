@@ -1,14 +1,8 @@
-#include <tavros/shaders/scene.glsl>
+#include <tavros/scene/scene.glsl>
 
 // ----------------------------------------------------------------
 // Inputs
 // ----------------------------------------------------------------
-
-struct MyStruct
-{
-    vec4 a;
-    vec4 b;
-};
 
 layout(PUSH_CONSTANT) uniform PushConstants
 {
@@ -22,7 +16,6 @@ layout(PUSH_CONSTANT) uniform PushConstants
     float minor_grid_step;   // world units
     float major_grid_step;   // world units
     uint  flags;             // bits [1:0] — plane: 0 = XY, 1 = YZ, 2 = ZX
-    MyStruct my_struct;
 } pc;
 
 // ----------------------------------------------------------------

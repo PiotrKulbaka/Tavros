@@ -82,7 +82,18 @@ struct alignas(16) scene_data
     float    _pad2 = 0.0f;
 };
 
+enum class brush_type : int32
+{
+    solid = 0,
+    linear_gradient = 1,
+    radial_gradient = 2,
+};
+
 static_assert(sizeof(scene_data) % 16 == 0, "scene_data must be 16-byte aligned");
+
+using tavros::math::vec2;
+using tavros::math::vec3;
+using tavros::math::vec4;
 
 // -------------------------------------------------------------------------
 // main_window
@@ -152,6 +163,14 @@ public:
     // Render loop
     // ------------------------------------------------------------------
 
+    float tm = 0.0f;
+
+    vec4 hex_color(uint32 hex) noexcept
+    {
+        auto c = tavros::math::rgba8(hex);
+        return {static_cast<float>(c.r) / 255.0f, static_cast<float>(c.g) / 255.0f, static_cast<float>(c.b) / 255.0f, static_cast<float>(c.a) / 255.0f};
+    }
+
     void render(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us) override
     {
         ZoneScopedNC("Frame", 0xFFFFFF);
@@ -177,6 +196,39 @@ public:
         cbuf->draw(36);
 
         draw_world_grid(*cbuf, 0);
+
+        set_brush_gradient(*cbuf, {600.0f, 400.0f}, {m_input_manager.mouse_pos().x, m_input_manager.mouse_pos().y}, {1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 0.1f});
+
+        auto* r = m_renderer->renderer2d();
+
+        r->set_line_thickness(3.0f);
+        r->set_brush_solid_color(0x00C6EEFF);
+        r->move_to({600.0f, 400.0f});
+        r->line_to({700.0f, 400.0f});
+
+        r->set_brush_solid_color(0x00C606FF);
+        r->circle({100, 100}, 50);
+        r->set_brush_solid_color(0xC40D8180);
+        r->ring({300, 60}, 50, 40);
+        r->set_brush_solid_color(0xBF262695);
+        r->ring_cut({400, 60}, 50, 60, {20, 20});
+
+
+        r->set_brush_radial_gradient({600, 50}, 0x3E4F3FFF, 25, 0x3E4F3F33);
+        r->circle({600, 50}, 15);
+        r->set_brush_radial_gradient({600, 50}, 0xFFFFFF00, 25, 0xFFFFFF40);
+        r->ring_cut({600, 50}, 15, 20, {0, 10});
+        r->set_brush_linear_gradient({600, 25}, 0x97D46BFF, {600, 75}, 0x5B9238FF);
+        r->circle({600, 50}, 12);
+
+        r->rect({800, 100}, {50, 20}, 20);
+
+        r->set_sprite_pivot({0.5f, 0.5f});
+        r->set_brush_solid_color(0xFFFFFFFF);
+        r->sprite(m_ui_texture, {400.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {492.0f, 435.0f, 123.0f, 87.0f});
+        r->sprite(m_ui_texture, {700.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {369.0f, 522.0f, 123.0f, 87.0f});
+        r->sprite(m_ui_texture, {1000.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {615.0f, 175.0f, 123.0f, 87.0f});
+
 
         cbuf->end_rendering();
 
@@ -219,13 +271,15 @@ private:
 
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.misty_morning"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sunset_sky"));
+        /*m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sunset_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.dark_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sunset_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sky"));
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.rock_sky"));
+        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.rock_sky"));*/
         m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.rock_sky_small"));
+
+        m_ui_texture = m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.ui_actor_portrets");
 
         m_skybox_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.skybox");
         m_world_grid_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.world_grid");
@@ -312,6 +366,44 @@ private:
         m_scene_data._pad1 = 0.0f;
     }
 
+    void set_brush_gradient(rhi::command_queue& cmd, vec2 p0, vec2 p1, vec4 color0, vec4 color1)
+    {
+        set_brush(cmd, brush_type::linear_gradient, p0, p1, color0, color1);
+    }
+
+    void set_brush_radial_gradient(rhi::command_queue& cmd, vec2 center, vec2 target, vec4 color_center, vec4 color_target)
+    {
+        set_brush(cmd, brush_type::radial_gradient, center, target, color_center, color_target);
+    }
+
+    void set_brush_solid(rhi::command_queue& cmd, vec4 color)
+    {
+        set_brush(cmd, brush_type::solid, {0.0f, 0.0f}, {0.0f, 0.0f}, color, color);
+    }
+
+    void set_brush(rhi::command_queue& cmd, brush_type type, vec2 p0, vec2 p1, vec4 color0, vec4 color1)
+    {
+        struct brush_data
+        {
+            vec2  pos0;
+            vec2  pos1;
+            vec4  color0;
+            vec4  color1;
+            int32 type;
+        };
+
+        const auto bd = brush_data{p0, p1, color0, color1, static_cast<int32>(type)};
+        auto       slice = m_uniform_buffer.slice<brush_data>(1);
+        slice.data().copy_from(&bd, 1);
+        cmd.bind_shader_buffers(rhi::buffer_binding{slice.gpu_buffer(), static_cast<uint32>(slice.offset_bytes()), static_cast<uint32>(slice.size_bytes()), 1});
+    }
+
+    void bind_texture(rhi::command_queue& cmd, tavros::renderer::texture_ref tex, uint32 binding_point, tavros::renderer::sampler_preset smp)
+    {
+        auto sampler = m_renderer->resource_manager()->samplers().get_sampler(smp);
+        cmd.bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), sampler, binding_point});
+    }
+
     void draw_world_grid(rhi::command_queue& cbuf, uint32 plane = 0)
     {
         using namespace tavros;
@@ -385,6 +477,8 @@ private:
     tavros::core::vector<tavros::renderer::texture_ref> m_sky_textures;
     int32                                               m_sky_index = 0;
     int32                                               m_smp_index = 0;
+
+    tavros::renderer::texture_ref m_ui_texture;
 
     tavros::renderer::material_ref m_fullscreen_quad_pipeline;
     tavros::renderer::material_ref m_world_grid_pipeline;

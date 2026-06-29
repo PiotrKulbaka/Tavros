@@ -81,4 +81,96 @@ mt = {
             fill_mode = "fill"
         }
     }
+
+    line2d = {
+        shaders = {
+            vertex = "tavros/shaders/line2d.vert"
+            fragment = "tavros/shaders/line2d.frag"
+        }
+
+        color = {
+            base_color = { 
+                mask = "rgba"
+                blend = "alpha"
+            }
+        }
+
+        topology = "triangles"
+
+        rasterizer = {
+            cull = "off"
+            front_face = "ccw" 
+            fill_mode = "fill"
+        }
+    }
+
+    cubic_bezier2d = {
+        shaders = {
+            vertex = "tavros/shaders/cubic_bezier2d.vert"
+            fragment = "tavros/shaders/cubic_bezier2d.frag"
+        }
+
+        color = {
+            base_color = { 
+                mask = "rgba"
+                blend = "alpha"
+            }
+        }
+
+        topology = "triangle_strip"
+
+        rasterizer = {
+            cull = "off"
+            front_face = "ccw" 
+            fill_mode = "fill"
+        }
+    }
+
+    sprite2d = {
+        shaders = {
+            vertex = "tavros/shaders/sprite2d.vert"
+            fragment = "tavros/shaders/sprite2d.frag"
+        }
+
+        color = {
+            base_color = { 
+                mask = "rgba"
+                blend = "alpha"
+            }
+        }
+
+        topology = "triangle_strip"
+
+        rasterizer = {
+            cull = "off"
+            front_face = "ccw" 
+            fill_mode = "fill"
+        }
+    }
+
+    rect2d = {
+        shaders = {
+            vertex = "tavros/shaders/rounded_rect.vert"
+            fragment = "tavros/shaders/rounded_rect.frag"
+        }
+
+        color = {
+            base_color = {
+                blend = "alpha"
+            }
+        }
+    }
+
+    circle2d = {
+        shaders = {
+            vertex = "tavros/shaders/circle2d.vert"
+            fragment = "tavros/shaders/circle2d.frag"
+        }
+
+        color = {
+            base_color = {
+                blend = "alpha"
+            }
+        }
+    }
 }

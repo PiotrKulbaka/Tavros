@@ -44,14 +44,17 @@ namespace tavros::renderer
         }
 
         template<class Res>
-        void release(core::basic_resource_ref<Res> ref) noexcept
+        void release(core::basic_resource_ref<Res>& ref) noexcept
         {
             if constexpr (std::is_same_v<Res, texture>) {
-                return m_tex_mgr.release(ref);
+                m_tex_mgr.release(ref);
+                ref = {};
             } else if constexpr (std::is_same_v<Res, render_target>) {
-                return m_rt_mgr.release(ref);
+                m_rt_mgr.release(ref);
+                ref = {};
             } else if constexpr (std::is_same_v<Res, material>) {
-                return m_mt_mgr.release(ref);
+                m_mt_mgr.release(ref);
+                ref = {};
             } else {
                 static_assert(sizeof(Res) == 0, "release not implemented for this resourece type");
             }

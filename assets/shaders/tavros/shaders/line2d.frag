@@ -1,10 +1,9 @@
-#include <tavros/shaders/scene.glsl>
+#include <tavros/scene/scene.glsl>
 
 layout(PUSH_CONSTANT) uniform PushConstants
 {
     vec2  p0;
     vec2  p1;
-    vec4  color;
     float thickness;
     float aa_width;
     float dash_size;
@@ -12,7 +11,7 @@ layout(PUSH_CONSTANT) uniform PushConstants
 } pc;
 
 in  vec2 v_coord;
-out vec4 frag_color;
+out vec4 base_color;
 
 float sdf_segment(vec2 p, vec2 a, vec2 b)
 {
@@ -24,19 +23,23 @@ float sdf_segment(vec2 p, vec2 a, vec2 b)
 
 void main()
 {
-    float dist   = sdf_segment(v_coord, pc.p0, pc.p1);
+    vec2 a = pc.p0;
+    vec2 b = pc.p1;
+
+    float aa_width = pc.aa_width;
+    float dist   = sdf_segment(v_coord, a, b);
     if (pc.dash_size > 0.1f) {
-        vec2  ab      = pc.p1 - pc.p0;
-        vec2  ap      = v_coord - pc.p0;
+        vec2  ab      = b - a;
+        vec2  ap      = v_coord - a;
         float t       = dot(ap, normalize(ab));
         float period  = pc.dash_size + pc.gap_size;
         float phase   = mod(t, period);
         if (phase > pc.dash_size) discard;
     }
     float half_w = pc.thickness * 0.5;
-    float alpha  = 1.0 - smoothstep(half_w - pc.aa_width, half_w + pc.aa_width, dist);
+    float alpha  = 1.0 - smoothstep(half_w - aa_width, half_w + aa_width, dist);
 
-    if (alpha <= 0.0) discard;
-
-    frag_color = vec4(pc.color.rgb, pc.color.a * alpha);
+    
+    vec4 color = sample_brush(v_coord);
+    base_color = vec4(color.rgb, color.a * alpha);
 }

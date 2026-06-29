@@ -51,4 +51,44 @@ layout (std140, binding = 0) uniform Scene
     float _pad2;
 } scene;
 
+#define BRUSH_SOLID           0
+#define BRUSH_LINEAR_GRADIENT 1
+#define BRUSH_RADIAL_GRADIENT 2
+
+layout (std140, binding = 1) uniform Brush
+{
+    vec2  pos0;    // solid: ignored | linear: start point | radial: center
+    vec2  pos1;    // solid: ignored | linear: end point   | radial: x - radius
+    vec4  color0;
+    vec4  color1;
+    int   type;
+} brush;
+
+vec4 sample_brush(vec2 p)
+{
+    float t = 0.0;
+
+    if (brush.type == BRUSH_SOLID) {
+        return brush.color0;
+    } else if (brush.type == BRUSH_LINEAR_GRADIENT) {
+        vec2 dir = brush.pos1 - brush.pos0;
+        t = dot(p - brush.pos0, dir) / max(dot(dir, dir), 1e-6);
+    } else if (brush.type == BRUSH_RADIAL_GRADIENT) {
+        t = length(p - brush.pos0) / max(brush.pos1.x, 1e-6);
+    }
+
+    t = clamp(t, 0.0, 1.0);
+    return mix(brush.color0, brush.color1, t);
+}
+
+const vec2 k_quad[6] = vec2[6]
+(
+    vec2(-1.0, -1.0),
+    vec2( 1.0, -1.0),
+    vec2( 1.0,  1.0),
+    vec2(-1.0, -1.0),
+    vec2( 1.0,  1.0),
+    vec2(-1.0,  1.0)
+);
+
 #endif // TAVROSCENE_GLSL

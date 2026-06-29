@@ -1,4 +1,4 @@
-#include <tavros/shaders/scene.glsl>
+#include <tavros/scene/scene.glsl>
 
 const vec3 k_positions[36] = vec3[36](
     // +X face (forward)

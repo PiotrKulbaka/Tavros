@@ -78,7 +78,7 @@ namespace tavros::core
          * @param handle Resource handle.
          * @return @c true if the count reached zero.
          */
-        [[nodiscard]] bool release(resource_ref_type ref) noexcept
+        bool release(resource_ref_type ref) noexcept
         {
             const auto h = ref->hash();
             if (auto it = m_resources.find(h); it != m_resources.end()) {

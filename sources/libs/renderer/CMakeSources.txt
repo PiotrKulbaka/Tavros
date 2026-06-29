@@ -11,6 +11,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_stream_buffer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_system.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_system.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer2d.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer2d.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resource_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resource_manager.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/upload_context.cpp
@@ -48,6 +50,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_desc.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_desc.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_instance.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_instance.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_manager.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/material/material_manager.hpp
 

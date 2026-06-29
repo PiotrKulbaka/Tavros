@@ -55,9 +55,15 @@ namespace tavros::renderer
         m_composer = m_gdevice->get_frame_composer_ptr(fc_handle);
         TAV_ASSERT(m_composer);
 
-        m_rm = core::make_unique<tavros::renderer::resource_manager>(m_gdevice.get(), m_am, m_ws);
+        m_rm = core::make_unique<renderer::resource_manager>(m_gdevice.get(), m_am, m_ws);
         if (!m_rm) {
             logger.error("Failed to create resource manager.");
+            return;
+        }
+
+        m_renderer2d = core::make_unique<renderer::renderer2d>(m_gdevice.get(), m_rm.get());
+        if (!m_renderer2d) {
+            logger.error("Failed to create 2D renderer.");
             return;
         }
 
@@ -70,6 +76,7 @@ namespace tavros::renderer
             logger.warning("Render system is not initialized.");
         }
 
+        m_renderer2d = nullptr;
         m_am = nullptr;
         m_ws = nullptr;
         m_rm = nullptr;
@@ -86,10 +93,12 @@ namespace tavros::renderer
         }
 
         m_rm->begin_frame();
+        m_renderer2d->begin_frame();
     }
 
     void render_system::end_frame() noexcept
     {
+        m_renderer2d->end_frame();
         m_rm->end_frame();
         ++m_frame_number;
         m_composer->present();

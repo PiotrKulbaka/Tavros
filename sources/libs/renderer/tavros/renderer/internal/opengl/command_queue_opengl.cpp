@@ -70,6 +70,9 @@ namespace tavros::renderer::rhi
 
     void command_queue_opengl::bind_pipeline(pipeline_handle pipeline)
     {
+        if (m_current_pipeline == pipeline) {
+            return;
+        }
         m_current_pipeline = {};
 
         auto* p = m_device->get_resources()->find(pipeline);

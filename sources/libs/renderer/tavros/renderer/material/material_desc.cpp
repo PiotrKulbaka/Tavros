@@ -9,6 +9,17 @@
 namespace
 {
 
+    namespace rhi = tavros::renderer::rhi;
+
+    constexpr auto k_default_rasterizer_state = rhi::rasterizer_state{
+        rhi::cull_face::off,
+        rhi::front_face::counter_clockwise,
+        rhi::polygon_mode::fill,
+        false, 0.0f, 1.0f,       // Depth clamp
+        false, 0.0f, 0.0f, 0.0f, // Depth bias
+        false                    // Scissor
+    };
+
     tavros::core::logger logger("material_desc");
 
     using diagnostics = tavros::core::diagnostics;
@@ -654,7 +665,7 @@ namespace
             }
         }
 
-        valid &= read_required_enum(n, "topology", to_topology, tc.topology, "topology", ds);
+        valid &= read_enum(n, "topology", rhi::primitive_topology::triangles, to_topology, tc.topology, "topology", ds);
 
         if (const auto* r = n->resolve_path("rasterizer")) {
             if (auto v = parse_rasterizer(r, ds)) {
@@ -663,8 +674,7 @@ namespace
                 valid = false;
             }
         } else {
-            ds.error("Missing required field 'rasterizer' at '{}'.", n->path());
-            valid = false;
+            rc = k_default_rasterizer_state;
         }
 
         if (valid) {

@@ -51,4 +51,12 @@ tex = {
         gen_mipmaps = true
         type = "texture_cube"
     }
+
+    ui_actor_portrets = {
+        path = "textures/ui_actor_portrets.png"
+        gen_mipmaps = false
+        type = "texture_2d"
+    }
 }
+
+
