@@ -82,28 +82,6 @@ mt = {
         }
     }
 
-    line2d = {
-        shaders = {
-            vertex = "tavros/shaders/line2d.vert"
-            fragment = "tavros/shaders/line2d.frag"
-        }
-
-        color = {
-            base_color = { 
-                mask = "rgba"
-                blend = "alpha"
-            }
-        }
-
-        topology = "triangles"
-
-        rasterizer = {
-            cull = "off"
-            front_face = "ccw" 
-            fill_mode = "fill"
-        }
-    }
-
     cubic_bezier2d = {
         shaders = {
             vertex = "tavros/shaders/cubic_bezier2d.vert"
@@ -126,25 +104,21 @@ mt = {
         }
     }
 
-    sprite2d = {
+
+
+
+
+
+    line2d = {
         shaders = {
-            vertex = "tavros/shaders/sprite2d.vert"
-            fragment = "tavros/shaders/sprite2d.frag"
+            vertex = "tavros/shaders/line2d.vert"
+            fragment = "tavros/shaders/line2d.frag"
         }
 
         color = {
-            base_color = { 
-                mask = "rgba"
+            base_color = {
                 blend = "alpha"
             }
-        }
-
-        topology = "triangle_strip"
-
-        rasterizer = {
-            cull = "off"
-            front_face = "ccw" 
-            fill_mode = "fill"
         }
     }
 
@@ -173,4 +147,31 @@ mt = {
             }
         }
     }
+
+    sprite2d = {
+        shaders = {
+            vertex = "tavros/shaders/sprite2d.vert"
+            fragment = "tavros/shaders/sprite2d.frag"
+        }
+
+        color = {
+            base_color = { 
+                blend = "alpha"
+            }
+        }
+    }
+
+    text2d = {
+        shaders = {
+            vertex = "tavros/shaders/sdf_font.vert"
+            fragment = "tavros/shaders/sdf_font.frag"
+        }
+
+        color = {
+            base_color = { 
+                blend = "alpha"
+            }
+        }
+    }
+
 }

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
-#include <tavros/core/noncopyable.hpp>
+#include <tavros/core/resource/resource_registry.hpp>
 #include <tavros/core/math/ivec2.hpp>
 #include <tavros/core/math/vec4.hpp>
 #include <tavros/core/string_view.hpp>
@@ -23,7 +23,7 @@ namespace tavros::renderer
      * It also defines an interface for generating SDF bitmaps for individual glyphs.
      * The implementation is font-backend specific (e.g., TrueType).
      */
-    class font : core::noncopyable
+    class font
     {
     public:
         using glyph_index = uint32;
@@ -88,6 +88,14 @@ namespace tavros::renderer
 
     public:
         /**
+         * @brief Constructs an empty font instance with Null glyph.
+         *
+         * The font is initialized with default metrics and an empty glyph list.
+         * Derived classes should populate the glyphs and metrics as needed.
+         */
+        font();
+
+        /**
          * @brief Destroys the font instance.
          */
         virtual ~font() noexcept = default;
@@ -137,7 +145,10 @@ namespace tavros::renderer
          * @param glyph_sdf_pad_pix Additional SDF padding, in pixels.
          * @return Required size of the glyph bitmap.
          */
-        virtual math::isize2 glyph_bitmap_size(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept = 0;
+        virtual math::isize2 glyph_bitmap_size_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept = 0;
+
+        /** @copydoc glyph_bitmap_size_internal(glyph_index, float, float) */
+        math::isize2 glyph_bitmap_size(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept;
 
         /**
          * @brief Generates a glyph bitmap (typically SDF) into a provided buffer.
@@ -148,7 +159,10 @@ namespace tavros::renderer
          * @param pixels           Destination pixel buffer.
          * @param pixels_stride    Row stride of the destination buffer.
          */
-        virtual void bake_glyph_bitmap(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept = 0;
+        virtual void bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept = 0;
+
+        /** @copydoc bake_glyph_bitmap_internal(glyph_index, float, float, core::buffer_span<uint8>, uint32) */
+        void bake_glyph_bitmap(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept;
 
         /**
          * @brief Internal method for retrieving kerning between two codepoints.
@@ -163,5 +177,7 @@ namespace tavros::renderer
         font_metrics             m_font_metrics;
         core::vector<glyph_info> m_glyphs; /// Sorted by glyph_info::codepoint
     };
+
+    using font_ref = core::resource_ref<font>;
 
 } // namespace tavros::renderer

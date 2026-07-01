@@ -156,7 +156,7 @@ namespace tavros::renderer::rhi
     struct vertex_attribute_reflect
     {
         /// Attribute name in shader
-        core::fixed_string<63> name;
+        core::short_string name;
 
         /// Value shape (only: scalar, vec2, vec3, vec4)
         composite_format format = composite_format::scalar;
@@ -178,7 +178,7 @@ namespace tavros::renderer::rhi
     struct shader_resource_reflect
     {
         /// Resource name in shader.
-        core::fixed_string<63> name;
+        core::short_string name;
 
         /// Type of shader resource.
         shader_resource_type type = shader_resource_type::sampler_2d;
@@ -194,7 +194,7 @@ namespace tavros::renderer::rhi
     struct member_reflect
     {
         /// Member name.
-        core::fixed_string<63> name;
+        core::short_string name;
 
         /// Value shape (scalar, vector or matrix).
         composite_format format = composite_format::scalar;
@@ -228,7 +228,7 @@ namespace tavros::renderer::rhi
     struct constant_block_reflect
     {
         /// Block name
-        core::fixed_string<63> name;
+        core::short_string name;
 
         /// Total size in bytes
         uint32 size = 0;
@@ -243,7 +243,7 @@ namespace tavros::renderer::rhi
     struct storage_block_reflect
     {
         /// Block name
-        core::fixed_string<63> name;
+        core::short_string name;
 
         /// Total size in bytes
         uint32 size = 0;
@@ -258,7 +258,7 @@ namespace tavros::renderer::rhi
     struct output_reflect
     {
         /// Output variable name
-        core::fixed_string<63> name;
+        core::short_string name;
 
         /// Format of the attachment
         pixel_format format = pixel_format::none;

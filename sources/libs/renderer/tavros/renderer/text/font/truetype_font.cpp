@@ -4,13 +4,55 @@
 #include <tavros/core/defines.hpp>
 #include <tavros/core/math/functions/clamp.hpp>
 #include <tavros/core/exception.hpp>
+#include <tavros/core/memory/memory.hpp>
+
 #include <stb/stb_truetype.h>
 
 namespace
 {
     tavros::core::logger logger("truetype_font");
 
-}
+    using cp_rng = tavros::renderer::font_desc::codepoint_range;
+
+
+    tavros::core::vector<cp_rng> sort_and_merge_codepoint_ranges(tavros::core::buffer_view<cp_rng> ranges)
+    {
+        tavros::core::vector<cp_rng> sorted_ranges(ranges.begin(), ranges.end());
+
+        std::sort(sorted_ranges.begin(), sorted_ranges.end(), [](const cp_rng& lhs, const cp_rng& rhs) noexcept {
+            return lhs.first_codepoint < rhs.first_codepoint;
+        });
+
+        size_t dst = 0;
+
+        for (size_t src = 0; src < sorted_ranges.size(); ++src) {
+            const auto range = sorted_ranges[src];
+
+            // Skip invalid ranges.
+            if (range.first_codepoint > range.last_codepoint) {
+                continue;
+            }
+
+            if (dst == 0) {
+                sorted_ranges[dst++] = range;
+                continue;
+            }
+
+            auto& last = sorted_ranges[dst - 1];
+
+            // Merge overlapping and adjacent ranges.
+            if (range.first_codepoint <= last.last_codepoint + 1) {
+                last.last_codepoint = std::max(last.last_codepoint, range.last_codepoint);
+            } else {
+                sorted_ranges[dst++] = range;
+            }
+        }
+
+        sorted_ranges.resize(dst);
+
+        return sorted_ranges;
+    }
+} // namespace
 
 namespace tavros::renderer
 {
@@ -20,26 +62,13 @@ namespace tavros::renderer
         stbtt_fontinfo info;
     };
 
-    truetype_font::truetype_font(core::dynamic_buffer<uint8> font_data, core::buffer_view<codepoint_range> codepoint_ranges)
-        : m_font_data(std::move(font_data))
+    truetype_font::truetype_font(font_atlas* atlas, core::dynamic_buffer<uint8> font_data, core::buffer_view<font_desc::codepoint_range> codepoint_ranges)
+        : font()
+        , m_font_data(std::move(font_data))
         , m_scale(0.0f)
-        , m_impl()
+        , m_atlas(atlas)
     {
-#if TAV_DEBUG
-        // Verify ranges
-        TAV_ASSERT(codepoint_ranges.size() > 0);
-        TAV_ASSERT(codepoint_ranges[0].first_codepoint <= codepoint_ranges[0].last_codepoint); // Free range is not available
-        for (size_t i = 1; i < codepoint_ranges.size(); ++i) {
-            const auto& prev = codepoint_ranges[i - 1];
-            const auto& curr = codepoint_ranges[i];
-
-            char32 prev_end = prev.last_codepoint;
-
-            TAV_ASSERT(curr.first_codepoint <= curr.last_codepoint); // Free range is not available
-            TAV_ASSERT(curr.first_codepoint >= prev_end);            // There should be no overlapping of ranges
-            TAV_ASSERT(curr.first_codepoint > prev.first_codepoint); // The ranges are increasing
-        }
-#endif
+        m_impl = core::make_unique<impl>();
 
         if (stbtt_InitFont(&m_impl->info, m_font_data.data(), 0) == 0) {
             throw core::format_error(core::format_error_tag::invalid_data, "Failed to init font data");
@@ -54,11 +83,14 @@ namespace tavros::renderer
         m_font_metrics.line_gap_y = static_cast<float>(line_gap) * m_scale;
         m_font_metrics.sdf_padding_pix = 0.0f; // Set externally during calling 'invalidate_old_and_bake_new_atlas' method in 'font_atlas' class
 
+        tavros::core::vector<cp_rng> ranges;
+        if (codepoint_ranges.empty()) {
+            ranges.emplace_back(cp_rng{0x20, 0x7E}); // Default to ASCII range if no ranges are provided
+        } else {
+            ranges = sort_and_merge_codepoint_ranges(codepoint_ranges);
+        }
 
-        // Null glyph
-        m_glyphs.emplace_back(0, atlas_rect_t{}, glyph_metrics{math::vec2(0.5f), math::vec2(0.0f), math::size2(0.4f, 0.5f)});
-
-        for (auto& range : codepoint_ranges) {
+        for (const auto& range : ranges) {
             char32 beg = range.first_codepoint;
             char32 end = range.last_codepoint + 1;
 
@@ -93,24 +125,20 @@ namespace tavros::renderer
                 m_glyphs.emplace_back(cp, atlas_rect_t{}, glyph_metrics{advance, bearing, size});
             }
         }
+
+        m_atlas->register_font(this);
     }
 
     truetype_font::~truetype_font() noexcept
     {
+        m_atlas->unreg_font(this);
+        m_impl = nullptr;
     }
 
-    math::isize2 truetype_font::glyph_bitmap_size(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept
+    math::isize2 truetype_font::glyph_bitmap_size_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept
     {
         auto        pad2 = static_cast<int32>(math::ceil(glyph_sdf_pad_pix)) * 2;
         const auto& g = get_glyph_info(idx);
-
-        if (0 == idx) {
-            auto sz = g.metrics.size * glyph_scale_pix;
-            return math::ivec2(
-                static_cast<int32>(math::ceil(sz.width)) + pad2,
-                static_cast<int32>(math::ceil(sz.height)) + pad2
-            );
-        }
 
         int32 ix0 = 0, iy0 = 0, ix1 = 0, iy1 = 0;
         stbtt_GetCodepointBitmapBoxSubpixel(&m_impl->info, g.codepoint, m_scale * glyph_scale_pix, m_scale * glyph_scale_pix, 0.0f, 0.0f, &ix0, &iy0, &ix1, &iy1);
@@ -121,42 +149,15 @@ namespace tavros::renderer
         return math::ivec2(w, h);
     }
 
-    void truetype_font::bake_glyph_bitmap(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept
+    void truetype_font::bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept
     {
         const auto& g = get_glyph_info(idx);
 
-        auto  pad = static_cast<int32>(math::ceil(glyph_sdf_pad_pix));
-        auto  pix_dist_scale = pad == 0 ? 256.0f : 128.0f / static_cast<float>(pad);
-        auto* dst = pixels.data();
-
-        if (0 == idx) {
-            auto sz = g.metrics.size * glyph_scale_pix;
-            auto bitmap_sz = math::ivec2(
-                static_cast<int32>(math::ceil(sz.width)) + pad * 2,
-                static_cast<int32>(math::ceil(sz.height)) + pad * 2
-            );
-
-            auto cx = static_cast<float>(bitmap_sz.width) / 2.0f;
-            auto cy = static_cast<float>(bitmap_sz.height) / 2.0f;
-            auto dist_offset = std::min(cx, cy);
-            auto aspect = sz.width / sz.height;
-
-            // Gen null glyph with sdf (rhombus generation)
-            for (int32 y = 0; y < bitmap_sz.height; ++y) {
-                for (int32 x = 0; x < bitmap_sz.width; ++x) {
-                    float dx = std::abs(x - cx);
-                    float dy = std::abs(y - cy) * aspect;
-                    float dist = -(dx + dy) + dist_offset;
-
-                    auto val = static_cast<uint8>(math::clamp(dist * pix_dist_scale, 0.0f, 255.0f));
-                    dst[y * pixels_stride + x] = val;
-                }
-            }
-            return;
-        }
+        auto pad = static_cast<int32>(math::ceil(glyph_sdf_pad_pix));
+        auto pix_dist_scale = pad == 0 ? 256.0f : 128.0f / static_cast<float>(pad);
 
         int32 stbtt_glyph_idx = stbtt_FindGlyphIndex(&m_impl->info, g.codepoint);
-        stbtt_MakeGlyphSDF(&m_impl->info, m_scale * glyph_scale_pix, stbtt_glyph_idx, pad, 128, pix_dist_scale, dst, pixels_stride, nullptr, nullptr, nullptr, nullptr);
+        stbtt_MakeGlyphSDF(&m_impl->info, m_scale * glyph_scale_pix, stbtt_glyph_idx, pad, 128, pix_dist_scale, pixels.data(), pixels_stride, nullptr, nullptr, nullptr, nullptr);
     }
 
     float truetype_font::get_kerning_internal(char32 cp1, char32 cp2) const noexcept

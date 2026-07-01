@@ -35,7 +35,7 @@ namespace tavros::renderer
         /// many fonts in a single atlas, and this avoids heap overhead entirely.
         /// If a project needs to support more fonts, the capacity may be increased
         /// or the container can be replaced with a dynamically sized core::vector.
-        constexpr static size_t k_max_fonts = 128;
+        constexpr static size_t k_max_fonts = 256;
 
     public:
         /**
@@ -57,6 +57,8 @@ namespace tavros::renderer
          * @param fnt Font instance to register.
          */
         void register_font(font* fnt) noexcept;
+
+        void unreg_font(font* fnt) noexcept;
 
         /**
          * @brief Checks whether the atlas must be rebuilt.

@@ -14,8 +14,7 @@ namespace tavros::renderer
 {
 
     render_target::render_target(rhi::graphics_device* gdevice, const render_target_desc& desc) noexcept
-        : basic_resource(desc.name())
-        , m_current_msaa(0)
+        : m_current_msaa(0)
         , m_gdevice(gdevice)
         , m_da_cfg(desc.depth_attachment())
         , m_sa_cfg(desc.stencil_attachment())
@@ -26,12 +25,10 @@ namespace tavros::renderer
             TAV_ASSERT(c.format != rhi::pixel_format::none);
             m_ca_cfg.push_back(c);
         }
-        set_valid();
     }
 
     render_target::render_target(render_target&& other) noexcept
-        : basic_resource(std::move(other))
-        , m_current_msaa(other.m_current_msaa)
+        : m_current_msaa(other.m_current_msaa)
         , m_gdevice(other.m_gdevice)
         , m_ca_cfg(std::move(other.m_ca_cfg))
         , m_da_cfg(std::move(other.m_da_cfg))

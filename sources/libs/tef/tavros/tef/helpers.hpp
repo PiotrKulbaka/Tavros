@@ -314,7 +314,7 @@ namespace tavros::tef
     {
         const auto* n = parent->resolve_path(key);
         if (!n) {
-            ds.error("Missing required field '{}' value at '{}'.", key, n->path());
+            ds.error("Missing required field '{}' at '{}'.", key, parent->path());
             return false;
         }
 
@@ -373,14 +373,64 @@ namespace tavros::tef
         core::diagnostics& ds
     ) noexcept
     {
-        T r;
-        if (!read_scalar<T>(parent, key, default_val, r, is_type, type_hint, ds)) {
+        if (!read_scalar<T>(parent, key, default_val, out, is_type, type_hint, ds)) {
             return false;
         }
 
-        if (r < lo || r > hi) {
-            auto clamped = std::clamp(r, lo, hi);
-            ds.warning("Value {} at '{}' is out of range [{}, {}]. Clamped to {}.", r, parent->path(), lo, hi, clamped);
+        if (out < lo || out > hi) {
+            auto clamped = std::clamp(out, lo, hi);
+            ds.warning("Value {} at '{}' is out of range [{}, {}]. Clamped to {}.", out, parent->path(), lo, hi, clamped);
+            out = clamped;
+            return true;
+        }
+
+        return true;
+    }
+
+    /**
+     * @brief Reads an required scalar value and clamps it to a specified range.
+     *
+     * The value is read using read_scalar(). If the resulting value falls
+     * outside the range [`lo`, `hi`], it is clamped and a warning is reported.
+     *
+     * If the node does not exist, @p default_val is returned.
+     * If type validation fails, an error is reported and
+     * `std::nullopt` is returned.
+     *
+     * @tparam T Value type.
+     * @tparam TypeCheck Callable with signature:
+     *         `bool(const node*)`.
+     *
+     * @param parent Parent node.
+     * @param key Relative path to the target node.
+     * @param lo Lower bound of the valid range.
+     * @param hi Upper bound of the valid range.
+     * @param is_type Node type validation predicate.
+     * @param type_hint Human-readable type description used in diagnostics.
+     * @param ds Diagnostics sink.
+     *
+     * @return Parsed value clamped to [`lo`, `hi`], @p default_val if the
+     *         node is missing, or `std::nullopt` if validation fails.
+     */
+    template<class T, class TypeCheck>
+    [[nodiscard]] bool read_required_clamped(
+        const node*        parent,
+        core::string_view  key,
+        T                  lo,
+        T                  hi,
+        T&                 out,
+        TypeCheck          is_type,
+        core::string_view  type_hint,
+        core::diagnostics& ds
+    ) noexcept
+    {
+        if (!read_required_scalar<T>(parent, key, out, is_type, type_hint, ds)) {
+            return false;
+        }
+
+        if (out < lo || out > hi) {
+            auto clamped = std::clamp(out, lo, hi);
+            ds.warning("Value {} at '{}' is out of range [{}, {}]. Clamped to {}.", out, parent->path(), lo, hi, clamped);
             out = clamped;
             return true;
         }

@@ -1,0 +1,63 @@
+fnt = {
+    consola_mono = {
+        path = "fonts/Consola-Mono.ttf"
+        codepoints = 
+            {first = 0x0 last = 0x7f}
+            {first = 0xab last = 0xbb}
+            {first = 0x401 last = 0x401}   # RU Ё
+            {first = 0x410 last = 0x44F}   # RU А-Яа-я
+            {first = 0x451 last = 0x451}   # RU ё
+            {first = 0x2012 last = 0x2014} # dash
+            {first = 0x2022 last = 0x2026} # circle, riangle, one dot, two dot, three dot
+            {first = 0xfffd last = 0xfffd} # replacement character
+    }
+    droid_sans = {
+        path = "fonts/Consola-Mono.ttf"
+        codepoints = 
+            {first = 0x0 last = 0x7f}
+            {first = 0xab last = 0xbb}
+            {first = 0x401 last = 0x401}   # RU Ё
+            {first = 0x410 last = 0x44F}   # RU А-Яа-я
+            {first = 0x451 last = 0x451}   # RU ё
+            {first = 0x2012 last = 0x2014} # dash
+            {first = 0x2022 last = 0x2026} # circle, riangle, one dot, two dot, three dot
+            {first = 0xfffd last = 0xfffd} # replacement character
+    }
+    home_video = {
+        path = "fonts/HomeVideo.ttf"
+        codepoints = 
+            {first = 0x0 last = 0x7f}
+            {first = 0xab last = 0xbb}
+            {first = 0x401 last = 0x401}   # RU Ё
+            {first = 0x410 last = 0x44F}   # RU А-Яа-я
+            {first = 0x451 last = 0x451}   # RU ё
+            {first = 0x2012 last = 0x2014} # dash
+            {first = 0x2022 last = 0x2026} # circle, riangle, one dot, two dot, three dot
+            {first = 0xfffd last = 0xfffd} # replacement character
+    }
+    noto_sans_regular = {
+        path = "fonts/NotoSans-Regular.ttf"
+        codepoints = 
+            {first = 0x0 last = 0x7f}
+            {first = 0xab last = 0xbb}
+            {first = 0x401 last = 0x401}   # RU Ё
+            {first = 0x410 last = 0x44F}   # RU А-Яа-я
+            {first = 0x451 last = 0x451}   # RU ё
+            {first = 0x2012 last = 0x2014} # dash
+            {first = 0x2022 last = 0x2026} # circle, riangle, one dot, two dot, three dot
+            {first = 0xfffd last = 0xfffd} # replacement character
+    }
+    roboto_medium = {
+        path = "fonts/Roboto-Medium.ttf"
+        codepoints = 
+            {first = 0x0 last = 0x7f}
+            {first = 0xab last = 0xbb}
+            {first = 0x401 last = 0x401}   # RU Ё
+            {first = 0x410 last = 0x44F}   # RU А-Яа-я
+            {first = 0x451 last = 0x451}   # RU ё
+            {first = 0x2012 last = 0x2014} # dash
+            {first = 0x2022 last = 0x2026} # circle, riangle, one dot, two dot, three dot
+            {first = 0xfffd last = 0xfffd} # replacement character
+    }
+}
+

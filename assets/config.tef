@@ -1,3 +1,4 @@
 @include "configs/textures.tef"
 @include "configs/materials.tef"
 @include "configs/render_targets.tef"
+@include "configs/fonts.tef"

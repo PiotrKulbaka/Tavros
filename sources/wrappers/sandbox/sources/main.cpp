@@ -12,6 +12,9 @@
 #include <tavros/tef/loader.hpp>
 #include <tavros/input/input_manager.hpp>
 
+#include <tavros/renderer/text/text_builder.hpp>
+#include <tavros/renderer/text/text_layouter.hpp>
+
 #include <tracy/Tracy.hpp>
 
 
@@ -175,6 +178,8 @@ public:
     {
         ZoneScopedNC("Frame", 0xFFFFFF);
 
+        tm += time_us.count() / 1'000'000.0f;
+
         process_input(events, time_us);
 
         m_renderer->begin_frame();
@@ -189,7 +194,7 @@ public:
         cbuf->begin_rendering(m_offscreen_rt->gpu_framebuffer());
         cbuf->bind_shader_buffers(rhi::buffer_binding{scene_data_slice.gpu_buffer(), static_cast<uint32>(scene_data_slice.offset_bytes()), static_cast<uint32>(scene_data_slice.size_bytes()), 0});
 
-        auto smp = m_renderer->resource_manager()->samplers().get_sampler(static_cast<tavros::renderer::sampler_preset>(m_smp_index));
+        auto smp = m_renderer->resource_manager()->sampler(static_cast<tavros::renderer::sampler_preset>(m_smp_index));
         cbuf->bind_pipeline(m_skybox_pipeline->gpu_pipeline());
         auto tex = m_sky_textures[m_sky_index];
         cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), smp, 0});
@@ -204,30 +209,69 @@ public:
         r->set_line_thickness(3.0f);
         r->set_brush_solid_color(0x00C6EEFF);
         r->move_to({600.0f, 400.0f});
-        r->line_to({700.0f, 400.0f});
+        r->draw_line_to({700.0f, 400.0f});
 
         r->set_brush_solid_color(0x00C606FF);
-        r->circle({100, 100}, 50);
+        r->fill_circle({100, 100}, 50);
         r->set_brush_solid_color(0xC40D8180);
-        r->ring({300, 60}, 50, 40);
+        r->fill_ring({300, 60}, 50, 40);
         r->set_brush_solid_color(0xBF262695);
-        r->ring_cut({400, 60}, 50, 60, {20, 20});
+        r->fill_ring_cut({400, 60}, 50, 60, {20, 20});
 
 
         r->set_brush_radial_gradient({600, 50}, 0x3E4F3FFF, 25, 0x3E4F3F33);
-        r->circle({600, 50}, 15);
+        r->fill_circle({600, 50}, 15);
         r->set_brush_radial_gradient({600, 50}, 0xFFFFFF00, 25, 0xFFFFFF40);
-        r->ring_cut({600, 50}, 15, 20, {0, 10});
+        r->fill_ring_cut({600, 50}, 15, 20, {0, 10});
         r->set_brush_linear_gradient({600, 25}, 0x97D46BFF, {600, 75}, 0x5B9238FF);
-        r->circle({600, 50}, 12);
+        r->fill_circle({600, 50}, 12);
 
-        r->rect({800, 100}, {50, 20}, 20);
+        r->fill_rect({800, 100}, {50, 20}, 20);
 
         r->set_sprite_pivot({0.5f, 0.5f});
         r->set_brush_solid_color(0xFFFFFFFF);
-        r->sprite(m_ui_texture, {400.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {492.0f, 435.0f, 123.0f, 87.0f});
-        r->sprite(m_ui_texture, {700.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {369.0f, 522.0f, 123.0f, 87.0f});
-        r->sprite(m_ui_texture, {1000.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {615.0f, 175.0f, 123.0f, 87.0f});
+        r->draw_sprite(m_ui_texture, {400.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {492.0f, 435.0f, 123.0f, 87.0f});
+        r->draw_sprite(m_ui_texture, {700.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {369.0f, 522.0f, 123.0f, 87.0f});
+        r->draw_sprite(m_ui_texture, {1000.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {615.0f, 175.0f, 123.0f, 87.0f});
+
+
+        m_text.clear();
+        m_text.set_text_align(tavros::renderer::text_align::left);
+        auto secs = static_cast<uint32>(tm);
+        auto s = secs / 5;
+        if (s % 2 == 0) {
+            m_text.append_text("Постоянно меняющийся текст!\nПривет Мир!");
+        } else {
+            m_text.append_text("Другой меняющийся текст!\nИ пару новых строк!\nЕще одна строка!");
+        }
+
+
+        const auto p = tavros::math::vec2(500, 500);
+
+        m_text.set_text_align(tavros::renderer::text_align::center);
+        auto l = m_text.layout();
+        r->set_brush_solid_color(0x33333355);
+        //  r->draw_aabb({l.min + p, l.max + p});
+
+        r->fill_rect(l.center() + p, l.size() / 2.0f, 3.0f);
+
+        r->set_brush_solid_color(0x33333388);
+        r->fill_rect_cut(l.center() + p, l.size() / 2.0f + 2.0f, {0.0f, 0.0f}, l.size() / 2.0f, 5.0f, 3.0f);
+
+        r->set_text_use_brush_mask(true, true);
+        r->set_brush_radial_gradient(m_input_manager.mouse_pos(), 0xFF0000FF, 100, 0xFFFFFFFF);
+        r->draw_text(m_text.text(), {500, 500}, 0.5, 0.1);
+
+        r->set_line_thickness(3);
+
+
+        r->set_brush_solid_color(0xFFFFFFFF);
+        r->draw_line(p, p + tavros::math::vec2{-10, 0});
+        r->draw_line(p, p + tavros::math::vec2{10, 0});
+        r->draw_line(p, p + tavros::math::vec2{0, -10});
+        r->draw_line(p, p + tavros::math::vec2{0, 10});
+
+        draw_world_axis({m_input_manager.window_size().width - 120.0f, 120.0f}, 90.0f);
 
 
         cbuf->end_rendering();
@@ -264,26 +308,39 @@ private:
         m_free_cam.set_orientation(tavros::math::quat::look_rotation(tavros::math::vec3(-1.0f, -1.0f, -0.5f), tavros::math::vec3(0.0f, 0.0f, 1.0f)));
         m_free_cam.set_orbit_dist(30.0f);
 
-        m_offscreen_rt = m_renderer->resource_manager()->load<tavros::renderer::render_target>("rt.main_offscreen");
+        auto* rm = m_renderer->resource_manager();
+
+        m_offscreen_rt = rm->load_render_target("rt.main_offscreen");
         TAV_FATAL_IF(!m_offscreen_rt, "Failed to create offscreen render target.");
 
         m_uniform_buffer.init(m_renderer->get_graphics_device(), 256 * 1024 * 1024, rhi::buffer_usage::constant);
 
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.misty_morning"));
-        /*m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.cloudy_sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.dark_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.pure_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.sunset_sky"));
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.rock_sky"));*/
-        m_sky_textures.push_back(m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.rock_sky_small"));
+        m_sky_textures.push_back(rm->load_texture("tex.cloudy_sky"));
+        m_sky_textures.push_back(rm->load_texture("tex.misty_morning"));
+        // m_sky_textures.push_back(rm->load_texture("tex.cloudy_sunset_sky"));
+        // m_sky_textures.push_back(rm->load_texture("tex.dark_sky"));
+        // m_sky_textures.push_back(rm->load_texture("tex.pure_sunset_sky"));
+        m_sky_textures.push_back(rm->load_texture("tex.pure_sky"));
+        m_sky_textures.push_back(rm->load_texture("tex.sunset_sky"));
+        // m_sky_textures.push_back(rm->load_texture("tex.rock_sky"));
+        // m_sky_textures.push_back(rm->load_texture("tex.rock_sky_small"));
 
-        m_ui_texture = m_renderer->resource_manager()->load<tavros::renderer::texture>("tex.ui_actor_portrets");
+        m_ui_texture = rm->load_texture("tex.ui_actor_portrets");
 
-        m_skybox_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.skybox");
-        m_world_grid_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.world_grid");
-        m_fullscreen_quad_pipeline = m_renderer->resource_manager()->load<tavros::renderer::material>("mt.fullscreen_quad", "");
+        rm->set_material_load_params({}, 1, rhi::pixel_format::depth32f);
+        m_skybox_pipeline = rm->load_material("mt.skybox");
+        m_world_grid_pipeline = rm->load_material("mt.world_grid");
+        rm->set_material_load_params({}, 1, rhi::pixel_format::none);
+        m_fullscreen_quad_pipeline = rm->load_material("mt.fullscreen_quad");
+
+        m_font = rm->load_font("fnt.consola_mono");
+        // m_font = rm->load_font("fnt.droid_sans");
+        m_font = rm->load_font("fnt.home_video");
+        // m_font = rm->load_font("fnt.noto_sans_regular");
+        m_font = rm->load_font("fnt.roboto_medium");
+
+        m_text.set_font(m_font);
+        m_text.set_font_size(64.0f);
     }
 
     // ==================================================================
@@ -400,8 +457,120 @@ private:
 
     void bind_texture(rhi::command_queue& cmd, tavros::renderer::texture_ref tex, uint32 binding_point, tavros::renderer::sampler_preset smp)
     {
-        auto sampler = m_renderer->resource_manager()->samplers().get_sampler(smp);
+        auto sampler = m_renderer->resource_manager()->sampler(smp);
         cmd.bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), sampler, binding_point});
+    }
+
+    void draw_world_axis(const tavros::math::vec2& pos, float radius)
+    {
+        using namespace tavros;
+        float line_width = 6.0f;
+        float dash_size = 10.0f;
+        float gap_size = 5.0f;
+        float p_side_circle = 19.0f;
+        float n_side_circle = 13.0f;
+        float axis_len = radius - p_side_circle - line_width;
+
+        auto view3 = math::mat3(m_free_cam.camera().view_matrix());
+
+        auto project_axis = [&](math::vec3 world_dir) -> math::vec2 {
+            math::vec3 cam = view3 * world_dir;
+            return math::vec2(cam.x, -cam.y) * axis_len;
+        };
+
+        auto depth_of = [&](math::vec3 world_dir) -> float {
+            return (view3 * world_dir).z;
+        };
+
+        constexpr auto x_color = math::rgba8(0xA73A53FF);
+        constexpr auto y_color = math::rgba8(0x6BB023FF);
+        constexpr auto z_color = math::rgba8(0x3A83BEFF);
+
+        struct axis_info
+        {
+            math::vec2  dir;   // projected 2d direction
+            math::rgba8 color;
+            float       depth; // camera-space Z (больше = дальше)
+            char        pos_label[3];
+            char        neg_label[3];
+            float       pos_font_size;
+            float       neg_font_size;
+        };
+
+        axis_info axes[3] = {
+            {project_axis({1, 0, 0}), x_color, depth_of({1, 0, 0}), "X", "-X", 36.0f, 22.0f},
+            {project_axis({0, 1, 0}), y_color, depth_of({0, 1, 0}), "Y", "-Y", 36.0f, 22.0f},
+            {project_axis({0, 0, 1}), z_color, depth_of({0, 0, 1}), "Z", "-Z", 36.0f, 22.0f},
+        };
+
+        // Сортируем: сначала рисуем оси с большей глубиной (дальше от камеры)
+        int order[3] = {0, 1, 2};
+        std::sort(std::begin(order), std::end(order), [&](int a, int b) {
+            return axes[a].depth > axes[b].depth;
+        });
+
+        auto* r = m_renderer->renderer2d();
+
+        // Фон
+        r->set_brush_solid_color(0xF0F0F040);
+        r->fill_circle(pos, radius);
+        r->set_brush_solid_color(0xB0B0B070);
+        r->fill_ring(pos, radius, radius - line_width);
+
+        r->set_line_thickness(line_width);
+
+        // Рисуем в порядке от дальнего к ближнему
+        // Для каждой оси: сначала негативный конец (он дальше если depth > 0), потом позитивный
+        tavros::renderer::rich_text text;
+        text.set_font(m_font);
+        r->set_text_use_brush_mask(false, false);
+
+        auto draw_axis_neg = [&](const axis_info& ax) {
+            r->set_brush_solid_color(ax.color);
+            r->set_line_dash(dash_size, gap_size);
+            r->draw_line(pos, pos - ax.dir);
+            r->set_line_dash(0.0f, 0.0f);
+            r->fill_circle(pos - ax.dir, n_side_circle);
+
+            text.clear();
+            text.set_font_size(ax.neg_font_size);
+            text.append_text(ax.neg_label);
+            auto l = text.layout();
+            r->draw_text(text.text(), pos - ax.dir - l.center(), 0.5f, 0.0f);
+        };
+
+        auto draw_axis_pos = [&](const axis_info& ax) {
+            r->set_brush_solid_color(ax.color);
+            r->set_line_dash(0.0f, 0.0f);
+            r->draw_line(pos, pos + ax.dir);
+            r->fill_circle(pos + ax.dir, p_side_circle);
+
+            text.clear();
+            text.set_font_size(ax.pos_font_size);
+            text.append_text(ax.pos_label);
+            auto l = text.layout();
+            r->draw_text(text.text(), pos + ax.dir - l.center(), 0.5f, 0.15f);
+        };
+
+        // Painter's algorithm:
+        // Сначала все негативные концы дальних осей, потом позитивные ближних
+        for (int i : order) {
+            // depth > 0 означает что позитивный конец дальше — рисуем neg последним
+            if (axes[i].depth > 0.0f) {
+                draw_axis_neg(axes[i]);
+            } else {
+                draw_axis_pos(axes[i]);
+            }
+        }
+
+        // Теперь в обратном порядке — ближние концы поверх
+        for (int i = 2; i >= 0; --i) {
+            if (axes[order[i]].depth > 0.0f) {
+                draw_axis_pos(axes[order[i]]);
+            } else {
+                draw_axis_neg(axes[order[i]]);
+            }
+        }
     }
 
     void draw_world_grid(rhi::command_queue& cbuf, uint32 plane = 0)
@@ -483,6 +652,10 @@ private:
     tavros::renderer::material_ref m_fullscreen_quad_pipeline;
     tavros::renderer::material_ref m_world_grid_pipeline;
     tavros::renderer::material_ref m_skybox_pipeline;
+
+    tavros::renderer::font_ref m_font;
+
+    tavros::renderer::rich_text m_text;
 
     // -- Input --
     tavros::input::input_manager m_input_manager;

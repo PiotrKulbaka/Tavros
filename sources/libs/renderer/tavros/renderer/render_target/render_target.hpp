@@ -2,7 +2,7 @@
 
 #include <tavros/core/types.hpp>
 #include <tavros/core/noncopyable.hpp>
-#include <tavros/core/resource/resource.hpp>
+#include <tavros/core/resource/resource_registry.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/render_target/render_target_desc.hpp>
 
@@ -37,7 +37,7 @@ namespace tavros::renderer
      *
      * @note Not copyable. Movable.
      */
-    class render_target : public core::basic_resource<render_target>, core::noncopyable
+    class render_target : core::noncopyable
     {
     public:
         /** @brief Default constructor. */
@@ -134,6 +134,6 @@ namespace tavros::renderer
         rhi::framebuffer_handle m_framebuffer;      // Framebuffer referencing src attachments
     };
 
-    using render_target_ref = core::basic_resource_ref<render_target>;
+    using render_target_ref = core::resource_ref<render_target>;
 
 } // namespace tavros::renderer

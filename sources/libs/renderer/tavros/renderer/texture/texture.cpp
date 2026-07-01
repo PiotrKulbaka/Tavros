@@ -52,8 +52,7 @@ namespace tavros::renderer
 {
 
     texture::texture(rhi::graphics_device* gdevice, upload_context& upctx, assets::image_view im, const texture_desc& desc, bool y_flip)
-        : basic_resource(desc.name())
-        , m_gdevice(gdevice)
+        : m_gdevice(gdevice)
     {
         const auto& params = desc.load_params();
         auto        key = desc.name();
@@ -197,12 +196,10 @@ namespace tavros::renderer
         m_height = rhi_tex.height;
         m_depth = rhi_tex.depth;
         m_array_layers = rhi_tex.array_layers;
-        set_valid();
     }
 
     texture::texture(texture&& other) noexcept
-        : basic_resource(std::move(other))
-        , m_gdevice(other.m_gdevice)
+        : m_gdevice(other.m_gdevice)
         , m_texture(other.m_texture)
         , m_type(other.m_type)
         , m_format(other.m_format)

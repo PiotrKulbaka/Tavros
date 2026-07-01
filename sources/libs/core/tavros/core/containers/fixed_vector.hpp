@@ -68,6 +68,37 @@ namespace tavros::core
         }
 
         /**
+         * @brief Replaces the contents of the container with the elements from a buffer view.
+         *
+         * All existing elements are destroyed and the elements from the specified
+         * buffer view are copied into the container in order.
+         *
+         * @param rhs View of elements to copy from.
+         *
+         * @return Reference to this container.
+         *
+         * @note The number of elements in the view must not exceed the container capacity `N`.
+         * @note Assigning from a view that refers to elements stored in this container results
+         *       in undefined behavior.
+         */
+        constexpr fixed_vector& operator=(buffer_view<T> rhs) noexcept
+        {
+            if (rhs.data() == data()) {
+                return *this;
+            }
+
+            clear();
+
+            TAV_ASSERT(rhs.size() <= N);
+
+            for (const auto& value : rhs) {
+                emplace_back(value);
+            }
+
+            return *this;
+        }
+
+        /**
          * @brief Swaps contents with another fixed_vector.
          *
          * @param other Another container to swap contents with.

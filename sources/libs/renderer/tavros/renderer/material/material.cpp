@@ -14,9 +14,8 @@ namespace
 namespace tavros::renderer
 {
 
-    material::material(rhi::graphics_device* gdevice, const material_desc& desc, shader_loader& sl, uint32 msaa, rhi::pixel_format ds_format)
-        : basic_resource(desc.name())
-        , m_gdevice(gdevice)
+    material::material(rhi::graphics_device* gdevice, const material_desc& desc, shader_loader& sl, core::buffer_view<vertex_attribute> vert_attribs, uint32 msaa, rhi::pixel_format ds_format)
+        : m_gdevice(gdevice)
     {
         ::logger.debug("Creating material '{}'", desc.name());
 
@@ -99,12 +98,59 @@ namespace tavros::renderer
             return;
         }
 
+        // Check and collect vertex attributes
+        struct attrib_info
+        {
+            const rhi::vertex_attribute_reflect* reflect;
+            const vertex_attribute*              attr;
+        };
+        core::fixed_vector<attrib_info, rhi::k_max_vertex_attributes> attr_infos;
+
+        for (const auto& reflected : reflect->vertex_attributes()) {
+            bool found = false;
+            for (const auto& attrib : vert_attribs) {
+                if (attrib.name == reflected.name) {
+                    found = true;
+                    attr_infos.push_back(attrib_info{&reflected, &attrib});
+                    break;
+                }
+            }
+            if (!found) {
+                ::logger.error(
+                    "Failed to create material '{}': shader vertex attribute '{}' at location {} "
+                    "has no matching entry in vert_attribs",
+                    desc.name(), reflected.name, reflected.location
+                );
+                valid = false;
+            }
+        }
+
+        if (!valid) {
+            m_gdevice->safe_destroy(sh);
+            return;
+        }
+
         // 6. Build pipeline_create_info
         // We iterate sorted outputs and emit one color_attachment_state per output,
         // in location order. Gaps between locations get dummy (off) slots so that
         // the index in color_attachments[] matches the shader location.
         rhi::pipeline_create_info info;
         info.shader_program = sh;
+
+        // Attrib bindings
+        for (const auto& ai : attr_infos) {
+            rhi::vertex_attribute attr;
+            attr.format = ai.reflect->format;
+            attr.type = ai.reflect->type;
+            attr.normalize = false;
+            attr.location = ai.reflect->location;
+            attr.stride = ai.attr->stride;
+            attr.offset = ai.attr->offset;
+            attr.instance_divisor = ai.attr->instance_divisor;
+
+            info.bindings.push_back(attr);
+        }
+
 
         constexpr auto blend_off = rhi::blend_state{false};
         constexpr auto mask_off = tavros::core::flags<rhi::color_mask>();
@@ -180,12 +226,10 @@ namespace tavros::renderer
 
         m_pipeline = pipeline;
         m_shader = sh;
-        set_valid();
     }
 
     material::material(material&& other) noexcept
-        : basic_resource(std::move(other))
-        , m_gdevice(other.m_gdevice)
+        : m_gdevice(other.m_gdevice)
         , m_pipeline(other.m_pipeline)
         , m_shader(other.m_shader)
     {

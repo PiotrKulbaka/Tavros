@@ -5,6 +5,8 @@
 
 #include <stb/stb_rect_pack.h>
 
+#include <algorithm>
+
 namespace
 {
     tavros::core::logger logger("font_atlas");
@@ -28,6 +30,19 @@ namespace tavros::renderer
         m_need_to_recreate = true;
     }
 
+    void font_atlas::unreg_font(font* fnt) noexcept
+    {
+        for (size_t i = 0; i < m_fonts.size();) {
+            if (m_fonts[i] == fnt) {
+                m_fonts[i] = m_fonts.back();
+                m_fonts.pop_back();
+            } else {
+                ++i;
+            }
+        }
+        m_need_to_recreate = true;
+    }
+
     bool font_atlas::need_to_recreate_atlas() const noexcept
     {
         return m_need_to_recreate;
@@ -35,6 +50,7 @@ namespace tavros::renderer
 
     assets::image font_atlas::invalidate_old_and_bake_new_atlas(float glyph_scale_pix, float glyph_sdf_pad_pix)
     {
+        m_need_to_recreate = false;
         // 1. The first step is packing the rectangles
 
         // Calc number of rects

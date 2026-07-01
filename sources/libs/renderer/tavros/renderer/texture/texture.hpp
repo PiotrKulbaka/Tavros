@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/resource/resource.hpp>
+#include <tavros/core/resource/resource_registry.hpp>
 #include <tavros/renderer/texture/texture_desc.hpp>
 #include <tavros/renderer/upload_context.hpp>
 #include <tavros/assets/image/image_view.hpp>
@@ -8,9 +8,7 @@
 namespace tavros::renderer
 {
 
-    class texture
-        : public core::basic_resource<texture>,
-          core::noncopyable
+    class texture : core::noncopyable
     {
     public:
         texture(rhi::graphics_device* gdevice, upload_context& upctx, assets::image_view im, const texture_desc& desc, bool y_flip);
@@ -65,6 +63,6 @@ namespace tavros::renderer
         uint32 m_array_layers;
     };
 
-    using texture_ref = core::basic_resource_ref<texture>;
+    using texture_ref = core::resource_ref<texture>;
 
 } // namespace tavros::renderer

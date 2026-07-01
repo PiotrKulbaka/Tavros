@@ -117,7 +117,7 @@ namespace tavros::core
         {
             using unqualified_ts = type_transform_t<std::remove_cvref, type_list<Ts...>>;
             static_assert(is_subset_v<unqualified_ts, typename base::unqualified_types>, "One or more view components are not part of this archetype");
-            return basic_archetype_view<basic_archetype, Ts...>(*this);
+            return basic_archetype_view<const basic_archetype, Ts...>(*this);
         }
     };
 
