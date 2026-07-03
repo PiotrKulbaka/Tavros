@@ -375,12 +375,13 @@ namespace tavros::renderer::rhi
             if (auto* b = m_device->get_resources()->find(buf.buffer)) {
                 TAV_ASSERT(b->gl_target == GL_UNIFORM_BUFFER || b->gl_target == GL_SHADER_STORAGE_BUFFER);
 
-                if (b->info.usage != buffer_usage::constant && b->info.usage != buffer_usage::storage) {
+                const auto usage = b->info.usage;
+                if (usage != buffer_usage::constant && usage != buffer_usage::storage) {
                     ::logger.error(
                         "Failed to bind shader binding: buffer {} binding {} has invalid usage (expected `constant` or `storage`, got {})",
                         buf.buffer,
                         fmt::styled_param(i),
-                        b->info.usage
+                        usage
                     );
                     return;
                 }
@@ -721,6 +722,18 @@ namespace tavros::renderer::rhi
         auto x = static_cast<GLint>(scissor.left);
         auto y = static_cast<GLint>(fb->info.height) - static_cast<GLint>(scissor.top) - static_cast<GLint>(h);
         GL_CALL(glScissor(x, y, w, h));
+    }
+
+    void command_queue_opengl::reset_scissor()
+    {
+        auto* fb = m_device->get_resources()->find(m_current_framebuffer);
+        if (!fb) {
+            ::logger.error("Failed to reset scissor: no framebuffer is bound");
+            return;
+        }
+        auto w = static_cast<GLsizei>(fb->info.width);
+        auto h = static_cast<GLsizei>(fb->info.height);
+        GL_CALL(glScissor(0, 0, w, h));
     }
 
     void command_queue_opengl::draw(uint32 vertex_count, uint32 first_vertex, uint32 instance_count, uint32 first_instance)

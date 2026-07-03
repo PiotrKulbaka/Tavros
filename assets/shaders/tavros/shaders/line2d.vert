@@ -31,5 +31,5 @@ void main()
 
     v_coord = pixel_pos;
 
-    gl_Position = scene.ortho_projection * vec4(pixel_pos, 0.0, 1.0);
+    gl_Position = ui_to_clip(pixel_pos);
 }

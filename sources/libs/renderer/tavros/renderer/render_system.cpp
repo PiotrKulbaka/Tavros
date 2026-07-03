@@ -67,6 +67,8 @@ namespace tavros::renderer
             return;
         }
 
+        m_constant_buffer.init(m_gdevice.get(), 256 * 1024 * 1024, rhi::buffer_usage::constant);
+
         m_is_init = true;
     }
 
@@ -80,24 +82,54 @@ namespace tavros::renderer
         m_am = nullptr;
         m_ws = nullptr;
         m_rm = nullptr;
+        m_constant_buffer.shutdown();
         m_gdevice = nullptr;
 
         m_is_init = false;
     }
 
-    void render_system::begin_frame() noexcept
+    void render_system::set_camera(const camera& cam) noexcept
+    {
+        m_current_view_data.set_camera_data(cam);
+    }
+
+    frame_context render_system::begin_frame(uint64 delta_time_us) noexcept
     {
         if (!m_is_init) {
             logger.error("Render system is not initialized.");
-            return;
+            return frame_context();
         }
+
+        m_total_time_us += delta_time_us;
+        m_delta_time_us = delta_time_us;
+        const auto total_time = static_cast<float>(m_total_time_us) / 1'000'000.0f;
+        const auto delta_time = static_cast<float>(m_delta_time_us) / 1'000'000.0f;
+        m_current_view_data.set_frame_info(
+            {static_cast<float>(m_frame_width),
+             static_cast<float>(m_frame_height)},
+            total_time, delta_time,
+            m_frame_number
+        );
+
+        m_constant_buffer.reset();
+        auto current_view_binding = m_current_view_data.upload(m_constant_buffer);
 
         m_rm->begin_frame();
         m_renderer2d->begin_frame();
+
+        m_current_command_queue = m_gdevice->create_command_queue();
+        m_current_command_queue->bind_shader_buffers(current_view_binding);
+
+        return frame_context(m_current_command_queue, &m_constant_buffer);
     }
 
     void render_system::end_frame() noexcept
     {
+        TAV_ASSERT(m_is_init);
+        if (m_current_command_queue) {
+            m_gdevice->submit_command_queue(m_current_command_queue);
+            m_current_command_queue = nullptr;
+        }
         m_renderer2d->end_frame();
         m_rm->end_frame();
         ++m_frame_number;
@@ -106,7 +138,9 @@ namespace tavros::renderer
 
     void render_system::resize_backbuffer(uint32 width, uint32 height)
     {
-        m_composer->resize(width, height);
+        m_frame_width = width < 1 ? 1 : width;
+        m_frame_height = height < 1 ? 1 : height;
+        m_composer->resize(m_frame_width, m_frame_height);
     }
 
     rhi::framebuffer_handle render_system::gpu_backbuffer() noexcept

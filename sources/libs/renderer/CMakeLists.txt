@@ -12,7 +12,7 @@ tavros_add_library(
     LIB_WIN32_SOURCES
         ${TAV_RENDERER_WIN32_SOURCES}
     LIB_DEPENDS
-        PRIVATE
+        PUBLIC
             tav_core
             tav_assets
             tav_tef

@@ -5,6 +5,7 @@
 #include <tavros/renderer/gpu_stream_buffer.hpp>
 #include <tavros/renderer/text/rich_text.hpp>
 #include <tavros/core/math.hpp>
+#include <tavros/core/geometry.hpp>
 
 namespace tavros::renderer
 {
@@ -37,9 +38,10 @@ namespace tavros::renderer
         void fill_ring(math::vec2 center, float outer_radius, float inner_radius);
         void fill_ring_cut(math::vec2 center, float outer_radius, float inner_radius, math::vec2 inner_offset);
 
-        void fill_rect(math::vec2 center, math::vec2 half_sizes, math::vec4 radius = {0.0f, 0.0f, 0.0f, 0.0f});
-        void fill_rect(geometry::aabb2 aabb, math::vec4 radius = {0.0f, 0.0f, 0.0f, 0.0f});
-        void fill_rect_cut(math::vec2 center, math::vec2 outer_half_sizes, math::vec2 inner_offset, math::vec2 inner_half_sizes, math::vec4 outer_radius = {0.0f}, math::vec4 inner_radius = {0.0f});
+        void fill_rect(math::vec2 center, math::vec2 half_sizes, geometry::radius4 radius = {});
+        void fill_rect(geometry::aabb2 aabb, geometry::radius4 radius = {});
+        void fill_rect_cut(geometry::aabb2 fill, geometry::aabb2 cut, geometry::radius4 outer_radius = {}, geometry::radius4 inner_radius = {});
+        void fill_rect_cut(math::vec2 center, math::vec2 outer_half_sizes, math::vec2 inner_offset, math::vec2 inner_half_sizes, geometry::radius4 outer_radius = {}, geometry::radius4 inner_radius = {});
 
         void draw_aabb(geometry::aabb2 aabb);
 
@@ -52,6 +54,9 @@ namespace tavros::renderer
         void set_text_use_brush_mask(bool use_fill_mask, bool use_outline_mask) noexcept;
 
         void draw_text(const text_archetype& text, math::vec2 pos, float fill_treshold = 0.5f, float outline_treshold = 0.0f);
+
+        void set_clip_rect(geometry::aabb2 aabb) noexcept;
+        void reset_clip_rect() noexcept;
 
     private:
         void init();

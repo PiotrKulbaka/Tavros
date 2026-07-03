@@ -550,6 +550,7 @@ namespace
         bool valid = read_enum(n, "cull", tavros::renderer::rhi::cull_face::off, to_cull_face, result.cull, "cull face", ds);
         valid &= read_enum(n, "front_face", tavros::renderer::rhi::front_face::counter_clockwise, to_front_face, result.face, "front face", ds);
         valid &= read_enum(n, "fill_mode", tavros::renderer::rhi::polygon_mode::fill, to_polygon_mode, result.polygon, "fill mode", ds);
+        valid &= read_scalar<bool>(n, "scissor", false, result.scissor_enable, [](const auto* n) noexcept { return n->is_boolean(); }, "bool", ds);
 
         // depth_clamp: "off" | { min max }
         if (const auto* dc = n->resolve_path("depth_clamp")) {

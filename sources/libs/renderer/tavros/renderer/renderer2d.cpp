@@ -220,17 +220,24 @@ namespace tavros::renderer
         m_cmd->draw(6);
     }
 
-    void renderer2d::fill_rect(math::vec2 center, math::vec2 half_sizes, math::vec4 radius)
+    void renderer2d::fill_rect(math::vec2 center, math::vec2 half_sizes, geometry::radius4 radius)
     {
         fill_rect_cut(center, half_sizes, {0.0f, 0.0f}, {0.0f, 0.0f}, radius);
     }
 
-    void renderer2d::fill_rect(geometry::aabb2 aabb, math::vec4 radius)
+    void renderer2d::fill_rect(geometry::aabb2 aabb, geometry::radius4 radius)
     {
         fill_rect_cut(aabb.center(), aabb.size() * 0.5f, {0.0f, 0.0f}, {0.0f, 0.0f}, radius);
     }
 
-    void renderer2d::fill_rect_cut(math::vec2 center, math::vec2 outer_half_sizes, math::vec2 inner_offset, math::vec2 inner_half_sizes, math::vec4 outer_radius, math::vec4 inner_radius)
+    void renderer2d::fill_rect_cut(geometry::aabb2 fill, geometry::aabb2 cut, geometry::radius4 outer_radius, geometry::radius4 inner_radius)
+    {
+        const auto fc = fill.center();
+        const auto cc = cut.center();
+        fill_rect_cut(fc, fill.size() / 2.0f, cc - fc, cut.size() / 2.0f, outer_radius, inner_radius);
+    }
+
+    void renderer2d::fill_rect_cut(math::vec2 center, math::vec2 outer_half_sizes, math::vec2 inner_offset, math::vec2 inner_half_sizes, geometry::radius4 outer_radius, geometry::radius4 inner_radius)
     {
         TAV_ASSERT(m_cmd);
         if (!m_cmd) {
@@ -240,19 +247,19 @@ namespace tavros::renderer
 
         struct rect_data
         {
-            math::vec2 center;
-            math::vec2 inner_center;
-            math::vec2 outer_half_sizes;
-            math::vec2 inner_half_sizes;
-            math::vec4 outer_radius;
-            math::vec4 inner_radius;
-            float      aa_width;
+            math::vec2        center;
+            math::vec2        inner_center;
+            math::vec2        outer_half_sizes;
+            math::vec2        inner_half_sizes;
+            geometry::radius4 outer_radius;
+            geometry::radius4 inner_radius;
+            float             aa_width;
         };
 
         float outer_max_r = math::min(outer_half_sizes.x, outer_half_sizes.y);
-        outer_radius = math::min(math::vec4(outer_max_r), outer_radius);
+        outer_radius = geometry::min(geometry::radius4(outer_max_r), outer_radius);
         float inner_max_r = math::min(inner_half_sizes.x, inner_half_sizes.y);
-        inner_radius = math::min(math::vec4(outer_max_r), inner_radius);
+        inner_radius = geometry::min(geometry::radius4(outer_max_r), inner_radius);
 
         rect_data r{center, center + inner_offset, outer_half_sizes, inner_half_sizes, outer_radius, inner_radius, m_aa_width};
         m_cmd->bind_pipeline(m_rect_mt->gpu_pipeline());
@@ -367,6 +374,21 @@ namespace tavros::renderer
         const rhi::bind_buffer_info bufs[] = {{slice.gpu_buffer(), slice.offset_bytes()}, {slice.gpu_buffer(), slice.offset_bytes()}};
         m_cmd->bind_vertex_buffers(bufs);
         m_cmd->draw(6, 0, static_cast<uint32>(text.size()));
+    }
+
+    void renderer2d::set_clip_rect(geometry::aabb2 aabb) noexcept
+    {
+        rhi::scissor_info si;
+        si.left = static_cast<int32>(std::floor(aabb.min.x));
+        si.top = static_cast<int32>(std::floor(aabb.min.y));
+        si.width = static_cast<int32>(std::ceil(aabb.width()));
+        si.height = static_cast<int32>(std::ceil(aabb.height()));
+        m_cmd->set_scissor(si);
+    }
+
+    void renderer2d::reset_clip_rect() noexcept
+    {
+        m_cmd->reset_scissor();
     }
 
     void renderer2d::init()

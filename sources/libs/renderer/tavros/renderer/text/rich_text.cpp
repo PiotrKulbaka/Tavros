@@ -5,6 +5,8 @@ namespace tavros::renderer
 
     rich_text::rich_text(font_ref initial_font, float initial_font_size) noexcept
         : m_dirty(true)
+        , m_dirty_from(0)
+        , m_dirty_size(0)
         , m_cur_font(initial_font)
         , m_cur_font_size(initial_font_size)
         , m_cur_fill_color(math::rgba8(255, 255, 255, 255))
@@ -55,7 +57,7 @@ namespace tavros::renderer
 
     void rich_text::append_text(core::string_view str)
     {
-        text_builder::append_text(m_text, str, *m_cur_font, m_cur_font_size);
+        m_dirty_size += text_builder::append_text(m_text, str, *m_cur_font, m_cur_font_size);
         m_text.view<glyph_style_c>().each([&](glyph_style_c& s) {
             s.fill_color = m_cur_fill_color;
             s.outline_color = m_cur_outline_color;
@@ -66,6 +68,8 @@ namespace tavros::renderer
     void rich_text::clear() noexcept
     {
         m_text.clear();
+        m_dirty_from = 0;
+        m_dirty_size = 0;
         m_dirty = true;
     }
 
@@ -76,6 +80,11 @@ namespace tavros::renderer
 
     geometry::aabb2 rich_text::layout() noexcept
     {
+        if (m_dirty_size != 0) {
+            text_builder::resolve_metrics(m_text, m_dirty_from, m_dirty_size);
+            m_dirty_size = 0;
+            m_dirty_from = m_text.size();
+        }
         if (m_dirty) {
             m_aabb = text_layouter::layout(m_text, m_line_wrap_width, m_text_align, m_line_spacing);
             m_dirty = false;

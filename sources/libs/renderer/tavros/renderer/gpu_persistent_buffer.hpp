@@ -89,7 +89,7 @@ namespace tavros::renderer
          * @return       gpu_buffer_view<T> over the allocated subrange.
          */
         template<class T>
-        [[nodiscard]] gpu_buffer_view<T> slice(size_t count) noexcept
+        [[nodiscard]] gpu_buffer_view<T> slice(size_t count = 1) noexcept
         {
             const size_t align = alignof(T) > 256 ? alignof(T) : 256;
             const size_t offset = tavros::math::align_up(m_cursor, align); // TODO: fixit. tavros::math::align_up(m_cursor + m_data.begin(), alignof(T))

@@ -128,6 +128,14 @@ namespace tavros::renderer::rhi
         virtual void set_scissor(const scissor_info& scissor) = 0;
 
         /**
+         * @brief Resets the scissor rectangle to cover the entire framebuffer.
+         *
+         * After calling this, all fragments will be processed without scissor clipping.
+         * Must be called within a render pass before issuing draw commands.
+         */
+        virtual void reset_scissor() = 0;
+
+        /**
          * @brief Issue a non-indexed draw command.
          *
          * Draws primitives using currently bound geometry and pipeline.

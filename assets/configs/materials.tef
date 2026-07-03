@@ -120,6 +120,10 @@ mt = {
                 blend = "alpha"
             }
         }
+
+        rasterizer = {
+            scissor = true
+        }
     }
 
     rect2d = {
@@ -132,6 +136,10 @@ mt = {
             base_color = {
                 blend = "alpha"
             }
+        }
+
+        rasterizer = {
+            scissor = true
         }
     }
 
@@ -146,6 +154,10 @@ mt = {
                 blend = "alpha"
             }
         }
+
+        rasterizer = {
+            scissor = true
+        }
     }
 
     sprite2d = {
@@ -159,6 +171,10 @@ mt = {
                 blend = "alpha"
             }
         }
+
+        rasterizer = {
+            scissor = true
+        }
     }
 
     text2d = {
@@ -171,6 +187,10 @@ mt = {
             base_color = { 
                 blend = "alpha"
             }
+        }
+    
+        rasterizer = {
+            scissor = true
         }
     }
 

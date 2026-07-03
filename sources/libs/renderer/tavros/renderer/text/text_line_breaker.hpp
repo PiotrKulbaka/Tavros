@@ -24,7 +24,7 @@ namespace tavros::renderer
      *
      * Behavior:
      *  - Processes glyphs in logical order.
-     *  - Stops at explicit newline (U'\n').
+     *  - Stops at explicit newline.
      *  - Optionally performs word wrapping when enabled.
      *  - Trailing whitespace does not contribute to line width.
      *
@@ -68,8 +68,8 @@ namespace tavros::renderer
          *
          * @return Index of the first glyph of the next line.
          */
-        static uint32 break_next_line(
-            uint32 i, uint32 end,
+        static size_t break_next_line(
+            size_t i, size_t end,
             core::buffer_view<glyph_c> glyphs,
             float& ascent_y, float& descent_y, float& width,
             bool wrap_words = false, float max_line_width = 0.0f
@@ -80,14 +80,14 @@ namespace tavros::renderer
             float actual_width = width = glyphs[i].step_x;
             float actual_ascent_y = ascent_y = glyphs[i].ascent_y;
             float actual_descent_y = descent_y = glyphs[i].descent_y;
-            bool  in_word_seq = !std::iswspace(static_cast<wint_t>(glyphs[i].codepoint));
+            bool  in_word_seq = !core::is_unicode_whitespace(glyphs[i].codepoint);
             bool  is_first_word = in_word_seq;
 
-            if (U'\n' == glyphs[i].codepoint) {
+            if (core::is_unicode_line_break(glyphs[i].codepoint)) {
                 return i + 1;
             }
 
-            uint32 best_seq = ++i;
+            auto best_seq = ++i;
             while (i < end) {
                 const glyph_c& g = glyphs[i++];
 
@@ -99,7 +99,7 @@ namespace tavros::renderer
                     actual_descent_y = g.descent_y;
                 }
 
-                if (std::iswspace(static_cast<wint_t>(g.codepoint))) {
+                if (core::is_unicode_whitespace(g.codepoint)) {
                     if (in_word_seq) {
                         width = actual_width - g.step_x;
                         in_word_seq = false;
@@ -109,7 +109,7 @@ namespace tavros::renderer
                     best_seq = i;
 
                     is_first_word = false;
-                    if (U'\n' == g.codepoint) {
+                    if (core::is_unicode_line_break(g.codepoint)) {
                         return i;
                     }
                 } else if (wrap_words && actual_width > max_line_width) {
@@ -158,8 +158,8 @@ namespace tavros::renderer
             lines.clear();
 
             // Iterate until all glyphs are processed
-            uint32 i = 0;
-            uint32 end = static_cast<uint32>(text.size());
+            size_t i = 0;
+            size_t end = text.size();
             auto&  glyphs = text.get<glyph_c>();
             float  ascent_y = 0.0f;
             float  descent_y = 0.0f;

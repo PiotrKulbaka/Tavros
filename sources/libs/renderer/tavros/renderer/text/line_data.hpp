@@ -18,10 +18,10 @@ namespace tavros::renderer
     struct text_line_c
     {
         /// Index of the first glyph of this line in the glyph sequence.
-        uint32 first_glyph_index = 0;
+        size_t first_glyph_index = 0;
 
         /// Number of glyphs belonging to this line.
-        uint32 glyph_count = 0;
+        size_t glyph_count = 0;
 
         /// Maximum ascent among all glyphs in the line.
         float ascent_y = 0.0f;

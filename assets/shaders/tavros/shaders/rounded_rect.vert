@@ -18,5 +18,5 @@ void main()
     vec2 pos = k_quad[gl_VertexID];
     vec2 world_pos = pc.center + pos * pc.outer_half_sizes;
     v_coord = world_pos;
-    gl_Position = scene.ortho_projection * vec4(world_pos, 0.0, 1.0);
+    gl_Position = ui_to_clip(world_pos);
 }

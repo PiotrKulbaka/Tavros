@@ -48,20 +48,22 @@ void main()
 
     // Each plane: quad is centered at camera projected onto that plane,
     // normal is the axis perpendicular to it.
+    vec3  world_pos;
     vec2 pos = k_quad_verts[gl_VertexID] * plane_scale;
     if (plane_id == 0u) { // XY plane (Z = 0) — normal is Z
         v_plane_normal = vec3(0.0, 0.0, 1.0);
-        v_world_pos    = vec3(v_cam_pos.xy, 0.0) + vec3(pos, 0.0);
-        v_uv           = v_world_pos.xy;
+        world_pos    = vec3(v_cam_pos.xy, 0.0) + vec3(pos, 0.0);
+        v_uv           = world_pos.xy;
     } else if (plane_id == 1u) { // YZ plane (X = 0) — normal is X
         v_plane_normal = vec3(1.0, 0.0, 0.0);
-        v_world_pos    = vec3(0.0, v_cam_pos.yz) + vec3(0.0, pos);
-        v_uv           = v_world_pos.yz;
+        world_pos    = vec3(0.0, v_cam_pos.yz) + vec3(0.0, pos);
+        v_uv           = world_pos.yz;
     } else { // ZX plane (Y = 0) — normal is Y
         v_plane_normal = vec3(0.0, 1.0, 0.0);
-        v_world_pos    = vec3(v_cam_pos.x, 0.0, v_cam_pos.z) + vec3(pos.x, 0.0, pos.y);
-        v_uv           = v_world_pos.zx;
+        world_pos    = vec3(v_cam_pos.x, 0.0, v_cam_pos.z) + vec3(pos.x, 0.0, pos.y);
+        v_uv           = world_pos.zx;
     }
 
-    gl_Position = scene.view_projection * vec4(v_world_pos, 1.0);
+    v_world_pos = world_pos;
+    gl_Position = world_to_clip(world_pos);
 }

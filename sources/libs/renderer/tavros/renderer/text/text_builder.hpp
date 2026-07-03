@@ -14,7 +14,7 @@ namespace tavros::renderer
 {
 
     /**
-     * @brief Static utility for constructing and updating glyph-based text layout.
+     * @brief Static utility for constructing and updating glyph-based text data.
      *
      * Builds and modifies an archetype containing:
      *  - glyph_c
@@ -23,9 +23,11 @@ namespace tavros::renderer
      *
      * Responsibilities:
      *  - UTF-8 decoding to Unicode codepoints
-     *  - Glyph lookup and metric extraction
+     *  - Glyph generation
+     *  - Glyph metric resolution
      *  - Kerning application
      *  - Step advance computation
+     *  - Atlas entry lookup
      *  - Layout rectangle calculation (including SDF padding)
      *
      * Coordinate system:
@@ -34,11 +36,6 @@ namespace tavros::renderer
      *  - Y axis increases downwards.
      *  - glyph_c::ascent_y is negative.
      *  - glyph_c::descent_y is positive.
-     *
-     * Kerning guarantees:
-     *  - step_x always represents advance to the next glyph.
-     *  - When appending or restyling, adjacent kerning pairs are recalculated
-     *    if both glyphs use the same font.
      *
      * The class is non-instantiable and contains only static methods.
      */
@@ -69,104 +66,54 @@ namespace tavros::renderer
 
     public:
         /**
-         * @brief Replace text content with a new string.
-         *
-         * Clears existing glyph data and appends decoded glyphs
-         * using the specified font and size.
-         *
-         * @tparam Text Archetype containing glyph_c, atlas_rect_t and rect_layout_c.
-         * @param text Target text container.
-         * @param str UTF-8 encoded string.
-         * @param fnt Font used for glyph generation (must not be null).
-         * @param font_size Font size scaling factor.
-         */
-        template<core::archetype_with<glyph_c, atlas_rect_t, rect_layout_c> Text>
-        static void set_text(Text& text, core::string_view str, const font* fnt, float font_size)
-        {
-            text.clear();
-            append_text(text, str, fnt, font_size);
-        }
-
-        /**
          * @brief Append UTF-8 text to existing glyph data.
          *
-         * Decodes the string, generates glyph components and appends them
-         * to the container. Kerning with the previously existing last glyph
-         * is updated when fonts match.
+         * Decodes the string and appends glyph components with unresolved metrics.
+         * Call resolve_metrics() for the appended range afterwards.
          *
-         * Layout rectangles are computed from glyph metrics and SDF padding.
-         *
-         * @tparam Text Archetype containing glyph_c, atlas_rect_t and rect_layout_c.
-         * @param text Target text container.
-         * @param str UTF-8 encoded string.
-         * @param fnt Font used for glyph generation (must not be null).
-         * @param font_size Font size scaling factor.
+         * @tparam Text      Archetype containing glyph_c.
+         * @param  text      Target text container.
+         * @param  str       UTF-8 encoded string.
+         * @param  fnt       Font assigned to new glyphs (must not be null).
+         * @param  font_size Font size scaling factor.
+         * @return Number of appended glyphs.
          */
         template<core::archetype_with<glyph_c, atlas_rect_t, rect_layout_c> Text>
-        static void append_text(Text& text, core::string_view str, const font* fnt, float font_size)
+        static size_t append_text(Text& text, core::string_view str, const font* fnt, float font_size)
         {
             TAV_ASSERT(fnt != nullptr);
 
             auto codepoints = convert_to_codepoints(str);
-
             text.reserve(text.size() + codepoints.size());
+            for (const auto cp : codepoints) {
+                const auto g = glyph_c{
+                    .font = fnt,
+                    .codepoint = cp,
+                    .size = font_size,
+                    .step_x = 0.0f,   // Will be calculated in resolve_metrics
+                    .ascent_y = 0.0f, // Will be calculated in resolve_metrics
+                    .descent_y = 0.0f // Will be calculated in resolve_metrics
+                };
 
-            auto cp_size = codepoints.size();
-            if (cp_size > 0) {
-                // Update step_x of the last glyph if the new text is appended to existing text and uses the same font.
-                if (text.size() > 0) {
-                    glyph_c&    last_g = text.get<glyph_c>().back();
-                    const auto& gi = last_g.font->get_glyph_info(last_g.font->find_glyph(last_g.codepoint));
-
-                    auto step_x = gi.metrics.advance.x;
-                    if (last_g.font->equals(*fnt)) {
-                        step_x += fnt->get_kerning(last_g.codepoint, codepoints[0]);
-                    }
-                    last_g.step_x = step_x * last_g.size;
-                }
-
-                const auto& fm = fnt->get_font_metrics();
-                auto        pad = fm.sdf_padding_pix * font_size;
-
-                for (size_t i = 0; i < cp_size; ++i) {
-                    auto        cp = codepoints[i];
-                    const auto& gi = fnt->get_glyph_info(fnt->find_glyph(cp));
-
-                    auto step_x = gi.metrics.advance.x;
-                    if (i + 1 < cp_size) {
-                        step_x += fnt->get_kerning(cp, codepoints[i + 1]);
-                    }
-
-                    auto b = gi.metrics.bearing * font_size;
-                    auto s = gi.metrics.size * font_size;
-
-                    atlas_rect_t entry = std::iswspace(static_cast<wint_t>(cp)) ? atlas_rect_t{0, 0, 0, 0} : gi.entry;
-
-                    text.typed_emplace_back(
-                        // Invert ascent and descent to match the UI coordinate system where Y increases downwards
-                        glyph_c{fnt, cp, font_size, step_x * font_size, -fm.ascent_y * font_size, -fm.descent_y * font_size},
-                        entry,
-                        // Compute layout rectangle with padding
-                        rect_layout_c{geometry::aabb2{b.x - pad, b.y - s.y - pad, b.x + s.x + pad, b.y + pad}}
-                    );
-                }
+                text.typed_emplace_back(glyph_c{fnt, cp, font_size, 0.0f, 0.0f, 0.0f});
             }
+            return codepoints.size();
         }
 
         /**
          * @brief Change font and size for a glyph range.
          *
-         * Recomputes glyph metrics, kerning, atlas entries and layout rectangles
-         * for the specified range. Also updates adjacent kerning where required.
+         * Updates glyph style and invalidates resolved metrics.
+         * Call resolve_metrics() for the modified range afterwards.
          *
-         * @tparam Text Archetype containing glyph_c, atlas_rect_t and rect_layout_c.
-         * @param text Target text container.
-         * @param first Index of the first glyph to modify.
-         * @param count Number of glyphs to update.
-         * @param fnt New font (must not be null).
-         * @param font_size New font size scaling factor.
+         * @tparam Text      Archetype containing glyph_c.
+         * @param  text      Target text container.
+         * @param  first     Index of the first glyph to modify.
+         * @param  count     Number of glyphs to update.
+         * @param  fnt       New font (must not be null).
+         * @param  font_size New font size scaling factor.
          */
-        template<core::archetype_with<glyph_c, atlas_rect_t, rect_layout_c> Text>
+        template<core::archetype_with<glyph_c> Text>
         static void set_style(Text& text, size_t first, size_t count, const font* fnt, float font_size)
         {
             TAV_ASSERT(fnt != nullptr);
@@ -177,45 +124,76 @@ namespace tavros::renderer
                 return;
             }
 
-            auto&       glyphs = text.get<glyph_c>();
-            size_t      end = first + count;
-            const auto& fm = fnt->get_font_metrics();
-            auto        pad = fm.sdf_padding_pix * font_size;
+            text.view<glyph_c>().each_n(first, count, [&](glyph_c& g) {
+                g.font = fnt;
+                // g.codepoint; // Keep the same codepoint
+                g.size = font_size;
+                g.step_x = 0.0f;    // Will be recalculated in resolve_metrics
+                g.ascent_y = 0.0f;  // Will be recalculated in resolve_metrics
+                g.descent_y = 0.0f; // Will be recalculated in resolve_metrics
+            });
+        }
+
+        /**
+         * @brief Resolve glyph metrics for a range.
+         *
+         * Computes glyph metrics, kerning, atlas entries and layout rectangles
+         * for the specified range. Adjacent kerning pairs are updated when needed.
+         *
+         * @tparam Text  Archetype containing glyph_c, atlas_rect_t and rect_layout_c.
+         * @param  text  Target text container.
+         * @param  first Index of the first glyph to resolve.
+         * @param  count Number of glyphs to resolve.
+         */
+        template<core::archetype_with<glyph_c, atlas_rect_t, rect_layout_c> Text>
+        static void resolve_metrics(Text& text, size_t first, size_t count) noexcept
+        {
+            TAV_ASSERT(first <= text.size());
+            TAV_ASSERT(first + count <= text.size());
+
+            if (count == 0) {
+                return;
+            }
+
+            auto&  glyphs = text.get<glyph_c>();
+            size_t end = first + count;
 
             // Update previous glyph's step_x if the new font is the same as the previous one, otherwise reset it to the default advance
             if (first > 0) {
                 glyph_c&    prev_g = glyphs[first - 1];
+                glyph_c&    cur_g = glyphs[first];
                 const auto& gi = prev_g.font->get_glyph_info(prev_g.font->find_glyph(prev_g.codepoint));
 
                 auto step_x = gi.metrics.advance.x;
-                if (prev_g.font->equals(*fnt)) {
-                    step_x += fnt->get_kerning(prev_g.codepoint, glyphs[first].codepoint);
+                if (prev_g.font->equals(*cur_g.font)) {
+                    step_x += cur_g.font->get_kerning(prev_g.codepoint, glyphs[first].codepoint);
                 }
                 prev_g.step_x = step_x * prev_g.size;
             }
 
             text.view<glyph_c, atlas_rect_t, rect_layout_c>()
                 .each_n_indexed(first, count, [&](size_t i, glyph_c& g, atlas_rect_t& r, rect_layout_c& l) {
-                    const auto& gi = fnt->get_glyph_info(fnt->find_glyph(g.codepoint));
+                    const auto& gi = g.font->get_glyph_info(g.font->find_glyph(g.codepoint));
 
                     auto step_x = gi.metrics.advance.x;
                     // Apply kerning with the next glyph if it exists and uses the same font
-                    if (i + 1 < end || (end < text.size() && fnt->equals(*glyphs[i].font))) {
-                        step_x += fnt->get_kerning(g.codepoint, glyphs[i + 1].codepoint);
+                    if (i + 1 < end || (end < text.size() && g.font->equals(*glyphs[i].font))) {
+                        step_x += g.font->get_kerning(g.codepoint, glyphs[i + 1].codepoint);
                     }
 
-                    g.font = fnt;
-                    g.size = font_size;
-                    g.step_x = step_x * font_size;
-                    // Invert ascent and descent to match the UI coordinate system where Y increases downwards
-                    g.ascent_y = -fm.ascent_y * font_size;
-                    g.descent_y = -fm.descent_y * font_size;
+                    const auto& fm = g.font->get_font_metrics();
+                    auto        pad = fm.sdf_padding_pix * g.size;
 
-                    r = std::iswspace(g.codepoint) ? atlas_rect_t{0, 0, 0, 0} : gi.entry;
+                    g.step_x = step_x * g.size;
+                    g.ascent_y = -fm.ascent_y * g.size;
+                    g.descent_y = -fm.descent_y * g.size;
 
-                    // Update layout rectangle with new font size and padding
-                    auto b = gi.metrics.bearing * font_size;
-                    auto s = gi.metrics.size * font_size;
+                    // Update atlas rectangle for the glyph, or set to zero if it's a whitespace character
+                    r = core::is_unicode_whitespace(g.codepoint) ? atlas_rect_t{0, 0, 0, 0} : gi.entry;
+
+                    // Update layout rectangle with a font size and padding
+                    auto b = gi.metrics.bearing * g.size;
+                    auto s = gi.metrics.size * g.size;
 
                     l.min.x = b.x - pad;
                     l.min.y = b.y - s.y - pad;

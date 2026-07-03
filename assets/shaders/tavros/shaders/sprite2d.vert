@@ -36,5 +36,5 @@ void main()
     v_uv = uv_min + uv_pos * (uv_max - uv_min);
     v_uv.y = 1.0 - v_uv.y;
 
-    gl_Position = scene.ortho_projection * vec4(world_pos, 0.0, 1.0);
+    gl_Position = ui_to_clip(world_pos);
 }
