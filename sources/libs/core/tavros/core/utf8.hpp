@@ -24,4 +24,28 @@ namespace tavros::core
      */
     char32 extract_utf8_codepoint(const char* text, const char* end, const char** out);
 
+    /**
+     * @brief Check whether a codepoint is a Unicode line break character.
+     *
+     * Recognizes:
+     *  - U+000A LINE FEED
+     *  - U+2028 LINE SEPARATOR
+     *  - U+2029 PARAGRAPH SEPARATOR
+     *
+     * @param cp Unicode codepoint.
+     * @return True if the codepoint represents a line break.
+     */
+    bool is_unicode_line_break(char32 cp) noexcept;
+
+    /**
+     * @brief Check whether a codepoint has the Unicode White_Space property.
+     *
+     * Includes ASCII whitespace characters and all Unicode space separators
+     * defined by the Unicode White_Space property.
+     *
+     * @param cp Unicode codepoint.
+     * @return True if the codepoint is considered whitespace.
+     */
+    bool is_unicode_whitespace(char32 cp) noexcept;
+
 } // namespace tavros::core

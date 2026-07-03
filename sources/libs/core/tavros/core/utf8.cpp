@@ -79,4 +79,67 @@ namespace tavros::core
         return rc;
     }
 
+    bool is_unicode_line_break(char32 cp) noexcept
+    {
+        return cp == U'\n' || cp == 0x2028 || cp == 0x2029;
+    }
+
+    bool is_unicode_whitespace(char32 cp) noexcept
+    {
+        switch (cp) {
+        case U'\t':
+            return true;
+        case U'\n':
+            return true;
+        case U'\v':
+            return true;
+        case U'\f':
+            return true;
+        case U'\r':
+            return true;
+        case U' ':
+            return true;
+        case 0x0085:
+            return true;
+        case 0x00A0:
+            return true;
+        case 0x1680:
+            return true;
+        case 0x2000:
+            return true;
+        case 0x2001:
+            return true;
+        case 0x2002:
+            return true;
+        case 0x2003:
+            return true;
+        case 0x2004:
+            return true;
+        case 0x2005:
+            return true;
+        case 0x2006:
+            return true;
+        case 0x2007:
+            return true;
+        case 0x2008:
+            return true;
+        case 0x2009:
+            return true;
+        case 0x200A:
+            return true;
+        case 0x2028:
+            return true;
+        case 0x2029:
+            return true;
+        case 0x202F:
+            return true;
+        case 0x205F:
+            return true;
+        case 0x3000:
+            return true;
+        default:
+            return false;
+        }
+    }
+
 } // namespace tavros::core

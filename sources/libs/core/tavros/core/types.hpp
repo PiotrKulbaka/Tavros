@@ -3,6 +3,7 @@
 #include <cstddef>
 #include <atomic>
 #include <limits>
+#include <algorithm>
 
 using uint8 = uint8_t;
 using int8 = int8_t;

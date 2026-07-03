@@ -86,6 +86,21 @@ namespace tavros::core
         [[nodiscard]] const node_ptr last_child() const noexcept;
 
         /**
+         * @brief Checks whether a node is the first in a sibling sequence.
+         */
+        [[nodiscard]] bool is_first() const noexcept;
+
+        /**
+         * @brief Checks whether a node is the last in a sibling sequence.
+         */
+        [[nodiscard]] bool is_last() const noexcept;
+
+        /**
+         * @brief Checks whether a node is the root node.
+         */
+        [[nodiscard]] bool is_root() const noexcept;
+
+        /**
          * @brief Inserts a node (or range of nodes) as the first child.
          * @param insert Node to insert as the first child.
          */
@@ -251,6 +266,24 @@ namespace tavros::core
     inline const hierarchy<D>::node_ptr hierarchy<D>::last_child() const noexcept
     {
         return m_last_child;
+    }
+
+    template<class D>
+    inline bool hierarchy<D>::is_first() const noexcept
+    {
+        return m_prev == nullptr;
+    }
+
+    template<class D>
+    inline bool hierarchy<D>::is_last() const noexcept
+    {
+        return m_next == nullptr;
+    }
+
+    template<class D>
+    inline bool hierarchy<D>::is_root() const noexcept
+    {
+        return m_parent == nullptr && is_first();
     }
 
     template<class D>

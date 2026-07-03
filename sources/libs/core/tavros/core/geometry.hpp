@@ -9,3 +9,5 @@
 #include <tavros/core/geometry/aabb3.hpp>
 #include <tavros/core/geometry/obb2.hpp>
 #include <tavros/core/geometry/obb3.hpp>
+#include <tavros/core/geometry/thickness4.hpp>
+#include <tavros/core/geometry/radius4.hpp>
