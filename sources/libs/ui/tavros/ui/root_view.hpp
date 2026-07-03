@@ -1,6 +1,6 @@
 #pragma once
 
-#include <tavros/core/memory/mallocator.hpp>
+#include <tavros/renderer/render_system.hpp>
 #include <tavros/ui/base.hpp>
 #include <tavros/ui/view.hpp>
 
@@ -10,50 +10,39 @@ namespace tavros::ui
     class root_view
     {
     public:
-        root_view();
+        root_view(core::shared_ptr<renderer::render_system> rs);
 
-        ~root_view();
+        ~root_view() noexcept;
 
-        // Initialize with graphics device (for lazy init)
-        void init(rhi::graphics_device* gdevice);
-
-        // Shutdown all graphics device resources
-        void shutdown();
-
-
-        view& root()
+        void set_root(view* root) noexcept
         {
-            return m_root;
+            m_root = root;
         }
 
+        void process_input(input::event_args_queue_view events) noexcept;
 
-        void process_ui_events(input::event_args_queue_view events);
+        void layout(geometry::aabb2 bounds) noexcept;
 
-        void on_frame(rhi::command_queue* cmds, float delta_time);
+        void update(float dt) noexcept;
 
-    private:
-        void update(float delta_time);
-
-        void layout();
-
-        void render(rhi::command_queue* cmds);
-
-        void on_mouse_down(const mouse_button_event_args&);
-        void on_mouse_move(const mouse_move_event_args&);
-        void on_mouse_up(const mouse_button_event_args&);
-        void on_mouse_wheel(const mouse_wheel_event_args&);
-        void on_key_down(const keyboard_key_event_args&);
-        void on_key_up(const keyboard_key_event_args&);
-        void on_key_press(const key_press_event_args&);
+        void draw();
 
     private:
-        rhi::graphics_device* m_graphics_device;
-        // renderer::debug_renderer m_debug_renderer;
-        bool       m_is_active;
-        view       m_root; // Always created automatically
-        view*      m_keyboard_focus;
-        view*      m_hovered;
-        math::mat4 m_orto_proj;
+        void mouse_down(const mouse_button_event_args& e) noexcept;
+        void mouse_move(const mouse_move_event_args& e) noexcept;
+        void mouse_up(const mouse_button_event_args& e) noexcept;
+        void mouse_wheel(const mouse_wheel_event_args& e) noexcept;
+        void key_down(const keyboard_key_event_args& e) noexcept;
+        void key_up(const keyboard_key_event_args& e) noexcept;
+        void key_press(const key_press_event_args& e) noexcept;
+
+    private:
+        core::shared_ptr<renderer::render_system> m_rs;
+
+        view* m_root = nullptr;           // Always created automatically
+        view* m_hovered = nullptr;        // Currently hovered view (by mouse)
+        view* m_keyboard_focus = nullptr; // Currently focused view (by keyboard)
+        bool  m_is_active = false;        // Whether the application is active (receiving input)
     };
 
 } // namespace tavros::ui

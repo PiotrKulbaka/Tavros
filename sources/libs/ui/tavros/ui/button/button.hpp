@@ -5,7 +5,7 @@
 namespace tavros::ui
 {
 
-    class button : public view
+    /*class button : public view
     {
     public:
         button();
@@ -28,6 +28,6 @@ namespace tavros::ui
         bool         m_is_hovered;
         float        m_hover_time;
         core::string m_text;
-    };
+    };*/
 
 } // namespace tavros::ui

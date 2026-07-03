@@ -224,6 +224,7 @@ rasterizer = {
     fill_mode   = "fill"
     depth_clamp = "off" | { min = NUMBER  max = NUMBER }
     depth_bias  = "off" | { constant = NUMBER  slope = NUMBER  clamp = NUMBER }
+    scissor     = false
 }
 ```
 
@@ -231,9 +232,10 @@ rasterizer = {
 |---------------|----------|------------------------------------------|
 | `cull`        | `"off"`  | Face culling: `"off"` ; `"front"` ; `"back"` |
 | `front_face`  | `"ccw"`  | Winding order considered front: `"ccw"` ; `"cw"` |
-| `fill_mode`   | `"fill"` | `"fill"` ; `"lines"` ; `"points"`       |
+| `fill_mode`   | `"fill"` | `"fill"` ; `"lines"` ; `"points"`        |
 | `depth_clamp` | `"off"`  | Clamp depth to [min, max] instead of clipping |
 | `depth_bias`  | `"off"`  | Add a bias to fragment depth values      |
+| `scissor`     | false    | Enable scissor test (true or false)      |
 
 ### `depth_clamp`
 

@@ -61,31 +61,16 @@ namespace
 namespace tavros::ui
 {
 
-    root_view::root_view()
-        : m_graphics_device(nullptr)
-        , m_is_active(true)
-        , m_keyboard_focus(nullptr)
-        , m_hovered(nullptr)
+    root_view::root_view(core::shared_ptr<renderer::render_system> rs)
+        : m_rs(std::move(rs))
     {
     }
 
-    root_view::~root_view()
+    root_view::~root_view() noexcept
     {
     }
 
-    void root_view::init(rhi::graphics_device* gdevice)
-    {
-        TAV_ASSERT(gdevice);
-        m_graphics_device = gdevice;
-        // m_debug_renderer.init(gdevice);
-    }
-
-    void root_view::shutdown()
-    {
-        // m_debug_renderer.shutdown();
-    }
-
-    void root_view::process_ui_events(input::event_args_queue_view events)
+    void root_view::process_input(input::event_args_queue_view events) noexcept
     {
         for (auto& e : events) {
             if (!m_is_active) {
@@ -105,14 +90,14 @@ namespace tavros::ui
                 a.button = e.button;
                 a.pos = e.vec;
                 a.time_us = e.time_us;
-                on_mouse_down(a);
+                mouse_down(a);
             } break;
 
             case input::event_type::mouse_move: {
                 mouse_move_event_args a;
                 a.pos = e.vec;
                 a.time_us = e.time_us;
-                on_mouse_move(a);
+                mouse_move(a);
             } break;
 
             case input::event_type::mouse_move_delta:
@@ -124,7 +109,7 @@ namespace tavros::ui
                 a.button = e.button;
                 a.pos = e.vec;
                 a.time_us = e.time_us;
-                on_mouse_up(a);
+                mouse_up(a);
             } break;
 
             case input::event_type::mouse_wheel: {
@@ -132,14 +117,14 @@ namespace tavros::ui
                 a.pos = e.vec;
                 a.wheel_delta = e.wheel;
                 a.time_us = e.time_us;
-                on_mouse_wheel(a);
+                mouse_wheel(a);
             } break;
 
             case input::event_type::key_down: {
                 keyboard_key_event_args a;
                 a.key = e.key;
                 a.time_us = e.time_us;
-                on_key_down(a);
+                key_down(a);
             } break;
 
             case input::event_type::key_press: {
@@ -147,19 +132,17 @@ namespace tavros::ui
                 a.key_char = e.key_char;
                 a.repeats = e.repeats;
                 a.time_us = e.time_us;
-                on_key_press(a);
+                key_press(a);
             } break;
 
             case input::event_type::key_up: {
                 keyboard_key_event_args a;
                 a.key = e.key;
                 a.time_us = e.time_us;
-                on_key_up(a);
+                key_up(a);
             } break;
 
             case input::event_type::window_size:
-                m_root.set_size(e.vec);
-                m_orto_proj = math::mat4::ortho(0.0f, e.vec.x, e.vec.y, 0.0f, 1.0f, -1.0f);
                 break;
 
             case input::event_type::window_move:
@@ -181,49 +164,52 @@ namespace tavros::ui
         }
     }
 
-    void root_view::on_frame(rhi::command_queue* cmds, float delta_time)
+    void root_view::layout(geometry::aabb2 bounds) noexcept
     {
-        layout();
-        update(delta_time);
-        render(cmds);
+        if (!m_root) {
+            return;
+        }
+        m_root->set_size(bounds.size());
+        m_root->set_max_size(bounds.size());
+        m_root->arrange(bounds);
     }
 
-    void root_view::update(float delta_time)
+    void root_view::update(float dt) noexcept
     {
-        traverse_preorder(&m_root, [delta_time](auto* n) { n->update(delta_time); });
+        if (!m_root) {
+            return;
+        }
+        m_root->update(dt);
     }
 
-    void root_view::layout()
+    void root_view::draw()
     {
+        if (!m_root) {
+            return;
+        }
+        m_root->draw({m_rs.get(), true});
     }
 
-    void root_view::render(rhi::command_queue* cmds)
+    void root_view::mouse_down(const mouse_button_event_args& e) noexcept
     {
-        render_context rctx;
-        // rctx.drenderer = &m_debug_renderer;
-        rctx.gdevice = m_graphics_device;
-        // m_debug_renderer.begin_frame(m_orto_proj, math::mat4::identity());
+        if (!m_root) {
+            return;
+        }
 
-        traverse_preorder(&m_root, [&](auto* n) { n->draw(rctx); });
-
-        // m_debug_renderer.update();
-        // m_debug_renderer.render(cmds);
-        // m_debug_renderer.end_frame();
-    }
-
-    void root_view::on_mouse_down(const mouse_button_event_args& e)
-    {
         view* v = nullptr;
-        traverse_preorder(&m_root, [&](auto* n) { return n->test_hit(e.pos); }, [&](auto* n) { v = n; });
+        traverse_preorder(m_root, [&](auto* n) { return n->hit_test(e.pos); }, [&](auto* n) { v = n; });
         if (v) {
             v->on_mouse_down(e);
         }
     }
 
-    void root_view::on_mouse_move(const mouse_move_event_args& e)
+    void root_view::mouse_move(const mouse_move_event_args& e) noexcept
     {
+        if (!m_root) {
+            return;
+        }
         view* v = nullptr;
-        traverse_preorder(&m_root, [&](auto* n) { return n->test_hit(e.pos); }, [&](auto* n) { v = n; });
+        traverse_preorder(m_root, [&](auto* n) { return n->hit_test(e.pos); }, [&](auto* n) { v = n; });
         if (m_hovered != v) {
             if (m_hovered) {
                 m_hovered->on_mouse_leave();
@@ -239,37 +225,40 @@ namespace tavros::ui
         }
     }
 
-    void root_view::on_mouse_up(const mouse_button_event_args& e)
+    void root_view::mouse_up(const mouse_button_event_args& e) noexcept
     {
+        if (!m_root) {
+            return;
+        }
         view* v = nullptr;
-        traverse_preorder(&m_root, [&](auto* n) { return n->test_hit(e.pos); }, [&](auto* n) { v = n; });
+        traverse_preorder(m_root, [&](auto* n) { return n->hit_test(e.pos); }, [&](auto* n) { v = n; });
         if (v) {
             v->on_mouse_up(e);
         }
     }
 
-    void root_view::on_mouse_wheel(const mouse_wheel_event_args& e)
+    void root_view::mouse_wheel(const mouse_wheel_event_args& e) noexcept
     {
         if (m_hovered) {
             m_hovered->on_mouse_wheel(e);
         }
     }
 
-    void root_view::on_key_down(const keyboard_key_event_args& e)
+    void root_view::key_down(const keyboard_key_event_args& e) noexcept
     {
         if (m_keyboard_focus) {
             m_keyboard_focus->on_key_down(e);
         }
     }
 
-    void root_view::on_key_up(const keyboard_key_event_args& e)
+    void root_view::key_up(const keyboard_key_event_args& e) noexcept
     {
         if (m_keyboard_focus) {
             m_keyboard_focus->on_key_up(e);
         }
     }
 
-    void root_view::on_key_press(const key_press_event_args& e)
+    void root_view::key_press(const key_press_event_args& e) noexcept
     {
         if (m_keyboard_focus) {
             m_keyboard_focus->on_key_press(e);

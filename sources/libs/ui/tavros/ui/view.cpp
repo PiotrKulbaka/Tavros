@@ -5,164 +5,213 @@
 namespace tavros::ui
 {
 
-    view::view()
+    view::view() noexcept
+        : m_is_visible(true)
+        , m_is_enabled(true)
+        , m_size(0.0f, 0.0f)
+        , m_min_size(0.0f, 0.0f)
+        , m_max_size(std::numeric_limits<float>::max(), std::numeric_limits<float>::max())
+        , m_padding(0.0f, 0.0f, 0.0f, 0.0f)
+        , m_margin(0.0f, 0.0f, 0.0f, 0.0f)
+        , m_bounds(0.0f, 0.0f, 0.0f, 0.0f)
     {
-        m_pos = {0.0f, 0.0f};
-        m_size = {0.0f, 0.0f};
-        m_pad = {0.0f, 0.0f, 0.0f, 0.0f};
-
-        m_is_hovered = false;
-        m_is_clicked = false;
-        m_hover_factor = 0.0f;
-        m_click_factor = 0.0f;
-
-        m_is_enabled = true;
     }
 
-    rect2 view::padding_rect() const
+    view::~view() noexcept
     {
-        auto p = absolute_position();
-        auto outer_sz = outer_size();
-        return {p, p + outer_sz};
     }
 
-    rect2 view::content_rect() const
+    void view::set_visible(bool v) noexcept
     {
-        auto p = absolute_content_position();
-        auto sz = size();
-        return {p, p + sz};
+        m_is_visible = v;
     }
 
-    void view::set_padding(padding2 pad)
+    void view::set_enabled(bool e) noexcept
     {
-        m_pad = pad;
+        m_is_enabled = e;
     }
 
-    padding2 view::padding() const
+    bool view::is_visible() const noexcept
     {
-        return m_pad;
+        return m_is_visible;
     }
 
-    void view::set_position(const point2 pos)
-    {
-        m_pos = pos;
-    }
-
-    point2 view::position() const
-    {
-        return m_pos;
-    }
-
-    point2 view::absolute_position() const
-    {
-        return absolute_content_position() - m_pad.min;
-    }
-
-    point2 view::absolute_content_position() const
-    {
-        if (auto p = parent()) {
-            return p->absolute_content_position() + m_pos + m_pad.min;
-        }
-        return m_pos + m_pad.min;
-    }
-
-    void view::set_size(const size2 size)
-    {
-        m_size = size;
-
-        for (auto& ch : children()) {
-            ch.on_parent_resized(size);
-        }
-    }
-
-    size2 view::size() const
-    {
-        return m_size;
-    }
-
-    size2 view::outer_size() const
-    {
-        return {m_size.width + m_pad.left + m_pad.right, m_size.height + m_pad.top + m_pad.bottom};
-    }
-
-    void view::set_enabled(bool enabled)
-    {
-        m_is_enabled = enabled;
-    }
-
-    bool view::is_enabled() const
+    bool view::is_enabled() const noexcept
     {
         return m_is_enabled;
     }
 
+
+    void view::set_size(math::vec2 size) noexcept
+    {
+        m_size = size;
+    }
+
+    void view::set_min_size(math::vec2 min_size) noexcept
+    {
+        m_min_size = min_size;
+    }
+
+    void view::set_max_size(math::vec2 max_size) noexcept
+    {
+        m_max_size = max_size;
+    }
+
+    math::vec2 view::size() const noexcept
+    {
+        return m_size;
+    }
+
+    math::vec2 view::min_size() const noexcept
+    {
+        return m_min_size;
+    }
+
+    math::vec2 view::max_size() const noexcept
+    {
+        return m_max_size;
+    }
+
+    void view::set_padding(geometry::thickness4 pad) noexcept
+    {
+        m_padding = pad;
+    }
+
+    void view::set_margin(geometry::thickness4 margin) noexcept
+    {
+        m_margin = margin;
+    }
+
+    geometry::thickness4 view::padding() const noexcept
+    {
+        return m_padding;
+    }
+
+    geometry::thickness4 view::margin() const noexcept
+    {
+        return m_margin;
+    }
+
+    math::vec2 view::measure(math::vec2) const noexcept
+    {
+        return limit_content_size(m_size);
+    }
+
+    void view::arrange(geometry::aabb2 bounds) noexcept
+    {
+        auto sz = limit_content_size(bounds.size());
+        m_bounds = {bounds.min, bounds.min + sz};
+    }
+
+    geometry::aabb2 view::margin_bounds() const noexcept
+    {
+        return {
+            m_bounds.left - m_margin.left,
+            m_bounds.top - m_margin.top,
+            m_bounds.right + m_margin.right,
+            m_bounds.bottom + m_margin.bottom
+        };
+    }
+
+    geometry::aabb2 view::bounds() const noexcept
+    {
+        return m_bounds;
+    }
+
+    geometry::aabb2 view::content_bounds() const noexcept
+    {
+        return {
+            m_bounds.left + m_padding.left,
+            m_bounds.top + m_padding.top,
+            m_bounds.right - m_padding.right,
+            m_bounds.bottom - m_padding.bottom
+        };
+    }
+
     void view::update(float dt)
     {
-        m_hover_factor = math::clamp(m_hover_factor + (m_is_hovered ? dt : -dt) * 5.0f, 0.0f, 1.0f);
-        m_click_factor = math::clamp(m_click_factor + (m_is_clicked ? dt : -dt) * 15.0f, 0.0f, 1.0f);
+        if (!m_is_visible) {
+            return;
+        }
+        for (auto& child : children()) {
+            child.update(dt);
+        }
     }
 
     void view::draw(const render_context& rctx)
     {
-        /*if (is_subtree_enabled()) {
-            math::color cl_inner = {1.0f, 0.5f, 0.5f, 0.25};
-            math::color cl1 = {0.6f, 0.6f, 0.8f, 0.15};
-            math::color cl2 = {1.0f, 0.3f, 0.7f, 0.47};
-            math::color cl3 = {1.0f, 1.0f, 1.0f, 0.55};
-            math::color cl = math::lerp(cl1, cl2, m_hover_factor);
-            cl = math::lerp(cl, cl3, m_click_factor);
+        if (!m_is_visible) {
+            return;
+        }
 
-            auto cr = content_rect();
-            cr.min -= vec2(3.0f) * m_hover_factor;
-            cr.max += vec2(3.0f) * m_hover_factor;
+        if (rctx.debug_draw) {
+            auto* r = rctx.renderer->renderer2d();
+            r->set_line_thickness(3.0f);
 
-            cr.min += vec2(0.0f, 3.0f) * m_click_factor;
-            cr.max += vec2(0.0f, 3.0f) * m_click_factor;
+            if (m_is_hover) {
+                // Content bounds
+                r->set_brush_solid_color(0x7F92FF60);
+                auto cb = content_bounds();
+                r->fill_rect(cb);
 
-            rctx.drenderer->box2d(cr, cl, renderer::debug_renderer::draw_mode::faces);
-            rctx.drenderer->box2d(padding_rect(), cl_inner, renderer::debug_renderer::draw_mode::edges);
-        } else {
-            math::color cl_inner = {0.7f, 0.7f, 0.7f, 0.25};
-            math::color cl_inner_h = {0.7f, 0.7f, 0.7f, 0.55};
-            math::color cl_outer = {0.7f, 0.7f, 0.7f, 0.47};
-            auto        cl = math::lerp(cl_inner, cl_inner_h, m_hover_factor);
+                // Size bounds
+                r->set_brush_solid_color(0x7FFFC560);
+                auto sb = bounds();
+                r->fill_rect_cut(sb, cb);
 
+                // Margin bounds
+                r->set_brush_solid_color(0xFFE97F60);
+                auto mb = margin_bounds();
+                r->fill_rect_cut(mb, sb);
+            }
 
-            rctx.drenderer->box2d(content_rect(), cl, renderer::debug_renderer::draw_mode::faces);
-            rctx.drenderer->box2d(padding_rect(), cl_outer, renderer::debug_renderer::draw_mode::edges);
-        }*/
-    }
+            // Bounds
+            r->set_brush_solid_color(0x7FFF8EFF);
+            rctx.renderer->renderer2d()->draw_aabb(bounds());
 
-    void view::on_mouse_down(const mouse_button_event_args& e)
-    {
-        if (e.button == input::mouse_button::left) {
-            m_is_clicked = true;
+            // if (m_is_hover) {
+            //     r->set_brush_solid_color(0x0094FFFF);
+
+            //    // Content bounds
+            //    r->set_brush_solid_color(0x0094FFFF);
+            //    rctx.renderer->renderer2d()->draw_aabb(content_bounds());
+            //}
+        }
+
+        for (auto& child : children()) {
+            child.draw(rctx);
         }
     }
 
-    void view::on_mouse_move(const mouse_move_event_args& e)
+    bool view::hit_test(math::vec2 pos) const noexcept
+    {
+        return m_is_visible && m_bounds.contains_point(pos);
+    }
+
+    void view::on_mouse_down(const mouse_button_event_args&)
     {
     }
 
-    void view::on_mouse_up(const mouse_button_event_args& e)
+    void view::on_mouse_move(const mouse_move_event_args&)
     {
-        if (e.button == input::mouse_button::left) {
-            m_is_clicked = false;
-        }
     }
 
-    void view::on_mouse_wheel(const mouse_wheel_event_args& e)
+    void view::on_mouse_up(const mouse_button_event_args&)
+    {
+    }
+
+    void view::on_mouse_wheel(const mouse_wheel_event_args&)
     {
     }
 
     void view::on_mouse_hover()
     {
-        m_is_hovered = true;
+        m_is_hover = true;
     }
 
     void view::on_mouse_leave()
     {
-        m_is_hovered = false;
-        m_is_clicked = false;
+        m_is_hover = false;
     }
 
     void view::on_key_down(const keyboard_key_event_args&)
@@ -177,24 +226,11 @@ namespace tavros::ui
     {
     }
 
-    void view::on_parent_resized(const size2 parent_size)
+    math::vec2 view::limit_content_size(math::vec2 size) const noexcept
     {
-    }
-
-    bool view::test_hit(point2 p) const noexcept
-    {
-        return content_rect().contains_point(p);
-    }
-
-    bool view::is_subtree_enabled() const
-    {
-        if (m_is_enabled) {
-            if (auto p = parent()) {
-                return p->is_subtree_enabled();
-            }
-            return true;
-        }
-        return false;
+        auto min_sz = math::max(m_padding.size(), m_min_size);
+        auto max_sz = math::max(min_sz, m_max_size);
+        return math::clamp(size, min_sz, max_sz);
     }
 
 } // namespace tavros::ui

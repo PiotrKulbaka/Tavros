@@ -15,6 +15,10 @@
 #include <tavros/renderer/text/text_builder.hpp>
 #include <tavros/renderer/text/text_layouter.hpp>
 
+#include <tavros/ui/root_view.hpp>
+#include <tavros/ui/linear_view.hpp>
+#include <tavros/ui/static/label.hpp>
+
 #include <tracy/Tracy.hpp>
 
 
@@ -33,75 +37,6 @@ static tavros::core::logger logger("main");
         }                            \
     } while (0)
 
-// -------------------------------------------------------------------------
-// Asset providers
-// -------------------------------------------------------------------------
-
-class tavros_engine_file_provider : public tavros::tef::source_provider
-{
-public:
-    explicit tavros_engine_file_provider(tavros::core::shared_ptr<tavros::assets::asset_manager> am)
-        : m_am(std::move(am))
-    {
-    }
-
-    tavros::core::string load(tavros::core::string_view path) override
-    {
-        return m_am->read_text(path);
-    }
-
-private:
-    tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
-};
-
-
-struct alignas(16) scene_data
-{
-    // Matrices
-    tavros::math::mat4 view;
-    tavros::math::mat4 projection;
-    tavros::math::mat4 view_projection;
-    tavros::math::mat4 inverse_view;
-    tavros::math::mat4 inverse_projection;
-    tavros::math::mat4 ortho_projection;
-
-    // Camera
-    tavros::math::vec3 camera_position;
-    float              _pad0 = 0.0f;
-    float              near_plane;
-
-    float far_plane;
-    float aspect_ratio;
-    float fov_y;
-    float _pad1 = 0.0f;
-
-    // Frame
-    tavros::math::vec2 frame_size;
-    tavros::math::vec2 frame_size_inv;
-
-    float    time = 0.0f;
-    float    delta_time = 0.0f;
-    uint32_t frame_index = 0;
-    float    _pad2 = 0.0f;
-};
-
-enum class brush_type : int32
-{
-    solid = 0,
-    linear_gradient = 1,
-    radial_gradient = 2,
-};
-
-static_assert(sizeof(scene_data) % 16 == 0, "scene_data must be 16-byte aligned");
-
-using tavros::math::vec2;
-using tavros::math::vec3;
-using tavros::math::vec4;
-
-// -------------------------------------------------------------------------
-// main_window
-// -------------------------------------------------------------------------
-
 class main_window : public app::render_app_base
 {
 public:
@@ -109,6 +44,23 @@ public:
         : app::render_app_base(name)
         , m_am(am)
     {
+        class tavros_engine_file_provider : public tavros::tef::source_provider
+        {
+        public:
+            explicit tavros_engine_file_provider(tavros::core::shared_ptr<tavros::assets::asset_manager> am)
+                : m_am(std::move(am))
+            {
+            }
+
+            tavros::core::string load(tavros::core::string_view path) override
+            {
+                return m_am->read_text(path);
+            }
+
+        private:
+            tavros::core::shared_ptr<tavros::assets::asset_manager> m_am;
+        };
+
         auto loader = tavros::tef::loader(std::move(tavros::core::make_unique<tavros_engine_file_provider>(am)));
         auto config = loader.load("config.tef");
         m_ws = std::move(config);
@@ -131,35 +83,9 @@ public:
     void shutdown() override
     {
         ZoneScopedNC("AppShutdown", 0x607D8B);
-        m_uniform_buffer.shutdown();
+        m_ui = nullptr;
         m_renderer->shutdown();
-    }
-
-    tavros::core::string_view smp_to_str(tavros::renderer::sampler_preset smp) noexcept
-    {
-        using sp = tavros::renderer::sampler_preset;
-        switch (smp) {
-        case sp::automatic:
-            return "automatic";
-        case sp::nearest_clamp:
-            return "nearest_clamp";
-        case sp::nearest_repeat:
-            return "nearest_repeat";
-        case sp::linear_clamp:
-            return "linear_clamp";
-        case sp::linear_repeat:
-            return "linear_repeat";
-        case sp::trilinear_clamp:
-            return "trilinear_clamp";
-        case sp::trilinear_repeat:
-            return "trilinear_repeat";
-        case sp::shadow:
-            return "shadow";
-        case sp::shadow_pcf:
-            return "shadow_pcf";
-        default:
-            return "<unknown>";
-        }
+        m_renderer = nullptr;
     }
 
     // ------------------------------------------------------------------
@@ -167,12 +93,6 @@ public:
     // ------------------------------------------------------------------
 
     float tm = 0.0f;
-
-    vec4 hex_color(uint32 hex) noexcept
-    {
-        auto c = tavros::math::rgba8(hex);
-        return {static_cast<float>(c.r) / 255.0f, static_cast<float>(c.g) / 255.0f, static_cast<float>(c.b) / 255.0f, static_cast<float>(c.a) / 255.0f};
-    }
 
     void render(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us) override
     {
@@ -182,107 +102,48 @@ public:
 
         process_input(events, time_us);
 
-        m_renderer->begin_frame();
+        m_ui->process_input(events);
 
-        auto* cbuf = m_renderer->get_graphics_device()->create_command_queue();
-        update_frame_data();
+        float delta_time_sec = static_cast<float>(time_us.count()) / 1'000'000.0f;
 
-        m_uniform_buffer.reset();
-        auto scene_data_slice = m_uniform_buffer.slice<scene_data>(1);
-        scene_data_slice.data().copy_from(&m_scene_data, 1);
+        m_renderer->set_camera(m_free_cam.camera());
+        auto frame = m_renderer->begin_frame(time_us.count());
 
-        cbuf->begin_rendering(m_offscreen_rt->gpu_framebuffer());
-        cbuf->bind_shader_buffers(rhi::buffer_binding{scene_data_slice.gpu_buffer(), static_cast<uint32>(scene_data_slice.offset_bytes()), static_cast<uint32>(scene_data_slice.size_bytes()), 0});
+
+        frame.commands().begin_rendering(m_offscreen_rt->gpu_framebuffer());
 
         auto smp = m_renderer->resource_manager()->sampler(static_cast<tavros::renderer::sampler_preset>(m_smp_index));
-        cbuf->bind_pipeline(m_skybox_pipeline->gpu_pipeline());
+        frame.commands().bind_pipeline(m_skybox_pipeline->gpu_pipeline());
         auto tex = m_sky_textures[m_sky_index];
-        cbuf->bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), smp, 0});
-        cbuf->draw(36);
+        frame.commands().bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), smp, 0});
+        frame.commands().draw(36);
 
-        draw_world_grid(*cbuf, 0);
-
-        set_brush_gradient(*cbuf, {600.0f, 400.0f}, {m_input_manager.mouse_pos().x, m_input_manager.mouse_pos().y}, {1.0f, 0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 1.0f, 0.1f});
+        draw_world_grid(frame.commands(), 0);
 
         auto* r = m_renderer->renderer2d();
-
-        r->set_line_thickness(3.0f);
-        r->set_brush_solid_color(0x00C6EEFF);
-        r->move_to({600.0f, 400.0f});
-        r->draw_line_to({700.0f, 400.0f});
-
-        r->set_brush_solid_color(0x00C606FF);
-        r->fill_circle({100, 100}, 50);
-        r->set_brush_solid_color(0xC40D8180);
-        r->fill_ring({300, 60}, 50, 40);
-        r->set_brush_solid_color(0xBF262695);
-        r->fill_ring_cut({400, 60}, 50, 60, {20, 20});
-
-
-        r->set_brush_radial_gradient({600, 50}, 0x3E4F3FFF, 25, 0x3E4F3F33);
-        r->fill_circle({600, 50}, 15);
-        r->set_brush_radial_gradient({600, 50}, 0xFFFFFF00, 25, 0xFFFFFF40);
-        r->fill_ring_cut({600, 50}, 15, 20, {0, 10});
-        r->set_brush_linear_gradient({600, 25}, 0x97D46BFF, {600, 75}, 0x5B9238FF);
-        r->fill_circle({600, 50}, 12);
-
-        r->fill_rect({800, 100}, {50, 20}, 20);
-
-        r->set_sprite_pivot({0.5f, 0.5f});
-        r->set_brush_solid_color(0xFFFFFFFF);
-        r->draw_sprite(m_ui_texture, {400.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {492.0f, 435.0f, 123.0f, 87.0f});
-        r->draw_sprite(m_ui_texture, {700.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {369.0f, 522.0f, 123.0f, 87.0f});
-        r->draw_sprite(m_ui_texture, {1000.0f, 400.0f}, {123.0f * 2, 87.0f * 2}, 0.0f, {615.0f, 175.0f, 123.0f, 87.0f});
-
-
-        m_text.clear();
-        m_text.set_text_align(tavros::renderer::text_align::left);
-        auto secs = static_cast<uint32>(tm);
-        auto s = secs / 5;
-        if (s % 2 == 0) {
-            m_text.append_text("Постоянно меняющийся текст!\nПривет Мир!");
-        } else {
-            m_text.append_text("Другой меняющийся текст!\nИ пару новых строк!\nЕще одна строка!");
-        }
-
-
-        const auto p = tavros::math::vec2(500, 500);
-
-        m_text.set_text_align(tavros::renderer::text_align::center);
-        auto l = m_text.layout();
-        r->set_brush_solid_color(0x33333355);
-        //  r->draw_aabb({l.min + p, l.max + p});
-
-        r->fill_rect(l.center() + p, l.size() / 2.0f, 3.0f);
-
-        r->set_brush_solid_color(0x33333388);
-        r->fill_rect_cut(l.center() + p, l.size() / 2.0f + 2.0f, {0.0f, 0.0f}, l.size() / 2.0f, 5.0f, 3.0f);
-
-        r->set_text_use_brush_mask(true, true);
-        r->set_brush_radial_gradient(m_input_manager.mouse_pos(), 0xFF0000FF, 100, 0xFFFFFFFF);
-        r->draw_text(m_text.text(), {500, 500}, 0.5, 0.1);
 
         r->set_line_thickness(3);
 
 
-        r->set_brush_solid_color(0xFFFFFFFF);
-        r->draw_line(p, p + tavros::math::vec2{-10, 0});
-        r->draw_line(p, p + tavros::math::vec2{10, 0});
-        r->draw_line(p, p + tavros::math::vec2{0, -10});
-        r->draw_line(p, p + tavros::math::vec2{0, 10});
-
         draw_world_axis({m_input_manager.window_size().width - 120.0f, 120.0f}, 90.0f);
 
+        tavros::core::long_string metrics;
+        metrics.fprint("Frame number: {}\n Hello world!", m_frame_number);
 
-        cbuf->end_rendering();
+        m_label.set_text(metrics);
 
-        cbuf->begin_rendering(m_renderer->gpu_backbuffer());
-        cbuf->bind_pipeline(m_fullscreen_quad_pipeline->gpu_pipeline());
-        cbuf->bind_shader_textures(rhi::texture_binding{m_offscreen_rt->color_attachments()[0], smp, 0});
-        cbuf->draw(4);
-        cbuf->end_rendering();
+        m_ui->layout({0.0f, 0.0f, static_cast<float>(m_input_manager.window_size().width), static_cast<float>(m_input_manager.window_size().height)});
+        m_ui->update(delta_time_sec);
+        m_ui->draw();
 
-        m_renderer->get_graphics_device()->submit_command_queue(cbuf);
+        frame.commands().end_rendering();
+
+        frame.commands().begin_rendering(m_renderer->gpu_backbuffer());
+        frame.commands().bind_pipeline(m_fullscreen_quad_pipeline->gpu_pipeline());
+        frame.commands().bind_shader_textures(rhi::texture_binding{m_offscreen_rt->color_attachments()[0], smp, 0});
+        frame.commands().draw(4);
+        frame.commands().end_rendering();
+
         m_renderer->end_frame();
         m_input_manager.end_frame();
 
@@ -300,7 +161,7 @@ private:
     {
         ZoneScopedNC("InitGraphics", 0x607D8B);
 
-        m_renderer = tavros::core::make_unique<tavros::renderer::render_system>(m_am, m_ws);
+        m_renderer = tavros::core::make_shared<tavros::renderer::render_system>(m_am, m_ws);
         TAV_FATAL_IF(!m_renderer, "Failed to create render system.");
 
         m_renderer->init(native_handle());
@@ -313,7 +174,6 @@ private:
         m_offscreen_rt = rm->load_render_target("rt.main_offscreen");
         TAV_FATAL_IF(!m_offscreen_rt, "Failed to create offscreen render target.");
 
-        m_uniform_buffer.init(m_renderer->get_graphics_device(), 256 * 1024 * 1024, rhi::buffer_usage::constant);
 
         m_sky_textures.push_back(rm->load_texture("tex.cloudy_sky"));
         m_sky_textures.push_back(rm->load_texture("tex.misty_morning"));
@@ -339,8 +199,71 @@ private:
         // m_font = rm->load_font("fnt.noto_sans_regular");
         m_font = rm->load_font("fnt.roboto_medium");
 
-        m_text.set_font(m_font);
-        m_text.set_font_size(64.0f);
+        m_ui = tavros::core::make_unique<tavros::ui::root_view>(m_renderer);
+        m_ui->set_root(&m_root_view);
+        m_root_view.set_padding({20.0f, 30.0f, 20.0f, 50.0f});
+        m_root_view.set_orientation(tavros::ui::linear_view::content_orientation::vertical);
+        m_horiz_view.set_orientation(tavros::ui::linear_view::content_orientation::horizontal);
+
+        m_root_view.insert_last_child(&m_view1);
+        m_root_view.insert_last_child(&m_view2);
+        m_root_view.insert_last_child(&m_horiz_view);
+        m_root_view.insert_last_child(&m_view3);
+        // m_root_view.insert_last_child(&m_view4);
+
+        m_view1.set_size({500, 200});
+        m_view1.set_margin({30, 60, 90, 120});
+        m_view1.set_padding({
+            40,
+            60,
+            80,
+            100,
+        });
+
+        m_view2.set_size({200, 150});
+        m_view2.set_margin({20, 10, 20, 10});
+        m_view2.set_padding({
+            20,
+            10,
+            30,
+            10,
+        });
+
+        m_view3.set_size({100, 300});
+        m_view3.set_margin({10, 10, 10, 10});
+        m_view3.set_padding({
+            50,
+            50,
+            50,
+            50,
+        });
+
+        // m_view4.set_size({150, 250});
+        // m_view4.set_margin({0, 10, 20, 0});
+        // m_view4.set_padding({100, 0, 100, 00,});
+
+
+        m_horiz_view.insert_last_child(&m_view5);
+        m_horiz_view.insert_last_child(&m_view6);
+        m_horiz_view.insert_last_child(&m_view7);
+
+        m_horiz_view.set_margin({10, 10, 10, 10});
+
+        m_view5.set_size({50, 50});
+        m_view5.set_padding({10, 10, 10, 10});
+
+        m_view6.set_size({100, 200});
+        m_view6.set_padding({20, 20, 20, 20});
+
+        m_view7.set_size({300, 400});
+        m_view7.set_margin({30, 30, 30, 30});
+
+        m_label.set_font(m_font);
+        m_label.set_font_size(48.0f);
+        m_root_view.add_child(&m_label);
+        m_label.set_margin(45.0f);
+        m_label.set_padding({15.0f, 15.0f, 15.0f, 15.0f});
+        m_label.set_max_size({10, 10});
     }
 
     // ==================================================================
@@ -374,7 +297,6 @@ private:
             if (m_smp_index >= static_cast<int32>(tavros::renderer::sampler_preset::count)) {
                 m_smp_index = 0;
             }
-            logger.info("Sampler selected: {}", smp_to_str(static_cast<tavros::renderer::sampler_preset>(m_smp_index)));
         }
     }
 
@@ -398,69 +320,6 @@ private:
         m_free_cam.set_perspective(fov_y, static_cast<float>(sz.width) / static_cast<float>(sz.height), near, far);
     }
 
-    void update_frame_data()
-    {
-        const float w = static_cast<float>(m_input_manager.window_size().width);
-        const float h = static_cast<float>(m_input_manager.window_size().height);
-
-        const auto& cam = m_free_cam.camera();
-        m_scene_data.view = cam.view_matrix();
-        m_scene_data.projection = cam.projection_matrix();
-        m_scene_data.view_projection = cam.view_projection_matrix();
-        m_scene_data.inverse_view = tavros::math::inverse(cam.view_matrix());
-        m_scene_data.inverse_projection = tavros::math::inverse(cam.projection_matrix());
-        m_scene_data.ortho_projection = tavros::math::mat4::ortho(0.0f, w, h, 0.0f, 1.0f, -1.0f);
-        m_scene_data.camera_position = cam.position();
-        m_scene_data.near_plane = cam.perspective_params().z_near;
-        m_scene_data.far_plane = cam.perspective_params().z_far;
-        m_scene_data.aspect_ratio = cam.perspective_params().aspect;
-        m_scene_data.fov_y = cam.perspective_params().fov_y;
-        m_scene_data._pad0 = 0.0f;
-        m_scene_data.frame_size = {w, h};
-        m_scene_data.time = 0.0f;
-        m_scene_data.delta_time = 0.0f;
-        m_scene_data.frame_index = static_cast<uint32>(m_frame_number);
-        m_scene_data._pad1 = 0.0f;
-    }
-
-    void set_brush_gradient(rhi::command_queue& cmd, vec2 p0, vec2 p1, vec4 color0, vec4 color1)
-    {
-        set_brush(cmd, brush_type::linear_gradient, p0, p1, color0, color1);
-    }
-
-    void set_brush_radial_gradient(rhi::command_queue& cmd, vec2 center, vec2 target, vec4 color_center, vec4 color_target)
-    {
-        set_brush(cmd, brush_type::radial_gradient, center, target, color_center, color_target);
-    }
-
-    void set_brush_solid(rhi::command_queue& cmd, vec4 color)
-    {
-        set_brush(cmd, brush_type::solid, {0.0f, 0.0f}, {0.0f, 0.0f}, color, color);
-    }
-
-    void set_brush(rhi::command_queue& cmd, brush_type type, vec2 p0, vec2 p1, vec4 color0, vec4 color1)
-    {
-        struct brush_data
-        {
-            vec2  pos0;
-            vec2  pos1;
-            vec4  color0;
-            vec4  color1;
-            int32 type;
-        };
-
-        const auto bd = brush_data{p0, p1, color0, color1, static_cast<int32>(type)};
-        auto       slice = m_uniform_buffer.slice<brush_data>(1);
-        slice.data().copy_from(&bd, 1);
-        cmd.bind_shader_buffers(rhi::buffer_binding{slice.gpu_buffer(), static_cast<uint32>(slice.offset_bytes()), static_cast<uint32>(slice.size_bytes()), 1});
-    }
-
-    void bind_texture(rhi::command_queue& cmd, tavros::renderer::texture_ref tex, uint32 binding_point, tavros::renderer::sampler_preset smp)
-    {
-        auto sampler = m_renderer->resource_manager()->sampler(smp);
-        cmd.bind_shader_textures(rhi::texture_binding{tex->gpu_texture(), sampler, binding_point});
-    }
-
     void draw_world_axis(const tavros::math::vec2& pos, float radius)
     {
         using namespace tavros;
@@ -482,15 +341,30 @@ private:
             return (view3 * world_dir).z;
         };
 
+        // depth в диапазоне [-1..1] -> alpha [0.2..1.0]
+        auto depth_to_alpha = [](float depth) -> uint8 {
+            if (depth > -0.2) {
+                return 255;
+            }
+            float t = (depth + 1.2f);  // [-1..-0.2] -> [0..1]
+            t = std::clamp(t, 0.0f, 1.0f);
+            float a = 0.1f + t * 0.9f; // [0.2..1.0]
+            return static_cast<uint8>(t * 255.0f);
+        };
+
+        auto with_alpha = [](math::rgba8 color, uint8 alpha) -> math::rgba8 {
+            return {color.r, color.g, color.b, alpha};
+        };
+
         constexpr auto x_color = math::rgba8(0xA73A53FF);
         constexpr auto y_color = math::rgba8(0x6BB023FF);
         constexpr auto z_color = math::rgba8(0x3A83BEFF);
 
         struct axis_info
         {
-            math::vec2  dir;   // projected 2d direction
+            math::vec2  dir;
             math::rgba8 color;
-            float       depth; // camera-space Z (больше = дальше)
+            float       depth;
             char        pos_label[3];
             char        neg_label[3];
             float       pos_font_size;
@@ -503,7 +377,6 @@ private:
             {project_axis({0, 0, 1}), z_color, depth_of({0, 0, 1}), "Z", "-Z", 36.0f, 22.0f},
         };
 
-        // Сортируем: сначала рисуем оси с большей глубиной (дальше от камеры)
         int order[3] = {0, 1, 2};
         std::sort(std::begin(order), std::end(order), [&](int a, int b) {
             return axes[a].depth > axes[b].depth;
@@ -511,51 +384,62 @@ private:
 
         auto* r = m_renderer->renderer2d();
 
-        // Фон
-        r->set_brush_solid_color(0xF0F0F040);
+        r->set_brush_solid_color(0x00000008);
         r->fill_circle(pos, radius);
-        r->set_brush_solid_color(0xB0B0B070);
+        r->set_brush_solid_color(0x00000010);
         r->fill_ring(pos, radius, radius - line_width);
 
         r->set_line_thickness(line_width);
 
-        // Рисуем в порядке от дальнего к ближнему
-        // Для каждой оси: сначала негативный конец (он дальше если depth > 0), потом позитивный
         tavros::renderer::rich_text text;
         text.set_font(m_font);
         r->set_text_use_brush_mask(false, false);
 
         auto draw_axis_neg = [&](const axis_info& ax) {
-            r->set_brush_solid_color(ax.color);
+            // Негативный конец — глубина противоположна
+            uint8 alpha = depth_to_alpha(-ax.depth);
+            auto  col = with_alpha(ax.color, alpha);
+
+            // Линия: градиент от центра (полный цвет) до конца (с альфой)
+            /*r->set_brush_solid_color(col);
             r->set_line_dash(dash_size, gap_size);
             r->draw_line(pos, pos - ax.dir);
-            r->set_line_dash(0.0f, 0.0f);
+            r->set_line_dash(0.0f, 0.0f);*/
+
+            // Круг и текст — solid с той же альфой
+            r->set_brush_solid_color(col);
             r->fill_circle(pos - ax.dir, n_side_circle);
 
             text.clear();
             text.set_font_size(ax.neg_font_size);
             text.append_text(ax.neg_label);
             auto l = text.layout();
+            r->set_brush_solid_color(col);
             r->draw_text(text.text(), pos - ax.dir - l.center(), 0.5f, 0.0f);
         };
 
         auto draw_axis_pos = [&](const axis_info& ax) {
-            r->set_brush_solid_color(ax.color);
+            uint8 alpha = depth_to_alpha(ax.depth);
+            auto  col = with_alpha(ax.color, alpha);
+
+            // Линия: градиент от центра (полный цвет) до конца (с альфой)
+            r->set_brush_solid_color(col);
             r->set_line_dash(0.0f, 0.0f);
             r->draw_line(pos, pos + ax.dir);
+
+            // Круг и текст — solid с той же альфой
+            r->set_brush_solid_color(col);
             r->fill_circle(pos + ax.dir, p_side_circle);
 
             text.clear();
             text.set_font_size(ax.pos_font_size);
             text.append_text(ax.pos_label);
             auto l = text.layout();
+            r->set_brush_solid_color(col);
             r->draw_text(text.text(), pos + ax.dir - l.center(), 0.5f, 0.15f);
         };
 
-        // Painter's algorithm:
-        // Сначала все негативные концы дальних осей, потом позитивные ближних
         for (int i : order) {
-            // depth > 0 означает что позитивный конец дальше — рисуем neg последним
             if (axes[i].depth > 0.0f) {
                 draw_axis_neg(axes[i]);
             } else {
@@ -563,7 +447,6 @@ private:
             }
         }
 
-        // Теперь в обратном порядке — ближние концы поверх
         for (int i = 2; i >= 0; --i) {
             if (axes[order[i]].depth > 0.0f) {
                 draw_axis_pos(axes[order[i]]);
@@ -634,13 +517,10 @@ private:
 
     tavros::core::shared_ptr<tavros::tef::workspace>          m_ws;
     tavros::core::shared_ptr<tavros::assets::asset_manager>   m_am;
-    tavros::core::unique_ptr<tavros::renderer::render_system> m_renderer;
+    tavros::core::shared_ptr<tavros::renderer::render_system> m_renderer;
 
     // -- Scene --
     tavros::sandbox::free_camera m_free_cam;
-    scene_data                   m_scene_data;
-
-    tavros::renderer::gpu_stream_buffer m_uniform_buffer;
 
     tavros::renderer::render_target_ref                 m_offscreen_rt;
     tavros::core::vector<tavros::renderer::texture_ref> m_sky_textures;
@@ -655,13 +535,19 @@ private:
 
     tavros::renderer::font_ref m_font;
 
-    tavros::renderer::rich_text m_text;
-
     // -- Input --
     tavros::input::input_manager m_input_manager;
 
     //
     uint64 m_frame_number = 0;
+
+    tavros::core::unique_ptr<tavros::ui::root_view> m_ui;
+
+    tavros::ui::linear_view m_root_view;
+    tavros::ui::linear_view m_vert_view;
+    tavros::ui::linear_view m_horiz_view;
+    tavros::ui::view        m_view1, m_view2, m_view3, m_view4, m_view5, m_view6, m_view7, m_view8, m_view9;
+    tavros::ui::label_view  m_label;
 };
 
 // -------------------------------------------------------------------------
