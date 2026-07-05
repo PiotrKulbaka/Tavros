@@ -804,7 +804,7 @@ tavros::math::ipoint2 tavros::system::create_point2(LPARAM lParam)
     return tavros::math::ipoint2(x, y);
 }
 
-tavros::math::point2 create_fpoint2(LPARAM lParam)
+tavros::math::point2 tavros::system::create_fpoint2(LPARAM lParam)
 {
     float x = static_cast<float>(GET_X_LPARAM(lParam));
     float y = static_cast<float>(GET_Y_LPARAM(lParam));

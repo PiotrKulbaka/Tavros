@@ -28,7 +28,7 @@ namespace tavros::assets
 
     private:
         filesystem::fixed_path m_base;
-        core::fixed_string<32> m_scheme;
+        core::short_string     m_scheme;
         bool                   m_can_read;
         bool                   m_can_write;
     };

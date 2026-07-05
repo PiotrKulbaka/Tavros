@@ -182,6 +182,18 @@ namespace tavros::system
         virtual void on_resize(size_event_args& e);
 
         /**
+         * @brief Called when the mouse is entered.
+         * @param e Enter event arguments.
+         */
+        virtual void on_mouse_enter(mouse_enter_event_args& e);
+        
+        /**
+         * @brief Called when the mouse is leaved.
+         * @param e Leave event arguments.
+         */
+        virtual void on_mouse_leave(mouse_leave_event_args& e);
+
+        /**
          * @brief Called when a mouse button is pressed.
          * @param e Mouse event arguments.
          */

@@ -226,11 +226,26 @@ namespace tavros::core
          * @param offset Destination offset in elements.
          * @return Number of elements copied.
          */
-        size_type copy_from(const value_type* src, size_type count, size_type offset = 0)
+        size_type copy_from(const value_type* src, size_type count, size_type buffer_offset = 0)
         {
             TAV_ASSERT(src);
-            TAV_ASSERT(offset + count <= m_capacity);
-            std::memcpy(m_data.get() + offset, src, count * sizeof(value_type));
+            TAV_ASSERT(buffer_offset + count <= m_capacity);
+            std::memcpy(m_data.get() + buffer_offset, src, count * sizeof(value_type));
+            return count;
+        }
+
+        /**
+         * @brief Copies `count` elements from the buffer at `offset` into `dst`.
+         * @param dst           Destination data pointer.
+         * @param count         Number of elements to copy.
+         * @param buffer_offset Source offset in elements.
+         * @return Number of elements copied.
+         */
+        size_type copy_to(value_type* dst, size_type count, size_type buffer_offset = 0) const
+        {
+            TAV_ASSERT(dst);
+            TAV_ASSERT(buffer_offset + count <= m_capacity);
+            std::memcpy(dst, m_data.get() + buffer_offset, count * sizeof(value_type));
             return count;
         }
 

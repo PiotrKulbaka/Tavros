@@ -68,6 +68,23 @@ namespace app
         m_event_queue.push_event(a);
     }
 
+    void render_app_base::on_mouse_enter(tavros::system::mouse_enter_event_args& e)
+    {
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::mouse_enter;
+        a.time_us = e.event_time_us;
+        a.vec = e.pos;
+        m_event_queue.push_event(a);
+    }
+
+    void render_app_base::on_mouse_leave(tavros::system::mouse_leave_event_args& e)
+    {
+        tavros::input::event_args a;
+        a.type = tavros::input::event_type::mouse_leave;
+        a.time_us = e.event_time_us;
+        m_event_queue.push_event(a);
+    }
+
     void render_app_base::on_mouse_down(tavros::system::mouse_event_args& e)
     {
         tavros::input::event_args a;

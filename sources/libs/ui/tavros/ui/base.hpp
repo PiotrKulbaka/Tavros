@@ -4,6 +4,7 @@
 #include <tavros/core/geometry.hpp>
 #include <tavros/core/string_view.hpp>
 #include <tavros/core/string.hpp>
+#include <tavros/core/fixed_string.hpp>
 #include <tavros/renderer/render_system.hpp>
 
 #include <tavros/input/event_args.hpp>
@@ -11,10 +12,37 @@
 namespace tavros::ui
 {
 
-    struct render_context
+    using thickness4 = geometry::thickness4;
+    using radius4 = geometry::radius4;
+    using aabb2 = geometry::aabb2;
+    using view_name = core::short_string;
+
+    constexpr auto k_max_ui_size = std::numeric_limits<float>::max();
+
+    enum class content_orient : uint8
     {
-        renderer::render_system* renderer = nullptr;
-        bool                     debug_draw = false;
+        horizontal,
+        vertical,
+    };
+    
+    enum class content_mode : uint8
+    {
+        fit,
+        fill,
+    };
+
+    enum class h_align : uint8
+    {
+        left,
+        center,
+        right,
+    };
+
+    enum class v_align : uint8
+    {
+        top,
+        center,
+        bottom,
     };
 
     using mouse_button = input::mouse_button;

@@ -63,7 +63,10 @@ namespace tavros::renderer
 
         rhi::texture_handle fonts_texture() const noexcept;
 
+        font_ref load_font_from_file(core::string_view name, core::string_view path);
         font_ref load_font(core::string_view name);
+        font_ref find_font(core::string_view name) noexcept;
+        font_ref default_font() const noexcept;
 
         void release_font(font_ref fnt);
 
@@ -91,10 +94,17 @@ namespace tavros::renderer
         rhi::sampler_handle sampler(sampler_preset preset) const noexcept;
 
     private:
+        void update_font_atlas();
+
+    private:
         using attribs_vec_t = core::fixed_vector<material::vertex_attribute, rhi::k_max_vertex_attributes>;
         using sampler_presets_vec_t = core::fixed_vector<rhi::sampler_handle, static_cast<size_t>(sampler_preset::count)>;
 
         float m_anisotropy = 8.0f; // for samplers
+
+        bool m_is_init = false;
+
+        font_ref m_default_font;
 
         rhi::graphics_device*                   m_gdevice = nullptr;
         core::shared_ptr<assets::asset_manager> m_am;

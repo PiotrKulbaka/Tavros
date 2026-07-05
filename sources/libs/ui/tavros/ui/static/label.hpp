@@ -8,55 +8,41 @@ namespace tavros::ui
     class label_view : public view
     {
     public:
-        label_view();
+        label_view(core::string_view name);
         ~label_view() noexcept override;
-
-        math::vec2 measure(math::vec2 avail) const noexcept override;
-
-        // void arrange(geometry::aabb2 bounds) noexcept override;
-
-        // math::vec2 view::measure(math::vec2 avail) const noexcept
-        //{
-        //     auto inner_avail = math::max(avail - m_margin.size(), math::vec2{0.0f, 0.0f});
-        //     auto desired = math::min(inner_avail, math::clamp(m_size, m_min_size, m_max_size));
-        //     return desired + m_margin.size();
-        // }
-
-        // void view::arrange(geometry::aabb2 bounds) noexcept
-        //{
-        //     auto inner = geometry::aabb2{
-        //         bounds.left + m_margin.left,
-        //         bounds.top + m_margin.top,
-        //         bounds.right - m_margin.right,
-        //         bounds.bottom - m_margin.bottom,
-        //     };
-
-        //    auto size = math::clamp(inner.size(), m_min_size, m_max_size);
-
-        //    m_bounds = {
-        //        inner.left,
-        //        inner.top,
-        //        inner.left + size.width,
-        //        inner.top + size.height
-        //    };
-        //}
 
         void set_text(std::string_view str);
 
-        void set_font(renderer::font_ref font) noexcept;
+        void set_font(std::string_view font_family) noexcept;
 
         void set_font_size(float size) noexcept;
+
+        void set_text_color(math::rgba8 color) noexcept;
+
+        void set_outline_color(math::rgba8 color) noexcept;
+
+        void set_word_wrap_enabled(bool enabled) noexcept;
+
+        bool is_word_wrap_enabled() const noexcept;
+
+        void resolve(ui_context& ctx) override;
+
+        math::vec2 measure(math::vec2 available_border_box_size) noexcept override;
 
         core::string_view text() const noexcept;
 
         void update(float dt) override;
-        void draw(const render_context& rctx) override;
+
+        void draw(ui_context& ctx) override;
 
     private:
-        core::string                m_str;
-        mutable renderer::rich_text m_text;
-        bool                        m_dirty;
-        float                       m_font_size;
+        core::short_string  m_font_family;
+        bool                m_dirty_font;
+        bool                m_dirty_text;
+        bool                m_is_word_wrap_enabled;
+        core::string        m_str;
+        geometry::aabb2     m_text_layout;
+        renderer::rich_text m_text;
     };
 
 

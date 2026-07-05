@@ -9,6 +9,10 @@ set(TAV_UI_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/linear_view.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/root_view.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/root_view.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/ui_context.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/ui_context.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/ui_system.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/ui_system.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/view.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/ui/view.hpp
 

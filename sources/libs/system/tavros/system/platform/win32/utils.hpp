@@ -16,6 +16,7 @@ namespace tavros::system
     keyboard_key     map_key(UINT vk);
     const char*      last_win_error_str(); // do not store a pointer to the str
     math::ipoint2    create_point2(LPARAM lParam);
+    math::point2     create_fpoint2(LPARAM lParam);
     math::isize2     create_size2(LPARAM lParam);
     mouse_event_args create_mouse_event_args(LPARAM lParam, mouse_button btn, bool double_click = false, int32 delta = 0);
     mouse_button     create_mouse_x_button(WPARAM wParam);

@@ -15,6 +15,8 @@ namespace tavros::input
     enum class event_type : uint8
     {
         none,             /// No event (default value)
+        mouse_enter,      /// Mouse enteret to client area
+        mouse_leave,      /// Mouse leaved from client area
         mouse_down,       /// Mouse button pressed
         mouse_move,       /// Mouse moved (absolute position)
         mouse_move_delta, /// Mouse moved (relative delta, raw mouse input)

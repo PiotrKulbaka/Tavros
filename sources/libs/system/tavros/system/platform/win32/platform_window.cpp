@@ -126,6 +126,7 @@ namespace tavros::system::win32
 
     platform_window::platform_window(tavros::core::string_view name)
         : m_hWnd(nullptr)
+        , m_mouse_entered(false)
     {
         increase_windows_count();
         register_main_windowclass();
@@ -307,6 +308,9 @@ namespace tavros::system::win32
         mouse_event_args margs;
         key_event_args   kargs;
 
+        mouse_leave_event_args mleave;
+        mouse_enter_event_args menter;
+
         ((void) hWnd);
 
         switch (uMsg) {
@@ -429,9 +433,27 @@ namespace tavros::system::win32
             return 0;
 
         case WM_MOUSEMOVE:
+            if (!m_mouse_entered) {
+                TRACKMOUSEEVENT tme{.cbSize = sizeof(tme), .dwFlags = TME_LEAVE | TME_HOVER, .hwndTrack = m_hWnd, .dwHoverTime = HOVER_DEFAULT};
+                TrackMouseEvent(&tme);
+                m_mouse_entered = true;
+
+                if (auto* c = m_cb_listener) {
+                    menter = {.event_time_us = get_event_time_us(), .pos = create_fpoint2(lParam)};
+                    c->on_mouse_enter(menter);
+                }
+            }
             margs = create_mouse_event_args(lParam, mouse_button::none);
             if (auto* c = m_cb_listener) {
                 c->on_mouse_move(margs);
+            }
+            return 0;
+
+        case WM_MOUSELEAVE:
+            mleave = {.event_time_us = get_event_time_us()};
+            m_mouse_entered = false;
+            if (auto* c = m_cb_listener) {
+                c->on_mouse_leave(mleave);
             }
             return 0;
 

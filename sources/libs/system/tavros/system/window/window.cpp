@@ -191,6 +191,14 @@ namespace tavros::system
     {
     }
 
+    void window::on_mouse_enter(mouse_enter_event_args&)
+    {
+    }
+
+    void window::on_mouse_leave(mouse_leave_event_args&)
+    {
+    }
+
     void window::on_mouse_down(mouse_event_args&)
     {
     }

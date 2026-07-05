@@ -37,6 +37,11 @@ namespace tavros::core
             return status() == resource_status::ready;
         }
 
+        bool is_failed() const noexcept
+        {
+            return status() == resource_status::failed;
+        }
+
         string_view name() const noexcept
         {
             if (m_entry) {

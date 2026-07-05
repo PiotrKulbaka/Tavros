@@ -40,6 +40,7 @@ namespace tavros::system::win32
     protected:
         HWND    m_hWnd;
         window* m_cb_listener;
+        bool    m_mouse_entered;
     };
 
 } // namespace tavros::system::win32

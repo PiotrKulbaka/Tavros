@@ -5,13 +5,11 @@ namespace tavros::renderer
 
     rich_text::rich_text(font_ref initial_font, float initial_font_size) noexcept
         : m_dirty(true)
-        , m_dirty_from(0)
-        , m_dirty_size(0)
         , m_cur_font(initial_font)
         , m_cur_font_size(initial_font_size)
         , m_cur_fill_color(math::rgba8(255, 255, 255, 255))
         , m_cur_outline_color(math::rgba8(0, 0, 0, 255))
-        , m_line_wrap_width(0.0f)
+        , m_line_wrap_width(-1.0f)
         , m_text_align(text_align::left)
         , m_line_spacing(1.0f)
     {
@@ -39,37 +37,43 @@ namespace tavros::renderer
 
     void rich_text::set_line_spacing(float spacing) noexcept
     {
-        m_line_spacing = spacing;
-        m_dirty = true;
+        if (m_line_spacing != spacing) {
+            m_line_spacing = spacing;
+            m_dirty = true;
+        }
     }
 
     void rich_text::set_line_wrap_width(float width) noexcept
     {
-        m_line_wrap_width = width;
-        m_dirty = true;
+        if (width != m_line_wrap_width) {
+            m_line_wrap_width = width;
+            m_dirty = true;
+        }
     }
 
     void rich_text::set_text_align(text_align align) noexcept
     {
-        m_text_align = align;
-        m_dirty = true;
+        if (align != m_text_align) {
+            m_text_align = align;
+            m_dirty = true;
+        }
     }
 
     void rich_text::append_text(core::string_view str)
     {
-        m_dirty_size += text_builder::append_text(m_text, str, *m_cur_font, m_cur_font_size);
-        m_text.view<glyph_style_c>().each([&](glyph_style_c& s) {
-            s.fill_color = m_cur_fill_color;
-            s.outline_color = m_cur_outline_color;
-        });
-        m_dirty = true;
+        if (!str.empty()) {
+            text_builder::append_text(m_text, str, *m_cur_font, m_cur_font_size);
+            m_text.view<glyph_style_c>().each([&](glyph_style_c& s) {
+                s.fill_color = m_cur_fill_color;
+                s.outline_color = m_cur_outline_color;
+            });
+            m_dirty = true;
+        }
     }
 
     void rich_text::clear() noexcept
     {
         m_text.clear();
-        m_dirty_from = 0;
-        m_dirty_size = 0;
         m_dirty = true;
     }
 
@@ -80,11 +84,7 @@ namespace tavros::renderer
 
     geometry::aabb2 rich_text::layout() noexcept
     {
-        if (m_dirty_size != 0) {
-            text_builder::resolve_metrics(m_text, m_dirty_from, m_dirty_size);
-            m_dirty_size = 0;
-            m_dirty_from = m_text.size();
-        }
+        text_builder::resolve_metrics(m_text, 0, m_text.size());
         if (m_dirty) {
             m_aabb = text_layouter::layout(m_text, m_line_wrap_width, m_text_align, m_line_spacing);
             m_dirty = false;

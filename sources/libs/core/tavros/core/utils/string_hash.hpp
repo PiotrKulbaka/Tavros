@@ -2,6 +2,7 @@
 
 #include <tavros/core/string.hpp>
 #include <tavros/core/string_view.hpp>
+#include <tavros/core/fixed_string.hpp>
 
 namespace tavros::core
 {
@@ -14,24 +15,27 @@ namespace tavros::core
     {
         using is_transparent = void;
 
-        bool operator()(const string& a, const string& b) const noexcept
+        template<typename A, typename B>
+        bool operator()(const A& a, const B& b) const noexcept
         {
-            return a < b;
+            return to_view(a) < to_view(b);
         }
 
-        bool operator()(const string& a, string_view b) const noexcept
+    private:
+        static string_view to_view(string_view s) noexcept
         {
-            return a < b;
+            return s;
         }
 
-        bool operator()(string_view a, const string& b) const noexcept
+        static string_view to_view(const string& s) noexcept
         {
-            return a < b;
+            return string_view(s);
         }
 
-        bool operator()(string_view a, string_view b) const noexcept
+        template<size_t N>
+        static string_view to_view(const fixed_string<N>& s) noexcept
         {
-            return a < b;
+            return string_view(s);
         }
     };
 

@@ -4,6 +4,7 @@
 #include <tavros/core/exception.hpp>
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/unreachable.hpp>
+#include <tavros/assets/providers/builtin_provider.hpp>
 
 namespace
 {
@@ -28,7 +29,10 @@ namespace
 namespace tavros::assets
 {
 
-    asset_manager::asset_manager() = default;
+    asset_manager::asset_manager()
+    {
+        mount<builtin_provider>();
+    }
 
     asset_manager::~asset_manager() noexcept = default;
 

@@ -147,6 +147,8 @@ namespace
         tavros::renderer::font_atlas* m_atlas;
     };
 
+    constexpr tavros::core::string_view k_default_font_name = "$builtin_default_font";
+
 } // namespace
 
 namespace tavros::renderer
@@ -191,22 +193,14 @@ namespace tavros::renderer
 
     void resource_manager::begin_frame() noexcept
     {
-        m_fnt_reg.sync();
+        if (!m_is_init) {
+            m_default_font = load_font_from_file(k_default_font_name, "builtin://fonts/Consola-Mono.ttf");
+            m_is_init = true;
+        }
+
         m_tex_reg.sync();
         m_mt_reg.sync();
         m_rt_reg.sync();
-
-        if (m_fnt_atlas.need_to_recreate_atlas()) {
-            auto atlas = m_fnt_atlas.invalidate_old_and_bake_new_atlas(96.0f, 8.0f);
-
-            auto tex = m_gdevice->create_texture(rhi::texture_create_info{.type = rhi::texture_type::texture_2d, .format = rhi::pixel_format::r8un, .width = atlas.width(), .height = atlas.height(), .usage = rhi::k_default_texture_usage});
-            texture_uploader::upload_2d(tex, atlas, {}, 0, m_upctx);
-
-            if (m_fonts_texture) {
-                m_gdevice->destroy_texture(m_fonts_texture);
-            }
-            m_fonts_texture = tex;
-        }
 
         m_upctx.flush();
     }
@@ -227,6 +221,46 @@ namespace tavros::renderer
         return m_fonts_texture;
     }
 
+    font_ref resource_manager::load_font_from_file(core::string_view name, core::string_view path)
+    {
+        if (!m_fnt_placeholder) {
+            m_fnt_placeholder = core::make_unique<font_placeholder>(&m_fnt_atlas);
+            m_fnt_reg.set_placeholder(m_fnt_placeholder.get());
+        }
+
+        auto slot = m_fnt_reg.make_slot(name);
+
+        if (slot.second) {
+            core::dynamic_buffer<uint8> font_data;
+            try {
+                font_data = m_am->read_binary(path);
+            } catch (const core::file_error& e) {
+                logger.error("Failed to open font '{}'", path);
+                m_fnt_reg.publish_failed(slot.first);
+                update_font_atlas();
+                return slot.first;
+            }
+
+            font_desc::codepoint_range range[] = {
+                {0x0, 0x7f},
+                {0xab, 0xbb},
+                {0x401, 0x401},
+                {0x410, 0x44F},
+                {0x451, 0x451},
+                {0x2012, 0x2014},
+                {0x2022, 0x2026},
+                {0x2022, 0x2026},
+                {0xfffd, 0xfffd},
+            };
+
+            auto fnt = core::make_unique<truetype_font>(&m_fnt_atlas, std::move(font_data), range);
+            m_fnt_reg.publish(slot.first, std::move(fnt));
+            update_font_atlas();
+        }
+
+        return slot.first;
+    }
+
     font_ref resource_manager::load_font(core::string_view name)
     {
         if (!m_fnt_placeholder) {
@@ -244,7 +278,7 @@ namespace tavros::renderer
                 logger.error("Failed to load named font '{}'", name);
                 logger.flush(ds);
                 m_fnt_reg.publish_failed(slot.first);
-                m_fnt_reg.sync();
+                update_font_atlas();
                 return slot.first;
             }
 
@@ -258,20 +292,42 @@ namespace tavros::renderer
             } catch (const core::file_error& e) {
                 logger.error("Failed to open font '{}'", desc.path());
                 m_fnt_reg.publish_failed(slot.first);
-                m_fnt_reg.sync();
+                update_font_atlas();
                 return slot.first;
             }
 
             auto fnt = core::make_unique<truetype_font>(&m_fnt_atlas, std::move(font_data), desc.codepoint_ranges());
             m_fnt_reg.publish(slot.first, std::move(fnt));
-            m_fnt_reg.sync();
+            update_font_atlas();
         }
 
         return slot.first;
     }
 
+    font_ref resource_manager::find_font(core::string_view name) noexcept
+    {
+        if (name == k_default_font_name) {
+            return m_default_font;
+        }
+
+        auto fnt = m_fnt_reg.find(name);
+        if (fnt) {
+            m_fnt_reg.acquire(fnt);
+        }
+        return fnt;
+    }
+
+    font_ref resource_manager::default_font() const noexcept
+    {
+        return m_default_font;
+    }
+
     void resource_manager::release_font(font_ref fnt)
     {
+        if (fnt.get() == m_default_font.get()) {
+            return;
+        }
+
         m_fnt_reg.release(fnt);
     }
 
@@ -423,6 +479,22 @@ namespace tavros::renderer
     rhi::sampler_handle resource_manager::sampler(sampler_preset preset) const noexcept
     {
         return m_samplers[static_cast<uint32>(preset)];
+    }
+
+    void resource_manager::update_font_atlas()
+    {
+        m_fnt_reg.sync();
+        if (m_fnt_atlas.need_to_recreate_atlas()) {
+            auto atlas = m_fnt_atlas.invalidate_old_and_bake_new_atlas(56.0f, 8.0f);
+
+            auto tex = m_gdevice->create_texture(rhi::texture_create_info{.type = rhi::texture_type::texture_2d, .format = rhi::pixel_format::r8un, .width = atlas.width(), .height = atlas.height(), .usage = rhi::k_default_texture_usage});
+            texture_uploader::upload_2d(tex, atlas, {}, 0, m_upctx);
+
+            if (m_fonts_texture) {
+                m_gdevice->destroy_texture(m_fonts_texture);
+            }
+            m_fonts_texture = tex;
+        }
     }
 
 } // namespace tavros::renderer

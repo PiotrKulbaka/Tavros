@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/math.hpp>
+#include <tavros/core/geometry/thickness4.hpp>
 #include <limits>
 
 namespace tavros::geometry
@@ -97,6 +98,14 @@ namespace tavros::geometry
         }
 
         /**
+         * @brief Returns true if the rect has no area.
+         */
+        [[nodiscard]] bool is_empty() const noexcept
+        {
+            return left >= right || top >= bottom;
+        }
+
+        /**
          * @brief Expands the AABB to include a point.
          * @param point Point to include.
          */
@@ -104,6 +113,54 @@ namespace tavros::geometry
         {
             min = tavros::math::min(min, point);
             max = tavros::math::max(max, point);
+        }
+
+        /**
+         * @brief Expands the AABB with indent.
+         */
+        void expand(const thickness4& indent) noexcept
+        {
+            left -= indent.left;
+            top -= indent.top;
+            right += indent.right;
+            bottom += indent.bottom;
+        }
+
+        /**
+         * @brief Return expanded AABB with indent.
+         */
+        [[nodiscard]] aabb2 expanded(const thickness4& indent) const noexcept
+        {
+            return {
+                left - indent.left,
+                top - indent.top,
+                right + indent.right,
+                bottom + indent.bottom
+            };
+        }
+
+        /**
+         * @brief Shrinks the AABB with indent.
+         */
+        void shrink(const thickness4& indent) noexcept
+        {
+            left += indent.left;
+            top += indent.top;
+            right -= indent.right;
+            bottom -= indent.bottom;
+        }
+
+        /**
+         * @brief Returns shrinked AABB with indent.
+         */
+        [[nodiscard]] aabb2 shrinked(const thickness4& indent) const noexcept
+        {
+            return {
+                left + indent.left,
+                top + indent.top,
+                right - indent.right,
+                bottom - indent.bottom
+            };
         }
 
         /**

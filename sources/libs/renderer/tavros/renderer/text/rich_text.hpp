@@ -54,7 +54,7 @@ namespace tavros::renderer
         /** @brief Sets the line spacing multiplier. */
         void set_line_spacing(float spacing) noexcept;
 
-        /** @brief Sets the maximum line width used for word wrapping. */
+        /** @brief Sets the maximum line width used for word wrapping. (-1.0 - disable wrapping) */
         void set_line_wrap_width(float width) noexcept;
 
         /** @brief Sets the horizontal text alignment. */
@@ -87,8 +87,6 @@ namespace tavros::renderer
     private:
         text_archetype  m_text;
         bool            m_dirty;
-        size_t          m_dirty_from;
-        size_t          m_dirty_size;
         font_ref        m_cur_font;
         float           m_cur_font_size;
         math::rgba8     m_cur_fill_color;

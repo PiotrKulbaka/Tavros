@@ -73,9 +73,10 @@ namespace tavros::renderer
          */
         void set_frame_info(
             math::vec2 frame_size,
-            float total_time,
-            float delta_time,
-            uint64 frame_number) noexcept;
+            float      total_time,
+            float      delta_time,
+            uint64     frame_number
+        ) noexcept;
 
         /**
          * @brief Uploads the view data to the specified GPU stream buffer.

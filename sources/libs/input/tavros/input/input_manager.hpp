@@ -93,6 +93,16 @@ namespace tavros::input
          * @brief Returns a normalized factor [0-1] representing how long the button has been held.
          */
         float mouse_button_hold_factor(mouse_button button) const noexcept;
+        
+        /**
+         * @brief Returns true if mouse entered to window during last frame.
+         */
+        bool is_mouse_entered() const noexcept;
+
+        /**
+         * @brief Returns true if mouse leaved from window during last frame.
+         */
+        bool is_mouse_leaved() const noexcept;
 
         /**
          * @brief Returns true if the mouse was moved this frame.
@@ -189,6 +199,8 @@ namespace tavros::input
         math::vec2 m_wheel_delta;
         bool       m_is_mouse_moved = false;
         bool       m_is_wheel_scrolled = false;
+        bool       m_is_mouse_entered = false;
+        bool       m_is_mouse_leaved = false;
 
         bool         m_is_window_resized = false;
         bool         m_is_window_moved = false;

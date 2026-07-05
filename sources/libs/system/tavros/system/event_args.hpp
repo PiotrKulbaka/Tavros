@@ -37,6 +37,23 @@ namespace tavros::system
     };
 
     /**
+     * @brief Contains information about a mouse leave event.
+     */
+    struct mouse_leave_event_args
+    {
+        uint64 event_time_us = 0; /// Event timestamp in microseconds
+    };
+    
+    /**
+     * @brief Contains information about a mouse enter event.
+     */
+    struct mouse_enter_event_args
+    {
+        uint64 event_time_us = 0; /// Event timestamp in microseconds.
+        math::point2 pos;         /// Mouse hover position.
+    };
+
+    /**
      * @brief Contains information about a window move event.
      */
     struct move_event_args

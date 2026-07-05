@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/core/math.hpp>
+#include <tavros/core/geometry/thickness4.hpp>
 
 namespace tavros::geometry
 {
@@ -203,6 +204,17 @@ namespace tavros::geometry
     constexpr radius4 operator*(float scalar, const radius4& value) noexcept
     {
         return value * scalar;
+    }
+
+    /** @brief Returns the radius minus the thickness. */
+    [[nodiscard]] constexpr radius4 to_inner_radius(const radius4& outer_radius, const thickness4& thickness) noexcept
+    {
+        return {
+            math::max(0.0f, outer_radius.top_left - math::max(thickness.left, thickness.top)),
+            math::max(0.0f, outer_radius.top_right - math::max(thickness.right, thickness.top)),
+            math::max(0.0f, outer_radius.bottom_right - math::max(thickness.right, thickness.bottom)),
+            math::max(0.0f, outer_radius.bottom_left - math::max(thickness.left, thickness.bottom))
+        };
     }
 
 } // namespace tavros::geometry

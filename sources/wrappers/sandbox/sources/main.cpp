@@ -21,8 +21,7 @@
 
 #include <tracy/Tracy.hpp>
 
-
-constexpr uint32 k_msaa = 16;
+constexpr uint32 k_msaa = 1;
 
 namespace fs = tavros::filesystem;
 namespace rhi = tavros::renderer::rhi;
@@ -68,6 +67,77 @@ public:
     }
 
     ~main_window() override = default;
+    
+    static constexpr tavros::math::vec4 to_vec4(tavros::math::rgba8 rgba) noexcept
+    {
+        return tavros::math::vec4(
+            static_cast<float>(rgba.r) / 255.0f,
+            static_cast<float>(rgba.g) / 255.0f,
+            static_cast<float>(rgba.b) / 255.0f,
+            static_cast<float>(rgba.a) / 255.0f
+        );
+    }
+
+    static constexpr tavros::math::rgba8 to_rgba8(const tavros::math::vec4& color) noexcept
+    {
+        auto clamp01 = [](float v) noexcept -> float {
+            return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
+        };
+
+        auto to_u8 = [&](float v) noexcept -> uint8 {
+            return static_cast<uint8>(clamp01(v) * 255.0f + 0.5f);
+        };
+
+        return tavros::math::rgba8{
+            to_u8(color.x),
+            to_u8(color.y),
+            to_u8(color.z),
+            to_u8(color.w),
+        };
+    }
+
+    static tavros::math::rgba8 rainbow_color(float time_seconds) noexcept
+    {
+        static tavros::math::vec4 colors[] = {
+            to_vec4(tavros::math::rgba8(0xFF5959FF)), // Red
+            to_vec4(tavros::math::rgba8(0xFF9B59FF)), // Orange
+            to_vec4(tavros::math::rgba8(0xFFFF59FF)), // Yellow
+            to_vec4(tavros::math::rgba8(0x59FF59FF)), // Green
+            to_vec4(tavros::math::rgba8(0x59FFFFFF)), // Blue
+            to_vec4(tavros::math::rgba8(0x5959FFFF)), // Indigo
+            to_vec4(tavros::math::rgba8(0xFF59E8FF))  // Violet
+        };
+        constexpr size_t count = sizeof(colors) / sizeof(colors[0]);
+
+        // Заворачиваем время в диапазон [0, count)
+        float t = std::fmod(time_seconds, static_cast<float>(count));
+        if (t < 0.0f)
+        {
+            t += static_cast<float>(count);
+        }
+
+        size_t index_a = static_cast<size_t>(t);
+        size_t index_b = (index_a + 1) % count;
+        float  frac    = t - static_cast<float>(index_a);
+
+        const tavros::math::vec4& a = colors[index_a];
+        const tavros::math::vec4& b = colors[index_b];
+
+        tavros::math::vec4 result{
+            a.x + (b.x - a.x) * frac,
+            a.y + (b.y - a.y) * frac,
+            a.z + (b.z - a.z) * frac,
+            a.w + (b.w - a.w) * frac,
+        };
+
+        return to_rgba8(result);
+    }
+
+    static constexpr tavros::math::rgba8 inv_color(tavros::math::rgba8 cl) noexcept
+    {
+        return tavros::math::rgba8(255 - cl.r, 255 - cl.g, 255 - cl.b, cl.a);
+    }
+
 
     // ------------------------------------------------------------------
     // Lifecycle
@@ -92,19 +162,17 @@ public:
     // Render loop
     // ------------------------------------------------------------------
 
-    float tm = 0.0f;
-
+    float time_sec = 0.0f;
     void render(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us) override
     {
         ZoneScopedNC("Frame", 0xFFFFFF);
-
-        tm += time_us.count() / 1'000'000.0f;
 
         process_input(events, time_us);
 
         m_ui->process_input(events);
 
         float delta_time_sec = static_cast<float>(time_us.count()) / 1'000'000.0f;
+        time_sec += delta_time_sec;
 
         m_renderer->set_camera(m_free_cam.camera());
         auto frame = m_renderer->begin_frame(time_us.count());
@@ -119,19 +187,24 @@ public:
         frame.commands().draw(36);
 
         draw_world_grid(frame.commands(), 0);
-
-        auto* r = m_renderer->renderer2d();
-
-        r->set_line_thickness(3);
-
-
         draw_world_axis({m_input_manager.window_size().width - 120.0f, 120.0f}, 90.0f);
 
-        tavros::core::long_string metrics;
-        metrics.fprint("Frame number: {}\n Hello world!", m_frame_number);
+        tavros::core::long_string lb_text;
+        const auto                cam_pos = m_free_cam.camera().position();
+        lb_text.fprint("Frame number: {}\nMouse pos: x={:.1f}   y={:.1f}\nCamera position: x={:.3f}   y={:.3f}   z={:.3f}", m_frame_number, m_input_manager.mouse_pos().x, m_input_manager.mouse_pos().y, cam_pos.x, cam_pos.y, cam_pos.z);
 
-        m_label.set_text(metrics);
+        m_label.set_text(lb_text);
+        m_label.set_text_color(rainbow_color(time_sec));
+        m_label.set_outline_color(inv_color(rainbow_color(time_sec)));
+        
 
+        if (static_cast<int32>(time_sec) % 10 < 5) {
+            m_label.set_font_size(36.0f);
+        } else {
+            m_label.set_font_size(72.0f);
+        }
+
+        m_ui->resolve();
         m_ui->layout({0.0f, 0.0f, static_cast<float>(m_input_manager.window_size().width), static_cast<float>(m_input_manager.window_size().height)});
         m_ui->update(delta_time_sec);
         m_ui->draw();
@@ -195,48 +268,40 @@ private:
 
         m_font = rm->load_font("fnt.consola_mono");
         // m_font = rm->load_font("fnt.droid_sans");
-        m_font = rm->load_font("fnt.home_video");
+        //m_font = rm->load_font("fnt.home_video");
         // m_font = rm->load_font("fnt.noto_sans_regular");
-        m_font = rm->load_font("fnt.roboto_medium");
+        //m_font = rm->load_font("fnt.roboto_medium");
 
         m_ui = tavros::core::make_unique<tavros::ui::root_view>(m_renderer);
         m_ui->set_root(&m_root_view);
         m_root_view.set_padding({20.0f, 30.0f, 20.0f, 50.0f});
-        m_root_view.set_orientation(tavros::ui::linear_view::content_orientation::vertical);
-        m_horiz_view.set_orientation(tavros::ui::linear_view::content_orientation::horizontal);
+        m_root_view.set_content_orientation(tavros::ui::content_orient::vertical);
+        m_horiz_view.set_content_orientation(tavros::ui::content_orient::horizontal);
 
         m_root_view.insert_last_child(&m_view1);
+        m_root_view.add_child(&m_label);
+        m_root_view.add_child(&m_label2);
         m_root_view.insert_last_child(&m_view2);
         m_root_view.insert_last_child(&m_horiz_view);
         m_root_view.insert_last_child(&m_view3);
+        m_root_view.set_border(10);
+        m_horiz_view.add_child(&m_label3);
+        m_horiz_view.add_child(&m_label4);
         // m_root_view.insert_last_child(&m_view4);
 
         m_view1.set_size({500, 200});
         m_view1.set_margin({30, 60, 90, 120});
-        m_view1.set_padding({
-            40,
-            60,
-            80,
-            100,
-        });
+        m_view1.set_padding({40, 60, 80, 100});
+        m_view1.set_vertical_alignment(tavros::ui::v_align::center);
 
         m_view2.set_size({200, 150});
         m_view2.set_margin({20, 10, 20, 10});
-        m_view2.set_padding({
-            20,
-            10,
-            30,
-            10,
-        });
+        m_view2.set_padding({20, 10, 30, 10});
+        m_view2.set_vertical_alignment(tavros::ui::v_align::center);
 
         m_view3.set_size({100, 300});
         m_view3.set_margin({10, 10, 10, 10});
-        m_view3.set_padding({
-            50,
-            50,
-            50,
-            50,
-        });
+        m_view3.set_padding({50, 50, 50, 50});
 
         // m_view4.set_size({150, 250});
         // m_view4.set_margin({0, 10, 20, 0});
@@ -251,19 +316,46 @@ private:
 
         m_view5.set_size({50, 50});
         m_view5.set_padding({10, 10, 10, 10});
+        m_view5.set_vertical_alignment(tavros::ui::v_align::center);
 
+        m_view6.set_margin({10, 20, 60, 80});
         m_view6.set_size({100, 200});
         m_view6.set_padding({20, 20, 20, 20});
+        m_view6.set_vertical_alignment(tavros::ui::v_align::center);
 
         m_view7.set_size({300, 400});
         m_view7.set_margin({30, 30, 30, 30});
 
-        m_label.set_font(m_font);
+        m_label.set_font("fnt.consola_mono");
         m_label.set_font_size(48.0f);
-        m_root_view.add_child(&m_label);
         m_label.set_margin(45.0f);
-        m_label.set_padding({15.0f, 15.0f, 15.0f, 15.0f});
-        m_label.set_max_size({10, 10});
+        m_label.set_padding({125.0f, 25.0f, 125.0f, 25.0f});
+        m_label.set_horizontal_alignment(tavros::ui::h_align::center);
+        m_label.set_min_size({300.0f, 0});
+        //m_label.set_max_size({400.0f, tavros::ui::k_max_ui_size});
+        m_label.set_border(5);
+        m_label.set_border_radius(10);
+        m_label.set_word_wrap_enabled(true);
+        m_label.set_size({150000.0f, 0});
+
+        m_label2.set_font("fnt.noto_sans_regular");
+        m_label2.set_font_size(44.0f);
+        m_label2.set_text("Hello world!!!");
+        m_label2.set_padding(10.0f);
+        m_label2.set_margin(10.0f);
+
+        m_label3.set_font("fnt.home_video");
+        m_label3.set_font_size(55.0f);
+        m_label3.set_text("Label 3. Home video.");
+        m_label3.set_padding(10.0f);
+        m_label3.set_margin(10.0f);
+
+        m_label4.set_font("fnt.home_video");
+        m_label4.set_font_size(55.0f);
+        m_label4.set_text("Label 4. Home video.");
+        m_label4.set_padding(10.0f);
+        m_label4.set_margin(10.0f);
+        m_label4.set_horizontal_alignment(tavros::ui::h_align::center);
     }
 
     // ==================================================================
@@ -298,6 +390,35 @@ private:
                 m_smp_index = 0;
             }
         }
+
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_1)) {
+            m_label.set_font("asdafadfasdfaerwtqgsafv");
+        }
+
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_2)) {
+            m_label.set_font("fnt.droid_sans");
+        }
+
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_3)) {
+            m_label.set_font("fnt.home_video");
+        }
+
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_4)) {
+            m_label.set_font("fnt.noto_sans_regular");
+        }
+
+        if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_5)) {
+            m_label.set_font("fnt.roboto_medium");
+        }
+
+        if (m_input_manager.is_mouse_entered()) {
+            logger.info("Mouse entered during last frame.");
+        }
+
+        if (m_input_manager.is_mouse_leaved()) {
+            logger.info("Mouse leaved suring last frame.");
+        }
+
     }
 
     void handle_window_resize()
@@ -543,11 +664,22 @@ private:
 
     tavros::core::unique_ptr<tavros::ui::root_view> m_ui;
 
-    tavros::ui::linear_view m_root_view;
-    tavros::ui::linear_view m_vert_view;
-    tavros::ui::linear_view m_horiz_view;
-    tavros::ui::view        m_view1, m_view2, m_view3, m_view4, m_view5, m_view6, m_view7, m_view8, m_view9;
-    tavros::ui::label_view  m_label;
+    tavros::ui::linear_view m_root_view = tavros::ui::linear_view("root_view");
+    tavros::ui::linear_view m_vert_view = tavros::ui::linear_view("vert_view");
+    tavros::ui::linear_view m_horiz_view = tavros::ui::linear_view("horiz_view");
+    tavros::ui::view m_view1 = tavros::ui::view("view1");
+    tavros::ui::view m_view2 = tavros::ui::view("view2");
+    tavros::ui::view m_view3 = tavros::ui::view("view3");
+    tavros::ui::view m_view4 = tavros::ui::view("view4");
+    tavros::ui::view m_view5 = tavros::ui::view("view5");
+    tavros::ui::view m_view6 = tavros::ui::view("view6");
+    tavros::ui::view m_view7 = tavros::ui::view("view7");
+    tavros::ui::view m_view8 = tavros::ui::view("view8");
+    tavros::ui::view m_view9 = tavros::ui::view("view9");
+    tavros::ui::label_view m_label = tavros::ui::label_view("label");
+    tavros::ui::label_view m_label2 = tavros::ui::label_view("label2");
+    tavros::ui::label_view m_label3 = tavros::ui::label_view("label3");
+    tavros::ui::label_view m_label4 = tavros::ui::label_view("label4");
 };
 
 // -------------------------------------------------------------------------

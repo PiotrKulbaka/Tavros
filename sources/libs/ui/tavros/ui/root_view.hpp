@@ -21,6 +21,8 @@ namespace tavros::ui
 
         void process_input(input::event_args_queue_view events) noexcept;
 
+        void resolve();
+
         void layout(geometry::aabb2 bounds) noexcept;
 
         void update(float dt) noexcept;
@@ -31,10 +33,6 @@ namespace tavros::ui
         void mouse_down(const mouse_button_event_args& e) noexcept;
         void mouse_move(const mouse_move_event_args& e) noexcept;
         void mouse_up(const mouse_button_event_args& e) noexcept;
-        void mouse_wheel(const mouse_wheel_event_args& e) noexcept;
-        void key_down(const keyboard_key_event_args& e) noexcept;
-        void key_up(const keyboard_key_event_args& e) noexcept;
-        void key_press(const key_press_event_args& e) noexcept;
 
     private:
         core::shared_ptr<renderer::render_system> m_rs;

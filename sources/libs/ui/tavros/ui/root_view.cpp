@@ -70,6 +70,17 @@ namespace tavros::ui
     {
     }
 
+    void root_view::resolve()
+    {
+        if (!m_root) {
+            return;
+        }
+
+        ui_context ctx(m_rs);
+
+        traverse_preorder(m_root, [&](auto* n) { return n->is_enabled(); }, [&](auto* n) { n->resolve(ctx); });
+    }
+
     void root_view::process_input(input::event_args_queue_view events) noexcept
     {
         for (auto& e : events) {
@@ -83,6 +94,16 @@ namespace tavros::ui
             switch (e.type) {
             case input::event_type::none:
                 ::logger.warning("event `none` received");
+                break;
+
+            case input::event_type::mouse_enter: 
+                break;
+
+            case input::event_type::mouse_leave: 
+                if (m_hovered) {
+                    m_hovered->on_mouse_leave();
+                }
+                m_hovered = nullptr;
                 break;
 
             case input::event_type::mouse_down: {
@@ -117,14 +138,18 @@ namespace tavros::ui
                 a.pos = e.vec;
                 a.wheel_delta = e.wheel;
                 a.time_us = e.time_us;
-                mouse_wheel(a);
+                if (m_hovered) {
+                    m_hovered->on_mouse_wheel(a);
+                }
             } break;
 
             case input::event_type::key_down: {
                 keyboard_key_event_args a;
                 a.key = e.key;
                 a.time_us = e.time_us;
-                key_down(a);
+                if (m_keyboard_focus) {
+                    m_keyboard_focus->on_key_down(a);
+                }
             } break;
 
             case input::event_type::key_press: {
@@ -132,21 +157,24 @@ namespace tavros::ui
                 a.key_char = e.key_char;
                 a.repeats = e.repeats;
                 a.time_us = e.time_us;
-                key_press(a);
+                if (m_keyboard_focus) {
+                    m_keyboard_focus->on_key_press(a);
+                }
             } break;
 
             case input::event_type::key_up: {
                 keyboard_key_event_args a;
                 a.key = e.key;
                 a.time_us = e.time_us;
-                key_up(a);
+                if (m_keyboard_focus) {
+                    m_keyboard_focus->on_key_up(a);
+                }
             } break;
 
             case input::event_type::window_size:
                 break;
 
             case input::event_type::window_move:
-                // Skip this
                 break;
 
             case input::event_type::activate:
@@ -187,7 +215,8 @@ namespace tavros::ui
         if (!m_root) {
             return;
         }
-        m_root->draw({m_rs.get(), true});
+        ui_context ctx(m_rs);
+        m_root->draw(ctx);
     }
 
     void root_view::mouse_down(const mouse_button_event_args& e) noexcept
@@ -197,7 +226,7 @@ namespace tavros::ui
         }
 
         view* v = nullptr;
-        traverse_preorder(m_root, [&](auto* n) { return n->hit_test(e.pos); }, [&](auto* n) { v = n; });
+        traverse_preorder(m_root, [&](auto* n) { return n->is_visible() && n->hit_test(e.pos); }, [&](auto* n) { v = n; });
         if (v) {
             v->on_mouse_down(e);
         }
@@ -208,15 +237,16 @@ namespace tavros::ui
         if (!m_root) {
             return;
         }
+
         view* v = nullptr;
-        traverse_preorder(m_root, [&](auto* n) { return n->hit_test(e.pos); }, [&](auto* n) { v = n; });
+        traverse_preorder(m_root, [&](auto* n) { return n->is_visible() && n->hit_test(e.pos); }, [&](auto* n) { v = n; });
         if (m_hovered != v) {
             if (m_hovered) {
                 m_hovered->on_mouse_leave();
             }
             m_hovered = v;
             if (m_hovered) {
-                m_hovered->on_mouse_hover();
+                m_hovered->on_mouse_enter();
             }
         }
 
@@ -230,38 +260,11 @@ namespace tavros::ui
         if (!m_root) {
             return;
         }
+
         view* v = nullptr;
-        traverse_preorder(m_root, [&](auto* n) { return n->hit_test(e.pos); }, [&](auto* n) { v = n; });
+        traverse_preorder(m_root, [&](auto* n) { return n->is_visible() && n->hit_test(e.pos); }, [&](auto* n) { v = n; });
         if (v) {
             v->on_mouse_up(e);
-        }
-    }
-
-    void root_view::mouse_wheel(const mouse_wheel_event_args& e) noexcept
-    {
-        if (m_hovered) {
-            m_hovered->on_mouse_wheel(e);
-        }
-    }
-
-    void root_view::key_down(const keyboard_key_event_args& e) noexcept
-    {
-        if (m_keyboard_focus) {
-            m_keyboard_focus->on_key_down(e);
-        }
-    }
-
-    void root_view::key_up(const keyboard_key_event_args& e) noexcept
-    {
-        if (m_keyboard_focus) {
-            m_keyboard_focus->on_key_up(e);
-        }
-    }
-
-    void root_view::key_press(const key_press_event_args& e) noexcept
-    {
-        if (m_keyboard_focus) {
-            m_keyboard_focus->on_key_press(e);
         }
     }
 

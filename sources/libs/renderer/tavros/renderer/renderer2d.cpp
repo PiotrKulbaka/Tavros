@@ -345,7 +345,7 @@ namespace tavros::renderer
         auto* dst = slice.data().data();
 
         text.view<const atlas_rect_t, const rect_layout_c, const position2d_c, const glyph_style_c>()
-            .each([&](const auto& r, const auto& l, const auto& p, const glyph_style_c& st) {
+            .each([&](const auto& r, const auto& l, const auto& p, const auto& st) {
                 const auto size = l.size();
 
                 dst->transform[0][0] = size.width;

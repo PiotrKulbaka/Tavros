@@ -30,6 +30,8 @@ namespace app
         // virtual void on_drop(tavros::system::drop_event_args& e) override;
         virtual void on_move(tavros::system::move_event_args& e) override;
         virtual void on_resize(tavros::system::size_event_args& e) override;
+        virtual void on_mouse_enter(tavros::system::mouse_enter_event_args& e) override;
+        virtual void on_mouse_leave(tavros::system::mouse_leave_event_args& e) override;
         virtual void on_mouse_down(tavros::system::mouse_event_args& e) override;
         virtual void on_mouse_move(tavros::system::mouse_event_args& e) override;
         virtual void on_mouse_up(tavros::system::mouse_event_args& e) override;

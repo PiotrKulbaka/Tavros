@@ -160,14 +160,14 @@ namespace tavros::renderer
          *
          * @tparam Text Archetype containing glyph_c and position2d_c.
          * @param text  Glyph container.
-         * @param line_wrap_width Maximum allowed line width (0 disables wrapping).
+         * @param line_wrap_width Maximum allowed line width (-1.0 disables wrapping).
          * @param align Horizontal alignment mode.
          * @param line_spacing Line spacing multiplier (1.0 = default line height).
          *
          * @return Bounding box of the laid out text block or invalid bbox if text.size() is zero.
          */
         template<core::archetype_with<glyph_c, position2d_c> Text>
-        static geometry::aabb2 layout(Text& text, float line_wrap_width = 0.0f, text_align align = text_align::left, float line_spacing = 1.0f) noexcept
+        static geometry::aabb2 layout(Text& text, float line_wrap_width = -1.0f, text_align align = text_align::left, float line_spacing = 1.0f) noexcept
         {
             if (text.size() == 0) {
                 return {};
@@ -197,7 +197,7 @@ namespace tavros::renderer
             TAV_ASSERT(text.size() < 0xffffffffull);
 
             float max_width = 0.0f;
-            auto  wrap = line_wrap_width > 0.0f;
+            auto  wrap = line_wrap_width >= 0.0f;
 
             while (i < end) {
                 auto  next_i = text_line_breaker::break_next_line(i, end, glyphs, ascent_y, descent_y, width, wrap, line_wrap_width);

@@ -53,6 +53,8 @@ namespace tavros::input
         m_raw_mouse_delta = {};
         m_smooth_mouse_delta = {};
         m_wheel_delta = {};
+        m_is_mouse_entered = false;
+        m_is_mouse_leaved = false;
 
         m_is_window_resized = false;
         m_is_window_moved = false;
@@ -83,6 +85,14 @@ namespace tavros::input
 
             case event_type::mouse_down:
                 on_mouse_down(e.button, e.time_us);
+                break;
+
+            case event_type::mouse_enter:
+                m_is_mouse_entered = true;
+                break;
+
+            case event_type::mouse_leave:
+                m_is_mouse_leaved = true;;
                 break;
 
             case event_type::mouse_move:
@@ -192,6 +202,16 @@ namespace tavros::input
         const size_t idx = static_cast<size_t>(button);
         TAV_ASSERT(idx < k_mouse_button_count);
         return get_hold_factor(m_buttons[idx]);
+    }
+
+    bool input_manager::is_mouse_entered() const noexcept
+    {
+        return m_is_mouse_entered;
+    }
+
+    bool input_manager::is_mouse_leaved() const noexcept
+    {
+        return m_is_mouse_leaved;
     }
 
     bool input_manager::is_mouse_moved() const noexcept
