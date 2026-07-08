@@ -1,4 +1,5 @@
 #include <tavros/scene/scene.glsl>
+#include <tavros/scene/brush.glsl>
 
 layout(binding = 0) uniform sampler2D u_texture;
 

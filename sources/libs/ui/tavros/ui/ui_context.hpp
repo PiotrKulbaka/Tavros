@@ -7,7 +7,7 @@ namespace tavros::ui
 
     struct debug_draw_info
     {
-        bool debug_draw = true;
+        bool debug_draw = false;
         math::rgba8 content_box_color = math::rgba8(0x7FC9FF60);
         math::rgba8 padding_box_color = math::rgba8(0x7FFFC560);
         math::rgba8 border_box_color = math::rgba8(0xFF7FED60);

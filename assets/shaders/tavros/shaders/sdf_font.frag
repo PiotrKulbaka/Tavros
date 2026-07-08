@@ -1,4 +1,5 @@
 #include <tavros/scene/scene.glsl>
+#include <tavros/scene/brush.glsl>
 
 out vec4 base_color;
 

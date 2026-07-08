@@ -30,6 +30,18 @@ namespace
         int32      type;
     };
 
+#define BRUSH_MAX_COLORS            16
+
+    struct brush_t // 152 bytes
+    {
+        uint32     flags;                    // Brush type, one of BRUSH_TYPE_LINEAR_GRADIENT, BRUSH_TYPE_RADIAL_GRADIENT
+        uint32     num;                      // Number of colors, max value BRUSH_MAX_COLORS
+        math::vec2 pos;                      // start point for gradients
+        math::vec2 dir;                      // normalized direction for gradients
+        float      stops[BRUSH_MAX_COLORS];  // Soprted stops
+        uint32     colors[BRUSH_MAX_COLORS]; // Packed rgba colors
+    };
+
     // Normalize channel: 0..255 -> 0.0..1.0
     float norm_c(uint8 c) noexcept
     {
@@ -89,6 +101,14 @@ namespace tavros::renderer
         }
         m_gdevice->submit_command_queue(m_cmd);
         m_cmd = nullptr;
+    }
+
+    void renderer2d::reset_brush()
+    {
+        /*const auto d = brush_data{{0.0f, 0.0f}, {0.0f, 0.0f}, cl, cl, k_solid_brush_type_id};
+        auto       slice = m_uniform_buffer.slice<brush_data>(1);
+        slice.data().copy_from(&bd, 1);
+        m_cmd->bind_shader_buffers(rhi::buffer_binding{slice.gpu_buffer(), static_cast<uint32>(slice.offset_bytes()), static_cast<uint32>(slice.size_bytes()), 1});*/
     }
 
     void renderer2d::set_brush_solid_color(math::rgba8 color)

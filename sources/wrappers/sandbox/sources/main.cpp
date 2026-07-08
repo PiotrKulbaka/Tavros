@@ -343,16 +343,17 @@ private:
         m_label2.set_text("Hello world!!!");
         m_label2.set_padding(10.0f);
         m_label2.set_margin(10.0f);
+        m_label2.set_horizontal_alignment(tavros::ui::h_align::right);
 
         m_label3.set_font("fnt.home_video");
         m_label3.set_font_size(55.0f);
-        m_label3.set_text("Label 3. Home video.");
+        m_label3.set_text("Label 3. Hello world!");
         m_label3.set_padding(10.0f);
         m_label3.set_margin(10.0f);
 
         m_label4.set_font("fnt.home_video");
         m_label4.set_font_size(55.0f);
-        m_label4.set_text("Label 4. Home video.");
+        m_label4.set_text("Label 4. Hello label.");
         m_label4.set_padding(10.0f);
         m_label4.set_margin(10.0f);
         m_label4.set_horizontal_alignment(tavros::ui::h_align::center);
@@ -410,15 +411,6 @@ private:
         if (m_input_manager.is_key_just_pressed(tavros::input::keyboard_key::k_5)) {
             m_label.set_font("fnt.roboto_medium");
         }
-
-        if (m_input_manager.is_mouse_entered()) {
-            logger.info("Mouse entered during last frame.");
-        }
-
-        if (m_input_manager.is_mouse_leaved()) {
-            logger.info("Mouse leaved suring last frame.");
-        }
-
     }
 
     void handle_window_resize()

@@ -20,6 +20,7 @@ namespace tavros::renderer
         void begin_frame() noexcept;
         void end_frame() noexcept;
 
+        void reset_brush();
         void set_brush_solid_color(math::rgba8 color);
         void set_brush_linear_gradient(math::vec2 start, math::rgba8 start_color, math::vec2 end, math::rgba8 end_color);
         void set_brush_radial_gradient(math::vec2 center, math::rgba8 center_color, float radius, math::rgba8 end_color);

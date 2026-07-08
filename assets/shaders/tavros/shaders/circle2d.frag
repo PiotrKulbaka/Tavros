@@ -1,4 +1,5 @@
 #include <tavros/scene/scene.glsl>
+#include <tavros/scene/brush.glsl>
 
 layout(PUSH_CONSTANT) uniform PushConstants
 {
