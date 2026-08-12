@@ -186,7 +186,7 @@ namespace tavros::system
          * @param e Enter event arguments.
          */
         virtual void on_mouse_enter(mouse_enter_event_args& e);
-        
+
         /**
          * @brief Called when the mouse is leaved.
          * @param e Leave event arguments.

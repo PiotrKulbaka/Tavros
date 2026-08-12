@@ -212,11 +212,11 @@ namespace tavros::tef
     };
 
     template<>
-    struct conv<math::rgba8>
+    struct conv<math::color32>
     {
-        std::optional<math::rgba8> read(const node* n) const noexcept;
+        std::optional<math::color32> read(const node* n) const noexcept;
 
-        void write(node* parent, core::string_view key, const math::rgba8& val) const;
+        void write(node* parent, core::string_view key, const math::color32& val) const;
 
         core::string_view description() const noexcept;
     };

@@ -96,10 +96,10 @@ namespace tavros::ui
                 ::logger.warning("event `none` received");
                 break;
 
-            case input::event_type::mouse_enter: 
+            case input::event_type::mouse_enter:
                 break;
 
-            case input::event_type::mouse_leave: 
+            case input::event_type::mouse_leave:
                 if (m_hovered) {
                     m_hovered->on_mouse_leave();
                 }

@@ -67,8 +67,8 @@ public:
     }
 
     ~main_window() override = default;
-    
-    static constexpr tavros::math::vec4 to_vec4(tavros::math::rgba8 rgba) noexcept
+
+    static constexpr tavros::math::vec4 to_vec4(tavros::math::color32 rgba) noexcept
     {
         return tavros::math::vec4(
             static_cast<float>(rgba.r) / 255.0f,
@@ -78,7 +78,7 @@ public:
         );
     }
 
-    static constexpr tavros::math::rgba8 to_rgba8(const tavros::math::vec4& color) noexcept
+    static constexpr tavros::math::color32 to_rgba8(const tavros::math::vec4& color) noexcept
     {
         auto clamp01 = [](float v) noexcept -> float {
             return v < 0.0f ? 0.0f : (v > 1.0f ? 1.0f : v);
@@ -88,7 +88,7 @@ public:
             return static_cast<uint8>(clamp01(v) * 255.0f + 0.5f);
         };
 
-        return tavros::math::rgba8{
+        return tavros::math::color32{
             to_u8(color.x),
             to_u8(color.y),
             to_u8(color.z),
@@ -96,29 +96,28 @@ public:
         };
     }
 
-    static tavros::math::rgba8 rainbow_color(float time_seconds) noexcept
+    static tavros::math::color32 rainbow_color(float time_seconds) noexcept
     {
         static tavros::math::vec4 colors[] = {
-            to_vec4(tavros::math::rgba8(0xFF5959FF)), // Red
-            to_vec4(tavros::math::rgba8(0xFF9B59FF)), // Orange
-            to_vec4(tavros::math::rgba8(0xFFFF59FF)), // Yellow
-            to_vec4(tavros::math::rgba8(0x59FF59FF)), // Green
-            to_vec4(tavros::math::rgba8(0x59FFFFFF)), // Blue
-            to_vec4(tavros::math::rgba8(0x5959FFFF)), // Indigo
-            to_vec4(tavros::math::rgba8(0xFF59E8FF))  // Violet
+            to_vec4(tavros::math::color32(0xFF5959FF)), // Red
+            to_vec4(tavros::math::color32(0xFF599BFF)), // Orange
+            to_vec4(tavros::math::color32(0xFF59FFFF)), // Yellow
+            to_vec4(tavros::math::color32(0xFF59FF59)), // Green
+            to_vec4(tavros::math::color32(0xFFFFFF59)), // Blue
+            to_vec4(tavros::math::color32(0xFFFF5959)), // Indigo
+            to_vec4(tavros::math::color32(0xFFE859FF))  // Violet
         };
         constexpr size_t count = sizeof(colors) / sizeof(colors[0]);
 
         // Заворачиваем время в диапазон [0, count)
         float t = std::fmod(time_seconds, static_cast<float>(count));
-        if (t < 0.0f)
-        {
+        if (t < 0.0f) {
             t += static_cast<float>(count);
         }
 
         size_t index_a = static_cast<size_t>(t);
         size_t index_b = (index_a + 1) % count;
-        float  frac    = t - static_cast<float>(index_a);
+        float  frac = t - static_cast<float>(index_a);
 
         const tavros::math::vec4& a = colors[index_a];
         const tavros::math::vec4& b = colors[index_b];
@@ -133,11 +132,10 @@ public:
         return to_rgba8(result);
     }
 
-    static constexpr tavros::math::rgba8 inv_color(tavros::math::rgba8 cl) noexcept
+    static constexpr tavros::math::color32 inv_color(tavros::math::color32 cl) noexcept
     {
-        return tavros::math::rgba8(255 - cl.r, 255 - cl.g, 255 - cl.b, cl.a);
+        return tavros::math::color32(255 - cl.r, 255 - cl.g, 255 - cl.b, cl.a);
     }
-
 
     // ------------------------------------------------------------------
     // Lifecycle
@@ -163,7 +161,7 @@ public:
     // ------------------------------------------------------------------
 
     float time_sec = 0.0f;
-    void render(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us) override
+    void  render(tavros::input::event_args_queue_view events, std::chrono::microseconds time_us) override
     {
         ZoneScopedNC("Frame", 0xFFFFFF);
 
@@ -189,6 +187,27 @@ public:
         draw_world_grid(frame.commands(), 0);
         draw_world_axis({m_input_manager.window_size().width - 120.0f, 120.0f}, 90.0f);
 
+        auto* r = m_renderer->renderer2d();
+
+        tavros::renderer::color_stop stops[] = {
+
+            {0.7f, 0xFFFF0000},
+            {0.8f, 0xFF00FF00},
+            {0.9f, 0xFF0000FF},
+        };
+
+        auto r1 = tavros::math::vec2(172, 0);
+        auto r2 = tavros::math::vec2(0, 172);
+
+        auto coef = std::sin(time_sec) * 4.0f;
+
+        r->superellipse({1250, 350}, r1, r2, 1)
+            //.sprite(m_ui_texture, m_input_manager.mouse_pos(), r1, r2, {615, 783, 123, 86})
+            .cut_superellipse({1250, 350}, {150, 0}, {0, 150}, -1)
+            .draw();
+        r->rect({500, 350}, {150, 0}, {0, 100}, {30}).fill_linear(stops, {200, 200}, {300, 200}, tavros::renderer::gradient_repeat::repeat).draw();
+        r->line({30, 400}, {700, 150}, 25.0, 50, 10).fill_color(0xFFBDDFCB).draw();
+
         tavros::core::long_string lb_text;
         const auto                cam_pos = m_free_cam.camera().position();
         lb_text.fprint("Frame number: {}\nMouse pos: x={:.1f}   y={:.1f}\nCamera position: x={:.3f}   y={:.3f}   z={:.3f}", m_frame_number, m_input_manager.mouse_pos().x, m_input_manager.mouse_pos().y, cam_pos.x, cam_pos.y, cam_pos.z);
@@ -196,7 +215,7 @@ public:
         m_label.set_text(lb_text);
         m_label.set_text_color(rainbow_color(time_sec));
         m_label.set_outline_color(inv_color(rainbow_color(time_sec)));
-        
+
 
         if (static_cast<int32>(time_sec) % 10 < 5) {
             m_label.set_font_size(36.0f);
@@ -259,6 +278,7 @@ private:
         // m_sky_textures.push_back(rm->load_texture("tex.rock_sky_small"));
 
         m_ui_texture = rm->load_texture("tex.ui_actor_portrets");
+        m_ui_texture2 = rm->load_texture("tex.ui_pda2_noice");
 
         rm->set_material_load_params({}, 1, rhi::pixel_format::depth32f);
         m_skybox_pipeline = rm->load_material("mt.skybox");
@@ -268,9 +288,9 @@ private:
 
         m_font = rm->load_font("fnt.consola_mono");
         // m_font = rm->load_font("fnt.droid_sans");
-        //m_font = rm->load_font("fnt.home_video");
+        // m_font = rm->load_font("fnt.home_video");
         // m_font = rm->load_font("fnt.noto_sans_regular");
-        //m_font = rm->load_font("fnt.roboto_medium");
+        // m_font = rm->load_font("fnt.roboto_medium");
 
         m_ui = tavros::core::make_unique<tavros::ui::root_view>(m_renderer);
         m_ui->set_root(&m_root_view);
@@ -332,7 +352,7 @@ private:
         m_label.set_padding({125.0f, 25.0f, 125.0f, 25.0f});
         m_label.set_horizontal_alignment(tavros::ui::h_align::center);
         m_label.set_min_size({300.0f, 0});
-        //m_label.set_max_size({400.0f, tavros::ui::k_max_ui_size});
+        // m_label.set_max_size({400.0f, tavros::ui::k_max_ui_size});
         m_label.set_border(5);
         m_label.set_border_radius(10);
         m_label.set_word_wrap_enabled(true);
@@ -465,23 +485,23 @@ private:
             return static_cast<uint8>(t * 255.0f);
         };
 
-        auto with_alpha = [](math::rgba8 color, uint8 alpha) -> math::rgba8 {
+        auto with_alpha = [](math::color32 color, uint8 alpha) -> math::color32 {
             return {color.r, color.g, color.b, alpha};
         };
 
-        constexpr auto x_color = math::rgba8(0xA73A53FF);
-        constexpr auto y_color = math::rgba8(0x6BB023FF);
-        constexpr auto z_color = math::rgba8(0x3A83BEFF);
+        constexpr auto x_color = math::color32(0xFF533AA7);
+        constexpr auto y_color = math::color32(0xFF23B06B);
+        constexpr auto z_color = math::color32(0xFFBE833A);
 
         struct axis_info
         {
-            math::vec2  dir;
-            math::rgba8 color;
-            float       depth;
-            char        pos_label[3];
-            char        neg_label[3];
-            float       pos_font_size;
-            float       neg_font_size;
+            math::vec2    dir;
+            math::color32 color;
+            float         depth;
+            char          pos_label[3];
+            char          neg_label[3];
+            float         pos_font_size;
+            float         neg_font_size;
         };
 
         axis_info axes[3] = {
@@ -497,76 +517,76 @@ private:
 
         auto* r = m_renderer->renderer2d();
 
-        r->set_brush_solid_color(0x00000008);
-        r->fill_circle(pos, radius);
-        r->set_brush_solid_color(0x00000010);
-        r->fill_ring(pos, radius, radius - line_width);
+        //r->set_brush_solid_color(0x00000008);
+        //r->fill_circle(pos, radius);
+        //r->set_brush_solid_color(0x00000010);
+        //r->fill_ring(pos, radius, radius - line_width);
 
-        r->set_line_thickness(line_width);
+        //r->set_line_thickness(line_width);
 
-        tavros::renderer::rich_text text;
-        text.set_font(m_font);
-        r->set_text_use_brush_mask(false, false);
+        //tavros::renderer::rich_text text;
+        //text.set_font(m_font);
+        //r->set_text_use_brush_mask(false, false);
 
-        auto draw_axis_neg = [&](const axis_info& ax) {
-            // Негативный конец — глубина противоположна
-            uint8 alpha = depth_to_alpha(-ax.depth);
-            auto  col = with_alpha(ax.color, alpha);
+        //auto draw_axis_neg = [&](const axis_info& ax) {
+        //    // Негативный конец — глубина противоположна
+        //    uint8 alpha = depth_to_alpha(-ax.depth);
+        //    auto  col = with_alpha(ax.color, alpha);
 
-            // Линия: градиент от центра (полный цвет) до конца (с альфой)
-            /*r->set_brush_solid_color(col);
-            r->set_line_dash(dash_size, gap_size);
-            r->draw_line(pos, pos - ax.dir);
-            r->set_line_dash(0.0f, 0.0f);*/
+        //    // Линия: градиент от центра (полный цвет) до конца (с альфой)
+        //    /*r->set_brush_solid_color(col);
+        //    r->set_line_dash(dash_size, gap_size);
+        //    r->draw_line(pos, pos - ax.dir);
+        //    r->set_line_dash(0.0f, 0.0f);*/
 
-            // Круг и текст — solid с той же альфой
-            r->set_brush_solid_color(col);
-            r->fill_circle(pos - ax.dir, n_side_circle);
+        //    // Круг и текст — solid с той же альфой
+        //    r->set_brush_solid_color(col);
+        //    r->fill_circle(pos - ax.dir, n_side_circle);
 
-            text.clear();
-            text.set_font_size(ax.neg_font_size);
-            text.append_text(ax.neg_label);
-            auto l = text.layout();
-            r->set_brush_solid_color(col);
-            r->draw_text(text.text(), pos - ax.dir - l.center(), 0.5f, 0.0f);
-        };
+        //    text.clear();
+        //    text.set_font_size(ax.neg_font_size);
+        //    text.append_text(ax.neg_label);
+        //    auto l = text.layout();
+        //    r->set_brush_solid_color(col);
+        //    r->draw_text(text.text(), pos - ax.dir - l.center(), 0.5f, 0.0f);
+        //};
 
-        auto draw_axis_pos = [&](const axis_info& ax) {
-            uint8 alpha = depth_to_alpha(ax.depth);
-            auto  col = with_alpha(ax.color, alpha);
+        //auto draw_axis_pos = [&](const axis_info& ax) {
+        //    uint8 alpha = depth_to_alpha(ax.depth);
+        //    auto  col = with_alpha(ax.color, alpha);
 
-            // Линия: градиент от центра (полный цвет) до конца (с альфой)
-            r->set_brush_solid_color(col);
-            r->set_line_dash(0.0f, 0.0f);
-            r->draw_line(pos, pos + ax.dir);
+        //    // Линия: градиент от центра (полный цвет) до конца (с альфой)
+        //    r->set_brush_solid_color(col);
+        //    r->set_line_dash(0.0f, 0.0f);
+        //    r->draw_line(pos, pos + ax.dir);
 
-            // Круг и текст — solid с той же альфой
-            r->set_brush_solid_color(col);
-            r->fill_circle(pos + ax.dir, p_side_circle);
+        //    // Круг и текст — solid с той же альфой
+        //    r->set_brush_solid_color(col);
+        //    r->fill_circle(pos + ax.dir, p_side_circle);
 
-            text.clear();
-            text.set_font_size(ax.pos_font_size);
-            text.append_text(ax.pos_label);
-            auto l = text.layout();
-            r->set_brush_solid_color(col);
-            r->draw_text(text.text(), pos + ax.dir - l.center(), 0.5f, 0.15f);
-        };
+        //    text.clear();
+        //    text.set_font_size(ax.pos_font_size);
+        //    text.append_text(ax.pos_label);
+        //    auto l = text.layout();
+        //    r->set_brush_solid_color(col);
+        //    r->draw_text(text.text(), pos + ax.dir - l.center(), 0.5f, 0.15f);
+        //};
 
-        for (int i : order) {
-            if (axes[i].depth > 0.0f) {
-                draw_axis_neg(axes[i]);
-            } else {
-                draw_axis_pos(axes[i]);
-            }
-        }
+        //for (int i : order) {
+        //    if (axes[i].depth > 0.0f) {
+        //        draw_axis_neg(axes[i]);
+        //    } else {
+        //        draw_axis_pos(axes[i]);
+        //    }
+        //}
 
-        for (int i = 2; i >= 0; --i) {
-            if (axes[order[i]].depth > 0.0f) {
-                draw_axis_pos(axes[order[i]]);
-            } else {
-                draw_axis_neg(axes[order[i]]);
-            }
-        }
+        //for (int i = 2; i >= 0; --i) {
+        //    if (axes[order[i]].depth > 0.0f) {
+        //        draw_axis_pos(axes[order[i]]);
+        //    } else {
+        //        draw_axis_neg(axes[order[i]]);
+        //    }
+        //}
     }
 
     void draw_world_grid(rhi::command_queue& cbuf, uint32 plane = 0)
@@ -596,19 +616,19 @@ private:
 
         auto plane_id = plane & 0x3;
         if (plane_id == 0) { // XY plane
-            u_color = math::rgba8(x_axis_color).color;
-            v_color = math::rgba8(y_axis_color).color;
+            u_color = math::color32(x_axis_color).packed;
+            v_color = math::color32(y_axis_color).packed;
         } else if (plane_id == 1) { // YZ plane
-            u_color = math::rgba8(y_axis_color).color;
-            v_color = math::rgba8(z_axis_color).color;
+            u_color = math::color32(y_axis_color).packed;
+            v_color = math::color32(z_axis_color).packed;
         } else if (plane_id == 2) { // ZX plane
-            u_color = math::rgba8(z_axis_color).color;
-            v_color = math::rgba8(x_axis_color).color;
+            u_color = math::color32(z_axis_color).packed;
+            v_color = math::color32(x_axis_color).packed;
         }
         // TODO
         shader_data sd;
-        sd.minor_color = math::rgba8(75, 75, 75, 76).color;
-        sd.major_color = math::rgba8(100, 100, 100, 76).color;
+        sd.minor_color = math::color32(75, 75, 75, 76).packed;
+        sd.major_color = math::color32(100, 100, 100, 76).packed;
         sd.axis_u_color = u_color;
         sd.axis_v_color = v_color;
         sd.minor_line_width = 1.0f;
@@ -641,6 +661,7 @@ private:
     int32                                               m_smp_index = 0;
 
     tavros::renderer::texture_ref m_ui_texture;
+    tavros::renderer::texture_ref m_ui_texture2;
 
     tavros::renderer::material_ref m_fullscreen_quad_pipeline;
     tavros::renderer::material_ref m_world_grid_pipeline;
@@ -659,19 +680,19 @@ private:
     tavros::ui::linear_view m_root_view = tavros::ui::linear_view("root_view");
     tavros::ui::linear_view m_vert_view = tavros::ui::linear_view("vert_view");
     tavros::ui::linear_view m_horiz_view = tavros::ui::linear_view("horiz_view");
-    tavros::ui::view m_view1 = tavros::ui::view("view1");
-    tavros::ui::view m_view2 = tavros::ui::view("view2");
-    tavros::ui::view m_view3 = tavros::ui::view("view3");
-    tavros::ui::view m_view4 = tavros::ui::view("view4");
-    tavros::ui::view m_view5 = tavros::ui::view("view5");
-    tavros::ui::view m_view6 = tavros::ui::view("view6");
-    tavros::ui::view m_view7 = tavros::ui::view("view7");
-    tavros::ui::view m_view8 = tavros::ui::view("view8");
-    tavros::ui::view m_view9 = tavros::ui::view("view9");
-    tavros::ui::label_view m_label = tavros::ui::label_view("label");
-    tavros::ui::label_view m_label2 = tavros::ui::label_view("label2");
-    tavros::ui::label_view m_label3 = tavros::ui::label_view("label3");
-    tavros::ui::label_view m_label4 = tavros::ui::label_view("label4");
+    tavros::ui::view        m_view1 = tavros::ui::view("view1");
+    tavros::ui::view        m_view2 = tavros::ui::view("view2");
+    tavros::ui::view        m_view3 = tavros::ui::view("view3");
+    tavros::ui::view        m_view4 = tavros::ui::view("view4");
+    tavros::ui::view        m_view5 = tavros::ui::view("view5");
+    tavros::ui::view        m_view6 = tavros::ui::view("view6");
+    tavros::ui::view        m_view7 = tavros::ui::view("view7");
+    tavros::ui::view        m_view8 = tavros::ui::view("view8");
+    tavros::ui::view        m_view9 = tavros::ui::view("view9");
+    tavros::ui::label_view  m_label = tavros::ui::label_view("label");
+    tavros::ui::label_view  m_label2 = tavros::ui::label_view("label2");
+    tavros::ui::label_view  m_label3 = tavros::ui::label_view("label3");
+    tavros::ui::label_view  m_label4 = tavros::ui::label_view("label4");
 };
 
 // -------------------------------------------------------------------------

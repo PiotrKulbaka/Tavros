@@ -554,10 +554,10 @@ namespace tavros::tef
 
 
     // ============================================================
-    // rgba8
+    // color32
     // ============================================================
 
-    std::optional<math::rgba8> conv<math::rgba8>::read(const node* n) const noexcept
+    std::optional<math::color32> conv<math::color32>::read(const node* n) const noexcept
     {
         if (!valid_n(n)) {
             return std::nullopt;
@@ -566,21 +566,21 @@ namespace tavros::tef
         if (v > 0xffffffffull) {
             return std::nullopt;
         }
-        return math::rgba8(static_cast<uint32>(v));
+        return math::color32(static_cast<uint32>(v));
     }
 
-    void conv<math::rgba8>::write(node* parent, core::string_view key, const math::rgba8& val) const
+    void conv<math::color32>::write(node* parent, core::string_view key, const math::color32& val) const
     {
         TAV_ASSERT(parent);
 
         if (parent) {
-            parent->append(key, static_cast<uint64>(val.color));
+            parent->append(key, static_cast<uint64>(val.packed));
         }
     }
 
-    core::string_view conv<math::rgba8>::description() const noexcept
+    core::string_view conv<math::color32>::description() const noexcept
     {
-        return "rgba8 (0xRRGGBBAA)";
+        return "color32 (0xRRGGBBAA)";
     }
 
 

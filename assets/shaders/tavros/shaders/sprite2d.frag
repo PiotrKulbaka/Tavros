@@ -1,5 +1,4 @@
 #include <tavros/scene/scene.glsl>
-#include <tavros/scene/brush.glsl>
 
 layout(binding = 0) uniform sampler2D u_texture;
 
@@ -10,6 +9,5 @@ out vec4 base_color;
 
 void main()
 {
-    vec4 modulate = sample_brush(v_coord);
-    base_color = texture(u_texture, v_uv) * modulate;
+    base_color = texture(u_texture, v_uv);
 }

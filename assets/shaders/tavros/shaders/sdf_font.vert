@@ -1,5 +1,4 @@
 #include <tavros/scene/scene.glsl>
-#include <tavros/shaders/color.glsl>
 
 layout (location = 0) in mat3x2 a_gpyph_transform;  // per-instance transform
 layout (location = 3) in uvec4  a_bounds_and_color; // per-instance xy - glyph rects; z - glyph color; w - outline color
@@ -42,8 +41,8 @@ void main()
     v_world_pos = world_pos;
     gl_Position = ui_to_clip(world_pos);
 
-    v_color = unpack_color(a_bounds_and_color.z);
-    v_outline_color = unpack_color(a_bounds_and_color.w);
+    v_color = unpackUnorm4x8(a_bounds_and_color.z);
+    v_outline_color = unpackUnorm4x8(a_bounds_and_color.w);
 
     uint fill_th = (pc.flags >> 0) & 0xff;
     uint outline_th = (pc.flags >> 8) & 0xff;

@@ -36,12 +36,12 @@ namespace tavros::ui
         m_text.set_font_size(size);
     }
 
-    void label_view::set_text_color(math::rgba8 color) noexcept
+    void label_view::set_text_color(math::color32 color) noexcept
     {
         m_text.set_fill_color(color);
     }
 
-    void label_view::set_outline_color(math::rgba8 color) noexcept
+    void label_view::set_outline_color(math::color32 color) noexcept
     {
         m_text.set_outline_color(color);
     }
@@ -105,9 +105,9 @@ namespace tavros::ui
         auto* r = ctx.renderer().renderer2d();
 
         auto cb = content_box();
-        r->set_clip_rect(padding_box());
+       /* r->set_clip_rect(padding_box());
         r->draw_text(m_text.text(), cb.min, 0.5f, 0.1f);
-        r->reset_clip_rect();
+        r->reset_clip_rect();*/
     }
 
 } // namespace tavros::ui

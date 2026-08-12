@@ -92,7 +92,8 @@ namespace tavros::input
                 break;
 
             case event_type::mouse_leave:
-                m_is_mouse_leaved = true;;
+                m_is_mouse_leaved = true;
+                ;
                 break;
 
             case event_type::mouse_move:

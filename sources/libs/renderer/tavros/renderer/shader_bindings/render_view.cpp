@@ -31,7 +31,7 @@ namespace tavros::renderer
     {
         auto slice = sb.slice<view_data>();
         slice.data().copy_from(&m_data);
-        return {slice.gpu_buffer(), static_cast<uint32>(slice.offset_bytes()), static_cast<uint32>(slice.size_bytes()), k_shader_binding_index};
+        return {slice.gpu_buffer(), static_cast<uint32>(slice.offset_bytes()), static_cast<uint32>(slice.size_bytes()), k_render_view_binding_index};
     }
 
     const render_view::view_data& render_view::data() const noexcept

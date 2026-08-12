@@ -12,14 +12,14 @@ namespace tavros::math
      * Provides simple utilities for manipulating 8-bit color values, converting
      * from floating-point colors, linear interpolation, and checking transparency.
      */
-    class rgba8
+    class color32
     {
     public:
         /**
          * @brief Default-initializes the color to 0x00000000.
          */
-        constexpr rgba8() noexcept
-            : color(0)
+        constexpr color32() noexcept
+            : packed(0)
         {
         }
 
@@ -31,7 +31,7 @@ namespace tavros::math
          * @param b Blue channel.
          * @param a Alpha channel (defaults to 255).
          */
-        constexpr rgba8(uint8 r, uint8 g, uint8 b, uint8 a = 255) noexcept
+        constexpr color32(uint8 r, uint8 g, uint8 b, uint8 a = 255) noexcept
             : r(r)
             , g(g)
             , b(b)
@@ -44,8 +44,8 @@ namespace tavros::math
          *
          * @param rgba Red Green Blue and Alpha channels.
          */
-        constexpr rgba8(uint32 rgba) noexcept
-            : color(rgba)
+        constexpr color32(uint32 rgba) noexcept
+            : packed(rgba)
         {
         }
 
@@ -54,7 +54,7 @@ namespace tavros::math
          *
          * @param color Input color where each component is in [0.0, 1.0].
          */
-        constexpr rgba8(const vec4& color) noexcept
+        constexpr color32(const vec4& color) noexcept
             : r(static_cast<uint8>(color.r * 255.0f))
             , g(static_cast<uint8>(color.g * 255.0f))
             , b(static_cast<uint8>(color.b * 255.0f))
@@ -67,7 +67,7 @@ namespace tavros::math
          */
         constexpr void set(uint8 r, uint8 g, uint8 b, uint8 a) noexcept
         {
-            color = (static_cast<uint32>(r) << 24) | (static_cast<uint32>(g) << 16) | (static_cast<uint32>(b) << 8) | (static_cast<uint32>(a) << 0);
+            packed = (static_cast<uint32>(r) << 24) | (static_cast<uint32>(g) << 16) | (static_cast<uint32>(b) << 8) | (static_cast<uint32>(a) << 0);
         }
 
         /**
@@ -104,10 +104,10 @@ namespace tavros::math
          * @param c2 Second color.
          * @param t Interpolation factor in [0, 1].
          */
-        static constexpr rgba8 lerp(const rgba8& c1, const rgba8& c2, float t)
+        static constexpr color32 lerp(const color32& c1, const color32& c2, float t)
         {
             const int32 ti = static_cast<int32>(t * 256.0f);
-            return rgba8(
+            return color32(
                 static_cast<uint8>(static_cast<int32>(c1.r) + ((static_cast<int32>(c2.r) - static_cast<int32>(c1.r)) * static_cast<int32>(ti) >> 8)),
                 static_cast<uint8>(static_cast<int32>(c1.g) + ((static_cast<int32>(c2.g) - static_cast<int32>(c1.g)) * static_cast<int32>(ti) >> 8)),
                 static_cast<uint8>(static_cast<int32>(c1.b) + ((static_cast<int32>(c2.b) - static_cast<int32>(c1.b)) * static_cast<int32>(ti) >> 8)),
@@ -120,12 +120,12 @@ namespace tavros::math
         {
             struct
             {
-                uint8 a, b, g, r;
+                uint8 r, g, b, a;
             };
-            uint32 color; /// Packed RGBA value in 0xRRGGBBAA format.
+            uint32 packed; /// Packed RGBA value in 0xAABBGGRR format.
         };
     };
 
-    static_assert(sizeof(rgba8) == 4);
+    static_assert(sizeof(color32) == 4);
 
 } // namespace tavros::math

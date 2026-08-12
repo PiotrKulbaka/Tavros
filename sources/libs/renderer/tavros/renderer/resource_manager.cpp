@@ -25,6 +25,11 @@ namespace
         .wrap_mode = {rhi::wrap_mode::repeat, rhi::wrap_mode::repeat, rhi::wrap_mode::repeat},
     };
 
+    constexpr smp_create_info k_nearest_mirrored_repeat = {
+        .filter = {rhi::filter_mode::nearest, rhi::filter_mode::nearest, rhi::mipmap_filter_mode::off},
+        .wrap_mode = {rhi::wrap_mode::mirrored_repeat, rhi::wrap_mode::mirrored_repeat, rhi::wrap_mode::mirrored_repeat},
+    };
+
     constexpr smp_create_info k_linear_clamp = {
         .filter = {rhi::filter_mode::linear, rhi::filter_mode::linear, rhi::mipmap_filter_mode::off},
         .wrap_mode = {rhi::wrap_mode::clamp_to_edge, rhi::wrap_mode::clamp_to_edge, rhi::wrap_mode::clamp_to_edge},
@@ -33,6 +38,11 @@ namespace
     constexpr smp_create_info k_linear_repeat = {
         .filter = {rhi::filter_mode::linear, rhi::filter_mode::linear, rhi::mipmap_filter_mode::off},
         .wrap_mode = {rhi::wrap_mode::repeat, rhi::wrap_mode::repeat, rhi::wrap_mode::repeat},
+    };
+
+    constexpr smp_create_info k_linear_mirrored_repeat = {
+        .filter = {rhi::filter_mode::linear, rhi::filter_mode::linear, rhi::mipmap_filter_mode::off},
+        .wrap_mode = {rhi::wrap_mode::mirrored_repeat, rhi::wrap_mode::mirrored_repeat, rhi::wrap_mode::mirrored_repeat},
     };
 
     constexpr smp_create_info k_trilinear_clamp = {
@@ -68,8 +78,10 @@ namespace
         preset_info{smp_preset_t::automatic, true, &k_trilinear_repeat},
         preset_info{smp_preset_t::nearest_clamp, false, &k_nearest_clamp},
         preset_info{smp_preset_t::nearest_repeat, false, &k_nearest_repeat},
+        preset_info{smp_preset_t::nearest_mirrored_repeat, false, &k_nearest_mirrored_repeat},
         preset_info{smp_preset_t::linear_clamp, true, &k_linear_clamp},
         preset_info{smp_preset_t::linear_repeat, true, &k_linear_repeat},
+        preset_info{smp_preset_t::linear_mirrored_repeat, true, &k_linear_mirrored_repeat},
         preset_info{smp_preset_t::trilinear_clamp, true, &k_trilinear_clamp},
         preset_info{smp_preset_t::trilinear_repeat, true, &k_trilinear_repeat},
         preset_info{smp_preset_t::shadow, false, &k_shadow},

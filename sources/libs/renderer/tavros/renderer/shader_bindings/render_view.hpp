@@ -2,6 +2,7 @@
 
 #include <tavros/renderer/camera/camera.hpp>
 #include <tavros/renderer/gpu_stream_buffer.hpp>
+#include <tavros/renderer/shader_bindings/shader_binding_indices.hpp>
 
 namespace tavros::renderer
 {
@@ -15,16 +16,13 @@ namespace tavros::renderer
     class render_view
     {
     public:
-        /** @brief Shader binding index of the view uniform buffer. */
-        static constexpr uint32 k_shader_binding_index = 0;
-
         /**
          * @brief Data uploaded to the GPU and mapped to the `Scene` shader structure.
          *
          * Contains camera matrices, camera parameters, UI projection,
          * frame information, and timing data.
          */
-        struct alignas(16) view_data
+        struct alignas(16) view_data // Mirrored 1:1 in the shader
         {
             // 3D scene
             math::mat4 view;

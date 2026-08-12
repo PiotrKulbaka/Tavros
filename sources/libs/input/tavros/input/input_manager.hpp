@@ -93,7 +93,7 @@ namespace tavros::input
          * @brief Returns a normalized factor [0-1] representing how long the button has been held.
          */
         float mouse_button_hold_factor(mouse_button button) const noexcept;
-        
+
         /**
          * @brief Returns true if mouse entered to window during last frame.
          */

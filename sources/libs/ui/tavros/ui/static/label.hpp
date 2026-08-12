@@ -17,9 +17,9 @@ namespace tavros::ui
 
         void set_font_size(float size) noexcept;
 
-        void set_text_color(math::rgba8 color) noexcept;
+        void set_text_color(math::color32 color) noexcept;
 
-        void set_outline_color(math::rgba8 color) noexcept;
+        void set_outline_color(math::color32 color) noexcept;
 
         void set_word_wrap_enabled(bool enabled) noexcept;
 

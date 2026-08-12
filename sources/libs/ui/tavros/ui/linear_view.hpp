@@ -7,9 +7,12 @@ namespace
     float align_offset(tavros::ui::h_align align, float avail, float size) noexcept
     {
         switch (align) {
-            case tavros::ui::h_align::left:   return 0.0f;
-            case tavros::ui::h_align::center: return (avail - size) * 0.5f;
-            case tavros::ui::h_align::right:  return avail - size;
+        case tavros::ui::h_align::left:
+            return 0.0f;
+        case tavros::ui::h_align::center:
+            return (avail - size) * 0.5f;
+        case tavros::ui::h_align::right:
+            return avail - size;
         }
         return 0.0f;
     }
@@ -17,9 +20,12 @@ namespace
     float align_offset(tavros::ui::v_align align, float avail, float size) noexcept
     {
         switch (align) {
-            case tavros::ui::v_align::top:    return 0.0f;
-            case tavros::ui::v_align::center: return (avail - size) * 0.5f;
-            case tavros::ui::v_align::bottom: return avail - size;
+        case tavros::ui::v_align::top:
+            return 0.0f;
+        case tavros::ui::v_align::center:
+            return (avail - size) * 0.5f;
+        case tavros::ui::v_align::bottom:
+            return avail - size;
         }
         return 0.0f;
     }
@@ -31,7 +37,6 @@ namespace tavros::ui
     class linear_view : public view
     {
     public:
-
         linear_view(core::string_view name) noexcept
             : view(name)
         {
@@ -112,8 +117,8 @@ namespace tavros::ui
 
                 if (m_content_orient == content_orient::vertical) {
                     // main axis = vertical, cross axis = horizontal -> horizontal_alignment
-                    float cross_avail  = cb.width();
-                    float cross_size   = std::min(desired.x, cross_avail);
+                    float cross_avail = cb.width();
+                    float cross_size = std::min(desired.x, cross_avail);
                     float cross_offset = align_offset(child.horizontal_alignment(), cross_avail, cross_size);
 
                     child_bounds = {
@@ -125,8 +130,8 @@ namespace tavros::ui
                     cursor += desired.y + m_spacing;
                 } else {
                     // main axis = horizontal, cross axis = vertical -> vertical_alignment
-                    float cross_avail  = cb.height();
-                    float cross_size   = std::min(desired.y, cross_avail);
+                    float cross_avail = cb.height();
+                    float cross_size = std::min(desired.y, cross_avail);
                     float cross_offset = align_offset(child.vertical_alignment(), cross_avail, cross_size);
 
                     child_bounds = {

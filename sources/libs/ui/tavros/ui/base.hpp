@@ -24,7 +24,7 @@ namespace tavros::ui
         horizontal,
         vertical,
     };
-    
+
     enum class content_mode : uint8
     {
         fit,

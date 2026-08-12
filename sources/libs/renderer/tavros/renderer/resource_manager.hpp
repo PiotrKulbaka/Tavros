@@ -27,11 +27,17 @@ namespace tavros::renderer
         /// Nearest filtering, repeat wrap. Suitable for tiled textures without filtering.
         nearest_repeat,
 
+        /// Nearest filtering, repeat mirrored wrap. Suitable for tiled textures without filtering.
+        nearest_mirrored_repeat,
+
         /// Linear filtering, clamp to edge. Suitable for UI, fullscreen effects, and post-processing.
         linear_clamp,
 
         /// Linear filtering, repeat wrap. Suitable for generic textures without mipmaps.
         linear_repeat,
+
+        /// Linear filtering, mirrored repeat wrap. Suitable for generic textures without mipmaps.
+        linear_mirrored_repeat,
 
         /// Trilinear filtering, clamp to edge. Suitable for skyboxes, environment maps, and unique textures.
         trilinear_clamp,

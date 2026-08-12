@@ -50,7 +50,7 @@ namespace tavros::renderer
         if (delta != 0.0f) {
             auto before = m_distance > 0.01f ? m_distance : 0.01f;
             m_distance -= delta * before;
-            m_distance = math::clamp(m_distance, 0.0f, 1000.0f);
+            m_distance = math::clamp(m_distance, 0.0f, k_max_zoom);
             apply();
         }
     }

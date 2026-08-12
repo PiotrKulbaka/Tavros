@@ -1,5 +1,4 @@
 #include <tavros/scene/scene.glsl>
-#include <tavros/shaders/color.glsl>
 
 // ----------------------------------------------------------------
 // Inputs
@@ -98,10 +97,10 @@ void main()
     float minor_mask = clamp(max(minor_u, minor_v) - axis_mask - major_mask, 0.0, 1.0);
 
     vec4 color = vec4(0.0f);
-    color = blend(color, unpack_color(pc.minor_color), minor_mask);
-    color = blend(color, unpack_color(pc.major_color), major_mask);
-    color = blend(color, unpack_color(pc.axis_v_color), axis_v * axis_mask);
-    color = blend(color, unpack_color(pc.axis_u_color), axis_u * axis_mask);
+    color = blend(color, unpackUnorm4x8(pc.minor_color), minor_mask);
+    color = blend(color, unpackUnorm4x8(pc.major_color), major_mask);
+    color = blend(color, unpackUnorm4x8(pc.axis_v_color), axis_v * axis_mask);
+    color = blend(color, unpackUnorm4x8(pc.axis_u_color), axis_u * axis_mask);
 
     float a_fade = angle_fade(v_cam_pos, v_world_pos, v_plane_normal); //clamp(abs(view_dir.z) * 2.2, 0.0, 1.0);
     float d_fade = distance_fade(v_cam_pos, v_world_pos, v_plane_normal, v_view_space_depth);

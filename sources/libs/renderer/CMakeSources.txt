@@ -68,8 +68,15 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/string_utils.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/rhi/structs.hpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/brush_collection.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/brush_collection.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/paint_collection.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/paint_collection.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/render_view.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/render_view.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/shader_binding_indices.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/shape_collection.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shader_bindings/shape_collection.hpp
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shaders/pp_lexer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/shaders/pp_lexer.hpp

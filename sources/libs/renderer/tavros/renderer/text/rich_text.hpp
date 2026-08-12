@@ -14,10 +14,10 @@ namespace tavros::renderer
     struct glyph_style_c
     {
         /// @brief Glyph fill color.
-        math::rgba8 fill_color;
+        math::color32 fill_color;
 
         /// @brief Glyph outline color.
-        math::rgba8 outline_color;
+        math::color32 outline_color;
     };
 
     /// Text archetype containing glyph data and layout information.
@@ -46,10 +46,10 @@ namespace tavros::renderer
         void set_font_size(float size_px) noexcept;
 
         /** @brief Sets the current glyph fill color. */
-        void set_fill_color(math::rgba8 color) noexcept;
+        void set_fill_color(math::color32 color) noexcept;
 
         /** @brief Sets the current glyph outline color. */
-        void set_outline_color(math::rgba8 color) noexcept;
+        void set_outline_color(math::color32 color) noexcept;
 
         /** @brief Sets the line spacing multiplier. */
         void set_line_spacing(float spacing) noexcept;
@@ -89,8 +89,8 @@ namespace tavros::renderer
         bool            m_dirty;
         font_ref        m_cur_font;
         float           m_cur_font_size;
-        math::rgba8     m_cur_fill_color;
-        math::rgba8     m_cur_outline_color;
+        math::color32   m_cur_fill_color;
+        math::color32   m_cur_outline_color;
         float           m_line_wrap_width;
         text_align      m_text_align;
         float           m_line_spacing;

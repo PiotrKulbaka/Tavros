@@ -57,6 +57,12 @@ tex = {
         gen_mipmaps = false
         type = "texture_2d"
     }
+
+    ui_pda2_noice = {
+        path = "textures/ui_pda2_noice.png"
+        gen_mipmaps = false
+        type = "texture_2d"
+    }
 }
 
 

@@ -33,16 +33,16 @@ namespace tavros::ui
 
         void       set_margin(const thickness4& margin) noexcept;
         thickness4 margin() const noexcept;
-        
+
         void       set_border(const thickness4& border) noexcept;
         thickness4 border() const noexcept;
-        
+
         void       set_padding(const thickness4& padding) noexcept;
         thickness4 padding() const noexcept;
-        
+
         void    set_border_radius(const radius4& radius) noexcept;
         radius4 border_radius() const noexcept;
-        
+
         aabb2 margin_box() const noexcept;
         aabb2 border_box() const noexcept;
         aabb2 padding_box() const noexcept;
@@ -51,14 +51,14 @@ namespace tavros::ui
         void    set_horizontal_alignment(h_align align) noexcept; // Self alignment
         h_align horizontal_alignment() const noexcept;            // Self alignment
 
-        void    set_vertical_alignment(v_align align) noexcept; // Self alignment
-        v_align vertical_alignment() const noexcept;            // Self alignment
+        void    set_vertical_alignment(v_align align) noexcept;   // Self alignment
+        v_align vertical_alignment() const noexcept;              // Self alignment
 
-        // 
+        //
         virtual void resolve(ui_context& ctx);
 
         virtual math::vec2 measure(math::vec2 available_border_box_size) noexcept;
-        virtual void arrange(aabb2 border_box_bounds) noexcept;
+        virtual void       arrange(aabb2 border_box_bounds) noexcept;
 
         // Update & draw
         virtual void update(float dt);

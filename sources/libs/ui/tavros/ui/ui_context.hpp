@@ -7,13 +7,13 @@ namespace tavros::ui
 
     struct debug_draw_info
     {
-        bool debug_draw = false;
-        math::rgba8 content_box_color = math::rgba8(0x7FC9FF60);
-        math::rgba8 padding_box_color = math::rgba8(0x7FFFC560);
-        math::rgba8 border_box_color = math::rgba8(0xFF7FED60);
-        math::rgba8 margin_box_color = math::rgba8(0xFFE97F60);
-        math::rgba8 hit_box_color = math::rgba8(0x7FFF8EFF);
-        float       hit_box_line_thickness = 2.0f;
+        bool          debug_draw = true;
+        math::color32 content_box_color = math::color32(0x60FFC97F);
+        math::color32 padding_box_color = math::color32(0x60C5FF7F);
+        math::color32 border_box_color = math::color32(0x60ED7FFF);
+        math::color32 margin_box_color = math::color32(0x607FE9FF);
+        math::color32 hit_box_color = math::color32(0xFF8EFF7F);
+        float         hit_box_line_thickness = 2.0f;
     };
 
     class ui_context : core::noncopyable
@@ -30,7 +30,7 @@ namespace tavros::ui
 
     private:
         core::shared_ptr<renderer::render_system> m_renderer;
-        debug_draw_info m_debug_info;
+        debug_draw_info                           m_debug_info;
     };
 
 } // namespace tavros::ui

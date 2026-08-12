@@ -56,7 +56,7 @@ namespace tavros::math
 
         /// @brief Divides this vector component-wise by another. Asserts in debug if any component of `other` is zero
         constexpr vec3& operator/=(const vec3& other) noexcept;
-        
+
         /// @brief Returns true if all components are zero.
         constexpr bool is_zero() const noexcept
         {

@@ -7,8 +7,8 @@ namespace tavros::renderer
         : m_dirty(true)
         , m_cur_font(initial_font)
         , m_cur_font_size(initial_font_size)
-        , m_cur_fill_color(math::rgba8(255, 255, 255, 255))
-        , m_cur_outline_color(math::rgba8(0, 0, 0, 255))
+        , m_cur_fill_color(math::color32(255, 255, 255, 255))
+        , m_cur_outline_color(math::color32(0, 0, 0, 255))
         , m_line_wrap_width(-1.0f)
         , m_text_align(text_align::left)
         , m_line_spacing(1.0f)
@@ -25,12 +25,12 @@ namespace tavros::renderer
         m_cur_font_size = size_px;
     }
 
-    void rich_text::set_fill_color(math::rgba8 color) noexcept
+    void rich_text::set_fill_color(math::color32 color) noexcept
     {
         m_cur_fill_color = color;
     }
 
-    void rich_text::set_outline_color(math::rgba8 color) noexcept
+    void rich_text::set_outline_color(math::color32 color) noexcept
     {
         m_cur_outline_color = color;
     }

@@ -194,4 +194,21 @@ mt = {
         }
     }
 
+    r2d = {
+        shaders = {
+            vertex = "tavros/shaders/r2d.vert"
+            fragment = "tavros/shaders/r2d.frag"
+        }
+
+        color = {
+            base_color = { 
+                blend = "alpha"
+            }
+        }
+
+        rasterizer = {
+            scissor = true
+        }
+    }
+
 }

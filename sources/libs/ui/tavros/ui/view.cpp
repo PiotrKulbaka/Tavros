@@ -51,7 +51,7 @@ namespace tavros::ui
     {
         m_border_box_desired_size = size;
     }
-    
+
     math::vec2 view::size() const noexcept
     {
         return m_border_box_desired_size;
@@ -61,7 +61,7 @@ namespace tavros::ui
     {
         m_border_box_min_size = min_size;
     }
-    
+
     math::vec2 view::min_size() const noexcept
     {
         return m_border_box_min_size;
@@ -81,22 +81,22 @@ namespace tavros::ui
     {
         m_margin = margin;
     }
-    
+
     thickness4 view::margin() const noexcept
     {
         return m_margin;
     }
-    
+
     void view::set_border(const thickness4& border) noexcept
     {
         m_border = border;
     }
-    
+
     thickness4 view::border() const noexcept
     {
         return m_border;
     }
-    
+
     void view::set_padding(const thickness4& padding) noexcept
     {
         m_padding = padding;
@@ -121,7 +121,7 @@ namespace tavros::ui
     {
         return m_border_box.expanded(m_margin);
     }
-    
+
     aabb2 view::border_box() const noexcept
     {
         return m_border_box;
@@ -146,12 +146,12 @@ namespace tavros::ui
     {
         return m_h_align;
     }
-    
+
     void view::set_vertical_alignment(v_align align) noexcept
     {
         m_v_align = align;
     }
-    
+
     v_align view::vertical_alignment() const noexcept
     {
         return m_v_align;
@@ -203,33 +203,33 @@ namespace tavros::ui
                 auto mb = margin_box();
 
                 if (!cb.is_empty()) {
-                    r->set_brush_solid_color(dbg.content_box_color);
-                    r->fill_rect(cb);
+                    //r->set_brush_solid_color(dbg.content_box_color);
+                    //r->fill_rect(cb);
                 }
-                
-                if (!m_padding.is_zero()) {
-                    r->set_brush_solid_color(dbg.padding_box_color);
-                    r->fill_rect_cut(pb, cb);
-                }
-                
-                if (!m_border.is_zero()) {
-                    r->set_brush_solid_color(dbg.border_box_color);
-                    r->fill_rect_cut(bb, pb);
 
-                    r->set_brush_solid_color(0xFF000040);
-                    auto inner = geometry::to_inner_radius(m_border_radius, m_border);
-                    r->fill_rect_cut(bb, pb, m_border_radius, inner);
+                if (!m_padding.is_zero()) {
+                   // r->set_brush_solid_color(dbg.padding_box_color);
+                   // r->fill_rect_cut(pb, cb);
+                }
+
+                if (!m_border.is_zero()) {
+                   // r->set_brush_solid_color(dbg.border_box_color);
+                   // r->fill_rect_cut(bb, pb);
+
+                  //  r->set_brush_solid_color(0x400000FF);
+                   // auto inner = geometry::to_inner_radius(m_border_radius, m_border);
+                   // r->fill_rect_cut(bb, pb, m_border_radius, inner);
                 }
 
                 if (!m_margin.is_zero()) {
-                    r->set_brush_solid_color(dbg.margin_box_color);
-                    r->fill_rect_cut(mb, bb);
+                   // r->set_brush_solid_color(dbg.margin_box_color);
+                   // r->fill_rect_cut(mb, bb);
                 }
             }
 
-            r->set_brush_solid_color(dbg.hit_box_color);
-            r->set_line_thickness(dbg.hit_box_line_thickness);
-            r->draw_aabb(m_border_box);
+           // r->set_brush_solid_color(dbg.hit_box_color);
+           // r->set_line_thickness(dbg.hit_box_line_thickness);
+           // r->draw_aabb(m_border_box);
         }
     }
 

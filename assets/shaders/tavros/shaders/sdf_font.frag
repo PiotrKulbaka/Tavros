@@ -25,7 +25,7 @@ void main()
     float w = max(fwidth(sdf) * 0.5, 0.004);
 
     // Resolve fill color
-    vec4 brush = sample_brush(v_world_pos);
+    vec4 brush = vec4(1.0f);
     vec4 fill_color = v_color;
     if ((v_flags & USE_FILL_BRUSH_MASK) != 0u) {
         fill_color *= brush;
