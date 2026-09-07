@@ -91,15 +91,21 @@ namespace tavros::renderer
     {
         constexpr auto hash_ver_sv = core::string_view("#version ");
         constexpr auto core_sv = core::string_view(" core\n");
+        constexpr auto extension_sv = core::string_view("#extension ");
+        constexpr auto extension_mid_sv = core::string_view(" : require\n");
         constexpr auto define_sv = core::string_view("#define ");
         constexpr auto define_end_sv = core::string_view("\n");
 
         core::string_view backend = to_backend_define(args.lang);
-        size_t            defines_number = args.defines.size() == 0 ? 0 : std::count(args.defines.begin(), args.defines.end(), ';') + 1;
-        size_t            required_capacity =
-            hash_ver_sv.size() + 3 + core_sv.size() +                                          // #version XYZ core\n
-            (define_sv.size() + define_end_sv.size()) * defines_number + args.defines.size() + // #define ...\n...
-            backend.size();                                                                    // #define TAV_OPEN_GL\n
+
+        size_t extensions_number = args.extensions.size() == 0 ? 0 : std::count(args.extensions.begin(), args.extensions.end(), ';') + 1;
+        size_t defines_number = args.defines.size() == 0 ? 0 : std::count(args.defines.begin(), args.defines.end(), ';') + 1;
+
+        size_t required_capacity =
+            hash_ver_sv.size() + 3 + core_sv.size() +                                                      // #version XYZ core\n
+            (extension_sv.size() + extension_mid_sv.size()) * extensions_number + args.extensions.size() + // #extension ... : require\n...
+            (define_sv.size() + define_end_sv.size()) * defines_number + args.defines.size() +             // #define ...\n...
+            backend.size();                                                                                // #define TAV_OPEN_GL\n
 
         core::string result;
         result.reserve(required_capacity);
@@ -108,20 +114,38 @@ namespace tavros::renderer
         result.append(to_version(args.lang));
         result.append(core_sv);
 
-        // Add defines
-        const auto* fwd = args.defines.data();
-        const auto* beg = args.defines.data();
-        const auto* end = args.defines.data() + args.defines.size();
-        while (fwd < end) {
-            while (fwd < end && *fwd != ';') {
-                ++fwd;
+        // Add extensions
+        {
+            const auto* fwd = args.extensions.data();
+            const auto* beg = args.extensions.data();
+            const auto* end = args.extensions.data() + args.extensions.size();
+            while (fwd < end) {
+                while (fwd < end && *fwd != ';') {
+                    ++fwd;
+                }
+                result.append(extension_sv);
+                result.append(core::string_view(beg, fwd));
+                result.append(extension_mid_sv);
+                beg = ++fwd;
             }
+        }
 
-            result.append(define_sv);
-            result.append(core::string_view(beg, fwd));
-            result.append(define_end_sv);
+        // Add defines
+        {
+            const auto* fwd = args.defines.data();
+            const auto* beg = args.defines.data();
+            const auto* end = args.defines.data() + args.defines.size();
+            while (fwd < end) {
+                while (fwd < end && *fwd != ';') {
+                    ++fwd;
+                }
 
-            beg = ++fwd;
+                result.append(define_sv);
+                result.append(core::string_view(beg, fwd));
+                result.append(define_end_sv);
+
+                beg = ++fwd;
+            }
         }
 
         result.append(backend);
@@ -196,12 +220,12 @@ namespace tavros::renderer
 
             result.append(n_hash_line_sp);
             result.append(ascii_number);
-            result.append(" ");
+            /*result.append(" ");
             result.append("1");
-            result.append("\n");
-            // result.append(sp_dq);
-            // result.append(p.path);
-            // result.append(dq_n);
+            result.append("\n");*/
+            result.append(sp_dq);
+            result.append(p.path);
+            result.append(dq_n);
             result.append(p.text);
         }
 

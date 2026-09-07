@@ -1,3 +1,6 @@
+#ifndef _TAV_BRUSH_GLSL_
+#define _TAV_BRUSH_GLSL_
+
 #define BRUSH_TYPE_WHITE_COLOR      0
 #define BRUSH_TYPE_LINEAR_GRADIENT  1
 #define BRUSH_TYPE_RADIAL_GRADIENT  2
@@ -78,9 +81,10 @@ vec4 sample_brush(const in brush_t b, const in vec2 p)
     } else { // BRUSH_TYPE_CONIC_GRADIENT
         const float TWO_PI = 6.28318530717958647692;
         float start_angle = b.arg1.x;
-        float angle = atan(local_pos.y, local_pos.x) - start_angle;
-        angle = mod(angle, TWO_PI);
-        t = angle / TWO_PI;
+        float sweep_rad   = b.arg1.y;
+        float raw_angle = atan(local_pos.y, local_pos.x);
+        float angle = mod(raw_angle - start_angle, TWO_PI);
+        t = angle / sweep_rad;
     }
 
     uint repeat_mode = (b.flags & BRUSH_REPEATING_MASK) >> BRUSH_REPEATING_SHIFT;
@@ -129,6 +133,8 @@ vec4 sample_brush(const in brush_t b, const in vec2 p)
 
     return mix(c0, c1, local_t);
 }
+
+#endif // _TAV_BRUSH_GLSL_
 
 
 

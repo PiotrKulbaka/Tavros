@@ -119,7 +119,7 @@ namespace tavros::renderer
         for (auto& r : rects) {
             auto height_candidate = static_cast<uint32>(r.y + r.h);
             if (height_candidate > atlas_height) {
-                atlas_height = height_candidate;
+                atlas_height = math::ceil_power_of_two(height_candidate);
             }
         }
 
@@ -139,8 +139,8 @@ namespace tavros::renderer
 
                 g.entry.left = static_cast<uint16>(rect.x + 1);
                 g.entry.top = static_cast<uint16>(rect.y + 1);
-                g.entry.right = static_cast<uint16>(rect.x + rect.w);
-                g.entry.bottom = static_cast<uint16>(rect.y + rect.h);
+                g.entry.width = static_cast<uint16>(rect.w);
+                g.entry.height = static_cast<uint16>(rect.h);
 
                 // Bake glyph
                 auto offset = static_cast<size_t>(rect.y + 1) * static_cast<size_t>(stride) + static_cast<size_t>(rect.x + 1);

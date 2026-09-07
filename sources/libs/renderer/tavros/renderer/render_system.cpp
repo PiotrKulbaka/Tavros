@@ -61,13 +61,13 @@ namespace tavros::renderer
             return;
         }
 
-        m_renderer2d = core::make_unique<renderer::renderer2d>(m_gdevice.get(), m_rm.get());
-        if (!m_renderer2d) {
+        m_ui_r = core::make_unique<renderer::ui_renderer>(m_gdevice.get(), m_rm.get());
+        if (!m_ui_r) {
             logger.error("Failed to create 2D renderer.");
             return;
         }
 
-        m_constant_buffer.init(m_gdevice.get(), 256 * 1024 * 1024, rhi::buffer_usage::constant);
+        m_constant_buffer.init(m_gdevice.get(), 256 * 1024 * 1024, rhi::buffer_usage::constant, "render_system.constant_buffer");
 
         m_is_init = true;
     }
@@ -78,7 +78,7 @@ namespace tavros::renderer
             logger.warning("Render system is not initialized.");
         }
 
-        m_renderer2d = nullptr;
+        m_ui_r = nullptr;
         m_am = nullptr;
         m_ws = nullptr;
         m_rm = nullptr;
@@ -115,7 +115,7 @@ namespace tavros::renderer
         auto current_view_binding = m_current_view_data.upload(m_constant_buffer);
 
         m_rm->begin_frame();
-        m_renderer2d->begin_frame();
+        m_ui_r->begin_frame();
 
         m_current_command_queue = m_gdevice->create_command_queue();
         m_current_command_queue->bind_shader_buffers(current_view_binding);
@@ -130,7 +130,7 @@ namespace tavros::renderer
             m_gdevice->submit_command_queue(m_current_command_queue);
             m_current_command_queue = nullptr;
         }
-        m_renderer2d->end_frame();
+        m_ui_r->end_frame();
         m_rm->end_frame();
         ++m_frame_number;
         m_composer->present();

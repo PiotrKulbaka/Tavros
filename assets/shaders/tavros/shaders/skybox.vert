@@ -31,5 +31,4 @@ void main()
     mat4 view_only = mat4(mat3(scene.view));
     vec4 out_pos = scene.projection * view_only * vec4(pos, 1.0);
     gl_Position = out_pos.xyww;
-
 }

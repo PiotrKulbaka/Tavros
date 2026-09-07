@@ -19,6 +19,8 @@
 #include <tavros/ui/linear_view.hpp>
 #include <tavros/ui/static/label.hpp>
 
+#include <tavros/core/debug/debug.hpp>
+
 #include <tracy/Tracy.hpp>
 
 constexpr uint32 k_msaa = 1;
@@ -187,26 +189,75 @@ public:
         draw_world_grid(frame.commands(), 0);
         draw_world_axis({m_input_manager.window_size().width - 120.0f, 120.0f}, 90.0f);
 
-        auto* r = m_renderer->renderer2d();
+        auto* r = m_renderer->ui_renderer();
+        m_renderer->get_graphics_device()->push_debug_group("UI Draw");
 
         tavros::renderer::color_stop stops[] = {
 
-            {0.7f, 0xFFFF0000},
-            {0.8f, 0xFF00FF00},
-            {0.9f, 0xFF0000FF},
+            {0.02f, 0xFF799CF1},
+            {0.5f, 0xFF62E7FC},
+            {0.98f, 0xFFD2F4F6},
         };
 
-        auto r1 = tavros::math::vec2(172, 0);
-        auto r2 = tavros::math::vec2(0, 172);
+        tavros::renderer::color_stop diamond_stops[] = {
+            {0.00f, 0x00E29958},
+            {0.20f, 0x30E29958},
+            {0.48f, 0xFFFFEBBD},
+            {0.491f, 0xFFF3D5B9},
+            {0.509f, 0xFFF3D5B9},
+            {0.52f, 0xFFFFEBBD},
+            {0.80f, 0x30FFAF65},
+            {1.00f, 0x00FFAF65},
+        };
 
-        auto coef = std::sin(time_sec) * 4.0f;
+        auto r1 = tavros::math::vec2(372, 0);
+        auto r2 = tavros::math::vec2(0, 372);
 
-        r->superellipse({1250, 350}, r1, r2, 1)
-            //.sprite(m_ui_texture, m_input_manager.mouse_pos(), r1, r2, {615, 783, 123, 86})
-            .cut_superellipse({1250, 350}, {150, 0}, {0, 150}, -1)
-            .draw();
-        r->rect({500, 350}, {150, 0}, {0, 100}, {30}).fill_linear(stops, {200, 200}, {300, 200}, tavros::renderer::gradient_repeat::repeat).draw();
-        r->line({30, 400}, {700, 150}, 25.0, 50, 10).fill_color(0xFFBDDFCB).draw();
+        auto coef = std::sin(time_sec) * 2.0f;
+
+
+        auto s = (std::sin(time_sec * 0.5)) * 700.0;
+
+        /*enum class pattern_fill_type : uint8
+        {
+            none = 0,
+            rect = 1,
+            hexagon = 2,
+            brick = 3,
+            voronoi = 4,
+            cairo = 5,
+            stripes = 6,
+        };*/
+
+
+        //     r->superellipse({1250, 550}, r1, r2, 2)
+        //         //.sprite(m_ui_texture, m_input_manager.mouse_pos(), r1, r2, {615, 783, 123, 86})
+        //.pattern_fill(tavros::renderer::pattern_fill_type::hex, 30.0f, 15.0f)
+        //         .cut_superellipse(m_input_manager.mouse_pos(), {100, 0}, {0, 100}, -1)
+        //.fill_conic(stops, {1250, 350}, time_sec, tavros::math::k_pi<float> / 3.0, tavros::renderer::gradient_repeat::mirror)
+        //         .draw();
+
+
+        // r->rect({1250, 550}, r1, r2, {25.0})
+        //.sprite(m_ui_texture,  m_input_manager.mouse_pos(), r1, r2, {615, 783, 123, 86})
+        //  .pattern_fill(tavros::renderer::pattern_fill_type::voronoi, tavros::math::angle(0.0f), 15.0f, 25.0f)
+        //.fill_radial(diamond_stops, {static_cast<float>(1250), 450}, 300.0)
+        //  .fill_linear(diamond_stops, {static_cast<float>(1250 - 800 + s), 350}, {static_cast<float>(1250 + 600 + s), 350 + 600})
+
+        //  .shadow(0, 80.0)
+        // .draw();
+
+        // r->rect({1250, 550}, r1, r2, {25.0})
+        //.sprite(m_ui_texture,  m_input_manager.mouse_pos(), r1, r2, {615, 783, 123, 86})
+        //.pattern_fill(tavros::renderer::pattern_fill_type::voronoi, tavros::math::angle(0.0f), 25.0f, 25.0f)
+        //.fill_radial(diamond_stops, {static_cast<float>(1250), 450}, 300.0)
+        //.fill_linear(diamond_stops, {static_cast<float>(1250 - 800 + s), 350}, {static_cast<float>(1250 + 600 + s), 350 + 600})
+        //    .fill_color(0xFFFFBBCC)
+        //    .draw();
+
+
+        // r->rect({500, 350}, {150, 0}, {0, 100}, {30}).fill_linear(stops, {200, 200}, {300, 200}, tavros::renderer::gradient_repeat::mirror).draw();
+        // r->line({30, 400}, {700, 150}, 25.0, 50, 10).fill_color(0xFFBDDFCB).draw();
 
         tavros::core::long_string lb_text;
         const auto                cam_pos = m_free_cam.camera().position();
@@ -216,6 +267,27 @@ public:
         m_label.set_text_color(rainbow_color(time_sec));
         m_label.set_outline_color(inv_color(rainbow_color(time_sec)));
 
+
+        auto tex123 = m_renderer->resource_manager()->fonts_texture();
+
+        r->sdf({650, 400}, {1040 / 4.0, 0}, {0, 1340 / 4.0}, tex123, {2774, 1461, 104, 134})
+            .fill_color(0xFF333333)
+            .shadow(0.0, 0.2)
+            .cut_sdf({650, 400}, {1040 / 4.0, 0}, {0, 1340 / 4.0}, tex123, {2774, 1461, 104, 134})
+            .draw();
+
+        // r->sdf({650, 400}, {370 / 2.0, 0}, {0, 490 / 2.0}, tex123, {77, 128, 37, 49})
+        //     .pattern_fill(tavros::renderer::pattern_fill_type::voronoi, tavros::math::angle(0.0f), 15.0f, 25.0f)
+        //     //.fill_linear(diamond_stops, {static_cast<float>(1250 - 800 + s), 350}, {static_cast<float>(1250 + 600 + s), 350 + 600})
+        //     .shadow(0.0, 0.05)
+        //     .cut_sdf({650, 400}, {370 / 2.0, 0}, {0, 490 / 2.0}, tex123, {77, 128, 37, 49})
+        //     //.sprite(m_ui_texture, m_input_manager.mouse_pos(), r1, r2, {615, 783, 123, 86})
+        //     .draw();
+
+
+        r->quad({400, 800}, {123, 0}, {0, -86})
+            .sprite(m_input_manager.mouse_pos(), {123, 0}, {0, 86}, m_ui_texture->gpu_texture(), {492, 261, 123, 86})
+            .draw();
 
         if (static_cast<int32>(time_sec) % 10 < 5) {
             m_label.set_font_size(36.0f);
@@ -227,6 +299,8 @@ public:
         m_ui->layout({0.0f, 0.0f, static_cast<float>(m_input_manager.window_size().width), static_cast<float>(m_input_manager.window_size().height)});
         m_ui->update(delta_time_sec);
         m_ui->draw();
+
+        m_renderer->get_graphics_device()->pop_debug_group();
 
         frame.commands().end_rendering();
 
@@ -268,14 +342,15 @@ private:
 
 
         m_sky_textures.push_back(rm->load_texture("tex.cloudy_sky"));
-        m_sky_textures.push_back(rm->load_texture("tex.misty_morning"));
+        // m_sky_textures.push_back(rm->load_texture("tex.misty_morning"));
         // m_sky_textures.push_back(rm->load_texture("tex.cloudy_sunset_sky"));
         // m_sky_textures.push_back(rm->load_texture("tex.dark_sky"));
         // m_sky_textures.push_back(rm->load_texture("tex.pure_sunset_sky"));
-        m_sky_textures.push_back(rm->load_texture("tex.pure_sky"));
-        m_sky_textures.push_back(rm->load_texture("tex.sunset_sky"));
+        // m_sky_textures.push_back(rm->load_texture("tex.pure_sky"));
+        // m_sky_textures.push_back(rm->load_texture("tex.sunset_sky"));
         // m_sky_textures.push_back(rm->load_texture("tex.rock_sky"));
         // m_sky_textures.push_back(rm->load_texture("tex.rock_sky_small"));
+        m_sky_textures.push_back(rm->load_texture("tex.test"));
 
         m_ui_texture = rm->load_texture("tex.ui_actor_portrets");
         m_ui_texture2 = rm->load_texture("tex.ui_pda2_noice");
@@ -515,78 +590,78 @@ private:
             return axes[a].depth > axes[b].depth;
         });
 
-        auto* r = m_renderer->renderer2d();
+        auto* r = m_renderer->ui_renderer();
 
-        //r->set_brush_solid_color(0x00000008);
-        //r->fill_circle(pos, radius);
-        //r->set_brush_solid_color(0x00000010);
-        //r->fill_ring(pos, radius, radius - line_width);
+        r->superellipse(pos, {radius, 0.0}, {0.0, radius}, 1.0)
+            .fill_color(0x80000000)
+            .draw();
+        r->superellipse(pos, {radius, 0.0}, {0.0, radius}, 1.0)
+            .fill_color(0x10000000)
+            .cut_superellipse(pos, {radius - line_width, 0.0}, {0.0, radius - line_width}, 1.0)
+            .draw();
 
-        //r->set_line_thickness(line_width);
+        tavros::renderer::rich_text text;
+        text.set_font(m_font);
 
-        //tavros::renderer::rich_text text;
-        //text.set_font(m_font);
-        //r->set_text_use_brush_mask(false, false);
+        auto draw_axis_neg = [&](const axis_info& ax) {
+            // Негативный конец — глубина противоположна
+            uint8 alpha = depth_to_alpha(-ax.depth);
+            auto  col = with_alpha(ax.color, alpha);
 
-        //auto draw_axis_neg = [&](const axis_info& ax) {
-        //    // Негативный конец — глубина противоположна
-        //    uint8 alpha = depth_to_alpha(-ax.depth);
-        //    auto  col = with_alpha(ax.color, alpha);
+            // Линия: градиент от центра (полный цвет) до конца (с альфой)
+            /*r->set_brush_solid_color(col);
+            r->draw_line(pos, pos - ax.dir);*/
 
-        //    // Линия: градиент от центра (полный цвет) до конца (с альфой)
-        //    /*r->set_brush_solid_color(col);
-        //    r->set_line_dash(dash_size, gap_size);
-        //    r->draw_line(pos, pos - ax.dir);
-        //    r->set_line_dash(0.0f, 0.0f);*/
+            // Круг и текст — solid с той же альфой
+            r->superellipse(pos - ax.dir, {n_side_circle, 0.0}, {0.0, n_side_circle}, 1.0)
+                .fill_color(col)
+                .draw();
 
-        //    // Круг и текст — solid с той же альфой
-        //    r->set_brush_solid_color(col);
-        //    r->fill_circle(pos - ax.dir, n_side_circle);
+            text.clear();
+            text.set_font_size(ax.neg_font_size);
+            text.append_text(ax.neg_label);
+            auto l = text.layout();
+            /*r->set_brush_solid_color(col);
+            r->draw_text(text.text(), pos - ax.dir - l.center(), 0.5f, 0.0f);*/
+        };
 
-        //    text.clear();
-        //    text.set_font_size(ax.neg_font_size);
-        //    text.append_text(ax.neg_label);
-        //    auto l = text.layout();
-        //    r->set_brush_solid_color(col);
-        //    r->draw_text(text.text(), pos - ax.dir - l.center(), 0.5f, 0.0f);
-        //};
+        auto draw_axis_pos = [&](const axis_info& ax) {
+            uint8 alpha = depth_to_alpha(ax.depth);
+            auto  col = with_alpha(ax.color, alpha);
 
-        //auto draw_axis_pos = [&](const axis_info& ax) {
-        //    uint8 alpha = depth_to_alpha(ax.depth);
-        //    auto  col = with_alpha(ax.color, alpha);
+            // Линия: градиент от центра (полный цвет) до конца (с альфой)
+            r->line(pos, pos + ax.dir, line_width)
+                .fill_color(col)
+                .draw();
 
-        //    // Линия: градиент от центра (полный цвет) до конца (с альфой)
-        //    r->set_brush_solid_color(col);
-        //    r->set_line_dash(0.0f, 0.0f);
-        //    r->draw_line(pos, pos + ax.dir);
+            // Круг и текст — solid с той же альфой
+            r->superellipse(pos + ax.dir, {p_side_circle, 0.0}, {0.0, p_side_circle}, 1.0)
+                .fill_color(col)
+                .draw();
 
-        //    // Круг и текст — solid с той же альфой
-        //    r->set_brush_solid_color(col);
-        //    r->fill_circle(pos + ax.dir, p_side_circle);
+            text.clear();
+            text.set_font_size(ax.pos_font_size);
+            text.append_text(ax.pos_label);
+            auto l = text.layout();
+            /*r->set_brush_solid_color(col);
+            r->draw_text(text.text(), pos + ax.dir - l.center(), 0.5f, 0.15f);*/
+        };
 
-        //    text.clear();
-        //    text.set_font_size(ax.pos_font_size);
-        //    text.append_text(ax.pos_label);
-        //    auto l = text.layout();
-        //    r->set_brush_solid_color(col);
-        //    r->draw_text(text.text(), pos + ax.dir - l.center(), 0.5f, 0.15f);
-        //};
+        for (int i : order) {
+            if (axes[i].depth > 0.0f) {
+                draw_axis_neg(axes[i]);
+            } else {
+                draw_axis_pos(axes[i]);
+            }
+        }
 
-        //for (int i : order) {
-        //    if (axes[i].depth > 0.0f) {
-        //        draw_axis_neg(axes[i]);
-        //    } else {
-        //        draw_axis_pos(axes[i]);
-        //    }
-        //}
-
-        //for (int i = 2; i >= 0; --i) {
-        //    if (axes[order[i]].depth > 0.0f) {
-        //        draw_axis_pos(axes[order[i]]);
-        //    } else {
-        //        draw_axis_neg(axes[order[i]]);
-        //    }
-        //}
+        for (int i = 2; i >= 0; --i) {
+            if (axes[order[i]].depth > 0.0f) {
+                draw_axis_pos(axes[order[i]]);
+            } else {
+                draw_axis_neg(axes[order[i]]);
+            }
+        }
     }
 
     void draw_world_grid(rhi::command_queue& cbuf, uint32 plane = 0)
@@ -704,6 +779,8 @@ int main()
     tavros::core::logger::add_consumer(
         [](auto, auto, auto msg) { std::printf("%s\n", msg.data()); }
     );
+
+    tavros::debug::set_debug_path(TAV_OUTPUT_PATH);
 
     auto am = tavros::core::make_shared<tavros::assets::asset_manager>();
     am->mount<tavros::assets::filesystem_provider>(TAV_ASSETS_PATH, "");

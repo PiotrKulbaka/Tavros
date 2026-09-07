@@ -14,7 +14,8 @@ namespace tavros::renderer
 {
 
     render_target::render_target(rhi::graphics_device* gdevice, const render_target_desc& desc) noexcept
-        : m_current_msaa(0)
+        : m_name(desc.name())
+        , m_current_msaa(0)
         , m_gdevice(gdevice)
         , m_da_cfg(desc.depth_attachment())
         , m_sa_cfg(desc.stencil_attachment())
@@ -73,21 +74,29 @@ namespace tavros::renderer
         constexpr auto depth_usage_resolved = rhi::texture_usage::resolve_destination | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
         constexpr auto depth_usage_simple = rhi::texture_usage::render_target | rhi::texture_usage::sampled | rhi::texture_usage::transfer_source;
 
+        core::medium_string name_buf;
+
         for (const auto& c : m_ca_cfg) {
             if (m_current_msaa > 1) {
-                auto src_tex = create_texture(width, height, c.format, color_usage_msaa, m_current_msaa);
+                name_buf.clear();
+                name_buf.append(m_name).append(".").append(c.name).append("_src");
+                auto src_tex = create_texture(name_buf, width, height, c.format, color_usage_msaa, m_current_msaa);
                 if (!src_tex) {
                     return;
                 }
                 m_src_cl.push_back(src_tex);
 
-                auto dst_tex = create_texture(width, height, c.format, color_usage_resolved, 1);
+                name_buf.clear();
+                name_buf.append(m_name).append(".").append(c.name).append("_dst");
+                auto dst_tex = create_texture(name_buf, width, height, c.format, color_usage_resolved, 1);
                 if (!dst_tex) {
                     return;
                 }
                 m_dst_cl.push_back(dst_tex);
             } else {
-                auto tex = create_texture(width, height, c.format, color_usage_simple, 1);
+                name_buf.clear();
+                name_buf.append(m_name).append(".").append(c.name);
+                auto tex = create_texture(name_buf, width, height, c.format, color_usage_simple, 1);
                 if (!tex) {
                     return;
                 }
@@ -99,17 +108,23 @@ namespace tavros::renderer
         auto ds_fmt = rhi::combine_depth_stencil_formats(m_da_cfg.format, m_sa_cfg.format);
         if (ds_fmt != rhi::pixel_format::none) {
             if (m_current_msaa > 1) {
-                m_src_ds = create_texture(width, height, ds_fmt, depth_usage_msaa, m_current_msaa);
+                name_buf.clear();
+                name_buf.append(m_name).append(".").append("depth_stencil_src");
+                m_src_ds = create_texture(name_buf, width, height, ds_fmt, depth_usage_msaa, m_current_msaa);
                 if (!m_src_ds) {
                     return;
                 }
 
-                m_dst_ds = create_texture(width, height, ds_fmt, depth_usage_resolved, 1);
+                name_buf.clear();
+                name_buf.append(m_name).append(".").append("depth_stencil_dst");
+                m_dst_ds = create_texture(name_buf, width, height, ds_fmt, depth_usage_resolved, 1);
                 if (!m_dst_ds) {
                     return;
                 }
             } else {
-                auto tex = create_texture(width, height, ds_fmt, depth_usage_simple, 1);
+                name_buf.clear();
+                name_buf.append(m_name).append(".").append("depth_stencil");
+                auto tex = create_texture(name_buf, width, height, ds_fmt, depth_usage_simple, 1);
                 if (!tex) {
                     return;
                 }
@@ -208,6 +223,7 @@ namespace tavros::renderer
         };
 
         rhi::framebuffer_create_info fb_info;
+        fb_info.label = m_name;
         fb_info.width = width;
         fb_info.height = height;
 
@@ -248,9 +264,10 @@ namespace tavros::renderer
         return fb;
     }
 
-    rhi::texture_handle render_target::create_texture(uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa)
+    rhi::texture_handle render_target::create_texture(core::string_view label, uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa)
     {
         rhi::texture_create_info tex_info;
+        tex_info.label = label;
         tex_info.type = rhi::texture_type::texture_2d;
         tex_info.format = fmt;
         tex_info.width = width;

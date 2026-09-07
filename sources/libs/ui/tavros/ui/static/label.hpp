@@ -43,6 +43,8 @@ namespace tavros::ui
         core::string        m_str;
         geometry::aabb2     m_text_layout;
         renderer::rich_text m_text;
+
+        float t = 0.0f;
     };
 
 

@@ -48,6 +48,7 @@ namespace tavros::renderer::rhi
 
         // Create default backbuffer
         framebuffer_create_info backbuffer_info;
+        backbuffer_info.label = "Backbuffer";
         backbuffer_info.width = info.width;
         backbuffer_info.height = info.height;
         backbuffer_info.color_attachments.push_back({texture_handle{}, texture_handle{}, load_op::clear, store_op::store, {0.0f, 0.0f, 0.0f, 0.0f}});

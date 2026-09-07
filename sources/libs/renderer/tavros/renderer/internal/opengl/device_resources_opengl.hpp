@@ -38,6 +38,7 @@ namespace tavros::renderer::rhi
         GLenum target = 0;
         GLuint renderbuffer_obj = 0;
         uint32 max_mip = 0;
+        uint64 bindless_handle = 0;
     };
 
     struct gl_pipeline

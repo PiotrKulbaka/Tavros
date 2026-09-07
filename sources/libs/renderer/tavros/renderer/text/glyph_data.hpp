@@ -33,6 +33,9 @@ namespace tavros::renderer
 
         /// Vertical descent from baseline to glyph bottom (usually positive).
         float descent_y = 0.0f;
+
+        /// Glyph sdf size
+        float sdf_pad_pix = 0.0f;
     };
 
 } // namespace tavros::renderer

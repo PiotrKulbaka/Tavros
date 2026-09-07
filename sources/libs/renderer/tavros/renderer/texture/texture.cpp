@@ -53,6 +53,13 @@ namespace tavros::renderer
 
     texture::texture(rhi::graphics_device* gdevice, upload_context& upctx, assets::image_view im, const texture_desc& desc, bool y_flip)
         : m_gdevice(gdevice)
+        , m_texture(0)
+        , m_type(rhi::texture_type::texture_2d)
+        , m_format(rhi::pixel_format::none)
+        , m_width(0)
+        , m_height(0)
+        , m_depth(0)
+        , m_array_layers(0)
     {
         const auto& params = desc.load_params();
         auto        key = desc.name();
@@ -147,9 +154,9 @@ namespace tavros::renderer
             assets::image_view src(im, src_x, src_y, tile_w, tile_h);
             if (params.gen_mipmaps) {
                 auto mips = mipmap_generator::generate(src, 0, /*srgb=*/true);
-                texture_uploader::upload_2d(gpu_tex, src, mips, 0, upctx);
+                texture_uploader::upload_2d(gpu_tex, src, mips, 0, upctx, y_flip);
             } else {
-                texture_uploader::upload_2d_level(gpu_tex, src, 0, 0, upctx);
+                texture_uploader::upload_2d_level(gpu_tex, src, 0, 0, upctx, y_flip);
             }
         } else {
             for (uint32 layer = 0; layer < array_layers; ++layer) {
@@ -160,22 +167,11 @@ namespace tavros::renderer
 
                 assets::image_view layer_im(im, offset_x, offset_y, tile_w, tile_h);
 
-                // TODO: remove this (for cubemaps only)
-                // Needed for proper loading of cubemaps.
-                uint32 layer_index = layer;
-                if (type == rhi::texture_type::texture_cube) {
-                    if (layer_index == 2) {
-                        layer_index = 3;
-                    } else if (layer_index == 3) {
-                        layer_index = 2;
-                    }
-                }
-
                 if (params.gen_mipmaps) {
                     auto mips = mipmap_generator::generate(layer_im, 0, /*srgb=*/true);
-                    texture_uploader::upload_2d(gpu_tex, layer_im, mips, layer_index, upctx);
+                    texture_uploader::upload_2d(gpu_tex, layer_im, mips, layer, upctx, y_flip);
                 } else {
-                    texture_uploader::upload_2d_level(gpu_tex, layer_im, 0, layer_index, upctx);
+                    texture_uploader::upload_2d_level(gpu_tex, layer_im, 0, layer, upctx, y_flip);
                 }
             }
         }

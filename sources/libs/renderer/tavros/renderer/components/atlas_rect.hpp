@@ -15,8 +15,8 @@ namespace tavros::renderer
         /// Rectangle of the glyph in the atlas.
         uint16 left = 0;
         uint16 top = 0;
-        uint16 right = 0;
-        uint16 bottom = 0;
+        uint16 width = 0;
+        uint16 height = 0;
     };
 
 } // namespace tavros::renderer

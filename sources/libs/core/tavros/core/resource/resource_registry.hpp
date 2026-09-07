@@ -52,11 +52,6 @@ namespace tavros::core
 
         ~resource_registry() noexcept = default;
 
-        void set_placeholder(resource_type* placeholder) noexcept
-        {
-            m_placeholder = placeholder;
-        }
-
         /**
          * @brief Reserves a slot for a resource, or returns an existing one.
          *
@@ -80,7 +75,7 @@ namespace tavros::core
                 h,
                 entry_type{
                     .owner = nullptr,
-                    .ptr = m_placeholder,
+                    .ptr = nullptr,
                     .rc = {},
                     .hash = h,
                     .status = resource_status::unloaded,
@@ -285,8 +280,7 @@ namespace tavros::core
         };
 
     private:
-        resource_type* m_placeholder = nullptr;
-        storage_type   m_resources;
+        storage_type m_resources;
 
         core::vector<pending_transition> m_pending_transitions;
     };

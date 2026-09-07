@@ -20,10 +20,10 @@ namespace tavros::renderer
         ::logger.debug("Creating material '{}'", desc.name());
 
         // 1. Load & compile shaders
-        auto vs_src = sl.load(desc.shaders().vertex_shader_path, {tavros::renderer::shader_language::glsl_460, ""});
-        auto fs_src = sl.load(desc.shaders().fragment_shader_path, {tavros::renderer::shader_language::glsl_460, ""});
+        auto vs_src = sl.load(desc.shaders().vertex_shader_path, {tavros::renderer::shader_language::glsl_460});
+        auto fs_src = sl.load(desc.shaders().fragment_shader_path, {tavros::renderer::shader_language::glsl_460});
 
-        auto sh = m_gdevice->create_shader({vs_src, fs_src});
+        auto sh = m_gdevice->create_shader({desc.name(), vs_src, fs_src});
         if (!sh) {
             ::logger.error(
                 "Failed to create material '{}': shader compilation failed (VS='{}', FS='{}')",

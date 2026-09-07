@@ -1,3 +1,6 @@
+#pragma once
+
+#include <tavros/core/math/angle.hpp>
 #include <tavros/core/math/euler3.hpp>
 #include <tavros/core/math/mat3.hpp>
 #include <tavros/core/math/mat4.hpp>
@@ -28,6 +31,7 @@
 #include <tavros/core/math/functions/min.hpp>
 #include <tavros/core/math/functions/normalize.hpp>
 #include <tavros/core/math/functions/orthogonal.hpp>
+#include <tavros/core/math/functions/pack.hpp>
 #include <tavros/core/math/functions/rotate.hpp>
 #include <tavros/core/math/functions/slerp.hpp>
 #include <tavros/core/math/functions/transpose.hpp>

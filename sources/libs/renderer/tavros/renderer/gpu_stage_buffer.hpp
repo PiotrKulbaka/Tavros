@@ -48,10 +48,10 @@ namespace tavros::renderer
          * @param gdevice  Non-owning pointer to the graphics device. Must outlive this buffer.
          * @param size     Total buffer size in bytes.
          */
-        void init(rhi::graphics_device* gdevice, size_t size)
+        void init(rhi::graphics_device* gdevice, size_t size, core::string_view label)
         {
             destroy_all();
-            internal_init(gdevice, size, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu);
+            internal_init(label, gdevice, size, rhi::buffer_usage::stage, rhi::buffer_access::cpu_to_gpu);
         }
 
         void shutdown()

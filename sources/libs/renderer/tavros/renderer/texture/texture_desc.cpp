@@ -37,101 +37,101 @@ namespace
         // Normalized formats
         else if (sv == "r8un") {
             return pf::r8un;
-        } else if (sv == "r8in") {
-            return pf::r8in;
+        } else if (sv == "r8sn") {
+            return pf::r8sn;
         } else if (sv == "r16un") {
             return pf::r16un;
-        } else if (sv == "r16in") {
-            return pf::r16in;
+        } else if (sv == "r16sn") {
+            return pf::r16sn;
         }
 
         else if (sv == "rg8un") {
             return pf::rg8un;
-        } else if (sv == "rg8in") {
-            return pf::rg8in;
+        } else if (sv == "rg8sn") {
+            return pf::rg8sn;
         } else if (sv == "rg16un") {
             return pf::rg16un;
-        } else if (sv == "rg16in") {
-            return pf::rg16in;
+        } else if (sv == "rg16sn") {
+            return pf::rg16sn;
         }
 
         // Specific format, rarely found in the GPU API
         else if (sv == "rgb8un") {
             return pf::rgb8un;
-        } else if (sv == "rgb8in") {
-            return pf::rgb8in;
+        } else if (sv == "rgb8sn") {
+            return pf::rgb8sn;
         } else if (sv == "rgb16un") {
             return pf::rgb16un;
-        } else if (sv == "rgb16in") {
-            return pf::rgb16in;
+        } else if (sv == "rgb16sn") {
+            return pf::rgb16sn;
         }
 
         else if (sv == "rgba8un") {
             return pf::rgba8un;
-        } else if (sv == "rgba8in") {
-            return pf::rgba8in;
+        } else if (sv == "rgba8sn") {
+            return pf::rgba8sn;
         } else if (sv == "rgba16un") {
             return pf::rgba16un;
-        } else if (sv == "rgba16in") {
-            return pf::rgba16in;
+        } else if (sv == "rgba16sn") {
+            return pf::rgba16sn;
         }
 
         // Integer formats
         else if (sv == "r8u") {
             return pf::r8u;
-        } else if (sv == "r8i") {
-            return pf::r8i;
+        } else if (sv == "r8s") {
+            return pf::r8s;
         } else if (sv == "r16u") {
             return pf::r16u;
-        } else if (sv == "r16i") {
-            return pf::r16i;
+        } else if (sv == "r16s") {
+            return pf::r16s;
         } else if (sv == "r32u") {
             return pf::r32u;
-        } else if (sv == "r32i") {
-            return pf::r32i;
+        } else if (sv == "r32s") {
+            return pf::r32s;
         }
 
         else if (sv == "rg8u") {
             return pf::rg8u;
-        } else if (sv == "rg8i") {
-            return pf::rg8i;
+        } else if (sv == "rg8s") {
+            return pf::rg8s;
         } else if (sv == "rg16u") {
             return pf::rg16u;
-        } else if (sv == "rg16i") {
-            return pf::rg16i;
+        } else if (sv == "rg16s") {
+            return pf::rg16s;
         } else if (sv == "rg32u") {
             return pf::rg32u;
-        } else if (sv == "rg32i") {
-            return pf::rg32i;
+        } else if (sv == "rg32s") {
+            return pf::rg32s;
         }
 
         // Specific format, rarely found in the GPU API
         else if (sv == "rgb8u") {
             return pf::rgb8u;
-        } else if (sv == "rgb8i") {
-            return pf::rgb8i;
+        } else if (sv == "rgb8s") {
+            return pf::rgb8s;
         } else if (sv == "rgb16u") {
             return pf::rgb16u;
-        } else if (sv == "rgb16i") {
-            return pf::rgb16i;
+        } else if (sv == "rgb16s") {
+            return pf::rgb16s;
         } else if (sv == "rgb32u") {
             return pf::rgb32u;
-        } else if (sv == "rgb32i") {
-            return pf::rgb32i;
+        } else if (sv == "rgb32s") {
+            return pf::rgb32s;
         }
 
         else if (sv == "rgba8u") {
             return pf::rgba8u;
-        } else if (sv == "rgba8i") {
-            return pf::rgba8i;
+        } else if (sv == "rgba8s") {
+            return pf::rgba8s;
         } else if (sv == "rgba16u") {
             return pf::rgba16u;
-        } else if (sv == "rgba16i") {
-            return pf::rgba16i;
+        } else if (sv == "rgba16s") {
+            return pf::rgba16s;
         } else if (sv == "rgba32u") {
             return pf::rgba32u;
-        } else if (sv == "rgba32i") {
-            return pf::rgba32i;
+        } else if (sv == "rgba32s") {
+            return pf::rgba32s;
         }
 
         // Floating point formats

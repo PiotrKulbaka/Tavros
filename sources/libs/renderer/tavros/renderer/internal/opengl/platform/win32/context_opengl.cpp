@@ -370,10 +370,10 @@ namespace tavros::renderer::rhi
 
         // Load all GL function pointers via GLAD (done once per process)
         if (!s_glad_initialized) {
-            if (!gladLoadGLLoader(reinterpret_cast<GLADloadproc>(glad_loader))) {
+            if (!gladLoadGL(reinterpret_cast<GLADloadfunc>(glad_loader))) {
                 g_wglMakeCurrent(nullptr, nullptr);
                 g_wglDeleteContext(hGLRC);
-                ::logger.error("gladLoadGLLoader failed.");
+                ::logger.error("gladLoadGL failed.");
                 return nullptr;
             }
             s_glad_initialized = true;

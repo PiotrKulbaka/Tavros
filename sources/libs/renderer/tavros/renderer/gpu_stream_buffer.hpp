@@ -34,10 +34,10 @@ namespace tavros::renderer
          * @param size     Total buffer size in bytes.
          * @param usage    Buffer usage (vertex, index, stage, etc.)
          */
-        void init(rhi::graphics_device* gdevice, size_t size, rhi::buffer_usage usage)
+        void init(rhi::graphics_device* gdevice, size_t size, rhi::buffer_usage usage, core::string_view label)
         {
             destroy_all();
-            internal_init(gdevice, size, usage, rhi::buffer_access::cpu_to_gpu);
+            internal_init(label, gdevice, size, usage, rhi::buffer_access::cpu_to_gpu);
         }
 
         void shutdown()

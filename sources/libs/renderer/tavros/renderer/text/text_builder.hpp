@@ -187,6 +187,7 @@ namespace tavros::renderer
                     g.step_x = step_x * g.size;
                     g.ascent_y = -fm.ascent_y * g.size;
                     g.descent_y = -fm.descent_y * g.size;
+                    g.sdf_pad_pix = pad;
 
                     // Update atlas rectangle for the glyph, or set to zero if it's a whitespace character
                     r = core::is_unicode_whitespace(g.codepoint) ? atlas_rect_t{0, 0, 0, 0} : gi.entry;
@@ -195,10 +196,10 @@ namespace tavros::renderer
                     auto b = gi.metrics.bearing * g.size;
                     auto s = gi.metrics.size * g.size;
 
-                    l.min.x = b.x - pad;
-                    l.min.y = b.y - s.y - pad;
-                    l.max.x = b.x + s.x + pad;
-                    l.max.y = b.y + pad;
+                    l.value.min.x = b.x - pad;
+                    l.value.min.y = b.y - s.y - pad;
+                    l.value.max.x = b.x + s.x + pad;
+                    l.value.max.y = b.y + pad;
                 });
         }
     };

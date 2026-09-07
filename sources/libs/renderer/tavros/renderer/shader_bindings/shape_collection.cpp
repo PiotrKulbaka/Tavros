@@ -26,17 +26,11 @@ namespace tavros::renderer
         m_shapes.push_back(shape_type{static_cast<uint32>(shape_t::circle), 0.0f, 0, 0, {center, radius, 0.0f}, {0.0f, 0.0f, 0.0f, 0.0f}});
         return {id};
     }
-        
+
     shape_id shape_collection::add_round_rect(const math::vec2& center, const math::vec2& half_sizes, const geometry::radius4& radius, float rot)
     {
         const auto id = static_cast<uint32>(m_shapes.size()); // + 1 because shape ID 0 - is reserved
-        m_shapes.push_back(shape_type{
-            static_cast<uint32>(shape_t::round_rect),
-            rot,
-            0, 0,
-            {center, half_sizes}, 
-            {radius.top_left, radius.top_right, radius.bottom_right,radius.bottom_left}
-        });
+        m_shapes.push_back(shape_type{static_cast<uint32>(shape_t::round_rect), rot, 0, 0, {center, half_sizes}, {radius.top_left, radius.top_right, radius.bottom_right, radius.bottom_left}});
         return {id};
     }
 
@@ -65,4 +59,4 @@ namespace tavros::renderer
         m_shapes.clear();
     }
 
-}
+} // namespace tavros::renderer

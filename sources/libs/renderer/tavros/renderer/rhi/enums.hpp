@@ -212,7 +212,7 @@ namespace tavros::renderer::rhi
      * - Numbers (e.g., 8, 16, 32) specify the bit depth per component.
      * - Suffixes:
      *   - `un`: unsigned normalized (maps to [0, 1] in shader)
-     *   - `in`: signed normalized (maps to [-1, 1] in shader)
+     *   - `sn`: signed normalized (maps to [-1, 1] in shader)
      *   - `u`: unsigned integer
      *   - `i`: signed integer
      *   - `f`: floating-point (IEEE 754)
@@ -225,52 +225,52 @@ namespace tavros::renderer::rhi
         none = 0,          /// No texture format
 
         r8un,              /// 8-bit R channel, unsigned normalized [0, 1]
-        r8in,              /// 8-bit R channel, signed normalized [-1, 1]
+        r8sn,              /// 8-bit R channel, signed normalized [-1, 1]
         r16un,             /// 16-bit R channel, unsigned normalized [0, 1]
-        r16in,             /// 16-bit R channel, signed normalized [-1, 1]
+        r16sn,             /// 16-bit R channel, signed normalized [-1, 1]
 
         rg8un,             /// 8-bit RG channels, unsigned normalized [0, 1]
-        rg8in,             /// 8-bit RG channels, signed normalized [-1, 1]
+        rg8sn,             /// 8-bit RG channels, signed normalized [-1, 1]
         rg16un,            /// 16-bit RG channels, unsigned normalized [0, 1]
-        rg16in,            /// 16-bit RG channels, signed normalized [-1, 1]
+        rg16sn,            /// 16-bit RG channels, signed normalized [-1, 1]
 
         rgb8un,            /// 8-bit RGB channels, unsigned normalized [0, 1]
-        rgb8in,            /// 8-bit RGB channels, signed normalized [-1, 1]
+        rgb8sn,            /// 8-bit RGB channels, signed normalized [-1, 1]
         rgb16un,           /// 16-bit RGB channels, unsigned normalized [0, 1]
-        rgb16in,           /// 16-bit RGB channels, signed normalized [-1, 1]
+        rgb16sn,           /// 16-bit RGB channels, signed normalized [-1, 1]
 
         rgba8un,           /// 8-bit RGBA channels, unsigned normalized [0, 1]
-        rgba8in,           /// 8-bit RGBA channels, signed normalized [-1, 1]
+        rgba8sn,           /// 8-bit RGBA channels, signed normalized [-1, 1]
         rgba16un,          /// 16-bit RGBA channels, unsigned normalized [0, 1]
-        rgba16in,          /// 16-bit RGBA channels, signed normalized [-1, 1]
+        rgba16sn,          /// 16-bit RGBA channels, signed normalized [-1, 1]
 
         r8u,               /// 8-bit R channel, unsigned integer [0, 255]
-        r8i,               /// 8-bit R channel, signed integer [-128, 127]
+        r8s,               /// 8-bit R channel, signed integer [-128, 127]
         r16u,              /// 16-bit R channel, unsigned integer
-        r16i,              /// 16-bit R channel, signed integer
+        r16s,              /// 16-bit R channel, signed integer
         r32u,              /// 32-bit R channel, unsigned integer
-        r32i,              /// 32-bit R channel, signed integer
+        r32s,              /// 32-bit R channel, signed integer
 
         rg8u,              /// 8-bit RG channels, unsigned integer
-        rg8i,              /// 8-bit RG channels, signed integer
+        rg8s,              /// 8-bit RG channels, signed integer
         rg16u,             /// 16-bit RG channels, unsigned integer
-        rg16i,             /// 16-bit RG channels, signed integer
+        rg16s,             /// 16-bit RG channels, signed integer
         rg32u,             /// 32-bit RG channels, unsigned integer
-        rg32i,             /// 32-bit RG channels, signed integer
+        rg32s,             /// 32-bit RG channels, signed integer
 
         rgb8u,             /// 8-bit RGB channels, unsigned integer
-        rgb8i,             /// 8-bit RGB channels, signed integer
+        rgb8s,             /// 8-bit RGB channels, signed integer
         rgb16u,            /// 16-bit RGB channels, unsigned integer
-        rgb16i,            /// 16-bit RGB channels, signed integer
+        rgb16s,            /// 16-bit RGB channels, signed integer
         rgb32u,            /// 32-bit RGB channels, unsigned integer
-        rgb32i,            /// 32-bit RGB channels, signed integer
+        rgb32s,            /// 32-bit RGB channels, signed integer
 
         rgba8u,            /// 8-bit RGBA channels, unsigned integer
-        rgba8i,            /// 8-bit RGBA channels, signed integer
+        rgba8s,            /// 8-bit RGBA channels, signed integer
         rgba16u,           /// 16-bit RGBA channels, unsigned integer
-        rgba16i,           /// 16-bit RGBA channels, signed integer
+        rgba16s,           /// 16-bit RGBA channels, signed integer
         rgba32u,           /// 32-bit RGBA channels, unsigned integer
-        rgba32i,           /// 32-bit RGBA channels, signed integer
+        rgba32s,           /// 32-bit RGBA channels, signed integer
 
         r16f,              /// 16-bit R channel, IEEE float
         r32f,              /// 32-bit R channel, IEEE float

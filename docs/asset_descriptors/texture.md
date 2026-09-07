@@ -56,21 +56,21 @@ the format is inferred from the source image channels.
 | Value      | Channels | Bits | Type           |
 |------------|----------|------|----------------|
 | `"r8un"`   | 1        | 8    | unsigned norm  |
-| `"r8in"`   | 1        | 8    | signed norm    |
+| `"r8sn"`   | 1        | 8    | signed norm    |
 | `"r16un"`  | 1        | 16   | unsigned norm  |
-| `"r16in"`  | 1        | 16   | signed norm    |
+| `"r16sn"`  | 1        | 16   | signed norm    |
 | `"rg8un"`  | 2        | 8    | unsigned norm  |
-| `"rg8in"`  | 2        | 8    | signed norm    |
+| `"rg8sn"`  | 2        | 8    | signed norm    |
 | `"rg16un"` | 2        | 16   | unsigned norm  |
-| `"rg16in"` | 2        | 16   | signed norm    |
+| `"rg16sn"` | 2        | 16   | signed norm    |
 | `"rgb8un"` | 3        | 8    | unsigned norm  |
-| `"rgb8in"` | 3        | 8    | signed norm    |
+| `"rgb8sn"` | 3        | 8    | signed norm    |
 | `"rgb16un"`| 3        | 16   | unsigned norm  |
-| `"rgb16in"`| 3        | 16   | signed norm    |
+| `"rgb16sn"`| 3        | 16   | signed norm    |
 | `"rgba8un"`| 4        | 8    | unsigned norm  |
-| `"rgba8in"`| 4        | 8    | signed norm    |
+| `"rgba8sn"`| 4        | 8    | signed norm    |
 | `"rgba16un"`| 4       | 16   | unsigned norm  |
-| `"rgba16in"`| 4       | 16   | signed norm    |
+| `"rgba16sn"`| 4       | 16   | signed norm    |
 
 > RGB formats (`rgb*`) are rarely natively supported by GPUs. Prefer `rgba*` equivalents where possible.
 
@@ -79,23 +79,23 @@ the format is inferred from the source image channels.
 | Value       | Channels | Bits | Type     |
 |-------------|----------|------|----------|
 | `"r8u"`     | 1        | 8    | unsigned |
-| `"r8i"`     | 1        | 8    | signed   |
+| `"r8s"`     | 1        | 8    | signed   |
 | `"r16u"`    | 1        | 16   | unsigned |
-| `"r16i"`    | 1        | 16   | signed   |
+| `"r16s"`    | 1        | 16   | signed   |
 | `"r32u"`    | 1        | 32   | unsigned |
-| `"r32i"`    | 1        | 32   | signed   |
+| `"r32s"`    | 1        | 32   | signed   |
 | `"rg8u"`    | 2        | 8    | unsigned |
-| `"rg8i"`    | 2        | 8    | signed   |
+| `"rg8s"`    | 2        | 8    | signed   |
 | `"rg16u"`   | 2        | 16   | unsigned |
-| `"rg16i"`   | 2        | 16   | signed   |
+| `"rg16s"`   | 2        | 16   | signed   |
 | `"rg32u"`   | 2        | 32   | unsigned |
-| `"rg32i"`   | 2        | 32   | signed   |
+| `"rg32s"`   | 2        | 32   | signed   |
 | `"rgba8u"`  | 4        | 8    | unsigned |
-| `"rgba8i"`  | 4        | 8    | signed   |
+| `"rgba8s"`  | 4        | 8    | signed   |
 | `"rgba16u"` | 4        | 16   | unsigned |
-| `"rgba16i"` | 4        | 16   | signed   |
+| `"rgba16s"` | 4        | 16   | signed   |
 | `"rgba32u"` | 4        | 32   | unsigned |
-| `"rgba32i"` | 4        | 32   | signed   |
+| `"rgba32s"` | 4        | 32   | signed   |
 
 **Floating point formats:**
 

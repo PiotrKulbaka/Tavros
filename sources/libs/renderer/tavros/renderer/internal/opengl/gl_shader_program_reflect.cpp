@@ -137,13 +137,13 @@ namespace
         case GL_FLOAT_VEC4:
             return pf::rgba32f;
         case GL_INT:
-            return pf::r32i;
+            return pf::r32s;
         case GL_INT_VEC2:
-            return pf::rg32i;
+            return pf::rg32s;
         case GL_INT_VEC3:
-            return pf::rgb32i;
+            return pf::rgb32s;
         case GL_INT_VEC4:
-            return pf::rgba32i;
+            return pf::rgba32s;
         case GL_UNSIGNED_INT:
             return pf::r32u;
         case GL_UNSIGNED_INT_VEC2:

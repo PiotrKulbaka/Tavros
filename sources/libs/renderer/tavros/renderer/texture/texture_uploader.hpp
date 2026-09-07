@@ -27,9 +27,10 @@ namespace tavros::renderer
          * @param gpu_tex   Target GPU texture handle. Must be valid.
          * @param im        Source image data. Dimensions must match the expected size for @p mip_level.
          * @param mip_level Destination mip level index (0 = full resolution).
+         * @param layer_index Destination array layer index for the upload. For non-array textures, pass 0.
          * @param upctx     Upload context (stage buffers and command queue).
          */
-        static void upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, uint32 layer_index, upload_context& upctx);
+        static void upload_2d_level(rhi::texture_handle gpu_tex, assets::image_view im, uint32 mip_level, uint32 layer_index, upload_context& upctx, bool y_flip = false);
 
         /**
          * @brief Uploads a base image and its mip chain to a 2D GPU texture.
@@ -38,13 +39,14 @@ namespace tavros::renderer
          * mip levels 1..N in order. The GPU texture must have been created
          * with at least 1 + levels.size() mip levels.
          *
-         * @param gpu_tex  Target GPU texture handle. Must be valid.
-         * @param base     Source image for mip level 0. Must be valid.
-         * @param levels   Mip levels 1..N, as produced by mipmap_generator::generate().
-         *                 May be empty if the texture has only one mip level.
-         * @param upctx    Upload context (stage buffers and command queue).
+         * @param gpu_tex     Target GPU texture handle. Must be valid.
+         * @param base        Source image for mip level 0. Must be valid.
+         * @param levels      Mip levels 1..N, as produced by mipmap_generator::generate().
+         *                    May be empty if the texture has only one mip level.
+         * @param layer_index Destination array layer index for the upload. For non-array textures, pass 0.
+         * @param upctx       Upload context (stage buffers and command queue).
          */
-        static void upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, upload_context& upctx);
+        static void upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, upload_context& upctx, bool y_flip = false);
     };
 
 } // namespace tavros::renderer

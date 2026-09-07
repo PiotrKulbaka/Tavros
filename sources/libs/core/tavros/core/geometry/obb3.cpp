@@ -9,23 +9,21 @@ namespace tavros::geometry
 
     bool obb3::contains_point(const math::vec3& point) const noexcept
     {
-        math::vec3 d = point - center;
+        const math::vec3 d = point - center;
 
-        // Checking for location within axis forward
-        auto dist_forward = math::dot(d, forward);
-        if (math::abs(dist_forward) > half_extents.x) {
+        const float sq_f = forward.sq_length();
+        const float sq_r = right.sq_length();
+        const float sq_u = up.sq_length();
+
+        if (math::abs(math::dot(d, forward)) > sq_f) {
             return false;
         }
 
-        // Checking for location within axis right
-        auto dist_right = math::dot(d, right);
-        if (math::abs(dist_right) > half_extents.y) {
+        if (math::abs(math::dot(d, right)) > sq_r) {
             return false;
         }
 
-        // Checking for location within axis up
-        auto dist_up = math::dot(d, up);
-        if (math::abs(dist_up) > half_extents.z) {
+        if (math::abs(math::dot(d, up)) > sq_u) {
             return false;
         }
 

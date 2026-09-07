@@ -35,6 +35,24 @@ namespace tavros::renderer::rhi
     public:
         virtual ~graphics_device() = default;
 
+        /** @brief Returns the rendering backend type of this graphics device. */
+        virtual render_backend_type backend_type() const noexcept = 0;
+
+        /**
+         * @brief Pushes a named debug group onto the command stream for GPU debugging
+         * tools (e.g. RenderDoc, PIX). Must be balanced with a matching pop_debug_group() call.
+         *
+         * @param name Label for the debug group, shown in graphics debugging tools.
+         */
+        virtual void push_debug_group(core::string_view name) = 0;
+
+        /**
+         * @brief Pops the most recently pushed debug group from the command stream.
+         *
+         * Must be called once for each push_debug_group() call, in matching (LIFO) order.
+         */
+        virtual void pop_debug_group() = 0;
+
         /**
          * @brief Create a frame composer used to manage per-frame rendering.
          *
@@ -130,6 +148,8 @@ namespace tavros::renderer::rhi
          * @param texture Handle to the texture to destroy.
          */
         virtual void destroy_texture(texture_handle texture) = 0;
+
+        virtual bindless_handle make_texture_bindless_handle(texture_handle texture, sampler_handle sampler) = 0;
 
         /**
          * @brief Create a graphics pipeline.

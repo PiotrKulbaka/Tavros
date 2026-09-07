@@ -305,91 +305,91 @@ namespace tavros::renderer::rhi
 
         case pixel_format::r8un:
             return "r8un";
-        case pixel_format::r8in:
-            return "r8in";
+        case pixel_format::r8sn:
+            return "r8sn";
         case pixel_format::r16un:
             return "r16un";
-        case pixel_format::r16in:
-            return "r16in";
+        case pixel_format::r16sn:
+            return "r16sn";
 
         case pixel_format::rg8un:
             return "rg8un";
-        case pixel_format::rg8in:
-            return "rg8in";
+        case pixel_format::rg8sn:
+            return "rg8sn";
         case pixel_format::rg16un:
             return "rg16un";
-        case pixel_format::rg16in:
-            return "rg16in";
+        case pixel_format::rg16sn:
+            return "rg16sn";
 
         case pixel_format::rgb8un:
             return "rgb8un";
-        case pixel_format::rgb8in:
-            return "rgb8in";
+        case pixel_format::rgb8sn:
+            return "rgb8sn";
         case pixel_format::rgb16un:
             return "rgb16un";
-        case pixel_format::rgb16in:
-            return "rgb16in";
+        case pixel_format::rgb16sn:
+            return "rgb16sn";
 
         case pixel_format::rgba8un:
             return "rgba8un";
-        case pixel_format::rgba8in:
-            return "rgba8in";
+        case pixel_format::rgba8sn:
+            return "rgba8sn";
         case pixel_format::rgba16un:
             return "rgba16un";
-        case pixel_format::rgba16in:
-            return "rgba16in";
+        case pixel_format::rgba16sn:
+            return "rgba16sn";
 
         case pixel_format::r8u:
             return "r8u";
-        case pixel_format::r8i:
-            return "r8i";
+        case pixel_format::r8s:
+            return "r8s";
         case pixel_format::r16u:
             return "r16u";
-        case pixel_format::r16i:
-            return "r16i";
+        case pixel_format::r16s:
+            return "r16s";
         case pixel_format::r32u:
             return "r32u";
-        case pixel_format::r32i:
-            return "r32i";
+        case pixel_format::r32s:
+            return "r32s";
 
         case pixel_format::rg8u:
             return "rg8u";
-        case pixel_format::rg8i:
-            return "rg8i";
+        case pixel_format::rg8s:
+            return "rg8s";
         case pixel_format::rg16u:
             return "rg16u";
-        case pixel_format::rg16i:
-            return "rg16i";
+        case pixel_format::rg16s:
+            return "rg16s";
         case pixel_format::rg32u:
             return "rg32u";
-        case pixel_format::rg32i:
-            return "rg32i";
+        case pixel_format::rg32s:
+            return "rg32s";
 
         case pixel_format::rgb8u:
             return "rgb8u";
-        case pixel_format::rgb8i:
-            return "rgb8i";
+        case pixel_format::rgb8s:
+            return "rgb8s";
         case pixel_format::rgb16u:
             return "rgb16u";
-        case pixel_format::rgb16i:
-            return "rgb16i";
+        case pixel_format::rgb16s:
+            return "rgb16s";
         case pixel_format::rgb32u:
             return "rgb32u";
-        case pixel_format::rgb32i:
-            return "rgb32i";
+        case pixel_format::rgb32s:
+            return "rgb32s";
 
         case pixel_format::rgba8u:
             return "rgba8u";
-        case pixel_format::rgba8i:
-            return "rgba8i";
+        case pixel_format::rgba8s:
+            return "rgba8s";
         case pixel_format::rgba16u:
             return "rgba16u";
-        case pixel_format::rgba16i:
-            return "rgba16i";
+        case pixel_format::rgba16s:
+            return "rgba16s";
         case pixel_format::rgba32u:
             return "rgba32u";
-        case pixel_format::rgba32i:
-            return "rgba32i";
+        case pixel_format::rgba32s:
+            return "rgba32s";
 
         case pixel_format::r16f:
             return "r16f";

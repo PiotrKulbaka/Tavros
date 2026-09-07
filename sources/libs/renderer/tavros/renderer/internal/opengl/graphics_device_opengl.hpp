@@ -15,6 +15,11 @@ namespace tavros::renderer::rhi
 
         void destroy();
 
+        render_backend_type backend_type() const noexcept override;
+
+        void push_debug_group(core::string_view name) override;
+        void pop_debug_group() override;
+
         frame_composer_handle create_frame_composer(const frame_composer_create_info& info) override;
         void                  destroy_frame_composer(frame_composer_handle composer) override;
         frame_composer*       get_frame_composer_ptr(frame_composer_handle composer) override;
@@ -29,8 +34,9 @@ namespace tavros::renderer::rhi
         sampler_handle create_sampler(const sampler_create_info& info) override;
         void           destroy_sampler(sampler_handle handle) override;
 
-        texture_handle create_texture(const texture_create_info& info) override;
-        void           destroy_texture(texture_handle handle) override;
+        texture_handle  create_texture(const texture_create_info& info) override;
+        void            destroy_texture(texture_handle handle) override;
+        bindless_handle make_texture_bindless_handle(texture_handle texture, sampler_handle sampler) override;
 
         pipeline_handle create_pipeline(const pipeline_create_info& info) override;
         void            destroy_pipeline(pipeline_handle pipeline) override;

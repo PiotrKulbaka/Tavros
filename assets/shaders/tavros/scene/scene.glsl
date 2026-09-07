@@ -1,5 +1,5 @@
-#ifndef TAVROSCENE_GLSL
-#define TAVROSCENE_GLSL
+#ifndef _TAV_SCENE_GLSL_
+#define _TAV_SCENE_GLSL_
 
 #ifdef TAV_OPEN_GL
 // 15 - k_constant_buffer_index in command_queue_opengl.cpp
@@ -231,4 +231,4 @@ const vec2 k_quad[6] = vec2[6]
     vec2(-1.0,  1.0)
 );
 
-#endif // TAVROSCENE_GLSL
+#endif // _TAV_SCENE_GLSL_

@@ -55,6 +55,16 @@ namespace tavros::renderer
         count,
     };
 
+    enum class default_texture_type : uint8
+    {
+        white,
+        black,
+        transparent,
+        normal,
+        gray,
+        debug,
+    };
+
     class resource_manager : core::noncopyable, core::nonmovable
     {
     public:
@@ -66,6 +76,8 @@ namespace tavros::renderer
         void end_frame() noexcept;
 
         void set_material_load_params(core::buffer_view<material::vertex_attribute> vert_attribs, uint32 msaa = 1, rhi::pixel_format ds_format = rhi::pixel_format::none) noexcept;
+
+        rhi::texture_handle default_texture(default_texture_type type) const noexcept;
 
         rhi::texture_handle fonts_texture() const noexcept;
 
@@ -102,6 +114,8 @@ namespace tavros::renderer
     private:
         void update_font_atlas();
 
+        void create_default_textures();
+
     private:
         using attribs_vec_t = core::fixed_vector<material::vertex_attribute, rhi::k_max_vertex_attributes>;
         using sampler_presets_vec_t = core::fixed_vector<rhi::sampler_handle, static_cast<size_t>(sampler_preset::count)>;
@@ -109,6 +123,7 @@ namespace tavros::renderer
         float m_anisotropy = 8.0f; // for samplers
 
         bool m_is_init = false;
+        bool m_flip_on_load; // flip textures vertically on load
 
         font_ref m_default_font;
 
@@ -123,6 +138,13 @@ namespace tavros::renderer
 
         rhi::texture_handle m_fonts_texture;
 
+        rhi::texture_handle m_white_texture;
+        rhi::texture_handle m_black_texture;
+        rhi::texture_handle m_transparent_texture;
+        rhi::texture_handle m_normal_texture;
+        rhi::texture_handle m_gray_texture;
+        rhi::texture_handle m_debug_texture;
+
         upload_context m_upctx;
 
         font_atlas m_fnt_atlas;
@@ -131,9 +153,6 @@ namespace tavros::renderer
         core::resource_registry<texture>       m_tex_reg;
         core::resource_registry<material>      m_mt_reg;
         core::resource_registry<render_target> m_rt_reg;
-
-        core::unique_ptr<font>    m_fnt_placeholder;
-        core::unique_ptr<texture> m_tex_placeholder;
 
         sampler_presets_vec_t m_samplers;
     };

@@ -63,6 +63,18 @@ namespace tavros::math
             return x == 0.0f && y == 0.0f && z == 0.0f;
         }
 
+        /// @brief Returns the length (magnitude) of the vector
+        float length() const noexcept
+        {
+            return sqrt(x * x + y * y + z * z);
+        }
+
+        /// @brief Returns the squared length of the vector
+        constexpr float sq_length() const noexcept
+        {
+            return x * x + y * y + z * z;
+        }
+
         /// @brief Sets the components of the vector to the specified values
         constexpr void set(float x, float y, float z) noexcept;
 

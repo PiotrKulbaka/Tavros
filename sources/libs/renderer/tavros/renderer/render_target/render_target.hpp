@@ -108,7 +108,7 @@ namespace tavros::renderer
 
         rhi::framebuffer_handle create_fb(uint32 width, uint32 height);
 
-        rhi::texture_handle create_texture(uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa);
+        rhi::texture_handle create_texture(core::string_view label, uint32 width, uint32 height, rhi::pixel_format fmt, tavros::core::flags<rhi::texture_usage> usage, uint32 msaa);
 
     private:
         using color_attachment_config = render_target_desc::color_attachment_config;
@@ -117,6 +117,8 @@ namespace tavros::renderer
 
         template<class T>
         using vector_t = core::fixed_vector<T, rhi::k_max_color_attachments>;
+
+        core::short_string m_name;
 
         uint32 m_current_msaa;
 

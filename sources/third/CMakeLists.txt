@@ -4,6 +4,7 @@ add_subdirectory(tinyobjloader)
 add_subdirectory(fmt)
 add_subdirectory(zlib)
 add_subdirectory(tracy)
+add_subdirectory(fhf)
 
 set_target_group(glad "third")
 set_target_group(stb "third")
@@ -11,6 +12,7 @@ set_target_group(tinyobjloader "third")
 set_target_group(fmt "third")
 set_target_group(zlibstatic "third")
 set_target_group(TracyClient "third")
+set_target_group(fhf "third")
 
 if (MSVC)
     target_compile_options(

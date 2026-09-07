@@ -3,6 +3,7 @@
 #include <tavros/assets/image/image_codec.hpp>
 #include <tavros/assets/image/image_view.hpp>
 #include <tavros/core/logger/logger.hpp>
+#include <tavros/core/debug/debug.hpp>
 
 #include <stb/stb_image_resize2.h>
 
@@ -123,3 +124,13 @@ namespace tavros::assets
     }
 
 } // namespace tavros::assets
+
+namespace tavros::debug
+{
+    void save_png(assets::image& im) noexcept
+    {
+        auto data = assets::image_codec::encode({im.data(), im.size_bytes()}, im.width(), im.height(), im.components(), im.stride(), assets::image_codec::image_format::png, false);
+
+        save_to_file(data, "", ".png");
+    }
+} // namespace tavros::debug

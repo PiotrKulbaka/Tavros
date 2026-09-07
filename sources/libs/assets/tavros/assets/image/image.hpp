@@ -4,6 +4,7 @@
 #include <tavros/core/memory/memory.hpp>
 #include <tavros/core/debug/assert.hpp>
 #include <tavros/core/debug/unreachable.hpp>
+#include <tavros/core/string_view.hpp>
 
 namespace tavros::assets
 {
@@ -286,3 +287,8 @@ namespace tavros::assets
     };
 
 } // namespace tavros::assets
+
+namespace tavros::debug
+{
+    void save_png(assets::image& im) noexcept;
+}

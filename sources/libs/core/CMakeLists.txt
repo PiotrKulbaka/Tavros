@@ -11,6 +11,7 @@ tavros_add_library(
         PUBLIC
             fmt
             zlibstatic
+            fhf
     LIB_DEFINES
 )
 

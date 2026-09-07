@@ -40,7 +40,7 @@ namespace tavros::renderer
     upload_context::upload_batch upload_context::slice(size_t size) noexcept
     {
         if (!m_stage_buffer.capacity()) {
-            m_stage_buffer.init(m_gdevice, k_stage_buffer_size);
+            m_stage_buffer.init(m_gdevice, k_stage_buffer_size, "upload_context.stage_buffer");
             TAV_ASSERT(m_stage_buffer.capacity() == k_stage_buffer_size);
         }
 
@@ -65,7 +65,7 @@ namespace tavros::renderer
         }
 
         // Last attempt, allocate a separate buffer for this
-        m_large_stage_buffer.init(m_gdevice, size);
+        m_large_stage_buffer.init(m_gdevice, size, "upload_context.large_stage_buffer");
         return upload_batch{m_large_stage_buffer.slice<uint8>(size), m_current_upload_queue};
     }
 

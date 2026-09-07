@@ -8,7 +8,7 @@
 #include <tavros/renderer/shader_bindings/render_view.hpp>
 #include <tavros/renderer/rhi/graphics_device.hpp>
 #include <tavros/renderer/resource_manager.hpp>
-#include <tavros/renderer/renderer2d.hpp>
+#include <tavros/renderer/ui_renderer.hpp>
 
 namespace tavros::renderer
 {
@@ -79,24 +79,25 @@ namespace tavros::renderer
             return m_rm.get();
         }
 
-        renderer2d* renderer2d() noexcept
+        ui_renderer* ui_renderer() noexcept
         {
-            return m_renderer2d.get();
+            return m_ui_r.get();
         }
 
     private:
-        uint64                                  m_frame_number = 0;
-        uint64                                  m_delta_time_us = 0;
-        uint64                                  m_total_time_us = 0;
-        uint32                                  m_frame_width = 1;
-        uint32                                  m_frame_height = 1;
-        bool                                    m_is_init = false;
+        uint64 m_frame_number = 0;
+        uint64 m_delta_time_us = 0;
+        uint64 m_total_time_us = 0;
+        uint32 m_frame_width = 1;
+        uint32 m_frame_height = 1;
+        bool   m_is_init = false;
+
         core::shared_ptr<assets::asset_manager> m_am;
         core::shared_ptr<tef::workspace>        m_ws;
         core::unique_ptr<rhi::graphics_device>  m_gdevice;
 
         core::unique_ptr<renderer::resource_manager> m_rm;
-        core::unique_ptr<renderer::renderer2d>       m_renderer2d;
+        core::unique_ptr<renderer::ui_renderer>      m_ui_r;
 
         rhi::frame_composer* m_composer = nullptr;
 

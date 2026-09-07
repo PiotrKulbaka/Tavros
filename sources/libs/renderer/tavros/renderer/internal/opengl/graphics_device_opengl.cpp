@@ -91,7 +91,7 @@ namespace
         return program;
     }
 
-    void APIENTRY gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* user_param)
+    void gl_debug_callback(GLenum source, GLenum type, GLuint id, GLenum severity, GLsizei length, const GLchar* message, const void* user_param)
     {
         TAV_UNUSED(type);
         TAV_UNUSED(source);
@@ -238,6 +238,21 @@ namespace tavros::renderer::rhi
         destroy_for<frame_composer_handle>(m_resources, [this](auto h) { destroy_frame_composer(h); });
     }
 
+    render_backend_type graphics_device_opengl::backend_type() const noexcept
+    {
+        return render_backend_type::opengl;
+    }
+
+    void graphics_device_opengl::push_debug_group(core::string_view name)
+    {
+        GL_CALL(glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(name.size()), name.data()));
+    }
+
+    void graphics_device_opengl::pop_debug_group()
+    {
+        GL_CALL(glPopDebugGroup());
+    }
+
     frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_create_info& info)
     {
         // Check if frame composer with native handle already created
@@ -339,6 +354,10 @@ namespace tavros::renderer::rhi
             return {};
         }
 
+        if (!info.label.empty()) {
+            glObjectLabel(GL_PROGRAM, prog, static_cast<GLsizei>(info.label.size()), info.label.data());
+        }
+
         auto sh_h = m_resources.create(gl_program{prog, {}});
         auto h = m_resources.create(gl_shader{sh_h, std::move(reflect)});
         ::logger.debug("Shader {} created", h);
@@ -409,6 +428,10 @@ namespace tavros::renderer::rhi
             GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_FUNC, to_gl_compare_func(info.depth_compare)));
         } else {
             GL_CALL(glSamplerParameteri(sampler, GL_TEXTURE_COMPARE_MODE, GL_NONE));
+        }
+
+        if (!info.label.empty()) {
+            glObjectLabel(GL_SAMPLER, sampler, static_cast<GLsizei>(info.label.size()), info.label.data());
         }
 
         auto h = m_resources.create(gl_sampler{info, sampler});
@@ -665,7 +688,11 @@ namespace tavros::renderer::rhi
 
             GL_CALL(glBindRenderbuffer(GL_RENDERBUFFER, 0));
 
-            auto h = m_resources.create(gl_texture{info, 0, GL_RENDERBUFFER, rbo, 1});
+            if (!info.label.empty()) {
+                glObjectLabel(GL_RENDERBUFFER, rbo, static_cast<GLsizei>(info.label.size()), info.label.data());
+            }
+
+            auto h = m_resources.create(gl_texture{info, 0, GL_RENDERBUFFER, rbo, 1, 0});
             ::logger.debug("Texture ({}) {} created as {}", info.type, h, fmt::styled_param("renderbuffer"));
             return h;
 
@@ -832,7 +859,11 @@ namespace tavros::renderer::rhi
 
             GL_CALL(glBindTexture(gl_target, 0));
 
-            auto h = m_resources.create(gl_texture{info, tex, gl_target, 0, info.mip_levels});
+            if (!info.label.empty()) {
+                glObjectLabel(GL_TEXTURE, tex, static_cast<GLsizei>(info.label.size()), info.label.data());
+            }
+
+            auto h = m_resources.create(gl_texture{info, tex, gl_target, 0, info.mip_levels, 0});
             ::logger.debug("Texture ({}) {} created", info.type, h);
             return h;
         }
@@ -844,6 +875,9 @@ namespace tavros::renderer::rhi
             auto is_texture = tex->texture_obj != 0;
             if (is_texture) {
                 TAV_ASSERT(tex->renderbuffer_obj == 0);
+                if (tex->bindless_handle) {
+                    glMakeTextureHandleNonResidentARB(tex->bindless_handle);
+                }
                 GL_CALL(glDeleteTextures(1, &tex->texture_obj));
             } else {
                 TAV_ASSERT(tex->texture_obj == 0);
@@ -860,6 +894,39 @@ namespace tavros::renderer::rhi
         } else {
             ::logger.error("Failed to destroy texture {}: not found", texture);
         }
+    }
+
+    bindless_handle graphics_device_opengl::make_texture_bindless_handle(texture_handle texture, sampler_handle sampler)
+    {
+        auto* smp = m_resources.find(sampler);
+        if (!smp) {
+            ::logger.error("Failed to make texture bindless {}: sampler {} not found", texture, sampler);
+            return {};
+        }
+        TAV_ASSERT(smp->sampler_obj != 0);
+
+        if (auto* tex = m_resources.find(texture)) {
+            auto is_texture = tex->texture_obj != 0;
+            if (is_texture) {
+                TAV_ASSERT(tex->renderbuffer_obj == 0);
+                if (tex->bindless_handle) {
+                    ::logger.error("Failed to make texture bindless {}: already maked", texture);
+                } else {
+                    GLuint64 handle = glGetTextureSamplerHandleARB(tex->texture_obj, smp->sampler_obj);
+                    glMakeTextureHandleResidentARB(handle);
+                    tex->bindless_handle = static_cast<uint64>(handle);
+                    return {tex->bindless_handle};
+                }
+            } else {
+                TAV_ASSERT(tex->texture_obj == 0);
+                TAV_ASSERT(tex->target == GL_RENDERBUFFER);
+                ::logger.warning("Failed to make texture bindless {}: is renderbuffer", texture);
+            }
+        } else {
+            ::logger.error("Failed to make texture bindless {}: not found", texture);
+        }
+
+        return {};
     }
 
     pipeline_handle graphics_device_opengl::create_pipeline(const pipeline_create_info& info)
@@ -1017,6 +1084,10 @@ namespace tavros::renderer::rhi
             }
 
             GL_CALL(glBindVertexArray(0));
+        }
+
+        if (vao != 0 && !info.label.empty()) {
+            glObjectLabel(GL_VERTEX_ARRAY, vao, static_cast<GLsizei>(info.label.size()), info.label.data());
         }
 
         p->rc.increment();
@@ -1501,6 +1572,10 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindFramebuffer(GL_FRAMEBUFFER, 0));
 
 
+        if (!info.label.empty()) {
+            glObjectLabel(GL_FRAMEBUFFER, fbo_owner.get(), static_cast<GLsizei>(info.label.size()), info.label.data());
+        }
+
         // ----------------------------------------------------------------
         // Register the framebuffer resource
         // ----------------------------------------------------------------
@@ -1590,7 +1665,7 @@ namespace tavros::renderer::rhi
             case buffer_access::cpu_to_gpu:
                 gl_target = GL_ARRAY_BUFFER;
                 gl_usage = GL_DYNAMIC_DRAW;
-                gl_flags |= GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
+                gl_flags = GL_MAP_WRITE_BIT | GL_MAP_PERSISTENT_BIT | GL_MAP_COHERENT_BIT;
                 break;
             case buffer_access::gpu_only:
                 gl_target = GL_ARRAY_BUFFER;
@@ -1672,6 +1747,10 @@ namespace tavros::renderer::rhi
         GLuint bo;
         GL_CALL(glCreateBuffers(1, &bo));
         GL_CALL(glNamedBufferStorage(bo, gl_size, nullptr, gl_flags));
+
+        if (!info.label.empty()) {
+            glObjectLabel(GL_BUFFER, bo, static_cast<GLsizei>(info.label.size()), info.label.data());
+        }
 
         auto h = m_resources.create(gl_buffer{info, bo, gl_target, gl_usage, gl_flags});
         ::logger.debug("Buffer ({}) {} created", info.usage, h);

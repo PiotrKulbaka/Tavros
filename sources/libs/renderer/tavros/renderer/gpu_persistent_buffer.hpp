@@ -152,12 +152,12 @@ namespace tavros::renderer
         }
 
     protected:
-        void internal_init(rhi::graphics_device* gdevice, size_t size, rhi::buffer_usage usage, rhi::buffer_access access) noexcept
+        void internal_init(core::string_view label, rhi::graphics_device* gdevice, size_t size, rhi::buffer_usage usage, rhi::buffer_access access) noexcept
         {
             TAV_ASSERT(gdevice);
             TAV_ASSERT(m_gdevice == nullptr);
             m_gdevice = gdevice;
-            rhi::buffer_create_info info{size, usage, access};
+            rhi::buffer_create_info info{label, size, usage, access};
             m_buffer = m_gdevice->create_buffer(info);
             m_data = m_gdevice->map_buffer(m_buffer);
         }

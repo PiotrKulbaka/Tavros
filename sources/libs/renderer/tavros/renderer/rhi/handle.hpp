@@ -39,4 +39,9 @@ namespace tavros::renderer::rhi
     using shader_handle = core::handle_base<shader_tag>;
     using fence_handle = core::handle_base<fence_tag>;
 
+    struct bindless_handle
+    {
+        uint64 handle = 0;
+    };
+
 } // namespace tavros::renderer::rhi

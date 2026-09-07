@@ -25,21 +25,21 @@ namespace tavros::renderer::rhi
         case pixel_format::rgba16un:
             return {GL_RGBA16, GL_RGBA, GL_UNSIGNED_SHORT, 8};
 
-        case pixel_format::r8in:
+        case pixel_format::r8sn:
             return {GL_R8_SNORM, GL_RED, GL_BYTE, 1};
-        case pixel_format::r16in:
+        case pixel_format::r16sn:
             return {GL_R16_SNORM, GL_RED, GL_SHORT, 2};
-        case pixel_format::rg8in:
+        case pixel_format::rg8sn:
             return {GL_RG8_SNORM, GL_RG, GL_BYTE, 2};
-        case pixel_format::rg16in:
+        case pixel_format::rg16sn:
             return {GL_RG16_SNORM, GL_RG, GL_SHORT, 4};
-        case pixel_format::rgb8in:
+        case pixel_format::rgb8sn:
             return {GL_RGB8_SNORM, GL_RGB, GL_BYTE, 3};
-        case pixel_format::rgb16in:
+        case pixel_format::rgb16sn:
             return {GL_RGB16_SNORM, GL_RGB, GL_SHORT, 6};
-        case pixel_format::rgba8in:
+        case pixel_format::rgba8sn:
             return {GL_RGBA8_SNORM, GL_RGBA, GL_BYTE, 4};
-        case pixel_format::rgba16in:
+        case pixel_format::rgba16sn:
             return {GL_RGBA16_SNORM, GL_RGBA, GL_SHORT, 8};
 
         case pixel_format::r8u:
@@ -67,29 +67,29 @@ namespace tavros::renderer::rhi
         case pixel_format::rgba32u:
             return {GL_RGBA32UI, GL_RGBA_INTEGER, GL_UNSIGNED_INT, 16};
 
-        case pixel_format::r8i:
+        case pixel_format::r8s:
             return {GL_R8I, GL_RED_INTEGER, GL_BYTE, 1};
-        case pixel_format::r16i:
+        case pixel_format::r16s:
             return {GL_R16I, GL_RED_INTEGER, GL_SHORT, 2};
-        case pixel_format::r32i:
+        case pixel_format::r32s:
             return {GL_R32I, GL_RED_INTEGER, GL_INT, 4};
-        case pixel_format::rg8i:
+        case pixel_format::rg8s:
             return {GL_RG8I, GL_RG_INTEGER, GL_BYTE, 2};
-        case pixel_format::rg16i:
+        case pixel_format::rg16s:
             return {GL_RG16I, GL_RG_INTEGER, GL_SHORT, 4};
-        case pixel_format::rg32i:
+        case pixel_format::rg32s:
             return {GL_RG32I, GL_RG_INTEGER, GL_INT, 8};
-        case pixel_format::rgb8i:
+        case pixel_format::rgb8s:
             return {GL_RGB8I, GL_RGB_INTEGER, GL_BYTE, 3};
-        case pixel_format::rgb16i:
+        case pixel_format::rgb16s:
             return {GL_RGB16I, GL_RGB_INTEGER, GL_SHORT, 6};
-        case pixel_format::rgb32i:
+        case pixel_format::rgb32s:
             return {GL_RGB32I, GL_RGB_INTEGER, GL_INT, 12};
-        case pixel_format::rgba8i:
+        case pixel_format::rgba8s:
             return {GL_RGBA8I, GL_RGBA_INTEGER, GL_BYTE, 4};
-        case pixel_format::rgba16i:
+        case pixel_format::rgba16s:
             return {GL_RGBA16I, GL_RGBA_INTEGER, GL_SHORT, 8};
-        case pixel_format::rgba32i:
+        case pixel_format::rgba32s:
             return {GL_RGBA32I, GL_RGBA_INTEGER, GL_INT, 16};
 
         case pixel_format::r16f:
@@ -225,21 +225,21 @@ namespace tavros::renderer::rhi
         case pixel_format::rgba16un:
             return true;
 
-        case pixel_format::r8in:
+        case pixel_format::r8sn:
             return true;
-        case pixel_format::r16in:
+        case pixel_format::r16sn:
             return true;
-        case pixel_format::rg8in:
+        case pixel_format::rg8sn:
             return true;
-        case pixel_format::rg16in:
+        case pixel_format::rg16sn:
             return true;
-        case pixel_format::rgb8in:
+        case pixel_format::rgb8sn:
             return true;
-        case pixel_format::rgb16in:
+        case pixel_format::rgb16sn:
             return true;
-        case pixel_format::rgba8in:
+        case pixel_format::rgba8sn:
             return true;
-        case pixel_format::rgba16in:
+        case pixel_format::rgba16sn:
             return true;
 
         case pixel_format::r8u:
@@ -267,29 +267,29 @@ namespace tavros::renderer::rhi
         case pixel_format::rgba32u:
             return true;
 
-        case pixel_format::r8i:
+        case pixel_format::r8s:
             return true;
-        case pixel_format::r16i:
+        case pixel_format::r16s:
             return true;
-        case pixel_format::r32i:
+        case pixel_format::r32s:
             return true;
-        case pixel_format::rg8i:
+        case pixel_format::rg8s:
             return true;
-        case pixel_format::rg16i:
+        case pixel_format::rg16s:
             return true;
-        case pixel_format::rg32i:
+        case pixel_format::rg32s:
             return true;
-        case pixel_format::rgb8i:
+        case pixel_format::rgb8s:
             return true;
-        case pixel_format::rgb16i:
+        case pixel_format::rgb16s:
             return true;
-        case pixel_format::rgb32i:
+        case pixel_format::rgb32s:
             return true;
-        case pixel_format::rgba8i:
+        case pixel_format::rgba8s:
             return true;
-        case pixel_format::rgba16i:
+        case pixel_format::rgba16s:
             return true;
-        case pixel_format::rgba32i:
+        case pixel_format::rgba32s:
             return true;
 
         case pixel_format::r16f:
@@ -749,90 +749,90 @@ namespace tavros::renderer::rhi
         switch (fmt) {
         case pf::r8un:
             return {1, pixel_format_class::normalized};
-        case pf::r8in:
+        case pf::r8sn:
             return {1, pixel_format_class::normalized};
         case pf::r16un:
             return {1, pixel_format_class::normalized};
-        case pf::r16in:
+        case pf::r16sn:
             return {1, pixel_format_class::normalized};
 
         case pf::rg8un:
             return {2, pixel_format_class::normalized};
-        case pf::rg8in:
+        case pf::rg8sn:
             return {2, pixel_format_class::normalized};
         case pf::rg16un:
             return {2, pixel_format_class::normalized};
-        case pf::rg16in:
+        case pf::rg16sn:
             return {2, pixel_format_class::normalized};
 
         case pf::rgb8un:
             return {3, pixel_format_class::normalized};
-        case pf::rgb8in:
+        case pf::rgb8sn:
             return {3, pixel_format_class::normalized};
         case pf::rgb16un:
             return {3, pixel_format_class::normalized};
-        case pf::rgb16in:
+        case pf::rgb16sn:
             return {3, pixel_format_class::normalized};
 
         case pf::rgba8un:
             return {4, pixel_format_class::normalized};
-        case pf::rgba8in:
+        case pf::rgba8sn:
             return {4, pixel_format_class::normalized};
         case pf::rgba16un:
             return {4, pixel_format_class::normalized};
-        case pf::rgba16in:
+        case pf::rgba16sn:
             return {4, pixel_format_class::normalized};
 
         case pf::r8u:
             return {1, pixel_format_class::integer};
-        case pf::r8i:
+        case pf::r8s:
             return {1, pixel_format_class::integer};
         case pf::r16u:
             return {1, pixel_format_class::integer};
-        case pf::r16i:
+        case pf::r16s:
             return {1, pixel_format_class::integer};
         case pf::r32u:
             return {1, pixel_format_class::integer};
-        case pf::r32i:
+        case pf::r32s:
             return {1, pixel_format_class::integer};
 
         case pf::rg8u:
             return {2, pixel_format_class::integer};
-        case pf::rg8i:
+        case pf::rg8s:
             return {2, pixel_format_class::integer};
         case pf::rg16u:
             return {2, pixel_format_class::integer};
-        case pf::rg16i:
+        case pf::rg16s:
             return {2, pixel_format_class::integer};
         case pf::rg32u:
             return {2, pixel_format_class::integer};
-        case pf::rg32i:
+        case pf::rg32s:
             return {2, pixel_format_class::integer};
 
         case pf::rgb8u:
             return {3, pixel_format_class::integer};
-        case pf::rgb8i:
+        case pf::rgb8s:
             return {3, pixel_format_class::integer};
         case pf::rgb16u:
             return {3, pixel_format_class::integer};
-        case pf::rgb16i:
+        case pf::rgb16s:
             return {3, pixel_format_class::integer};
         case pf::rgb32u:
             return {3, pixel_format_class::integer};
-        case pf::rgb32i:
+        case pf::rgb32s:
             return {3, pixel_format_class::integer};
 
         case pf::rgba8u:
             return {4, pixel_format_class::integer};
-        case pf::rgba8i:
+        case pf::rgba8s:
             return {4, pixel_format_class::integer};
         case pf::rgba16u:
             return {4, pixel_format_class::integer};
-        case pf::rgba16i:
+        case pf::rgba16s:
             return {4, pixel_format_class::integer};
         case pf::rgba32u:
             return {4, pixel_format_class::integer};
-        case pf::rgba32i:
+        case pf::rgba32s:
             return {4, pixel_format_class::integer};
 
         case pf::r16f:

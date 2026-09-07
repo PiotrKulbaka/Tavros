@@ -418,8 +418,7 @@ namespace tavros::renderer::rhi
                     ::logger.error("Failed to bind shader texture {}: texture is not sampled", bind.texture);
                     return;
                 }
-                GL_CALL(glActiveTexture(GL_TEXTURE0 + bind.binding));
-                GL_CALL(glBindTexture(t->target, t->texture_obj));
+                GL_CALL(glBindTextureUnit(bind.binding, t->texture_obj));
             } else {
                 ::logger.error("Failed to bind shader texture {}: texture not found", bind.texture);
                 return;
@@ -1034,7 +1033,9 @@ namespace tavros::renderer::rhi
             TAV_UNREACHABLE();
         }
 
-        auto   gl_pixel_format = to_gl_pixel_format(tinfo.format);
+
+        auto   data_format = region.data_format != pixel_format::none ? region.data_format : tinfo.format;
+        auto   gl_pixel_format = to_gl_pixel_format(data_format);
         uint32 real_row_bytes = region.width * gl_pixel_format.bytes;
         size_t stride_bytes = static_cast<size_t>(region.buffer_row_length > 0 ? region.buffer_row_length * gl_pixel_format.bytes : real_row_bytes);
         size_t need_bytes = stride_bytes * region.height * region.depth - (stride_bytes - real_row_bytes);
@@ -1068,6 +1069,7 @@ namespace tavros::renderer::rhi
         switch (tinfo.type) {
         case texture_type::texture_2d:
             if (tinfo.array_layers == 1) {
+                // (GLenum target, GLint level, GLint xoffset, GLint yoffset, GLsizei width, GLsizei height, GLenum format, GLenum type, const void * pixels);
                 GL_CALL(glTexSubImage2D(
                     GL_TEXTURE_2D,
                     static_cast<GLint>(region.mip_level),

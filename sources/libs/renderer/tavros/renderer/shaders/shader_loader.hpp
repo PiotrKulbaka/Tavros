@@ -9,6 +9,8 @@
 namespace tavros::renderer
 {
 
+    inline constexpr std::string_view k_default_glsl_extensions = "GL_ARB_gpu_shader_int64;GL_ARB_bindless_texture";
+
     /**
      * @brief Supported shader languages / GLSL versions (core profile).
      */
@@ -37,7 +39,12 @@ namespace tavros::renderer
          * Multiple definitions are separated by semicolons (';').
          * Example: "NUM_LIGHTS 4;USE_SHADOWS;DEBUG"
          */
-        core::string_view defines;
+        core::string_view defines = "";
+
+        /**
+         * @brief OpenGL extensions to enable, separated by semicolons (';').
+         */
+        core::string_view extensions = k_default_glsl_extensions;
     };
 
 

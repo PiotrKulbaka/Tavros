@@ -2,6 +2,7 @@
 
 #include <tavros/core/exception.hpp>
 #include <tavros/core/logger/logger.hpp>
+#include <tavros/core/debug/debug.hpp>
 #include <tavros/renderer/shaders/shader_source_provider.hpp>
 #include <tavros/renderer/texture/texture_uploader.hpp>
 #include <tavros/renderer/text/font/truetype_font.hpp>
@@ -172,16 +173,10 @@ namespace tavros::renderer
         , m_am(am)
         , m_ws(ws)
         , m_sl(std::move(core::make_unique<shader_provider>(am.get())))
+        , m_flip_on_load(false)
     {
         set_material_load_params({});
-
-        if (!m_tex_placeholder) {
-            uint8      data[] = {255, 0, 255};
-            const auto im = assets::image_view(data, 1, 1, assets::image::pixel_format::rgb8);
-            const auto desc = texture_desc{"$placeholder", texture_desc::texture_load_params{.width = 1, .height = 1}};
-            m_tex_placeholder = core::make_unique<texture>(m_gdevice, m_upctx, im, desc, true);
-            m_tex_reg.set_placeholder(m_tex_placeholder.get());
-        }
+        create_default_textures();
 
         for (size_t i = 0; i < k_preset_infos.size(); ++i) {
             auto info = k_preset_infos[i];
@@ -228,6 +223,25 @@ namespace tavros::renderer
         m_mt_load_ds_format = ds_format;
     }
 
+    rhi::texture_handle resource_manager::default_texture(default_texture_type type) const noexcept
+    {
+        switch (type) {
+        case default_texture_type::white:
+            return m_white_texture;
+        case default_texture_type::black:
+            return m_black_texture;
+        case default_texture_type::transparent:
+            return m_transparent_texture;
+        case default_texture_type::normal:
+            return m_normal_texture;
+        case default_texture_type::gray:
+            return m_gray_texture;
+        case default_texture_type::debug:
+            return m_debug_texture;
+        }
+        TAV_UNREACHABLE();
+    }
+
     rhi::texture_handle resource_manager::fonts_texture() const noexcept
     {
         return m_fonts_texture;
@@ -235,11 +249,6 @@ namespace tavros::renderer
 
     font_ref resource_manager::load_font_from_file(core::string_view name, core::string_view path)
     {
-        if (!m_fnt_placeholder) {
-            m_fnt_placeholder = core::make_unique<font_placeholder>(&m_fnt_atlas);
-            m_fnt_reg.set_placeholder(m_fnt_placeholder.get());
-        }
-
         auto slot = m_fnt_reg.make_slot(name);
 
         if (slot.second) {
@@ -275,10 +284,6 @@ namespace tavros::renderer
 
     font_ref resource_manager::load_font(core::string_view name)
     {
-        if (!m_fnt_placeholder) {
-            m_fnt_placeholder = core::make_unique<font_placeholder>(&m_fnt_atlas);
-            m_fnt_reg.set_placeholder(m_fnt_placeholder.get());
-        }
         auto slot = m_fnt_reg.make_slot(name);
 
         if (slot.second) {
@@ -368,13 +373,13 @@ namespace tavros::renderer
             try {
                 auto im_fmt = to_im_format(desc.load_params().pixel_format);
                 auto data = m_am->read_binary(desc.load_params().path);
-                im = assets::image::decode(data, im_fmt, true);
+                im = assets::image::decode(data, im_fmt);
             } catch (const core::file_error& e) {
                 logger.error("Failed to open image '{}'", desc.load_params().path);
                 return slot.first;
             }
 
-            auto tex = core::make_unique<texture>(m_gdevice, m_upctx, im, desc, true);
+            auto tex = core::make_unique<texture>(m_gdevice, m_upctx, im, desc, m_flip_on_load);
             m_tex_reg.publish(slot.first, std::move(tex));
         }
 
@@ -386,7 +391,7 @@ namespace tavros::renderer
         auto slot = m_tex_reg.make_slot(desc.name());
 
         if (slot.second) {
-            auto tex = core::make_unique<texture>(m_gdevice, m_upctx, im, desc, true);
+            auto tex = core::make_unique<texture>(m_gdevice, m_upctx, im, desc, m_flip_on_load);
             m_tex_reg.publish(slot.first, std::move(tex));
         }
 
@@ -497,16 +502,70 @@ namespace tavros::renderer
     {
         m_fnt_reg.sync();
         if (m_fnt_atlas.need_to_recreate_atlas()) {
-            auto atlas = m_fnt_atlas.invalidate_old_and_bake_new_atlas(56.0f, 8.0f);
+            auto atlas_un = m_fnt_atlas.invalidate_old_and_bake_new_atlas(64.0f, 16.0f);
 
-            auto tex = m_gdevice->create_texture(rhi::texture_create_info{.type = rhi::texture_type::texture_2d, .format = rhi::pixel_format::r8un, .width = atlas.width(), .height = atlas.height(), .usage = rhi::k_default_texture_usage});
-            texture_uploader::upload_2d(tex, atlas, {}, 0, m_upctx);
+            auto atlas_sn = atlas_un;
+            {
+                auto*       p = atlas_sn.data();
+                const auto* end_p = p + atlas_sn.size_bytes();
+                while (p < end_p) {
+                    int32 s = 128 - static_cast<int32>(*p);
+                    s = math::clamp(s, -128, 127);
+                    *p = static_cast<uint8>(static_cast<int8>(s));
+                    ++p;
+                }
+            }
+
+            auto tex = m_gdevice->create_texture(
+                rhi::texture_create_info{
+                    .label = "font_atlas",
+                    .type = rhi::texture_type::texture_2d,
+                    .format = rhi::pixel_format::r8sn,
+                    .width = atlas_sn.width(),
+                    .height = atlas_sn.height(),
+                    .usage = rhi::k_default_texture_usage
+                }
+            );
+            texture_uploader::upload_2d(tex, atlas_sn, {}, 0, m_upctx, m_flip_on_load);
 
             if (m_fonts_texture) {
                 m_gdevice->destroy_texture(m_fonts_texture);
             }
             m_fonts_texture = tex;
         }
+    }
+
+    void resource_manager::create_default_textures()
+    {
+        auto create_texture = [this](core::string_view label, core::buffer_view<uint8> data, uint32 side_size) -> rhi::texture_handle {
+            const auto fmt = rhi::pixel_format::rgba8un;
+            auto       tex = m_gdevice->create_texture(
+                rhi::texture_create_info{
+                          .label = label,
+                          .type = rhi::texture_type::texture_2d,
+                          .format = fmt,
+                          .width = side_size,
+                          .height = side_size,
+                          .usage = rhi::k_default_texture_usage,
+                }
+            );
+            assets::image_view im(data, side_size, side_size, to_im_format(fmt));
+            texture_uploader::upload_2d(tex, im, {}, 0, m_upctx, m_flip_on_load);
+            return tex;
+        };
+
+        uint8 white_data[] = {0xFF, 0xFF, 0xFF, 0xFF};
+        m_white_texture = create_texture("$white", {white_data, 4}, 1);
+        uint8 black_data[] = {0x00, 0x00, 0x00, 0xFF};
+        m_black_texture = create_texture("$black", {black_data, 4}, 1);
+        uint8 transparent_data[] = {0x00, 0x00, 0x00, 0x00};
+        m_transparent_texture = create_texture("$transparent", {transparent_data, 4}, 1);
+        uint8 normal_data[] = {0x80, 0x80, 0xFF, 0xFF};
+        m_normal_texture = create_texture("$normal", {normal_data, 4}, 1);
+        uint8 gray_data[] = {0x80, 0x80, 0x80, 0xFF};
+        m_gray_texture = create_texture("$gray", {gray_data, 4}, 1);
+        uint8 debug_data[] = {0xFF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0xFF};
+        m_debug_texture = create_texture("$debug", {debug_data, 16}, 2);
     }
 
 } // namespace tavros::renderer

@@ -44,7 +44,9 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/assert.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/check.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/debug.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/debug.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/debug_break.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/debug_only.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/profiler.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/profiler.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/debug/unreachable.hpp
@@ -102,6 +104,7 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/logger/logger.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/logger/severity_level.hpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/angle.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/bitops.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/color32.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/euler3.hpp
@@ -147,6 +150,7 @@ set(TAV_CORE_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/normalize.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/normalize.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/orthogonal.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/pack.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/rotate.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/rotate.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/core/math/functions/slerp.cpp

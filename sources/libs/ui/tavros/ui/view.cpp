@@ -194,7 +194,7 @@ namespace tavros::ui
 
         const auto& dbg = ctx.debug_info();
         if (dbg.debug_draw) {
-            auto* r = ctx.renderer().renderer2d();
+            auto* r = ctx.renderer().ui_renderer();
 
             if (m_is_entered) {
                 auto cb = content_box();
@@ -203,33 +203,25 @@ namespace tavros::ui
                 auto mb = margin_box();
 
                 if (!cb.is_empty()) {
-                    //r->set_brush_solid_color(dbg.content_box_color);
-                    //r->fill_rect(cb);
+                    r->quad(cb).fill_color(dbg.content_box_color).draw();
                 }
 
                 if (!m_padding.is_zero()) {
-                   // r->set_brush_solid_color(dbg.padding_box_color);
-                   // r->fill_rect_cut(pb, cb);
+                    r->quad(pb).cut_quad(cb).fill_color(dbg.padding_box_color).draw();
                 }
 
                 if (!m_border.is_zero()) {
-                   // r->set_brush_solid_color(dbg.border_box_color);
-                   // r->fill_rect_cut(bb, pb);
-
-                  //  r->set_brush_solid_color(0x400000FF);
-                   // auto inner = geometry::to_inner_radius(m_border_radius, m_border);
-                   // r->fill_rect_cut(bb, pb, m_border_radius, inner);
+                    r->quad(bb).cut_quad(pb).fill_color(dbg.border_box_color).draw();
                 }
 
                 if (!m_margin.is_zero()) {
-                   // r->set_brush_solid_color(dbg.margin_box_color);
-                   // r->fill_rect_cut(mb, bb);
+                    r->quad(mb).cut_rect(bb).fill_color(dbg.margin_box_color).draw();
                 }
             }
 
-           // r->set_brush_solid_color(dbg.hit_box_color);
-           // r->set_line_thickness(dbg.hit_box_line_thickness);
-           // r->draw_aabb(m_border_box);
+            auto ob = m_border_box.expanded(dbg.hit_box_line_thickness * 0.5);
+            auto ib = m_border_box.shrinked(dbg.hit_box_line_thickness * 0.5);
+            r->quad(ob).cut_quad(ib).fill_color(dbg.hit_box_color).draw();
         }
     }
 

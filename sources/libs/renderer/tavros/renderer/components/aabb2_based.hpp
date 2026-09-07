@@ -5,22 +5,9 @@
 namespace tavros::renderer
 {
 
-    struct rect_layout_c : public geometry::aabb2
+    struct rect_layout_c
     {
-        constexpr rect_layout_c& operator=(const geometry::aabb2& other) noexcept
-        {
-            geometry::aabb2::operator=(other);
-            return *this;
-        }
-    };
-
-    struct aabb2_c : public geometry::aabb2
-    {
-        constexpr aabb2_c& operator=(const geometry::aabb2& other) noexcept
-        {
-            geometry::aabb2::operator=(other);
-            return *this;
-        }
+        geometry::aabb2 value;
     };
 
 } // namespace tavros::renderer

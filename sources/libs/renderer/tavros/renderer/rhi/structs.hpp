@@ -110,6 +110,10 @@ namespace tavros::renderer::rhi
      */
     struct texture_copy_region
     {
+        /// Pixel format of the texture data in the buffer.
+        /// If the format is none, the texture's format is assumed.
+        pixel_format data_format = pixel_format::none;
+
         /// Offset in bytes within the buffer where the copy starts
         size_t buffer_offset = 0;
 
@@ -305,6 +309,9 @@ namespace tavros::renderer::rhi
      */
     struct texture_create_info
     {
+        /// Optional label for debugging or profiling
+        core::string_view label = "";
+
         /// Type of the texture
         texture_type type = texture_type::texture_2d;
 
@@ -375,6 +382,9 @@ namespace tavros::renderer::rhi
      */
     struct sampler_create_info
     {
+        /// Optional label for debugging or profiling
+        core::string_view label = "";
+
         /// Filtering modes (min, mag, mipmap)
         sampler_filter filter;
 
@@ -408,6 +418,9 @@ namespace tavros::renderer::rhi
      */
     struct shader_create_info
     {
+        /// Optional label for debugging or profiling
+        core::string_view label = "";
+
         /// Vertex shader source.
         core::string_view vertex_shader_source;
 
@@ -425,6 +438,9 @@ namespace tavros::renderer::rhi
      */
     struct buffer_create_info
     {
+        /// Optional label for debugging or profiling
+        core::string_view label = "";
+
         /// Buffer size in bytes
         size_t size = 0;
 
@@ -497,6 +513,9 @@ namespace tavros::renderer::rhi
      */
     struct framebuffer_create_info
     {
+        /// Optional label for debugging or profiling
+        core::string_view label = "";
+
         /// Framebuffer width in pixels. Must match the width of all attachments.
         uint32 width = 0;
 
@@ -753,6 +772,9 @@ namespace tavros::renderer::rhi
      */
     struct pipeline_create_info
     {
+        /// Optional label for debugging or profiling
+        core::string_view label = "";
+
         /// Shader program to be used in the pipeline
         shader_handle shader_program;
 

@@ -13,11 +13,10 @@ namespace tavros::geometry
     public:
         constexpr obb2() noexcept = default;
 
-        obb2(const math::vec2& center, const math::vec2& right, const math::vec2& up, const math::vec2& half_extents) noexcept
+        obb2(const math::vec2& center, const math::vec2& right, const math::vec2& up) noexcept
             : center(center)
             , right(right)
             , up(up)
-            , half_extents(half_extents)
         {
         }
 
@@ -29,6 +28,12 @@ namespace tavros::geometry
          */
         bool contains_point(const math::vec2& point) const noexcept;
 
+        /** @brief Returns the half extents of the OBB along its local axes. */
+        math::vec2 half_extents() const noexcept
+        {
+            return math::vec2(right.length(), up.length());
+        }
+
         /**
          * @brief Converts the OBB to a transformation matrix.
          *
@@ -39,8 +44,8 @@ namespace tavros::geometry
         math::mat3 to_mat() const noexcept
         {
             return math::mat3(
-                math::vec3(right * half_extents.x),
-                math::vec3(up * half_extents.y),
+                math::vec3(right),
+                math::vec3(up),
                 math::vec3(center, 1.0f)
             );
         }
@@ -49,7 +54,6 @@ namespace tavros::geometry
         math::vec2 center; // Center of the OBB
         math::vec2 right;
         math::vec2 up;
-        math::vec2 half_extents; // Half-extents along each of the axes
     };
 
 } // namespace tavros::geometry
