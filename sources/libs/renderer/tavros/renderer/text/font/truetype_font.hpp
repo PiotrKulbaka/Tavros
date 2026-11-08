@@ -37,7 +37,7 @@ namespace tavros::renderer
          * @param font_data         Raw font file stored in a dynamic buffer.
          * @param codepoint_ranges  List of Unicode ranges to load glyphs from.
          */
-        truetype_font(font_atlas* atlas, core::dynamic_buffer<uint8> font_data, core::buffer_view<font_desc::codepoint_range> codepoint_ranges);
+        truetype_font(font_atlas* atlas, core::dynamic_buffer<uint8> font_data, core::buffer_view<const font_desc::codepoint_range> codepoint_ranges);
 
         /**
          * @brief Destroys the font object.
@@ -47,7 +47,7 @@ namespace tavros::renderer
     protected:
         math::isize2 glyph_bitmap_size_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix) const noexcept override;
 
-        void bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept override;
+        void bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_view<uint8> pixels, uint32 pixels_stride) const noexcept override;
 
         float get_kerning_internal(char32 cp1, char32 cp2) const noexcept override;
 

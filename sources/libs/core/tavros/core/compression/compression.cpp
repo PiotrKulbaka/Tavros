@@ -11,7 +11,7 @@ namespace
 namespace tavros::core
 {
 
-    bool uncompress_data(buffer_view<uint8> compressed_data, buffer_span<uint8> output)
+    bool uncompress_data(buffer_view<const uint8> compressed_data, buffer_view<uint8> output)
     {
         auto dest_len = static_cast<uLongf>(output.size());
         auto res = uncompress(

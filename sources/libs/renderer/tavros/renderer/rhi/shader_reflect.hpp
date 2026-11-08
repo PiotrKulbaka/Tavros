@@ -23,17 +23,17 @@ namespace tavros::renderer::rhi
         /**
          * @brief Returns all vertex input attributes used by the shader.
          */
-        virtual core::buffer_view<vertex_attribute_reflect> vertex_attributes() const noexcept = 0;
+        virtual core::buffer_view<const vertex_attribute_reflect> vertex_attributes() const noexcept = 0;
 
         /**
          * @brief Returns all shader resource bindings.
          */
-        virtual core::buffer_view<shader_resource_reflect> shader_resources() const noexcept = 0;
+        virtual core::buffer_view<const shader_resource_reflect> shader_resources() const noexcept = 0;
 
         /**
          * @brief Returns all constant buffer (UBO) declarations.
          */
-        virtual core::buffer_view<constant_block_reflect> constant_blocks() const noexcept = 0;
+        virtual core::buffer_view<const constant_block_reflect> constant_blocks() const noexcept = 0;
 
         /**
          * @brief Returns members of a specific uniform buffer block.
@@ -44,17 +44,17 @@ namespace tavros::renderer::rhi
          *
          * @note Index must be valid and refer to an existing constant block.
          */
-        virtual core::buffer_view<member_reflect> constant_block_members(size_t constant_block_index) const noexcept = 0;
+        virtual core::buffer_view<const member_reflect> constant_block_members(size_t constant_block_index) const noexcept = 0;
 
         /**
          * @brief Returns all storage buffer (SSBO) declarations.
          */
-        virtual core::buffer_view<storage_block_reflect> storage_blocks() const noexcept = 0;
+        virtual core::buffer_view<const storage_block_reflect> storage_blocks() const noexcept = 0;
 
         /**
          * @brief Returns all shader output variables.
          */
-        virtual core::buffer_view<output_reflect> outputs() const noexcept = 0;
+        virtual core::buffer_view<const output_reflect> outputs() const noexcept = 0;
 
         /**
          * @brief Returns compute shader specific info.

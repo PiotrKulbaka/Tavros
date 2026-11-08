@@ -81,7 +81,7 @@ namespace tavros::renderer
          *
          * @pre  m_is_created == true
          */
-        core::buffer_view<rhi::texture_handle> color_attachments() const noexcept;
+        core::buffer_view<const rhi::texture_handle> color_attachments() const noexcept;
 
         /**
          * @brief Returns the resolved depth/stencil attachment texture.

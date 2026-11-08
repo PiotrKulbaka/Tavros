@@ -17,9 +17,6 @@ namespace tavros::renderer::rhi
 
         render_backend_type backend_type() const noexcept override;
 
-        void push_debug_group(core::string_view name) override;
-        void pop_debug_group() override;
-
         frame_composer_handle create_frame_composer(const frame_composer_create_info& info) override;
         void                  destroy_frame_composer(frame_composer_handle composer) override;
         frame_composer*       get_frame_composer_ptr(frame_composer_handle composer) override;
@@ -52,7 +49,7 @@ namespace tavros::renderer::rhi
         bool         is_fence_signaled(fence_handle fence) override;
         bool         client_wait_for_fence(fence_handle fence, uint64 timeout_ns = std::numeric_limits<uint64>::max()) override;
 
-        core::buffer_span<uint8> map_buffer(buffer_handle buffer, size_t offset = 0, size_t size = 0) override;
+        core::buffer_view<uint8> map_buffer(buffer_handle buffer, size_t offset = 0, size_t size = 0) override;
         void                     unmap_buffer(buffer_handle buffer) override;
 
         device_resources_opengl* get_resources();

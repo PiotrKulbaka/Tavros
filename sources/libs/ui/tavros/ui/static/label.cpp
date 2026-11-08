@@ -98,44 +98,37 @@ namespace tavros::ui
 
     void label_view::draw(ui_context& ctx)
     {
-        view::draw(ctx);
+        /* view::draw(ctx);
 
-        auto text_layout = m_text.layout();
+         const auto sc = padding_box();
 
-        auto* r = ctx.renderer().ui_renderer();
+         auto text_layout = m_text.layout();
 
-        auto cb = content_box();
-        auto tex = ctx.renderer().resource_manager()->fonts_texture();
+         auto* r = ctx.renderer().ui_renderer();
 
-        const tavros::renderer::color_stop diamond_stops[] = {
-            {0.00f, 0x00E29958},
-            {0.20f, 0x30E29958},
-            {0.48f, 0xFFFFEBBD},
-            {0.491f, 0xFFF3D5B9},
-            {0.509f, 0xFFF3D5B9},
-            {0.52f, 0xFFFFEBBD},
-            {0.80f, 0x30FFAF65},
-            {1.00f, 0x00FFAF65},
-        };
+         auto cb = content_box();
+         auto tex = ctx.renderer().resource_manager()->fonts_texture();
 
-        m_text.text().view<const renderer::glyph_c, const renderer::atlas_rect_t, const renderer::rect_layout_c, const renderer::position2d_c, const renderer::glyph_style_c>().each([&](const auto& g, const auto& ar, const auto& l, const auto& p, const auto& st) {
-            const auto size = l.value.size();
-            const auto pos = math::vec2(p.value.x + l.value.left, p.value.y + l.value.top) + cb.min;
-            const auto glyph_bounds = geometry::aabb2(pos.x, pos.y, pos.x + size.width, pos.y + size.height);
+         r->push_scissor_rect(cb);
 
-            r->sdf(glyph_bounds, tex, math::vec4(ar.left, ar.top, ar.width, ar.height), g.sdf_pad_pix)
-                .fill_color(0x80000000)
-                .shadow(0.0, 4.0f)
-                .draw();
+         m_text.text().view<const renderer::glyph_c, const renderer::atlas_rect_t, const renderer::rect_layout_c, const renderer::position2d_c, const renderer::glyph_style_c>().each(
+             [&](const auto& g, const auto& ar, const auto& l, const auto& p, const auto& st) {
+                 const auto size = l.value.size();
+                 const auto pos = math::vec2(p.value.x + l.value.left, p.value.y + l.value.top) + cb.min;
+                 const auto glyph_bounds = geometry::aabb2(pos.x, pos.y, pos.x + size.width, pos.y + size.height);
 
-            r->sdf(glyph_bounds, tex, math::vec4(ar.left, ar.top, ar.width, ar.height), g.sdf_pad_pix)
-                .fill_color(st.fill_color)
-                .draw();
-        });
+                 r->sdf(glyph_bounds, tex, math::vec4(ar.left, ar.top, ar.width, ar.height), g.sdf_pad_pix)
+                     .fill_color(0x80000000)
+                     .shadow(0.0, 4.0f)
+                     .draw();
 
-        /* r->set_clip_rect(padding_box());
-         r->draw_text(m_text.text(), cb.min, 0.5f, 0.1f);
-         r->reset_clip_rect();*/
+                 r->sdf(glyph_bounds, tex, math::vec4(ar.left, ar.top, ar.width, ar.height), g.sdf_pad_pix)
+                     .fill_color(st.fill_color)
+                     .draw();
+             }
+         );
+
+         r->pop_scissor_rect();*/
     }
 
 } // namespace tavros::ui

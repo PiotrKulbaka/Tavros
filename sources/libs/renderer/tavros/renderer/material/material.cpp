@@ -14,7 +14,7 @@ namespace
 namespace tavros::renderer
 {
 
-    material::material(rhi::graphics_device* gdevice, const material_desc& desc, shader_loader& sl, core::buffer_view<vertex_attribute> vert_attribs, uint32 msaa, rhi::pixel_format ds_format)
+    material::material(rhi::graphics_device* gdevice, const material_desc& desc, shader_loader& sl, core::buffer_view<const vertex_attribute> vert_attribs, uint32 msaa, rhi::pixel_format ds_format)
         : m_gdevice(gdevice)
     {
         ::logger.debug("Creating material '{}'", desc.name());

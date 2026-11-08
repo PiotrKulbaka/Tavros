@@ -34,7 +34,7 @@ namespace tavros::assets
          *
          * @return Buffer containing raw pixel data.
          */
-        static core::dynamic_buffer<uint8> decode(core::buffer_view<uint8> data, uint32& w, uint32& h, uint32& c, uint32& stride, uint32 rc = 0, bool y_flip = false);
+        static core::dynamic_buffer<uint8> decode(core::buffer_view<const uint8> data, uint32& w, uint32& h, uint32& c, uint32& stride, uint32 rc = 0, bool y_flip = false);
 
         /**
          * @brief Encodes raw pixel data into a compressed image format.
@@ -49,7 +49,7 @@ namespace tavros::assets
          *
          * @return Buffer containing the encoded image data.
          */
-        static core::dynamic_buffer<uint8> encode(core::buffer_view<uint8> pixels, uint32 w, uint32 h, uint32 c, uint32 stride, image_format fmt = image_format::png, bool y_flip = false);
+        static core::dynamic_buffer<uint8> encode(core::buffer_view<const uint8> pixels, uint32 w, uint32 h, uint32 c, uint32 stride, image_format fmt = image_format::png, bool y_flip = false);
     };
 
 } // namespace tavros::assets

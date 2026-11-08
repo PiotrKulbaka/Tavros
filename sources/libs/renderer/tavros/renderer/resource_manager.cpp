@@ -147,7 +147,7 @@ namespace
             return tavros::math::isize2(0, 0);
         }
 
-        void bake_glyph_bitmap_internal(glyph_index, float, float, tavros::core::buffer_span<uint8>, uint32) const noexcept override
+        void bake_glyph_bitmap_internal(glyph_index, float, float, tavros::core::buffer_view<uint8>, uint32) const noexcept override
         {
         }
 
@@ -193,6 +193,8 @@ namespace tavros::renderer
 
     resource_manager::~resource_manager() noexcept
     {
+        destroy_default_textures();
+
         for (auto s : m_samplers) {
             m_gdevice->destroy_sampler(s);
         }
@@ -216,7 +218,7 @@ namespace tavros::renderer
     {
     }
 
-    void resource_manager::set_material_load_params(core::buffer_view<material::vertex_attribute> vert_attribs, uint32 msaa, rhi::pixel_format ds_format) noexcept
+    void resource_manager::set_material_load_params(core::buffer_view<const material::vertex_attribute> vert_attribs, uint32 msaa, rhi::pixel_format ds_format) noexcept
     {
         m_mt_load_vert_attribs = vert_attribs;
         m_mt_load_msaa = msaa;
@@ -537,7 +539,7 @@ namespace tavros::renderer
 
     void resource_manager::create_default_textures()
     {
-        auto create_texture = [this](core::string_view label, core::buffer_view<uint8> data, uint32 side_size) -> rhi::texture_handle {
+        auto create_texture = [this](core::string_view label, core::buffer_view<const uint8> data, uint32 side_size) -> rhi::texture_handle {
             const auto fmt = rhi::pixel_format::rgba8un;
             auto       tex = m_gdevice->create_texture(
                 rhi::texture_create_info{
@@ -566,6 +568,16 @@ namespace tavros::renderer
         m_gray_texture = create_texture("$gray", {gray_data, 4}, 1);
         uint8 debug_data[] = {0xFF, 0x00, 0xFF, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0x00, 0x00, 0x00, 0xFF, 0xFF, 0x00, 0xFF, 0xFF};
         m_debug_texture = create_texture("$debug", {debug_data, 16}, 2);
+    }
+
+    void resource_manager::destroy_default_textures()
+    {
+        m_gdevice->safe_destroy(m_white_texture);
+        m_gdevice->safe_destroy(m_black_texture);
+        m_gdevice->safe_destroy(m_transparent_texture);
+        m_gdevice->safe_destroy(m_normal_texture);
+        m_gdevice->safe_destroy(m_gray_texture);
+        m_gdevice->safe_destroy(m_debug_texture);
     }
 
 } // namespace tavros::renderer

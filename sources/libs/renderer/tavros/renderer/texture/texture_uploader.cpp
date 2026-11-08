@@ -31,7 +31,7 @@ namespace tavros::renderer
         batch.queue->copy_buffer_to_texture(batch.view.gpu_buffer(), gpu_tex, region);
     }
 
-    void texture_uploader::upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, upload_context& upctx, bool y_flip)
+    void texture_uploader::upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<const assets::image> levels, uint32 layer_index, upload_context& upctx, bool y_flip)
     {
         upload_2d_level(gpu_tex, base, 0, layer_index, upctx, y_flip);
         auto sz = static_cast<uint32>(levels.size());

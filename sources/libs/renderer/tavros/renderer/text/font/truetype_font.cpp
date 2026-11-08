@@ -15,7 +15,7 @@ namespace
     using cp_rng = tavros::renderer::font_desc::codepoint_range;
 
 
-    tavros::core::vector<cp_rng> sort_and_merge_codepoint_ranges(tavros::core::buffer_view<cp_rng> ranges)
+    tavros::core::vector<cp_rng> sort_and_merge_codepoint_ranges(tavros::core::buffer_view<const cp_rng> ranges)
     {
         tavros::core::vector<cp_rng> sorted_ranges(ranges.begin(), ranges.end());
 
@@ -62,7 +62,7 @@ namespace tavros::renderer
         stbtt_fontinfo info;
     };
 
-    truetype_font::truetype_font(font_atlas* atlas, core::dynamic_buffer<uint8> font_data, core::buffer_view<font_desc::codepoint_range> codepoint_ranges)
+    truetype_font::truetype_font(font_atlas* atlas, core::dynamic_buffer<uint8> font_data, core::buffer_view<const font_desc::codepoint_range> codepoint_ranges)
         : font()
         , m_font_data(std::move(font_data))
         , m_scale(0.0f)
@@ -149,7 +149,7 @@ namespace tavros::renderer
         return math::ivec2(w, h);
     }
 
-    void truetype_font::bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept
+    void truetype_font::bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_view<uint8> pixels, uint32 pixels_stride) const noexcept
     {
         const auto& g = get_glyph_info(idx);
 

@@ -1,7 +1,6 @@
 #pragma once
 
 #include <tavros/core/memory/buffer_view.hpp>
-#include <tavros/core/memory/buffer_span.hpp>
 #include <tavros/core/memory/memory.hpp>
 
 #include <tavros/renderer/rhi/frame_composer.hpp>
@@ -37,21 +36,6 @@ namespace tavros::renderer::rhi
 
         /** @brief Returns the rendering backend type of this graphics device. */
         virtual render_backend_type backend_type() const noexcept = 0;
-
-        /**
-         * @brief Pushes a named debug group onto the command stream for GPU debugging
-         * tools (e.g. RenderDoc, PIX). Must be balanced with a matching pop_debug_group() call.
-         *
-         * @param name Label for the debug group, shown in graphics debugging tools.
-         */
-        virtual void push_debug_group(core::string_view name) = 0;
-
-        /**
-         * @brief Pops the most recently pushed debug group from the command stream.
-         *
-         * Must be called once for each push_debug_group() call, in matching (LIFO) order.
-         */
-        virtual void pop_debug_group() = 0;
 
         /**
          * @brief Create a frame composer used to manage per-frame rendering.
@@ -246,7 +230,7 @@ namespace tavros::renderer::rhi
          * @param size   Size of the region to map in bytes (0 = entire buffer).
          * @return Pointer to the mapped memory region.
          */
-        virtual core::buffer_span<uint8> map_buffer(buffer_handle buffer, size_t offset = 0, size_t size = 0) = 0;
+        virtual core::buffer_view<uint8> map_buffer(buffer_handle buffer, size_t offset = 0, size_t size = 0) = 0;
 
         /**
          * @brief Unmap a previously mapped buffer.

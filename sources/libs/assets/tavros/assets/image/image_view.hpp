@@ -37,7 +37,7 @@ namespace tavros::assets
          * @param format Pixel format. Must not be pixel_format::none.
          * @param stride Row stride in bytes. If 0, defaults to width * component_count(format).
          */
-        constexpr image_view(core::buffer_view<uint8> data, uint32 width, uint32 height, image::pixel_format format, uint32 stride = 0) noexcept
+        constexpr image_view(core::buffer_view<const uint8> data, uint32 width, uint32 height, image::pixel_format format, uint32 stride = 0) noexcept
             : m_width(width)
             , m_height(height)
             , m_format(format)
@@ -183,7 +183,7 @@ namespace tavros::assets
         uint32              m_components = 0;
         uint32              m_stride = 0; // stride of the source image, not the view
 
-        core::buffer_view<uint8> m_data = nullptr;
+        core::buffer_view<const uint8> m_data = nullptr;
     };
 
 } // namespace tavros::assets

@@ -1,7 +1,7 @@
 #pragma once
 
 #include <tavros/core/types.hpp>
-#include <tavros/core/memory/buffer_span.hpp>
+#include <tavros/core/memory/buffer_view.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 
 namespace tavros::renderer
@@ -38,7 +38,7 @@ namespace tavros::renderer
          * @param offset_bytes Byte offset from the start of the buffer.
          * @param slice        CPU-visible span representing the mapped data.
          */
-        explicit gpu_buffer_view(rhi::buffer_handle buffer, size_t offset_bytes, core::buffer_span<T> slice) noexcept
+        explicit gpu_buffer_view(rhi::buffer_handle buffer, size_t offset_bytes, core::buffer_view<T> slice) noexcept
             : m_buffer(buffer)
             , m_offset(offset_bytes)
             , m_slice(slice)
@@ -77,7 +77,7 @@ namespace tavros::renderer
          *
          * @note This span is valid only while the underlying buffer remains mapped.
          */
-        [[nodiscard]] core::buffer_span<T> data() const noexcept
+        [[nodiscard]] core::buffer_view<T> data() const noexcept
         {
             return m_slice;
         }
@@ -85,7 +85,7 @@ namespace tavros::renderer
     private:
         rhi::buffer_handle   m_buffer;
         size_t               m_offset = 0;
-        core::buffer_span<T> m_slice;
+        core::buffer_view<T> m_slice;
     };
 
 } // namespace tavros::renderer

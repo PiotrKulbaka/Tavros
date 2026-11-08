@@ -46,7 +46,7 @@ namespace tavros::renderer
          * @param layer_index Destination array layer index for the upload. For non-array textures, pass 0.
          * @param upctx       Upload context (stage buffers and command queue).
          */
-        static void upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<assets::image> levels, uint32 layer_index, upload_context& upctx, bool y_flip = false);
+        static void upload_2d(rhi::texture_handle gpu_tex, assets::image_view base, core::buffer_view<const assets::image> levels, uint32 layer_index, upload_context& upctx, bool y_flip = false);
     };
 
 } // namespace tavros::renderer

@@ -77,3 +77,13 @@
     #define TAV_DEBUG   0
     #define TAV_RELEASE 1
 #endif
+
+#if defined __clang__ || defined __GNUC__
+    #define TAV_FUNCSIG        __PRETTY_FUNCTION__
+    #define TAV_FUNCSIG_PREFIX "="
+    #define TAV_FUNCSIG_SUFFIX "]"
+#elif defined _MSC_VER
+    #define TAV_FUNCSIG        __FUNCSIG__
+    #define TAV_FUNCSIG_PREFIX "<"
+    #define TAV_FUNCSIG_SUFFIX ">"
+#endif

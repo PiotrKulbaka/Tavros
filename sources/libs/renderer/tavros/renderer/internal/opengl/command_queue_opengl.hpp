@@ -13,15 +13,19 @@ namespace tavros::renderer::rhi
 
         ~command_queue_opengl() override;
 
+        void push_debug_group(core::string_view name) override;
+
+        void pop_debug_group() override;
+
         void bind_pipeline(pipeline_handle pipeline) override;
 
-        void bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers) override;
+        void bind_vertex_buffers(core::buffer_view<const bind_buffer_info> buffers) override;
 
         void bind_index_buffer(const bind_index_buffer_info& info) override;
 
-        void bind_shader_buffers(core::buffer_view<buffer_binding> buffers) override;
+        void bind_shader_buffers(core::buffer_view<const buffer_binding> buffers) override;
 
-        void bind_shader_textures(core::buffer_view<texture_binding> textures) override;
+        void bind_shader_textures(core::buffer_view<const texture_binding> textures) override;
 
         void begin_rendering(framebuffer_handle framebuffer) override;
 

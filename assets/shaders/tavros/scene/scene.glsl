@@ -56,6 +56,19 @@ layout (std140, binding = 0) uniform Scene
 
 
 
+struct scissor_t // 16 bytes
+{
+    float left;
+    float top;
+    float right;
+    float bottom;
+};
+
+bool tav_test_scissor(const in scissor_t s, const in vec2 p)
+{
+    return p.x >= s.left && p.x <= s.right && p.y >= s.top && p.y <= s.bottom;
+}
+
 // ---------------------------------------------------------------
 // 3D coordinate space conversion helpers.
 // All functions operate on the active 3D camera stored in `scene`.

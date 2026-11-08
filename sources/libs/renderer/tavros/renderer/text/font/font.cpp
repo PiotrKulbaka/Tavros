@@ -64,7 +64,7 @@ namespace tavros::renderer
         );
     }
 
-    void font::bake_glyph_bitmap(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept
+    void font::bake_glyph_bitmap(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_view<uint8> pixels, uint32 pixels_stride) const noexcept
     {
         if (0 != idx) {
             bake_glyph_bitmap_internal(idx, glyph_scale_pix, glyph_sdf_pad_pix, pixels, pixels_stride);

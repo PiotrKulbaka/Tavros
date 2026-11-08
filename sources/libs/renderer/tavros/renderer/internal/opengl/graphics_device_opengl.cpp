@@ -243,16 +243,6 @@ namespace tavros::renderer::rhi
         return render_backend_type::opengl;
     }
 
-    void graphics_device_opengl::push_debug_group(core::string_view name)
-    {
-        GL_CALL(glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(name.size()), name.data()));
-    }
-
-    void graphics_device_opengl::pop_debug_group()
-    {
-        GL_CALL(glPopDebugGroup());
-    }
-
     frame_composer_handle graphics_device_opengl::create_frame_composer(const frame_composer_create_info& info)
     {
         // Check if frame composer with native handle already created
@@ -1822,7 +1812,7 @@ namespace tavros::renderer::rhi
         return result == GL_CONDITION_SATISFIED || result == GL_ALREADY_SIGNALED;
     }
 
-    core::buffer_span<uint8> graphics_device_opengl::map_buffer(buffer_handle buffer, size_t offset, size_t size)
+    core::buffer_view<uint8> graphics_device_opengl::map_buffer(buffer_handle buffer, size_t offset, size_t size)
     {
         auto* b = m_resources.find(buffer);
         if (!b) {
@@ -1879,7 +1869,7 @@ namespace tavros::renderer::rhi
             return nullptr;
         }
 
-        return core::buffer_span<uint8>(reinterpret_cast<uint8*>(ptr), size);
+        return core::buffer_view<uint8>(reinterpret_cast<uint8*>(ptr), size);
     }
 
     void graphics_device_opengl::unmap_buffer(buffer_handle buffer)

@@ -656,22 +656,22 @@ namespace tavros::renderer::rhi
         return m_valid;
     }
 
-    core::buffer_view<vertex_attribute_reflect> gl_shader_program_reflect::vertex_attributes() const noexcept
+    core::buffer_view<const vertex_attribute_reflect> gl_shader_program_reflect::vertex_attributes() const noexcept
     {
         return m_vert_attribs;
     }
 
-    core::buffer_view<shader_resource_reflect> gl_shader_program_reflect::shader_resources() const noexcept
+    core::buffer_view<const shader_resource_reflect> gl_shader_program_reflect::shader_resources() const noexcept
     {
         return m_shader_res;
     }
 
-    core::buffer_view<constant_block_reflect> gl_shader_program_reflect::constant_blocks() const noexcept
+    core::buffer_view<const constant_block_reflect> gl_shader_program_reflect::constant_blocks() const noexcept
     {
         return m_ubo_blocks;
     }
 
-    core::buffer_view<member_reflect> gl_shader_program_reflect::constant_block_members(size_t constant_block_index) const noexcept
+    core::buffer_view<const member_reflect> gl_shader_program_reflect::constant_block_members(size_t constant_block_index) const noexcept
     {
         TAV_ASSERT(constant_block_index < m_ubo_ranges.size());
 
@@ -690,12 +690,12 @@ namespace tavros::renderer::rhi
         return {m_ubo_members.data() + range.begin, range.end - range.begin};
     }
 
-    core::buffer_view<storage_block_reflect> gl_shader_program_reflect::storage_blocks() const noexcept
+    core::buffer_view<const storage_block_reflect> gl_shader_program_reflect::storage_blocks() const noexcept
     {
         return m_ssbo_blocks;
     }
 
-    core::buffer_view<output_reflect> gl_shader_program_reflect::outputs() const noexcept
+    core::buffer_view<const output_reflect> gl_shader_program_reflect::outputs() const noexcept
     {
         return m_outputs;
     }

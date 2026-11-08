@@ -48,7 +48,7 @@ namespace tavros::renderer
             return m_path;
         }
 
-        core::buffer_view<codepoint_range> codepoint_ranges() const noexcept
+        core::buffer_view<const codepoint_range> codepoint_ranges() const noexcept
         {
             return m_codepoint_ranges;
         }

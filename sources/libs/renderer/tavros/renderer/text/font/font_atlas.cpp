@@ -144,7 +144,7 @@ namespace tavros::renderer
 
                 // Bake glyph
                 auto offset = static_cast<size_t>(rect.y + 1) * static_cast<size_t>(stride) + static_cast<size_t>(rect.x + 1);
-                auto dst = core::buffer_span<uint8>(pixels.data() + offset, atlas_size - offset);
+                auto dst = core::buffer_view<uint8>(pixels.data() + offset, atlas_size - offset);
 
                 fnt->bake_glyph_bitmap(glyph_idx, glyph_scale_pix, glyph_sdf_pad_pix, dst, atlas_width);
             }

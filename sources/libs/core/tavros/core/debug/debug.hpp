@@ -16,7 +16,7 @@ namespace tavros::debug
 
     core::string_view debug_path() noexcept;
 
-    void save_to_file(core::buffer_view<uint8> data, core::string_view name = "", core::string_view ext = "") noexcept;
+    void save_to_file(core::buffer_view<const uint8> data, core::string_view name = "", core::string_view ext = "") noexcept;
 } // namespace tavros::debug
 
 namespace dbg = tavros::debug;

@@ -159,10 +159,10 @@ namespace tavros::renderer
          * @param pixels           Destination pixel buffer.
          * @param pixels_stride    Row stride of the destination buffer.
          */
-        virtual void bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept = 0;
+        virtual void bake_glyph_bitmap_internal(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_view<uint8> pixels, uint32 pixels_stride) const noexcept = 0;
 
-        /** @copydoc bake_glyph_bitmap_internal(glyph_index, float, float, core::buffer_span<uint8>, uint32) */
-        void bake_glyph_bitmap(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_span<uint8> pixels, uint32 pixels_stride) const noexcept;
+        /** @copydoc bake_glyph_bitmap_internal(glyph_index, float, float, core::buffer_view<uint8>, uint32) */
+        void bake_glyph_bitmap(glyph_index idx, float glyph_scale_pix, float glyph_sdf_pad_pix, core::buffer_view<uint8> pixels, uint32 pixels_stride) const noexcept;
 
         /**
          * @brief Internal method for retrieving kerning between two codepoints.

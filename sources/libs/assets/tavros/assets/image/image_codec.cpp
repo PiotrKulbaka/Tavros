@@ -13,7 +13,7 @@ namespace
 namespace tavros::assets
 {
 
-    core::dynamic_buffer<uint8> image_codec::decode(core::buffer_view<uint8> data, uint32& w, uint32& h, uint32& c, uint32& stride, uint32 rc, bool y_flip)
+    core::dynamic_buffer<uint8> image_codec::decode(core::buffer_view<const uint8> data, uint32& w, uint32& h, uint32& c, uint32& stride, uint32 rc, bool y_flip)
     {
         TAV_ASSERT(rc == 0 || rc == 1 || rc == 3 || rc == 4);
 
@@ -58,7 +58,7 @@ namespace tavros::assets
         return buffer;
     }
 
-    core::dynamic_buffer<uint8> image_codec::encode(core::buffer_view<uint8> pixels, uint32 w, uint32 h, uint32 c, uint32 stride, image_format fmt, bool y_flip)
+    core::dynamic_buffer<uint8> image_codec::encode(core::buffer_view<const uint8> pixels, uint32 w, uint32 h, uint32 c, uint32 stride, image_format fmt, bool y_flip)
     {
         struct ctx_t
         {

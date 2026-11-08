@@ -1,18 +1,18 @@
 #ifndef _TAV_BRUSH_GLSL_
 #define _TAV_BRUSH_GLSL_
 
-#define BRUSH_TYPE_WHITE_COLOR      0
-#define BRUSH_TYPE_LINEAR_GRADIENT  1
-#define BRUSH_TYPE_RADIAL_GRADIENT  2
-#define BRUSH_TYPE_CONIC_GRADIENT   3
-#define BRUSH_TYPE_MASK             0x0F
-#define BRUSH_TYPE_SHIFT            0u
+#define BRUSH_TYPE_WHITE_COLOR          0
+#define BRUSH_TYPE_LINEAR_GRADIENT      1
+#define BRUSH_TYPE_RADIAL_GRADIENT      2
+#define BRUSH_TYPE_CONIC_GRADIENT       3
+#define BRUSH_TYPE_MASK                 0x0F
+#define BRUSH_TYPE_SHIFT                0u
 
-#define BRUSH_REPEAT_CLAMP           0
-#define BRUSH_REPEAT_REPEAT          1
-#define BRUSH_REPEAT_MIRROR          2
-#define BRUSH_REPEATING_MASK        0xF0
-#define BRUSH_REPEATING_SHIFT       4u
+#define BRUSH_REPEAT_CLAMP              0
+#define BRUSH_REPEAT_REPEAT             1
+#define BRUSH_REPEAT_MIRROR             2
+#define BRUSH_REPEATING_MASK            0xF00
+#define BRUSH_REPEATING_SHIFT           8u
 
 
 struct color_stop_t
@@ -23,7 +23,8 @@ struct color_stop_t
 
 struct brush_t
 {
-    uint flags;
+    uint flags; // bits: 00000000 00000000 0000AAAA 0000BBBB
+                // A - brush repeating; B - brush type
     uint first; // first color index
     uint num;   // number of colors
     uint color; // Only if num == 1 (solid brush)
@@ -135,26 +136,3 @@ vec4 sample_brush(const in brush_t b, const in vec2 p)
 }
 
 #endif // _TAV_BRUSH_GLSL_
-
-
-
-// layout(std430, binding = 2) buffer BrushBuffer
-// {
-//     uint size;           // Size of brushes
-//     uint no_brush_color; // Color for brush ID 0
-//     uint reserved0;      // Reserved for future
-//     uint reserved1;      // Reserved for future
-//     brush_t brushes[];
-// } brush_buffer;
-//
-// vec4 sample_brush(const in uint brush_id, const in vec2 p)
-// {
-//     uint index = min(brush_id, uint(brush_buffer.size));
-//
-//     if (0u == index) {
-//         return unpackUnorm4x8(brush_buffer.no_brush_color);
-//     }
-//
-//     brush_t b = brush_buffer.brushes[index];
-//     return sample_brush(b, p);
-// }

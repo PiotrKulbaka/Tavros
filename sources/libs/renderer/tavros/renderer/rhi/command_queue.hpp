@@ -25,6 +25,21 @@ namespace tavros::renderer::rhi
         virtual ~command_queue() = default;
 
         /**
+         * @brief Pushes a named debug group onto the command stream for GPU debugging
+         * tools (e.g. RenderDoc, PIX). Must be balanced with a matching pop_debug_group() call.
+         *
+         * @param name Label for the debug group, shown in graphics debugging tools.
+         */
+        virtual void push_debug_group(core::string_view name) = 0;
+
+        /**
+         * @brief Pops the most recently pushed debug group from the command stream.
+         *
+         * Must be called once for each push_debug_group() call, in matching (LIFO) order.
+         */
+        virtual void pop_debug_group() = 0;
+
+        /**
          * @brief Bind a graphics pipeline.
          *
          * Associates the given pipeline state object with the command queue.
@@ -41,7 +56,7 @@ namespace tavros::renderer::rhi
          * @param buffers A view over buffer binding descriptions, defining buffers,
          *                binding indices, offsets, and strides.
          */
-        virtual void bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers) = 0;
+        virtual void bind_vertex_buffers(core::buffer_view<const bind_buffer_info> buffers) = 0;
 
         /**
          * @brief Bind an index buffer to the current command context.
@@ -66,7 +81,7 @@ namespace tavros::renderer::rhi
          * @note For uniform/storage buffers updated every frame, prefer sub-allocating
          *       from a shared buffer and passing the current frame's offset here.
          */
-        virtual void bind_shader_buffers(core::buffer_view<buffer_binding> buffers) = 0;
+        virtual void bind_shader_buffers(core::buffer_view<const buffer_binding> buffers) = 0;
 
         /**
          * @brief Binds one or more texture and sampler pairs for use in subsequent draw calls.
@@ -83,7 +98,7 @@ namespace tavros::renderer::rhi
          * @note All bindings remain active until overwritten by a subsequent call
          *       or until a new pipeline is bound.
          */
-        virtual void bind_shader_textures(core::buffer_view<texture_binding> textures) = 0;
+        virtual void bind_shader_textures(core::buffer_view<const texture_binding> textures) = 0;
 
         /**
          * @brief Begin a render pass.

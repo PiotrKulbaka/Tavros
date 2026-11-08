@@ -1,5 +1,6 @@
 #pragma once
 
+#include <tavros/renderer/text/rich_text.hpp>
 #include <tavros/ui/view.hpp>
 
 namespace tavros::ui

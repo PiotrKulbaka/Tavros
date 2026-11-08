@@ -70,7 +70,7 @@ namespace tavros::renderer
          */
         static size_t break_next_line(
             size_t i, size_t end,
-            core::buffer_view<glyph_c> glyphs,
+            core::buffer_view<const glyph_c> glyphs,
             float& ascent_y, float& descent_y, float& width,
             bool wrap_words = false, float max_line_width = 0.0f
         ) noexcept

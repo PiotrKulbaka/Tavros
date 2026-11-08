@@ -102,7 +102,7 @@ namespace tavros::renderer
 
             m_cursor = offset + size_bytes;
             T* begin = reinterpret_cast<T*>(m_data.begin() + offset);
-            return gpu_buffer_view<T>{m_buffer, offset, core::buffer_span<T>{begin, count}};
+            return gpu_buffer_view<T>{m_buffer, offset, core::buffer_view<T>{begin, count}};
         }
 
         /**
@@ -177,7 +177,7 @@ namespace tavros::renderer
     private:
         rhi::graphics_device*    m_gdevice = nullptr;
         rhi::buffer_handle       m_buffer;
-        core::buffer_span<uint8> m_data;
+        core::buffer_view<uint8> m_data;
         size_t                   m_cursor = 0;
     };
 

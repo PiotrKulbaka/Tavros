@@ -15,6 +15,7 @@ namespace tavros::core
     template<class... Ts>
     struct type_list
     {
+        static constexpr size_t size = sizeof...(Ts);
     };
 
 
@@ -45,6 +46,32 @@ namespace tavros::core
     /** @brief Helper alias for @ref type_at. */
     template<size_t N, class List>
     using type_at_t = typename type_at<N, List>::type;
+
+
+    /**
+     * @brief Provides the zero-based index of a type within a type list.
+     * @tparam T    Type whose index is being queried.
+     * @tparam List Type list containing @p T.
+     * @note   The type must occur in @p List.
+     */
+    template<class T, class List>
+    struct type_index;
+
+    template<class T, class... Ts>
+    struct type_index<T, type_list<T, Ts...>>
+        : std::integral_constant<size_t, 0>
+    {
+    };
+
+    template<class T, class U, class... Ts>
+    struct type_index<T, type_list<U, Ts...>>
+        : std::integral_constant<size_t, 1 + type_index<T, type_list<Ts...>>::value>
+    {
+    };
+
+    /** @brief Helper variable template for @ref type_index. */
+    template<class T, class List>
+    inline constexpr size_t type_index_v = type_index<T, List>::value;
 
 
     /**
@@ -252,8 +279,58 @@ namespace tavros::core
     inline constexpr bool are_nothrow_swappable_v = are_nothrow_swappable<List>::value;
 
 
+    /**
+     * @brief Computes the maximum size of a set of types.
+     * The value is equal to the largest result of @c sizeof(T) among all specified types.
+     * @tparam Ts Types whose sizes are compared.
+     */
+    template<class... Ts>
+    struct max_size_types;
+
+    template<class T>
+    struct max_size_types<T>
+        : std::integral_constant<size_t, sizeof(T)>
+    {
+    };
+
+    template<class T, class... Ts>
+    struct max_size_types<T, Ts...>
+        : std::integral_constant<size_t, (sizeof(T) > max_size_types<Ts...>::value ? sizeof(T) : max_size_types<Ts...>::value)>
+    {
+    };
+
+    /** @brief Helper variable template for @ref max_size_types. */
+    template<class List>
+    inline constexpr size_t max_size_types_v = max_size_types<List>::value;
+
+
+    /**
+     * @brief Computes the maximum alignment requirement of a set of types.
+     * The value is equal to the largest result of @c alignof(T) among all specified types.
+     * @tparam Ts Types whose alignment requirements are compared.
+     */
+    template<class... Ts>
+    struct max_align_types;
+
+    template<class T>
+    struct max_align_types<T>
+        : std::integral_constant<size_t, alignof(T)>
+    {
+    };
+
+    template<class T, class... Ts>
+    struct max_align_types<T, Ts...>
+        : std::integral_constant<size_t, (alignof(T) > max_align_types<Ts...>::value ? alignof(T) : max_align_types<Ts...>::value)>
+    {
+    };
+
+    /** @brief Helper variable template for @ref max_align_types. */
+    template<class List>
+    inline constexpr size_t max_align_types_v = max_align_types<List>::value;
+
+
     /** @brief Checks whether a type is considered a string type. */
-    template<typename T>
+    template<class T>
     struct is_string_type : std::false_type
     {
     };
@@ -271,12 +348,12 @@ namespace tavros::core
     };
 
     /** @brief Convenience variable template for @ref is_string_type. */
-    template<typename T>
+    template<class T>
     inline constexpr bool is_string_type_v = is_string_type<T>::value;
 
 
     /** @brief Trait to determine whether a type is considered string-like. */
-    template<typename T>
+    template<class T>
     struct is_string_like : std::false_type
     {
     };
@@ -306,7 +383,7 @@ namespace tavros::core
     };
 
     /** @brief Convenience variable template for @ref is_string_like. */
-    template<typename T>
+    template<class T>
     inline constexpr bool is_string_like_v = is_string_like<T>::value;
 
     /** @brief Evaluates to `true` for `std::optional<T>`. */

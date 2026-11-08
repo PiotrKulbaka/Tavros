@@ -31,7 +31,7 @@ namespace
 namespace tavros::assets
 {
 
-    image image::decode(core::buffer_view<uint8> data, pixel_format required_format, bool y_flip)
+    image image::decode(core::buffer_view<const uint8> data, pixel_format required_format, bool y_flip)
     {
         uint32 w = 0, h = 0, c = 0, stride = 0;
         auto   pixels = image_codec::decode(data, w, h, c, stride, component_count(required_format), y_flip);

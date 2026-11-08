@@ -16,8 +16,9 @@
 
 struct shape_t // 48 bytes
 {
-    uint flags; // shape type
-    uint range_bias;  
+    uint flags;      // shape type; bits: AAAAAAAA AAAAAAAA 00000000 BBBBBBBB 
+                     // (A (for TAV_SHAPE_TYPE_SDF) - sdf size in pixels (scaled), B - shape type)
+    uint range_bias;
     vec2 center; 
     vec2 x_axis; // half-extent along local X
     vec2 y_axis; // half-extent along local Y
@@ -48,6 +49,13 @@ float sd_squash(vec2 p, float k)
 uint tav_shape_type(const in shape_t s)
 {
     return s.flags & TAV_SHAPE_TYPE_MASK;
+}
+
+// Mask - is a textured shape (SDF or MSDF)
+bool tav_has_mask(const in shape_t s)
+{
+    uint t = tav_shape_type(s);
+    return TAV_SHAPE_TYPE_SDF == t;
 }
 
 float tav_shape_sdf_size(const in shape_t s)

@@ -68,6 +68,16 @@ namespace tavros::renderer::rhi
         ::logger.debug("command_queue_opengl destroyed");
     }
 
+    void command_queue_opengl::push_debug_group(core::string_view name)
+    {
+        GL_CALL(glPushDebugGroup(GL_DEBUG_SOURCE_APPLICATION, 0, static_cast<GLsizei>(name.size()), name.data()));
+    }
+
+    void command_queue_opengl::pop_debug_group()
+    {
+        GL_CALL(glPopDebugGroup());
+    }
+
     void command_queue_opengl::bind_pipeline(pipeline_handle pipeline)
     {
         if (m_current_pipeline == pipeline) {
@@ -287,7 +297,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindVertexArray(vao));
     }
 
-    void command_queue_opengl::bind_vertex_buffers(core::buffer_view<bind_buffer_info> buffers)
+    void command_queue_opengl::bind_vertex_buffers(core::buffer_view<const bind_buffer_info> buffers)
     {
         auto* p = m_device->get_resources()->find(m_current_pipeline);
         if (!p) {
@@ -366,7 +376,7 @@ namespace tavros::renderer::rhi
         GL_CALL(glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, b->buffer_obj));
     }
 
-    void command_queue_opengl::bind_shader_buffers(core::buffer_view<buffer_binding> buffers)
+    void command_queue_opengl::bind_shader_buffers(core::buffer_view<const buffer_binding> buffers)
     {
         // Bind buffers (UBO or SSBO buffers)
         for (uint32 i = 0; i < buffers.size(); ++i) {
@@ -406,7 +416,7 @@ namespace tavros::renderer::rhi
         }
     }
 
-    void command_queue_opengl::bind_shader_textures(core::buffer_view<texture_binding> textures)
+    void command_queue_opengl::bind_shader_textures(core::buffer_view<const texture_binding> textures)
     {
         // Bind textures and samplers
         for (uint32 i = 0; i < textures.size(); ++i) {

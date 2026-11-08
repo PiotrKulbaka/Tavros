@@ -158,7 +158,7 @@ namespace tavros::renderer
         return {};
     }
 
-    core::buffer_view<rhi::texture_handle> render_target::color_attachments() const noexcept
+    core::buffer_view<const rhi::texture_handle> render_target::color_attachments() const noexcept
     {
         return m_dst_cl;
     }

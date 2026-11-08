@@ -63,7 +63,7 @@ namespace tavros::assets
          *
          * @return Decoded image. Check valid() on the result if decoding may fail.
          */
-        [[nodiscard]] static image decode(core::buffer_view<uint8> data, pixel_format required_format = pixel_format::none, bool y_flip = false);
+        [[nodiscard]] static image decode(core::buffer_view<const uint8> data, pixel_format required_format = pixel_format::none, bool y_flip = false);
 
         /**
          * @brief Encodes an image into a compressed byte buffer.

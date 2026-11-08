@@ -48,7 +48,7 @@ namespace tavros::renderer
          * @param msaa Number of MSAA samples used when creating the pipeline.
          * @param ds_format Depth-stencil format that the pipeline will be compatible with.
          */
-        material(rhi::graphics_device* gdevice, const material_desc& desc, shader_loader& sl, core::buffer_view<vertex_attribute> vert_attribs, uint32 msaa, rhi::pixel_format ds_format);
+        material(rhi::graphics_device* gdevice, const material_desc& desc, shader_loader& sl, core::buffer_view<const vertex_attribute> vert_attribs, uint32 msaa, rhi::pixel_format ds_format);
 
         /** @brief Moves a material. */
         material(material&&) noexcept;

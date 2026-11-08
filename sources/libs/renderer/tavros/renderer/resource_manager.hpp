@@ -65,7 +65,7 @@ namespace tavros::renderer
         debug,
     };
 
-    class resource_manager : core::noncopyable, core::nonmovable
+    class resource_manager final : core::noncopyable, core::nonmovable
     {
     public:
         resource_manager(rhi::graphics_device* gdevice, core::shared_ptr<assets::asset_manager> am, core::shared_ptr<tef::workspace> ws);
@@ -75,7 +75,7 @@ namespace tavros::renderer
         void begin_frame() noexcept;
         void end_frame() noexcept;
 
-        void set_material_load_params(core::buffer_view<material::vertex_attribute> vert_attribs, uint32 msaa = 1, rhi::pixel_format ds_format = rhi::pixel_format::none) noexcept;
+        void set_material_load_params(core::buffer_view<const material::vertex_attribute> vert_attribs, uint32 msaa = 1, rhi::pixel_format ds_format = rhi::pixel_format::none) noexcept;
 
         rhi::texture_handle default_texture(default_texture_type type) const noexcept;
 
@@ -115,6 +115,7 @@ namespace tavros::renderer
         void update_font_atlas();
 
         void create_default_textures();
+        void destroy_default_textures();
 
     private:
         using attribs_vec_t = core::fixed_vector<material::vertex_attribute, rhi::k_max_vertex_attributes>;

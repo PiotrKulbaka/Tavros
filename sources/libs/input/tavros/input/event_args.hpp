@@ -62,6 +62,6 @@ namespace tavros::input
     };
 
     /// Type alias for accessing the front queue as a contiguous view.
-    using event_args_queue_view = tavros::core::buffer_view<event_args>;
+    using event_args_queue_view = tavros::core::buffer_view<const event_args>;
 
 } // namespace tavros::input

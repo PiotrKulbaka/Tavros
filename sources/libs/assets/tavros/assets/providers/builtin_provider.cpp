@@ -137,8 +137,8 @@ namespace tavros::assets
         tavros::core::dynamic_buffer<uint8> data(entry.uncompressed_size);
 
         if (entry.compressed) {
-            core::buffer_view<uint8> compressed(entry.data, entry.compressed_size);
-            core::buffer_span<uint8> output(data.data(), data.size_bytes());
+            core::buffer_view<const uint8> compressed(entry.data, entry.compressed_size);
+            core::buffer_view<uint8>       output(data.data(), data.size_bytes());
 
             if (!core::uncompress_data(compressed, output)) {
                 logger.error("Failed to uncompress '{}' builtin asset.", path);

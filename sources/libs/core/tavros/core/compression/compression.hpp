@@ -1,7 +1,6 @@
 #pragma once
 
 #include <tavros/core/memory/buffer_view.hpp>
-#include <tavros/core/memory/buffer_span.hpp>
 
 namespace tavros::core
 {
@@ -22,6 +21,6 @@ namespace tavros::core
      * @return `true` if uncompression succeeds, or `false` if zlib reports an error
      *         (e.g., corrupted input or size mismatch).
      */
-    bool uncompress_data(buffer_view<uint8> compressed_data, buffer_span<uint8> output);
+    bool uncompress_data(buffer_view<const uint8> compressed_data, buffer_view<uint8> output);
 
 } // namespace tavros::core

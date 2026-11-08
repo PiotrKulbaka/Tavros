@@ -111,7 +111,7 @@ namespace tavros::debug
         return g_debug_path;
     }
 
-    void save_to_file(core::buffer_view<uint8_t> data, core::string_view name, core::string_view ext) noexcept
+    void save_to_file(core::buffer_view<const uint8_t> data, core::string_view name, core::string_view ext) noexcept
     {
         try {
             namespace fs = std::filesystem;
