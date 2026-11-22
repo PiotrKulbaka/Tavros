@@ -55,9 +55,9 @@ namespace tavros::renderer
 
     void camera_pass::upload(frame_context& ctx)
     {
-        const auto& cam_data = ctx.frame_data().get_data<fdt_camera>();
+        const auto& cam_data = ctx.frame_data().get_data<fd_camera>();
         const auto& cam = cam_data.cam;
-        const auto& finf = ctx.frame_data().get_data<fdt_frame_info>();
+        const auto& finf = ctx.frame_data().get_data<fd_frame_info>();
 
         auto v = view_data{
             .view = cam.view_matrix(),
@@ -79,7 +79,7 @@ namespace tavros::renderer
             ._pad1 = 0.0f
         };
 
-        auto slice = ctx.stream_buffer().slice<view_data>();
+        auto slice = ctx.constant_buffer().slice<view_data>();
         slice.data().copy_from(&v);
         m_camera_binding = rhi::buffer_binding{
             slice.gpu_buffer(),

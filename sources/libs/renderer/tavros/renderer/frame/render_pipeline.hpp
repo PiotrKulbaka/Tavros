@@ -11,15 +11,12 @@ namespace tavros::renderer
 
     class render_pipeline : core::noncopyable
     {
-        friend class frame_graph;
-
     public:
+        render_pipeline(core::vector<core::unique_ptr<render_pass>>&& passes);
+
         ~render_pipeline() noexcept;
 
         void run(frame_context& ctx);
-
-    private:
-        render_pipeline(core::vector<core::unique_ptr<render_pass>>&& passes);
 
     public:
         core::vector<core::unique_ptr<render_pass>> m_passes;

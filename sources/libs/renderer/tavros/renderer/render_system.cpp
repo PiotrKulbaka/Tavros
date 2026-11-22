@@ -3,6 +3,7 @@
 #include <tavros/renderer/passes/camera_pass.hpp>
 #include <tavros/renderer/passes/ui_render_pass.hpp>
 #include <tavros/renderer/passes/present_frame_pass.hpp>
+#include <tavros/renderer/passes/forward_attachments_pass.hpp>
 
 #include <tavros/core/logger/logger.hpp>
 
@@ -50,10 +51,11 @@ namespace tavros::renderer
             return;
         }
 
-        m_sb.init(m_gd.get(), 256 * 1024 * 1024, rhi::buffer_usage::constant, "render_system.constant_buffer");
+        m_stream_buffer.init(m_gd.get(), 256 * 1024 * 1024, rhi::buffer_usage::storage, "render_system.storage_buffer");
+        m_constant_buffer.init(m_gd.get(), 16 * 1024 * 1024, rhi::buffer_usage::constant, "render_system.constant_buffer");
 
         create_graph();
-        m_pipeline = std::move(m_frame_graph.compile_for({"PresentFrame"}));
+        m_pipeline = std::move(m_frame_graph.compile_for({"PresentFramePass"}));
         if (!m_pipeline) {
             logger.error("Failed to create execution rendering pipeline.");
             return;
@@ -66,7 +68,8 @@ namespace tavros::renderer
         m_am = nullptr;
         m_ws = nullptr;
         m_rm = nullptr;
-        m_sb.shutdown();
+        m_stream_buffer.shutdown();
+        m_constant_buffer.shutdown();
         m_gd = nullptr;
     }
 
@@ -87,11 +90,13 @@ namespace tavros::renderer
 
         m_rm->begin_frame();
 
-        m_current_frame_context = frame_context(m_gd.get(), m_rm.get(), &m_sb, m_frame_number);
+        m_current_frame_context = frame_context(m_gd.get(), m_rm.get(), &m_stream_buffer, &m_constant_buffer, m_frame_number);
         auto& fd = m_current_frame_context.frame_data();
 
-        fd.add_data(fdt_backbuffer{m_composer->backbuffer()});
-        fd.add_data(fdt_frame_info{.frame_size = frame_size, .total_time = total_time, .delta_time = delta_time});
+        fd.add_data<fd_backbuffer>(m_composer->backbuffer());
+        fd.add_data<fd_frame_info>(frame_size, total_time, delta_time);
+
+        return m_current_frame_context;
     }
 
     void render_system::end_frame()
@@ -107,14 +112,21 @@ namespace tavros::renderer
 
         ++m_frame_number;
         m_composer->present();
-        m_sb.reset();
+        m_stream_buffer.reset();
+        m_constant_buffer.reset();
     }
 
     void render_system::create_graph()
     {
         m_frame_graph.register_pass<camera_pass>("CameraPass");
-        m_frame_graph.register_pass<ui_render_pass>("UIRenderPass").depends_on({"CameraPass"});
-        m_frame_graph.register_pass<present_frame_pass>("PresentFramePass").depends_on(core::buffer_view<const core::string_view>({"CameraPass", "UIRenderPass"}));
+
+        m_frame_graph.register_pass<forward_attachments_pass>("ForwardAttachmentsPass").depends_on(core::buffer_view<const core::string_view>({"CameraPass"}));
+
+        m_frame_graph.register_pass<ui_render_pass>("UIRenderPass")
+            .depends_on(core::buffer_view<const core::string_view>({"CameraPass", "ForwardAttachmentsPass"}));
+
+        m_frame_graph.register_pass<present_frame_pass>("PresentFramePass")
+            .depends_on(core::buffer_view<const core::string_view>({"CameraPass", "UIRenderPass"}));
     }
 
 } // namespace tavros::renderer

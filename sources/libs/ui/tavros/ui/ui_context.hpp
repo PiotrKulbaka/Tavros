@@ -1,6 +1,7 @@
 #pragma once
 
 #include <tavros/renderer/render_system.hpp>
+#include <tavros/renderer/renderer/ui_renderer.hpp>
 
 namespace tavros::ui
 {
@@ -22,15 +23,18 @@ namespace tavros::ui
         ui_context(core::shared_ptr<renderer::render_system> rs) noexcept;
         ~ui_context() noexcept = default;
 
-        renderer::render_system& renderer() const noexcept;
+        renderer::render_system& render_system() const noexcept;
+
+        renderer::ui_renderer& ui_renderer() noexcept;
 
         void set_debug_draw_enabled(bool enabled) noexcept;
 
         const debug_draw_info& debug_info() const noexcept;
 
     private:
-        core::shared_ptr<renderer::render_system> m_renderer;
+        core::shared_ptr<renderer::render_system> m_rs;
         debug_draw_info                           m_debug_info;
+        renderer::ui_renderer                     m_ui_renderer;
     };
 
 } // namespace tavros::ui

@@ -166,6 +166,29 @@ namespace tavros::core
 
 
     /**
+     * @brief Checks whether type @p T is present in a @ref type_list (exact match).
+     * @tparam T Type to search for.
+     * @tparam List A @ref type_list specialization.
+     * @note Ill-formed if @p List is not a @ref type_list.
+     */
+    template<class T, class List>
+    struct contains_nocvref_type
+    {
+        static_assert(sizeof(T) == 0, "contains_nocvref_type: second argument must be a type_list");
+    };
+
+    template<class T, class... Ts>
+    struct contains_nocvref_type<T, type_list<Ts...>>
+        : std::bool_constant<(std::is_same_v<std::remove_cvref_t<T>, Ts> || ...)>
+    {
+    };
+
+    /** @brief Helper variable template for @ref contains_nocvref_type. */
+    template<class T, class List>
+    inline constexpr bool contains_nocvref_type_v = contains_nocvref_type<T, List>::value;
+
+
+    /**
      * @brief Checks whether all types in @p List are contained in @p Other.
      * @tparam List Source @ref type_list - types to look up.
      * @tparam Other Target @ref type_list - types to search in.
@@ -204,7 +227,7 @@ namespace tavros::core
 
     template<class T, class... Ts>
     struct are_unique<type_list<T, Ts...>>
-        : std::bool_constant<!contains_type_v<T, type_list<Ts...>> && are_unique<type_list<Ts...>>::value>
+        : std::bool_constant<!contains_nocvref_type_v<T, type_list<Ts...>> && are_unique<type_list<Ts...>>::value>
     {
     };
 

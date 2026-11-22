@@ -59,9 +59,7 @@ namespace tavros::renderer
             logger.info("  {}. {}", i + 1, order[i]);
         }
 
-        auto rp = render_pipeline(std::move(pipeline));
-
-        return core::make_unique<render_pipeline>(std::move(rp));
+        return core::make_unique<render_pipeline>(std::move(pipeline));
     }
 
     void frame_graph::add_dependency(core::string_view pass, core::string_view dependency)

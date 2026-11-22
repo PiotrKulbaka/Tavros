@@ -177,7 +177,8 @@ public:
         time_sec += delta_time_sec;
 
         m_renderer->begin_frame(time_us.count());
-        m_renderer->add_data(tavros::renderer::fdt_camera{m_free_cam.camera()});
+        m_renderer->add_data(tavros::renderer::fd_camera{m_free_cam.camera()});
+        m_renderer->add_data(tavros::renderer::fd_graphics_settings{1});
 
 
         // auto frame = m_renderer->begin_frame(time_us.count());
@@ -218,7 +219,6 @@ public:
         m_ui->update(delta_time_sec);
         m_ui->draw();
 
-        m_renderer->render();
         m_renderer->end_frame();
 
         m_input_manager.end_frame();
@@ -244,9 +244,6 @@ private:
         m_free_cam.set_orbit_dist(30.0f);
 
         auto* rm = m_renderer->resource_manager();
-
-        m_offscreen_rt = rm->load_render_target("rt.main_offscreen");
-        TAV_FATAL_IF(!m_offscreen_rt, "Failed to create offscreen render target.");
 
 
         m_sky_textures.push_back(rm->load_texture("tex.cloudy_sky"));
@@ -430,8 +427,6 @@ private:
             return;
         }
         TracyMessageL("WindowResize");
-
-        m_offscreen_rt->resize(static_cast<uint32>(sz.width), static_cast<uint32>(sz.height), k_msaa);
 
         m_renderer->resize_backbuffer(sz.width, sz.height);
         const float fov_y = 70.0f * 3.14159265358979f / 180.0f;
@@ -632,7 +627,6 @@ private:
     // -- Scene --
     tavros::sandbox::free_camera m_free_cam;
 
-    tavros::renderer::render_target_ref                 m_offscreen_rt;
     tavros::core::vector<tavros::renderer::texture_ref> m_sky_textures;
     int32                                               m_sky_index = 0;
     int32                                               m_smp_index = 0;

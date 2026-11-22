@@ -2,8 +2,8 @@
 #                         Render targets
 # ================================================================
 
-rt = {
-    main_offscreen = {
+render_targets = {
+    forward_render_target = {
         color = {
             base_color = {
                 format = "rgba8"

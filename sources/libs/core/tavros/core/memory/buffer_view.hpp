@@ -1,7 +1,12 @@
 #pragma once
 
 #include <tavros/core/memory/dynamic_buffer.hpp>
+
+#include <algorithm>
 #include <concepts>
+#include <cstddef>
+#include <cstring>
+#include <type_traits>
 
 namespace tavros::core
 {
@@ -12,8 +17,12 @@ namespace tavros::core
      * Similar to std::span, this class represents a view over an existing
      * memory buffer. Whether the view is read-only or read-write depends
      * solely on the constness of @p T:
-     *   - buffer_view<T>       — mutable view (read/write access)
-     *   - buffer_view<const T> — read-only view
+     *   - buffer_view<T>       - mutable view (read/write access)
+     *   - buffer_view<const T> - read-only view
+     *
+     * Constness is reflected in the member type aliases (element_type, pointer,
+     * reference, iterator), and modifying functions (copy_from, fill) are only
+     * available when @p T is non-const.
      *
      * The class does not manage memory - it only stores a pointer and a size.
      *
@@ -22,7 +31,25 @@ namespace tavros::core
     template<class T>
     class buffer_view
     {
+        static_assert(!std::is_reference_v<T>, "buffer_view<T>: T must not be a reference");
+        static_assert(!std::is_void_v<T>, "buffer_view<T>: T must not be void");
+
     public:
+        /// Element type including constness (const U for read-only views).
+        using element_type = T;
+        /// Element type without cv-qualifiers.
+        using value_type = std::remove_cv_t<T>;
+        using size_type = size_t;
+        using pointer = T*;
+        using const_pointer = const value_type*;
+        using reference = T&;
+        using const_reference = const value_type&;
+        using iterator = pointer;
+        using const_iterator = const_pointer;
+
+        /// True if the view is read-only.
+        static constexpr bool is_read_only = std::is_const_v<T>;
+
         /**
          * @brief Constructs an empty view.
          */
@@ -44,6 +71,16 @@ namespace tavros::core
         constexpr buffer_view(T& single_obj) noexcept
             : m_data(&single_obj)
             , m_size(1)
+        {
+        }
+
+        /**
+         * @brief Constructs a view from an initializer list.
+         * @param list Initializer list of elements.
+         */
+        constexpr buffer_view(std::initializer_list<std::remove_const_t<T>> list) noexcept
+            : m_data(list.begin())
+            , m_size(static_cast<size_type>(list.size()))
         {
         }
 
@@ -81,10 +118,11 @@ namespace tavros::core
          * For buffer_view<const T> it accepts both const and non-const containers.
          */
         template<class Container>
-            requires requires(Container& c) {
-                { c.data() } -> std::convertible_to<T*>;
-                { c.size() } -> std::convertible_to<size_t>;
-            }
+            requires(!std::is_same_v<std::remove_cvref_t<Container>, buffer_view>)
+                     && requires(Container& c) {
+                            { c.data() } -> std::convertible_to<T*>;
+                            { c.size() } -> std::convertible_to<size_t>;
+                        }
         constexpr buffer_view(Container& c) noexcept
             : m_data(c.data())
             , m_size(c.size())
@@ -96,8 +134,9 @@ namespace tavros::core
          *
          * Enabled only for buffer_view<T> with non-const T.
          */
-        constexpr buffer_view(dynamic_buffer<T>& buffer) noexcept
-            requires(!std::is_const_v<T>)
+        template<class U>
+            requires(!std::is_const_v<T> && std::is_same_v<T, U>)
+        constexpr buffer_view(dynamic_buffer<U>& buffer) noexcept
             : m_data(buffer.data())
             , m_size(buffer.capacity())
         {
@@ -109,8 +148,9 @@ namespace tavros::core
          * Enabled only for buffer_view<const T>. Binds to both const and
          * non-const dynamic_buffer instances.
          */
-        constexpr buffer_view(const dynamic_buffer<std::remove_const_t<T>>& buffer) noexcept
-            requires(std::is_const_v<T>)
+        template<class U>
+            requires(std::is_const_v<T> && std::is_same_v<value_type, U>)
+        constexpr buffer_view(const dynamic_buffer<U>& buffer) noexcept
             : m_data(buffer.data())
             , m_size(buffer.capacity())
         {
@@ -214,7 +254,7 @@ namespace tavros::core
          *
          * For buffer_view<const T> this yields a const T*.
          */
-        [[nodiscard]] constexpr T* data() const noexcept
+        [[nodiscard]] constexpr pointer data() const noexcept
         {
             return m_data;
         }
@@ -223,7 +263,7 @@ namespace tavros::core
          * @brief Accesses an element by index.
          * @note Behavior is undefined if index >= size().
          */
-        [[nodiscard]] constexpr T& operator[](size_t index) const noexcept
+        [[nodiscard]] constexpr reference operator[](size_t index) const noexcept
         {
             TAV_ASSERT(index < m_size);
             return m_data[index];
@@ -232,17 +272,17 @@ namespace tavros::core
         /**
          * @brief Allows checking for empty.
          */
-        explicit operator bool() const noexcept
+        [[nodiscard]] explicit constexpr operator bool() const noexcept
         {
             return m_size != 0;
         }
 
-        [[nodiscard]] constexpr T* begin() const noexcept
+        [[nodiscard]] constexpr iterator begin() const noexcept
         {
             return m_data;
         }
 
-        [[nodiscard]] constexpr T* end() const noexcept
+        [[nodiscard]] constexpr iterator end() const noexcept
         {
             return m_data + m_size;
         }
@@ -251,5 +291,13 @@ namespace tavros::core
         T*     m_data = nullptr;
         size_t m_size = 0;
     };
+
+    /// Read-only view over elements of type T (buffer_view<const T>).
+    template<class T>
+    using const_buffer_view = buffer_view<const std::remove_const_t<T>>;
+
+    /// Read/write view over elements of type T (buffer_view<T> without const).
+    template<class T>
+    using mutable_buffer_view = buffer_view<std::remove_const_t<T>>;
 
 } // namespace tavros::core

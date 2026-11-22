@@ -82,7 +82,7 @@ namespace tavros::renderer
         m_cur_cmd.brush = m_r->m_ui_render_data.add(
             paint_brush_t{
                 .type = brush_fill_type::radial,
-                .linear_view = radial_view
+                .radial_view = radial_view
             }
         );
 
@@ -177,7 +177,7 @@ namespace tavros::renderer
         m_cur_cmd.cut_shape = m_r->m_ui_render_data.add(
             draw_shape_t{
                 .type = shape_type::quad,
-                .sdf_view = cut_quad_view,
+                .quad_view = cut_quad_view,
                 .shadow_bias = 0.0f,
                 .shadow_radius = 0.0f
             }
@@ -213,7 +213,7 @@ namespace tavros::renderer
         m_cur_cmd.cut_shape = m_r->m_ui_render_data.add(
             draw_shape_t{
                 .type = shape_type::line,
-                .sdf_view = cut_line_view,
+                .line_view = cut_line_view,
                 .shadow_bias = 0.0f,
                 .shadow_radius = 0.0f
             }
@@ -238,7 +238,7 @@ namespace tavros::renderer
         m_cur_cmd.cut_shape = m_r->m_ui_render_data.add(
             draw_shape_t{
                 .type = shape_type::superellipse,
-                .sdf_view = cut_superellipse_view,
+                .superellipse_view = cut_superellipse_view,
                 .shadow_bias = 0.0f,
                 .shadow_radius = 0.0f
             }
@@ -273,7 +273,7 @@ namespace tavros::renderer
         m_cur_cmd.cut_shape = m_r->m_ui_render_data.add(
             draw_shape_t{
                 .type = shape_type::rect,
-                .sdf_view = cut_rect_view,
+                .rect_view = cut_rect_view,
                 .shadow_bias = 0.0f,
                 .shadow_radius = 0.0f
             }
@@ -385,7 +385,7 @@ namespace tavros::renderer
 
         auto draw_shape_view = m_ui_render_data.add(
             draw_shape_t{
-                .type = shape_type::line,
+                .type = shape_type::quad,
                 .quad_view = quad_draw_view,
                 .shadow_bias = 0.0f,
                 .shadow_radius = 0.0f

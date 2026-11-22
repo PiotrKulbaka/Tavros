@@ -30,7 +30,7 @@ namespace tavros::renderer
         template<class T>
         bool add_data(T&& data)
         {
-            return m_current_frame_context.frame_data().add_data<T>(data);
+            return m_current_frame_context.frame_data().add_data<T>(std::move(data));
         }
 
         frame_context& begin_frame(uint64 delta_time_us);
@@ -62,7 +62,8 @@ namespace tavros::renderer
         core::unique_ptr<rhi::graphics_device>  m_gd;
         core::shared_ptr<assets::asset_manager> m_am;
         core::shared_ptr<tef::workspace>        m_ws;
-        gpu_stream_buffer                       m_sb;
+        gpu_stream_buffer                       m_stream_buffer;
+        gpu_stream_buffer                       m_constant_buffer;
 
         core::unique_ptr<renderer::resource_manager> m_rm;
 

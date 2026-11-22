@@ -61,12 +61,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/camera_pass.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/camera_pass.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_opaque_pass.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_opaque_pass.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_transparent_pass.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_transparent_pass.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/fullscreen_blit_pass.cpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/fullscreen_blit_pass.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_attachments_pass.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_attachments_pass.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/present_frame_pass.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/present_frame_pass.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/ui_render_pass.cpp

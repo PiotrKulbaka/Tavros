@@ -1,5 +1,7 @@
 #include <tavros/renderer/passes/present_frame_pass.hpp>
 
+#include <glad/glad.h>
+
 namespace tavros::renderer
 {
 
@@ -21,8 +23,13 @@ namespace tavros::renderer
 
     void present_frame_pass::execute(frame_context& ctx)
     {
-        const auto backbuffer = ctx.frame_data().get_data<fdt_backbuffer>();
-        const auto attachment = ctx.frame_data().get_data<fdt_albedo_ca>();
+        const auto backbuffer = ctx.frame_data().get_data<fd_backbuffer>();
+        const auto attachment = ctx.frame_data().get_data<fd_base_color_ca>();
+
+        // Ensure any previous rendering is finished before presenting
+        ctx.commands().end_rendering();
+
+        ctx.commands().push_debug_group("Present");
 
         ctx.commands().begin_rendering(backbuffer.fb);
         ctx.commands().bind_pipeline(m_mt->gpu_pipeline());
@@ -30,6 +37,8 @@ namespace tavros::renderer
         ctx.commands().bind_shader_textures(rhi::texture_binding{attachment.tex, smp, 0});
         ctx.commands().draw(4);
         ctx.commands().end_rendering();
+
+        ctx.commands().pop_debug_group();
     }
 
 } // namespace tavros::renderer

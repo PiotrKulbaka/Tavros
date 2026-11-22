@@ -19,6 +19,7 @@ namespace tavros::renderer
             , m_rm(other.m_rm)
             , m_cq(other.m_cq)
             , m_sb(other.m_sb)
+            , m_cb(other.m_cb)
             , m_fn(other.m_fn)
             , m_fd(std::move(other.m_fd))
         {
@@ -26,6 +27,7 @@ namespace tavros::renderer
             other.m_rm = nullptr;
             other.m_cq = nullptr;
             other.m_sb = nullptr;
+            other.m_cb = nullptr;
             other.m_fn = 0;
         }
 
@@ -39,6 +41,7 @@ namespace tavros::renderer
             m_rm = other.m_rm;
             m_cq = other.m_cq;
             m_sb = other.m_sb;
+            m_cb = other.m_cb;
             m_fn = other.m_fn;
             m_fd = std::move(other.m_fd);
 
@@ -46,6 +49,7 @@ namespace tavros::renderer
             other.m_rm = nullptr;
             other.m_cq = nullptr;
             other.m_sb = nullptr;
+            other.m_cb = nullptr;
             other.m_fn = 0;
 
             return *this;
@@ -59,6 +63,11 @@ namespace tavros::renderer
         rhi::command_queue& commands() noexcept
         {
             return *m_cq;
+        }
+
+        gpu_stream_buffer& constant_buffer() noexcept
+        {
+            return *m_cb;
         }
 
         gpu_stream_buffer& stream_buffer() noexcept
@@ -86,16 +95,18 @@ namespace tavros::renderer
 
         frame_context() noexcept = default;
 
-        frame_context(rhi::graphics_device* gd, renderer::resource_manager* rm, gpu_stream_buffer* sb, uint64 frame_number) noexcept
+        frame_context(rhi::graphics_device* gd, renderer::resource_manager* rm, gpu_stream_buffer* sb, gpu_stream_buffer* cb, uint64 frame_number) noexcept
             : m_gd(gd)
             , m_rm(rm)
             , m_sb(sb)
+            , m_cb(cb)
             , m_fn(frame_number)
         {
             m_cq = m_gd->create_command_queue();
             TAV_ASSERT(m_rm);
             TAV_ASSERT(m_cq);
             TAV_ASSERT(m_sb);
+            TAV_ASSERT(m_cb);
         }
 
         void clean() noexcept
@@ -104,6 +115,7 @@ namespace tavros::renderer
             m_rm = nullptr;
             m_cq = nullptr;
             m_sb = nullptr;
+            m_cb = nullptr;
             m_fn = 0;
             m_fd.clear();
         }
@@ -113,6 +125,7 @@ namespace tavros::renderer
         renderer::resource_manager* m_rm = nullptr;
         rhi::command_queue*         m_cq = nullptr;
         gpu_stream_buffer*          m_sb = nullptr;
+        gpu_stream_buffer*          m_cb = nullptr;
         uint64                      m_fn = 0;
         frame_data_t                m_fd;
     };

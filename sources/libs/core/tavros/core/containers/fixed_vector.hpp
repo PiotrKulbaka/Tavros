@@ -20,6 +20,12 @@ namespace tavros::core
      * but stores elements in a statically allocated buffer of size `N`.
      * No dynamic memory allocations are performed.
      *
+     * Interoperates with buffer_view:
+     *   - fixed_vector -> buffer_view<T>       (non-const container, implicit)
+     *   - fixed_vector -> buffer_view<const T> (any container, implicit)
+     *   - construction / assignment from buffer_view<const T>, which also
+     *     accepts buffer_view<T> and anything convertible to a read-only view.
+     *
      * @tparam T Element type. Must be nothrow move-constructible.
      * @tparam N Maximum number of elements that can be stored in the container.
      */
@@ -28,10 +34,19 @@ namespace tavros::core
     class fixed_vector
     {
     public:
+        using value_type = T;
+        using size_type = size_t;
+        using reference = T&;
+        using const_reference = const T&;
+        using pointer = T*;
+        using const_pointer = const T*;
         using iterator = T*;                                                  /// Mutable iterator type.
         using const_iterator = const T*;                                      /// Immutable iterator type.
         using reverse_iterator = std::reverse_iterator<iterator>;             /// Mutable reverse iterator.
         using const_reverse_iterator = std::reverse_iterator<const_iterator>; /// Immutable reverse iterator.
+
+        using view_type = buffer_view<T>;                                     /// Read/write view over the elements.
+        using const_view_type = buffer_view<const T>;                         /// Read-only view over the elements.
 
     public:
         /**
@@ -54,12 +69,14 @@ namespace tavros::core
         }
 
         /**
-         * @brief Constructs the container from a buffer_view.
+         * @brief Constructs the container from a read-only buffer_view.
          *
-         * @param init Span of elements to copy into the container.
+         * Accepts buffer_view<T> as well (implicit conversion to buffer_view<const T>).
+         *
+         * @param init View of elements to copy into the container.
          * @note The number of elements must not exceed `N`.
          */
-        constexpr explicit fixed_vector(buffer_view<T> init) noexcept
+        constexpr explicit fixed_vector(const_view_type init) noexcept
         {
             TAV_ASSERT(init.size() <= N);
             for (const auto& value : init) {
@@ -68,28 +85,45 @@ namespace tavros::core
         }
 
         /**
+         * @brief Replaces the contents of the container with the elements from an initializer list.
+         *
+         * @note The number of elements must not exceed `N`.
+         */
+        constexpr fixed_vector& operator=(std::initializer_list<T> init) noexcept
+        {
+            TAV_ASSERT(init.size() <= N);
+
+            clear();
+            for (const auto& value : init) {
+                emplace_back(value);
+            }
+
+            return *this;
+        }
+
+        /**
          * @brief Replaces the contents of the container with the elements from a buffer view.
          *
          * All existing elements are destroyed and the elements from the specified
          * buffer view are copied into the container in order.
          *
-         * @param rhs View of elements to copy from.
+         * @param rhs View of elements to copy from (buffer_view<T> converts implicitly).
          *
          * @return Reference to this container.
          *
          * @note The number of elements in the view must not exceed the container capacity `N`.
          * @note Assigning from a view that refers to elements stored in this container results
-         *       in undefined behavior.
+         *       in undefined behavior (assigning the whole container to itself is a no-op).
          */
-        constexpr fixed_vector& operator=(buffer_view<T> rhs) noexcept
+        constexpr fixed_vector& operator=(const_view_type rhs) noexcept
         {
             if (rhs.data() == data()) {
                 return *this;
             }
 
-            clear();
-
             TAV_ASSERT(rhs.size() <= N);
+
+            clear();
 
             for (const auto& value : rhs) {
                 emplace_back(value);
@@ -110,6 +144,22 @@ namespace tavros::core
             auto sz = m_size;
             m_size = other.m_size;
             other.m_size = sz;
+        }
+
+        /**
+         * @brief Returns a read/write view over the current elements.
+         */
+        [[nodiscard]] constexpr view_type view() noexcept
+        {
+            return view_type(data(), size());
+        }
+
+        /**
+         * @brief Returns a read-only view over the current elements.
+         */
+        [[nodiscard]] constexpr const_view_type view() const noexcept
+        {
+            return const_view_type(data(), size());
         }
 
         constexpr iterator begin() noexcept

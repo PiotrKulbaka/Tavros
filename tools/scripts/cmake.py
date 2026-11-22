@@ -1,6 +1,8 @@
 from pathlib import Path
 from .config import Config
 from .utils import run_command, tool_list, tool_version, parse_version
+import subprocess
+
 from .log import log_print, CL_FATAL, CL_INFO, CL_GREEN, CL_INVERT, CL_RESET
 
 def get_cmake_tool(cmake_cfg):
@@ -73,9 +75,56 @@ def cmake_gen(cfg: Config, generator: str, defines: dict[str, str] = None):
         *([f'-D{k}={v}' for k, v in defines.items()] if defines else []),
     ]
 
-    result = run_command(args)
+    try:
+        result = run_command(args)
+        if result.returncode != 0:
+            raise RuntimeError("CMake configuration failed")
 
-    if result.returncode != 0:
-        raise RuntimeError("CMake configuration failed")
+    except Exception as e:
+        log_print(f'{CL_FATAL}CMake configuration failed')
+        raise e
     
-    log_print(f'{CL_INFO}{CL_INVERT}Configuring project...{CL_RESET} {CL_GREEN}Done')
+    log_print(f'{CL_GREEN}{CL_INVERT}Configuring project...{CL_RESET} {CL_GREEN}Done')
+
+def build_target(cfg: Config, target_name: str, generator: str, defines: dict[str, str] = None, config: str = "debug", verbose: bool = False):
+    """Build a specific target using CMake.
+
+    :param cfg: Config object with the project configuration.
+    :param target_name: Name of the target to build.
+    :param config: Build configuration (debug/release).
+    :param tracy_enabled: Whether Tracy profiler is enabled.
+    :param verbose: Whether to show verbose output during build.
+    :param generator: CMake generator to use for building
+    """
+
+    log_print(f'{CL_INFO}Building {target_name} application...')
+
+    # Configure project (ensures build dir exists)
+    cmake_gen(cfg, generator, defines)
+
+    cmake_cfg = cfg.command.cmake_gen[generator]
+    
+    cmake_tool = get_cmake_tool(cmake_cfg)
+
+    build_dir = Path(cfg.path.build) / generator
+
+    # Build using CMake
+    args = [
+        cmake_tool,
+        '--build', str(build_dir),
+        '--config', config.capitalize(),
+        '--target', target_name,
+        *(['--verbose'] if verbose else []),
+    ]
+
+    try:
+        result = run_command(args)
+        if result.returncode != 0:
+            raise RuntimeError("CMake building failed")
+
+        log_print(f'{CL_GREEN}{CL_INVERT}{target_name} build completed successfully in {config} configuration.')
+        log_print(f'{CL_GREEN}Build artifacts are located in: {build_dir}')
+
+    except Exception as e:
+        log_print(f'{CL_FATAL}CMake building failed')
+        raise e

@@ -82,7 +82,7 @@ mt = {
         }
     }
 
-    uir = {
+    ui_material = {
         shaders = {
             vertex = "tavros/shaders/uir.vert"
             fragment = "tavros/shaders/uir.frag"
@@ -94,8 +94,16 @@ mt = {
             }
         }
 
+        depth = {
+            test = false
+            write = false
+            compare_op = "less"
+        }
+
+        topology = "triangles"
+
         rasterizer = {
-            scissor = true
+            scissor = false
         }
     }
 

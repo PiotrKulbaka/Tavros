@@ -217,6 +217,7 @@ namespace tavros::ui
         }
         ui_context ctx(m_rs);
         m_root->draw(ctx);
+        m_rs->add_data(renderer::fd_ui_draw_data{std::move(ctx.ui_renderer().take())});
     }
 
     void root_view::mouse_down(const mouse_button_event_args& e) noexcept

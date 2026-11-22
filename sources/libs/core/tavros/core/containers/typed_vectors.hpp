@@ -23,12 +23,46 @@ namespace tavros::core
 
         uint32 index = invalid_index;
 
+        template<class U>
+        static constexpr bool is_convertible_item_v =
+            !std::is_same_v<T, U> && std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>;
+
+        constexpr item_view() noexcept = default;
+
+        constexpr explicit item_view(uint32 index_) noexcept
+            : index(index_)
+        {
+        }
+
+        constexpr item_view(const item_view&) noexcept = default;
+        constexpr item_view& operator=(const item_view&) noexcept = default;
+
+        template<class U>
+            requires is_convertible_item_v<U>
+        constexpr item_view(const item_view<U>& other) noexcept
+            : index(other.index)
+        {
+        }
+
+        template<class U>
+            requires is_convertible_item_v<U>
+        constexpr item_view& operator=(const item_view<U>& other) noexcept
+        {
+            index = other.index;
+            return *this;
+        }
+
         [[nodiscard]] constexpr bool valid() const noexcept
         {
             return index != invalid_index;
         }
 
-        [[nodiscard]] friend bool operator==(const item_view&, const item_view&) noexcept = default;
+        template<class U>
+            requires(std::is_same_v<T, U> || is_convertible_item_v<U>)
+        [[nodiscard]] constexpr bool operator==(const item_view<U>& other) const noexcept
+        {
+            return index == other.index;
+        }
     };
 
     /**
@@ -48,6 +82,38 @@ namespace tavros::core
         uint32 first = invalid_index;
         uint32 size = 0;
 
+        template<class U>
+        static constexpr bool is_convertible_range_v =
+            !std::is_same_v<T, U> && std::is_same_v<std::remove_const_t<T>, std::remove_const_t<U>>;
+
+        constexpr range_view() noexcept = default;
+
+        constexpr range_view(uint32 first, uint32 size) noexcept
+            : first(first)
+            , size(size)
+        {
+        }
+
+        constexpr range_view(const range_view&) noexcept = default;
+        constexpr range_view& operator=(const range_view&) noexcept = default;
+
+        template<class U>
+            requires is_convertible_range_v<U>
+        constexpr range_view(const range_view<U>& other) noexcept
+            : first(other.first)
+            , size(other.size)
+        {
+        }
+
+        template<class U>
+            requires is_convertible_range_v<U>
+        constexpr range_view& operator=(const range_view<U>& other) noexcept
+        {
+            first = other.first;
+            size = other.size;
+            return *this;
+        }
+
         [[nodiscard]] bool valid() const noexcept
         {
             return first != invalid_index;
@@ -58,7 +124,12 @@ namespace tavros::core
             return size == 0;
         }
 
-        [[nodiscard]] friend bool operator==(const range_view&, const range_view&) noexcept = default;
+        template<class U>
+            requires(std::is_same_v<T, U> || is_convertible_range_v<U>)
+        [[nodiscard]] constexpr bool operator==(const range_view<U>& other) const noexcept
+        {
+            return first == other.first && size == other.size;
+        }
     };
 
     /**
@@ -81,7 +152,7 @@ namespace tavros::core
     class basic_typed_vectors<type_list<Ts...>>
     {
         template<class T>
-        using vector_type = vector<T>;
+        using vector_type = vector<std::remove_cvref_t<T>>;
 
         using storage_type = std::tuple<vector_type<Ts>...>;
 
@@ -103,7 +174,7 @@ namespace tavros::core
 
         /** @brief Returns the underlying vector for column @p T. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] vector_type<T>& get() noexcept
         {
             return std::get<vector_type<T>>(m_storage);
@@ -111,7 +182,7 @@ namespace tavros::core
 
         /** @brief Const overload of @ref get(). */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] const vector_type<T>& get() const noexcept
         {
             return std::get<vector_type<T>>(m_storage);
@@ -119,7 +190,7 @@ namespace tavros::core
 
         /** @brief Number of elements currently stored in column @p T. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] size_type size() const noexcept
         {
             return get<T>().size();
@@ -127,7 +198,7 @@ namespace tavros::core
 
         /** @brief Capacity of column @p T. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] size_type capacity() const noexcept
         {
             return get<T>().capacity();
@@ -135,7 +206,7 @@ namespace tavros::core
 
         /** @brief True if column @p T has no elements. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] bool empty() const noexcept
         {
             return get<T>().empty();
@@ -143,7 +214,7 @@ namespace tavros::core
 
         /** @brief Pointer to the underlying data of column @p T. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] T* data() noexcept
         {
             return get<T>().data();
@@ -151,7 +222,7 @@ namespace tavros::core
 
         /** @brief Const pointer to the underlying data of column @p T. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] const T* data() const noexcept
         {
             return get<T>().data();
@@ -159,7 +230,7 @@ namespace tavros::core
 
         /** @brief Reserves capacity in column @p T. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         void reserve(size_type new_cap)
         {
             get<T>().reserve(new_cap);
@@ -167,38 +238,38 @@ namespace tavros::core
 
         /** @brief Requests the removal of unused capacity from column @p T. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         void shrink_to_fit()
         {
             get<T>().shrink_to_fit();
         }
 
         /** @brief Requests the removal of unused capacity from every column. */
-        void shrink_to_fit_all()
-        {
-            (get<Ts>().shrink_to_fit(), ...);
-        }
+        /* void shrink_to_fit_all()
+         {
+             (get<Ts>().shrink_to_fit(), ...);
+         }*/
 
         /** @brief Removes all elements from column @p T. Views into it become dangling. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         void clear() noexcept
         {
             get<T>().clear();
         }
 
         /** @brief Removes all elements from every column. All views become dangling. */
-        void clear_all() noexcept
-        {
-            (get<Ts>().clear(), ...);
-        }
+        /*  void clear_all() noexcept
+          {
+              (get<Ts>().clear(), ...);
+          }*/
 
         /**
          * @brief Appends a single element to column @p T, constructed in place.
          * @return A view referring to the newly inserted element.
          */
         template<class T, class... Args>
-            requires contains_type_v<T, types> && std::constructible_from<T, Args...>
+            requires contains_nocvref_type_v<T, types> && std::constructible_from<T, Args...>
         item_view<T> emplace_back(Args&&... args)
         {
             auto& vec = get<T>();
@@ -211,7 +282,7 @@ namespace tavros::core
          * @return A view referring to the newly inserted element.
          */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         item_view<T> add(const T& value)
         {
             return emplace_back<T>(value);
@@ -221,11 +292,12 @@ namespace tavros::core
          * @brief Appends a single element to column @p T by move.
          * @return A view referring to the newly inserted element.
          */
-        template<class T>
-            requires contains_type_v<T, types>
-        item_view<T> add(T&& value)
+        template<class U>
+            requires contains_nocvref_type_v<U, types>
+        item_view<std::remove_cvref_t<U>> add(U&& value)
         {
-            return emplace_back<T>(std::move(value));
+            using T = std::remove_cvref_t<U>;
+            return emplace_back<T>(std::forward<U>(value));
         }
 
         /**
@@ -233,7 +305,7 @@ namespace tavros::core
          * @return A view referring to the newly inserted range.
          */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         range_view<T> add_range(buffer_view<T> items)
         {
             auto&  vec = get<T>();
@@ -244,7 +316,7 @@ namespace tavros::core
 
         /** @brief Overload accepting a braced initializer list. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         range_view<T> add_range(std::initializer_list<T> items)
         {
             return add_range<T>(buffer_view<T>(items.begin(), items.size()));
@@ -252,7 +324,7 @@ namespace tavros::core
 
         /** @brief Element access for column @p T. @pre v.index < size<T>() */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] T& operator[](item_view<T> v) noexcept
         {
             TAV_ASSERT(v.valid());
@@ -262,7 +334,7 @@ namespace tavros::core
 
         /** @brief Const overload. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] const T& operator[](item_view<T> v) const noexcept
         {
             TAV_ASSERT(v.valid());
@@ -272,7 +344,7 @@ namespace tavros::core
 
         /** @brief Range access for column @p T. @pre v.first + v.size <= size<T>() */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] buffer_view<T> operator[](range_view<T> v) noexcept
         {
             TAV_ASSERT(v.valid());
@@ -282,7 +354,7 @@ namespace tavros::core
 
         /** @brief Const overload. */
         template<class T>
-            requires contains_type_v<T, types>
+            requires contains_nocvref_type_v<T, types>
         [[nodiscard]] buffer_view<const T> operator[](range_view<T> v) const noexcept
         {
             TAV_ASSERT(v.valid());

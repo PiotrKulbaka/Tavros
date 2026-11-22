@@ -83,7 +83,7 @@ namespace tavros::renderer
             node new_node;
             new_node.name = name;
 
-            new_node.create = [](render_system* rs) {
+            new_node.create = [](render_system* rs) -> core::unique_ptr<render_pass> {
                 return core::make_unique<Stage>(rs);
             };
 

@@ -143,14 +143,14 @@ namespace tavros::tef
             valid = false;
         }
 
-        uint32 components = 0;
+        uint32 components = 4;
         valid &= read_required_enum(n, "format", to_color_format, result.format, "color format", ds);
         valid &= read_enum(n, "load", renderer::rhi::load_op::clear, to_load_op, result.load, "load operation", ds);
         valid &= read_enum(n, "store", renderer::rhi::store_op::store, to_store_op, result.store, "store operation", ds);
 
         // clear - by default clear value is 0.0 0.0 0.0 0.0
         result.clear_value[0] = result.clear_value[1] = result.clear_value[2] = result.clear_value[3] = 0.0f;
-        if (const auto* clear = n->resolve_path("clear"); clear && components > 0) {
+        if (const auto* clear = n->resolve_path("clear")) {
             const auto* cur = clear;
             for (uint32 c = 0; c < components; ++c) {
                 if (!cur) {
@@ -297,7 +297,6 @@ namespace tavros::tef
 
     void schema<render_target_desc>::deserialize(const node* n, render_target_desc& out, core::diagnostics& ds) noexcept
     {
-        TAV_ASSERT(n);
         if (!n) {
             ds.error("Null node provided for deserializing render target config.");
             return;

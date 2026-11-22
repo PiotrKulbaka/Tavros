@@ -7,7 +7,8 @@ def get_doc():
         Usage:
             tavros.py autoformat [--colored]
             tavros.py collect_sources [--colored]
-            tavros.py cmake_gen (xcode | visual_studio | ninja | makefiles) [--tracy] [--collect_sources] [--autoformat] [--colored]
+            tavros.py cmake_gen (xcode | visual_studio | makefiles) [--tracy] [--collect_sources] [--autoformat] [--colored]
+            tavros.py build (sandbox) (--xcode | --visual_studio | --makefiles) [--release | --debug] [--tracy] [--colored] [--verbose]
             tavros.py (--show_resolved_config) [--colored]
             tavros.py (-h | --help) [--colored]
 
@@ -18,16 +19,21 @@ def get_doc():
             --show_resolved_config  Show resolved configuration file
             --colored               Use colors in the output
             --tracy                 Use Tracy profiler
+            --release               Build in release configuration
+            --debug                 Build in debug configuration
 
         Commands:
             autoformat              Autoformat all source code files
             collect_sources         Collect source code files to the `CMakeSources.txt`
             cmake_gen               Generate CMake project for the given generator
+            build                   Build the specified target
 
         Generators:
             xcode                   Generate CMake project for Xcode
             visual_studio           Generate CMake project for Visual Studio
-            ninja                   Generate CMake project for Ninja
             makefiles               Generate CMake project for Unix Makefiles
+            
+        Targets:
+            sandbox                 Build the sandbox application
         """
     return textwrap.dedent(doc).strip() 

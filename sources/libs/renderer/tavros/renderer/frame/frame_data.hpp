@@ -8,42 +8,54 @@
 
 namespace tavros::renderer
 {
-    // fdt - frame data type
+    // fd - frame data type
 
-    struct fdt_frame_info
+    struct fd_frame_info
     {
         math::vec2 frame_size;
         float      total_time = 0.0f;
         float      delta_time = 0.0f;
     };
 
-    struct fdt_camera
+    struct fd_graphics_settings
+    {
+        uint32 msaa = 1;
+    };
+
+    struct fd_camera
     {
         camera cam;
     };
 
-    struct fdt_backbuffer
+    struct fd_backbuffer
     {
         rhi::framebuffer_handle fb;
     };
 
-    struct fdt_albedo_ca
+    struct fd_base_color_ca
     {
         rhi::texture_handle tex;
     };
 
-    struct fdt_ui_draw_data
+    struct fd_depth_stencil_ca
+    {
+        rhi::texture_handle tex;
+    };
+
+    struct fd_ui_draw_data
     {
         ui_render_data_t data;
     };
 
 
     using frame_types = core::type_list<
-        fdt_frame_info,
-        fdt_camera,
-        fdt_backbuffer,
-        fdt_albedo_ca,
-        fdt_ui_draw_data>;
+        fd_frame_info,
+        fd_camera,
+        fd_backbuffer,
+        fd_base_color_ca,
+        fd_depth_stencil_ca,
+        fd_ui_draw_data,
+        fd_graphics_settings>;
 
-    using frame_data_t = core::type_storage<frame_types, 256>;
+    using frame_data_t = core::type_storage<frame_types>;
 } // namespace tavros::renderer
