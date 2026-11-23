@@ -94,6 +94,7 @@ namespace tavros::ui
 
     void label_view::update(float dt)
     {
+        TAV_UNUSED(dt);
     }
 
     void label_view::draw(ui_context& ctx)

@@ -143,7 +143,7 @@ namespace tavros::renderer
 
     uint32 render_target::attachment_count() const
     {
-        return m_ca_cfg.size();
+        return static_cast<uint32>(m_ca_cfg.size());
     }
 
     rhi::texture_handle render_target::color_attachment_by_name(core::string_view name) const noexcept

@@ -56,7 +56,7 @@ namespace tavros::core
          * @brief Reserves a slot for a resource, or returns an existing one.
          *
          * This is the ONLY operation that may be called concurrently from
-         * multiple threads. It never touches actual resource data — it only
+         * multiple threads. It never touches actual resource data - it only
          * registers intent. The resource starts in `unloaded` state and has
          * no data until publish() is called.
          *
@@ -161,7 +161,7 @@ namespace tavros::core
         /**
          * @brief Decrements reference count.
          *
-         * Does NOT destroy anything immediately — actual destruction happens
+         * Does NOT destroy anything immediately - actual destruction happens
          * during sync(). Safe to call from any thread.
          */
         void release(ref_type ref) noexcept

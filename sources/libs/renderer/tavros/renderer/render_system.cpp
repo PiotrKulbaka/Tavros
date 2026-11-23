@@ -15,7 +15,7 @@ namespace
 namespace tavros::renderer
 {
 
-    render_system::render_system(core::shared_ptr<assets::asset_manager> am, core::shared_ptr<tef::workspace> ws, void* window_handle) noexcept
+    render_system::render_system(core::shared_ptr<assets::asset_manager> am, core::shared_ptr<tef::workspace> ws, void* window_handle)
         : m_am(am)
         , m_ws(ws)
         , m_frame_graph(this)
@@ -84,7 +84,7 @@ namespace tavros::renderer
     {
         m_total_time_us += delta_time_us;
         m_delta_time_us = delta_time_us;
-        const auto frame_size = math::vec2(m_frame_width, m_frame_height);
+        const auto frame_size = math::vec2(static_cast<float>(m_frame_width), static_cast<float>(m_frame_height));
         const auto total_time = static_cast<float>(m_total_time_us) / 1'000'000.0f;
         const auto delta_time = static_cast<float>(m_delta_time_us) / 1'000'000.0f;
 

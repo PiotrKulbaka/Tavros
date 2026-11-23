@@ -151,7 +151,6 @@ namespace
 
         switch (b.type) {
         case tavros::renderer::brush_fill_type::solid:
-            //  ак в старом fill_color: тип linear, num == 1, цвет в brush.color
             out.flags = u(gpu_brush_type::linear);
             out.first = 0;
             out.num = 1;
@@ -212,12 +211,12 @@ namespace
         const auto  c = math::cos(p.angle.radians());
         const auto  s = math::sin(p.angle.radians());
 
-        out.flags = static_cast<uint32>(p.type); // см. примечание про нумерацию в конце
+        out.flags = static_cast<uint32>(p.type);
         out.cos_sin = math::pack_snorm2x16(c, s);
         out.arg0 = math::vec2(p.size0, p.size1);
     }
 
-    // tex заполн€етс€ только дл€ sdf-фигур
+    // tex - fills only for sdf shapes, otherwise ignored
     void build_shape(const data_t& d, tavros::core::item_view<tavros::renderer::draw_shape_t> view, cmd_t::shape_t& out, tavros::renderer::rhi::texture_handle& sdf_tex)
     {
         if (!view.valid()) {
@@ -290,7 +289,6 @@ namespace
         }
     }
 
-    // ------------------------------ Command ------------------------------
 
     tavros::renderer::ui_render_pass::ui_cmd_entry build_entry(
         const data_t& d, const tavros::renderer::ui_draw_command_t& cmd,

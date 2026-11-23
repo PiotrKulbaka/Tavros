@@ -19,6 +19,7 @@ namespace tavros::renderer
 
     void present_frame_pass::upload(frame_context& ctx)
     {
+        TAV_UNUSED(ctx);
     }
 
     void present_frame_pass::execute(frame_context& ctx)

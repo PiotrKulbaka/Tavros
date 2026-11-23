@@ -159,10 +159,12 @@ namespace tavros::ui
 
     void view::resolve(ui_context& ctx)
     {
+        TAV_UNUSED(ctx);
     }
 
     math::vec2 view::measure(math::vec2 available_border_box_size) noexcept
     {
+        TAV_UNUSED(available_border_box_size);
         return limit_border_box_size(m_border_box_desired_size);
     }
 
@@ -219,8 +221,8 @@ namespace tavros::ui
                 }
             }
 
-            auto ob = m_border_box.expanded(dbg.hit_box_line_thickness * 0.5);
-            auto ib = m_border_box.shrinked(dbg.hit_box_line_thickness * 0.5);
+            auto ob = m_border_box.expanded(static_cast<float>(dbg.hit_box_line_thickness * 0.5));
+            auto ib = m_border_box.shrinked(static_cast<float>(dbg.hit_box_line_thickness * 0.5));
             r.quad(ob).cut_quad(ib).fill_color(dbg.hit_box_color).draw();
         }
     }

@@ -119,7 +119,7 @@ namespace tavros::renderer
         for (auto& r : rects) {
             auto height_candidate = static_cast<uint32>(r.y + r.h);
             if (height_candidate > atlas_height) {
-                atlas_height = math::ceil_power_of_two(height_candidate);
+                atlas_height = static_cast<uint32>(math::ceil_power_of_two(height_candidate));
             }
         }
 

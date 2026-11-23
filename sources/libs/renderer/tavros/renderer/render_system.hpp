@@ -16,7 +16,7 @@ namespace tavros::renderer
     class render_system final : core::noncopyable, core::nonmovable
     {
     public:
-        render_system(core::shared_ptr<assets::asset_manager> am, core::shared_ptr<tef::workspace> ws, void* window_handle) noexcept;
+        render_system(core::shared_ptr<assets::asset_manager> am, core::shared_ptr<tef::workspace> ws, void* window_handle);
         ~render_system() noexcept;
 
         void resize_backbuffer(uint32 width, uint32 height);

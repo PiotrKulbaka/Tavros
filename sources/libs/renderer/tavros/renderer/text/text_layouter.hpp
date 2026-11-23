@@ -213,7 +213,7 @@ namespace tavros::renderer
                     x += g.step_x;
                 });
 
-                i = next_i;
+                i = static_cast<uint32>(next_i);
                 y += math::abs(descent_y) + math::abs(descent_y - ascent_y) * (line_spacing - 1.0f);
             }
 

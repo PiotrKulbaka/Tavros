@@ -153,6 +153,8 @@ namespace
 
         float get_kerning_internal(char32 cp1, char32 cp2) const noexcept override
         {
+            TAV_UNUSED(cp1);
+            TAV_UNUSED(cp2);
             return 0.0f;
         }
 
@@ -257,7 +259,7 @@ namespace tavros::renderer
             core::dynamic_buffer<uint8> font_data;
             try {
                 font_data = m_am->read_binary(path);
-            } catch (const core::file_error& e) {
+            } catch (const core::file_error&) {
                 logger.error("Failed to open font '{}'", path);
                 m_fnt_reg.publish_failed(slot.first);
                 update_font_atlas();
@@ -308,7 +310,7 @@ namespace tavros::renderer
             core::dynamic_buffer<uint8> font_data;
             try {
                 font_data = m_am->read_binary(desc.path());
-            } catch (const core::file_error& e) {
+            } catch (const core::file_error&) {
                 logger.error("Failed to open font '{}'", desc.path());
                 m_fnt_reg.publish_failed(slot.first);
                 update_font_atlas();
@@ -376,7 +378,7 @@ namespace tavros::renderer
                 auto im_fmt = to_im_format(desc.load_params().pixel_format);
                 auto data = m_am->read_binary(desc.load_params().path);
                 im = assets::image::decode(data, im_fmt);
-            } catch (const core::file_error& e) {
+            } catch (const core::file_error&) {
                 logger.error("Failed to open image '{}'", desc.load_params().path);
                 return slot.first;
             }
