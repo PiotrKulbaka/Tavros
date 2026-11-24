@@ -62,8 +62,10 @@ namespace tavros::renderer
         core::unique_ptr<rhi::graphics_device>  m_gd;
         core::shared_ptr<assets::asset_manager> m_am;
         core::shared_ptr<tef::workspace>        m_ws;
-        gpu_stream_buffer                       m_stream_buffer;
-        gpu_stream_buffer                       m_constant_buffer;
+        gpu_persistent_buffer                   m_stream_buffer;
+        gpu_persistent_buffer                   m_constant_buffer;
+        gpu_persistent_buffer                   m_vertex_stream_buffer;
+        gpu_persistent_buffer                   m_index_stream_buffer;
 
         core::unique_ptr<renderer::resource_manager> m_rm;
 

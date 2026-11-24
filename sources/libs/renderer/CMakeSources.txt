@@ -6,9 +6,6 @@
 set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_buffer_view.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_persistent_buffer.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_readback_buffer.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_stage_buffer.hpp
-    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/gpu_stream_buffer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_system.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_system.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/resource_manager.cpp
@@ -61,6 +58,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
 
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/camera_pass.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/camera_pass.hpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/debug_render_pass.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/debug_render_pass.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_attachments_pass.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/forward_attachments_pass.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/passes/present_frame_pass.cpp
@@ -73,6 +72,8 @@ set(TAV_RENDERER_CROSSPLATFORM_SOURCES
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_desc.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/render_target/render_target_desc.hpp
 
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer/debug_renderer.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer/debug_renderer.hpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer/ui_renderer.cpp
     ${CMAKE_CURRENT_LIST_DIR}/tavros/renderer/renderer/ui_renderer.hpp
 

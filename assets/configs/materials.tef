@@ -103,8 +103,101 @@ mt = {
         topology = "triangles"
 
         rasterizer = {
-            scissor = false
+            scissor = true
         }
     }
 
+}
+
+debug_materials = {
+    basic = {
+        shaders = {
+            vertex = "tavros/shaders/debug.vert"
+            fragment = "tavros/shaders/debug.frag"
+        }
+
+        color = {
+            base_color = { 
+                blend = "alpha"
+            }
+        }
+
+        depth = {
+            test = false
+            write = false
+            compare_op = "less"
+        }
+
+        rasterizer = {
+            cull = "back"
+            front_face = "ccw" 
+            fill_mode = "fill"
+        }
+    }
+
+    triangles_no_test : debug_materials.basic = {
+        topology = "triangles"
+    }
+
+    lines_no_test : debug_materials.basic = {
+        topology = "lines"
+    }
+
+    points_no_test : debug_materials.basic = {
+        topology = "points"
+    }
+
+    triangles_test : debug_materials.basic = {
+        topology = "triangles"
+        depth = {
+            test = true
+            write = false
+            compare_op = "less"
+        }
+    }
+
+    lines_test : debug_materials.basic = {
+        topology = "lines"
+        depth = {
+            test = true
+            write = false
+            compare_op = "less"
+        }
+    }
+
+    points_test : debug_materials.basic = {
+        topology = "points"
+        depth = {
+            test = true
+            write = false
+            compare_op = "less"
+        }
+    }
+
+    triangles_test_write : debug_materials.basic = {
+        topology = "triangles"
+        depth = {
+            test = true
+            write = true
+            compare_op = "less"
+        }
+    }
+
+    lines_test_write : debug_materials.basic = {
+        topology = "lines"
+        depth = {
+            test = true
+            write = true
+            compare_op = "less"
+        }
+    }
+
+    points_test_write : debug_materials.basic = {
+        topology = "points"
+        depth = {
+            test = true
+            write = true
+            compare_op = "less"
+        }
+    }
 }

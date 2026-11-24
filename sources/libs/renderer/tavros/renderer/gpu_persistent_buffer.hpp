@@ -15,20 +15,15 @@ namespace tavros::renderer
      *
      * Owns a single GPU buffer and a persistent CPU mapping.
      * Provides typed slice allocation via slice<T>().
-     *
-     * Not intended to be used directly - use derived classes:
-     * - gpu_stream_buffer  : per-frame streaming (vertex, uniform)
-     * - gpu_stage_buffer : CPU-to-GPU upload (textures, static meshes)
-     * - gpu_readback_buffer: GPU-to-CPU readback (screenshots, compute results)
      */
-    class basic_gpu_persistent_buffer : core::noncopyable
+    class gpu_persistent_buffer : core::noncopyable
     {
     public:
         /** @brief Default constructor. */
-        explicit basic_gpu_persistent_buffer() noexcept = default;
+        explicit gpu_persistent_buffer() noexcept = default;
 
         /** @brief Move constructor. */
-        basic_gpu_persistent_buffer(basic_gpu_persistent_buffer&& other) noexcept
+        gpu_persistent_buffer(gpu_persistent_buffer&& other) noexcept
             : m_gdevice(other.m_gdevice)
             , m_buffer(other.m_buffer)
             , m_data(other.m_data)
@@ -43,7 +38,7 @@ namespace tavros::renderer
         /**
          * @brief Unmaps and destroys the underlying GPU buffer.
          */
-        ~basic_gpu_persistent_buffer() noexcept
+        ~gpu_persistent_buffer() noexcept
         {
             destroy_all();
         }
@@ -59,7 +54,7 @@ namespace tavros::renderer
         /**
          * @brief Move assignment.
          */
-        basic_gpu_persistent_buffer& operator=(basic_gpu_persistent_buffer&& other) noexcept
+        gpu_persistent_buffer& operator=(gpu_persistent_buffer&& other) noexcept
         {
             if (this == &other) {
                 return *this;
@@ -76,6 +71,24 @@ namespace tavros::renderer
             other.m_buffer = {};
             other.m_data = {};
             other.m_cursor = 0;
+        }
+
+        /**
+         * @brief Initializes a staging buffer and maps it persistently.
+         *
+         * @param gdevice  Non-owning pointer to the graphics device. Must outlive this buffer.
+         * @param size     Total buffer size in bytes.
+         */
+        void init(rhi::graphics_device* gdevice, size_t size, rhi::buffer_usage usage, rhi::buffer_access access, core::string_view label)
+        {
+            destroy_all();
+            internal_init(label, gdevice, size, usage, access);
+        }
+
+        /** @brief  */
+        void shutdown()
+        {
+            destroy_all();
         }
 
         /**

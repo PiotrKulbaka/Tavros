@@ -5,6 +5,7 @@
 #include <tavros/renderer/camera/camera.hpp>
 #include <tavros/renderer/rhi/handle.hpp>
 #include <tavros/renderer/renderer/ui_renderer.hpp>
+#include <tavros/renderer/renderer/debug_renderer.hpp>
 
 namespace tavros::renderer
 {
@@ -47,6 +48,10 @@ namespace tavros::renderer
         ui_render_data_t data;
     };
 
+    struct fd_debug_draw_data
+    {
+        debug_render_data_t data;
+    };
 
     using frame_types = core::type_list<
         fd_frame_info,
@@ -55,7 +60,8 @@ namespace tavros::renderer
         fd_base_color_ca,
         fd_depth_stencil_ca,
         fd_ui_draw_data,
-        fd_graphics_settings>;
+        fd_graphics_settings,
+        fd_debug_draw_data>;
 
     using frame_data_t = core::type_storage<frame_types>;
 } // namespace tavros::renderer

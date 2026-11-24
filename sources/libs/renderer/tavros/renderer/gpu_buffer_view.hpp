@@ -14,7 +14,7 @@ namespace tavros::renderer
      * and element count. It does not own the buffer or the memory it refers to.
      *
      * Typical usage:
-     * - Returned by gpu_stream_buffer::slice()
+     * - Returned by gpu_persistent_buffer::slice()
      * - Used to bind subranges of buffers to the GPU pipeline
      *
      * @tparam T Element type of the buffer view.

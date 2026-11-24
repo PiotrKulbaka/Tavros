@@ -245,10 +245,10 @@ namespace tavros::core
         }
 
         /** @brief Requests the removal of unused capacity from every column. */
-        /* void shrink_to_fit_all()
-         {
-             (get<Ts>().shrink_to_fit(), ...);
-         }*/
+        void shrink_to_fit_all()
+        {
+            (get<Ts>().shrink_to_fit(), ...);
+        }
 
         /** @brief Removes all elements from column @p T. Views into it become dangling. */
         template<class T>
@@ -259,10 +259,10 @@ namespace tavros::core
         }
 
         /** @brief Removes all elements from every column. All views become dangling. */
-        /*  void clear_all() noexcept
-          {
-              (get<Ts>().clear(), ...);
-          }*/
+        void clear_all() noexcept
+        {
+            (get<Ts>().clear(), ...);
+        }
 
         /**
          * @brief Appends a single element to column @p T, constructed in place.
@@ -306,7 +306,7 @@ namespace tavros::core
          */
         template<class T>
             requires contains_nocvref_type_v<T, types>
-        range_view<T> add_range(buffer_view<T> items)
+        range_view<T> add_range(buffer_view<const T> items)
         {
             auto&  vec = get<T>();
             uint32 first = static_cast<uint32>(vec.size());
@@ -319,7 +319,26 @@ namespace tavros::core
             requires contains_nocvref_type_v<T, types>
         range_view<T> add_range(std::initializer_list<T> items)
         {
-            return add_range<T>(buffer_view<T>(items.begin(), items.size()));
+            return add_range<T>(buffer_view<const T>(items.begin(), items.size()));
+        }
+
+        /** @brief Overload accepting from a single element. */
+        template<class T>
+            requires contains_nocvref_type_v<T, types>
+        range_view<T> add_range(const T& value)
+        {
+            const auto item = add(value);
+            return range_view<T>(item.index, 1);
+        }
+
+        /** @brief Overload accepting from a single element by a reference. */
+        template<class U>
+            requires contains_nocvref_type_v<U, types>
+        range_view<std::remove_cvref_t<U>> add_range(U&& value)
+        {
+            using T = std::remove_cvref_t<U>;
+            const auto item = add(std::move(value));
+            return range_view<T>(item.index, 1);
         }
 
         /** @brief Element access for column @p T. @pre v.index < size<T>() */

@@ -35,6 +35,27 @@ namespace
         float  delta_time = 0.0f;
         uint32 frame_number = 0;
         float  _pad1 = 0.0f;
+
+        // Debug rendering
+        vec3  sun_direction;
+        float sun_intensity = 0.0f;
+
+        vec3  sun_color;
+        float ambient_intensity = 0.0f;
+
+        vec3  sky_color;
+        float specular_intensity = 0.0f;
+
+        vec3  ground_color;
+        float specular_power = 0.0f;
+
+        vec3  fill_color;
+        float fill_intensity = 0.0f;
+
+        float rim_intensity = 0.0f;
+        float rim_power = 0.0f;
+        float saturation = 0.0f;
+        float light_wrap = 0.0f;
     };
 
     constexpr uint32 k_kamera_binding_index = 0;
@@ -76,7 +97,22 @@ namespace tavros::renderer
             .total_time = finf.total_time,
             .delta_time = finf.delta_time,
             .frame_number = static_cast<uint32>(ctx.frame_number()),
-            ._pad1 = 0.0f
+            ._pad1 = 0.0f,
+
+            .sun_direction = math::vec3(0.45f, -0.55f, 0.70f),
+            .sun_intensity = 0.8f,
+            .sun_color = math::vec3(1.00f, 0.96f, 0.88f),
+            .ambient_intensity = 0.35f,
+            .sky_color = math::vec3(0.50f, 0.68f, 1.00f),
+            .specular_intensity = 0.35f,
+            .ground_color = math::vec3(0.35f, 0.30f, 0.26f),
+            .specular_power = 48.0f,
+            .fill_color = math::vec3(0.65f, 0.78f, 1.00f),
+            .fill_intensity = 0.12f,
+            .rim_intensity = 0.35f,
+            .rim_power = 3.0f,
+            .saturation = 1.25f,
+            .light_wrap = 0.3f,
         };
 
         auto slice = ctx.constant_buffer().slice<view_data>();

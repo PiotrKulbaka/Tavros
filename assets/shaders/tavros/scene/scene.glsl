@@ -52,6 +52,29 @@ layout (std140, binding = 0) uniform Scene
     float delta_time; // current frame time
     uint  frame_number;
     float _pad1;
+
+    // ---------------------------------------------------------------
+    // Debug rendering
+    // ---------------------------------------------------------------
+    vec3  debug_sun_direction;      // world space, points TO the sun (the shader normalizes it)
+    float debug_sun_intensity;
+
+    vec3  debug_sun_color;
+    float debug_ambient_intensity;
+
+    vec3  debug_sky_color;          // hemisphere ambient from above (+Z), also tints the rim light
+    float debug_specular_intensity;
+
+    vec3  debug_ground_color;       // hemisphere ambient from below (-Z)
+    float debug_specular_power;
+
+    vec3  debug_fill_color;         // soft light from the camera side, lifts the shadows
+    float debug_fill_intensity;
+
+    float debug_rim_intensity;      // edge highlight at grazing angles
+    float debug_rim_power;
+    float debug_saturation;         // 1 - colors unchanged, >1 - juicier
+    float debug_light_wrap;         // 0 - pure Lambert, 1 - half-Lambert (softer terminator)
 } scene;
 
 
